@@ -9,6 +9,9 @@ from libnmstate.error import NmstateNotImplementedError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -79,20 +82,23 @@ class NetState:
                     )
                     self.use_global_dns = True
             else:
-                try:
-                    self._ifaces.gen_dns_metadata(
-                        self._dns, self._route, ignored_dns_ifaces
-                    )
-                except NmstateValueError as e:
-                    if gen_conf_mode or self._dns.is_search_only_config():
-                        raise e
-                    else:
-                        logging.warning(
-                            "Storing DNS to NetworkManager via global DNS "
-                            "API, this will cause __all__ interface level "
-                            "DNS settings been ignored"
+                if self._is_iface_dns_prefered():
+                    try:
+                        self._ifaces.gen_dns_metadata(
+                            self._dns, self._route, ignored_dns_ifaces
                         )
-                        self.use_global_dns = True
+                    except NmstateValueError as e:
+                        if gen_conf_mode or self._dns.is_search_only_config():
+                            raise e
+                        else:
+                            logging.warning(
+                                "Storing DNS to NetworkManager via global DNS "
+                                "API, this will cause __all__ interface level "
+                                "DNS settings been ignored"
+                            )
+                            self.use_global_dns = True
+                elif self.dns.config_changed:
+                    self.use_global_dns = True
 
             self._ifaces.gen_route_metadata(self._route)
             self._ifaces.gen_route_rule_metadata(self._route_rule, self._route)
@@ -132,3 +138,37 @@ class NetState:
     @property
     def dns(self):
         return self._dns
+
+    # Return true when any of these conditions met:
+    #   * Search only config
+    #   * Desire state has static DNS and static IP interface.
+    #   * Desire state has static DNS with auto IP interface with
+    #   * auto-dns: true defined explicit.
+    # Nmstate 1.4 does not support IPv6 link-local nameserver, hence not
+    # special handling for it.
+    def _is_iface_dns_prefered(self):
+        if self._dns.is_search_only_config():
+            return True
+        for iface in self.desire_state.get(Interface.KEY, []):
+            ipv4_info = iface.get(Interface.IPV4, {})
+            ipv6_info = iface.get(Interface.IPV6, {})
+
+            if ipv4_info.get(InterfaceIPv4.DHCP):
+                if ipv4_info.get(InterfaceIP.AUTO_DNS):
+                    return True
+            elif ipv4_info.get(InterfaceIPv4.ENABLED) and len(
+                ipv4_info.get(InterfaceIPv4.ADDRESS, [])
+            ):
+                return True
+
+            if ipv6_info.get(InterfaceIPv6.AUTOCONF) or ipv6_info.get(
+                InterfaceIPv6.DHCP
+            ):
+                if ipv6_info.get(InterfaceIP.AUTO_DNS):
+                    return True
+            elif ipv6_info.get(InterfaceIPv6.ENABLED) and len(
+                ipv6_info.get(InterfaceIPv6.ADDRESS, [])
+            ):
+                return True
+
+        return False

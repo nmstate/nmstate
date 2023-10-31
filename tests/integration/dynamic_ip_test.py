@@ -1509,3 +1509,34 @@ def test_auto_iface_with_static_routes(dhcp_env):
     assert current_config_routes[0][Route.NEXT_HOP_ADDRESS] == DHCP_SRV_IP6
     assert current_config_routes[1][Route.DESTINATION] == IPV4_NETWORK1
     assert current_config_routes[1][Route.NEXT_HOP_ADDRESS] == DHCP_SRV_IP4
+
+
+def test_append_static_dns_before_auto_dns(dhcpcli_up_with_dns_cleanup):
+    ipv4_state = _create_ipv4_state(enabled=True, dhcp=True, auto_dns=True)
+    ipv6_state = _create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True, auto_dns=True
+    )
+    desired_state = {
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [IPV4_DNS_NAMESERVER],
+            }
+        },
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: ipv4_state,
+                Interface.IPV6: ipv6_state,
+            }
+        ],
+    }
+
+    libnmstate.apply(desired_state)
+
+    assert _poll(_has_ipv4_dhcp_nameserver)
+
+    cur_name_servers = _get_nameservers()
+    assert cur_name_servers.index(
+        IPV4_DNS_NAMESERVER
+    ) < cur_name_servers.index(DHCP_SRV_IP4)

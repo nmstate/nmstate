@@ -32,6 +32,8 @@ class DnsState:
                 self._config_changed = _is_dns_config_changed(
                     des_dns_state, cur_dns_state
                 )
+            else:
+                self._config_changed = True
         self._canonicalize_ip_address()
 
     def is_search_only_config(self):
@@ -139,7 +141,7 @@ class DnsState:
             * Any interface with IP stack enabled
         The loopback interface will be ignored.
         """
-        is_ipv6, iface_name = self._find_ifaces_with_auto_ip(
+        is_ipv6, iface_name = self._find_ifaces_with_auto_ip_any(
             ifaces,
             ignored_dns_ifaces,
         )
@@ -181,30 +183,54 @@ class DnsState:
         Find interface to store the DNS configurations in the order of:
             * Any interface with static gateway
             * Any interface configured as dynamic IP with 'auto-dns:False'
+            * Any interface configured as dynamic IP
         The loopback interface is ignored.
+        The desired/changed interface is preferred.
         Return tuple: (ipv4_iface, ipv6_iface)
         """
-        ipv4_iface, ipv6_iface = self._find_ifaces_with_static_gateways(
-            ifaces,
-            route_state,
-            ignored_dns_ifaces,
-        )
-        if not (ipv4_iface and ipv6_iface):
+        for desired in (True, False):
+            ipv4_iface, ipv6_iface = self._find_ifaces_with_static_gateways(
+                ifaces,
+                route_state,
+                ignored_dns_ifaces,
+                desired,
+            )
+            if ipv4_iface and ipv6_iface:
+                break
             (
                 auto_ipv4_iface,
                 auto_ipv6_iface,
             ) = self._find_ifaces_with_auto_dns_false(
-                ifaces, ignored_dns_ifaces
+                ifaces,
+                ignored_dns_ifaces,
+                desired,
             )
             if not ipv4_iface and auto_ipv4_iface:
                 ipv4_iface = auto_ipv4_iface
             if not ipv6_iface and auto_ipv6_iface:
                 ipv6_iface = auto_ipv6_iface
 
+            if ipv4_iface and ipv6_iface:
+                break
+
+            (
+                auto_ipv4_iface,
+                auto_ipv6_iface,
+            ) = self._find_ifaces_with_auto_ip(
+                ifaces, ignored_dns_ifaces, desired
+            )
+            if not ipv4_iface and auto_ipv4_iface:
+                ipv4_iface = auto_ipv4_iface
+            if not ipv6_iface and auto_ipv6_iface:
+                ipv6_iface = auto_ipv6_iface
+
+            if ipv4_iface and ipv6_iface:
+                break
+
         return ipv4_iface, ipv6_iface
 
     def _find_ifaces_with_static_gateways(
-        self, ifaces, route_state, ignored_dns_ifaces
+        self, ifaces, route_state, ignored_dns_ifaces, desired
     ):
         """
         Return tuple of interfaces with IPv4 and IPv6 static gateways.
@@ -227,62 +253,39 @@ class DnsState:
                     if iface.is_ignore:
                         continue
                     # Skip plugin blacklist of DNS interface
-                    if (
-                        not iface.is_changed
-                        and not iface.is_desired
-                        and iface_name in ignored_dns_ifaces
-                    ):
+                    if iface_name in ignored_dns_ifaces:
+                        continue
+                    if desired and not (iface.is_desired or iface.is_changed):
                         continue
                     if route.is_ipv6:
                         ipv6_iface = iface_name
                     else:
                         ipv4_iface = iface_name
-        # Now try undesired current interfaces
-        if not ipv6_iface:
-            for (
-                iface_name,
-                route_set,
-            ) in route_state.config_iface_routes.items():
-                if iface_name == "lo":
-                    continue
-                for route in route_set:
-                    if not route.is_ipv6 or not route.is_gateway:
-                        continue
-                    iface = ifaces.all_kernel_ifaces.get(iface_name)
-                    if (
-                        iface
-                        and not iface.is_ignore
-                        and iface_name not in ignored_dns_ifaces
-                    ):
-                        ipv6_iface = iface_name
-                        break
-                if ipv6_iface:
-                    break
+        return (ipv4_iface, ipv6_iface)
 
-        if not ipv4_iface:
-            for (
-                iface_name,
-                route_set,
-            ) in route_state.config_iface_routes.items():
-                if iface_name == "lo":
-                    continue
-                for route in route_set:
-                    if route.is_ipv6 or not route.is_gateway:
-                        continue
-                    iface = ifaces.all_kernel_ifaces.get(iface_name)
-                    if (
-                        iface
-                        and not iface.is_ignore
-                        and iface_name not in ignored_dns_ifaces
-                    ):
-                        ipv4_iface = iface_name
-                        break
-                if ipv4_iface:
-                    break
+    def _find_ifaces_with_auto_ip(self, ifaces, ignored_dns_ifaces, desired):
+        """
+        Return tuple of interfaces with auto IPv4 and IPv6
+        Prefer desired interface.
+        """
+        ipv4_iface = None
+        ipv6_iface = None
+        for iface in ifaces.all_kernel_ifaces.values():
+            if iface.is_ignore or iface.name in ignored_dns_ifaces:
+                continue
+            if desired and not (iface.is_desired or iface.is_changed):
+                continue
+            if not ipv6_iface and iface.ip_state(Interface.IPV6).is_dynamic:
+                ipv6_iface = iface.name
+
+            if not ipv4_iface and iface.ip_state(Interface.IPV4).is_dynamic:
+                ipv4_iface = iface.name
+            if ipv6_iface and ipv4_iface:
+                return (ipv4_iface, ipv6_iface)
 
         return (ipv4_iface, ipv6_iface)
 
-    def _find_ifaces_with_auto_ip(self, ifaces, ignored_dns_ifaces):
+    def _find_ifaces_with_auto_ip_any(self, ifaces, ignored_dns_ifaces):
         """
         Find a interface with auto IPv4 or IPv6 enable, try desired interface
         first, then current interface.
@@ -350,15 +353,15 @@ class DnsState:
 
         return (True, None)
 
-    def _find_ifaces_with_auto_dns_false(self, ifaces, ignored_dns_ifaces):
+    def _find_ifaces_with_auto_dns_false(
+        self, ifaces, ignored_dns_ifaces, desired
+    ):
         ipv4_iface = None
         ipv6_iface = None
         for iface in ifaces.all_kernel_ifaces.values():
-            if iface.is_ignore or (
-                iface.name in ignored_dns_ifaces
-                and not iface.is_changed
-                and not iface.is_desired
-            ):
+            if iface.is_ignore or iface.name in ignored_dns_ifaces:
+                continue
+            if desired and not (iface.is_changed or iface.is_desired):
                 continue
             if ipv4_iface and ipv6_iface:
                 return (ipv4_iface, ipv6_iface)
@@ -370,24 +373,11 @@ class DnsState:
                     else:
                         ipv6_iface = iface.name
 
-        # Now try undesired current interfaces
-        if not ipv4_iface or not ipv6_iface:
-            for iface in ifaces.all_kernel_ifaces.values():
-                if iface.is_ignore or (iface.name in ignored_dns_ifaces):
-                    continue
-                if ipv4_iface and ipv6_iface:
-                    return (ipv4_iface, ipv6_iface)
-                for family in (Interface.IPV4, Interface.IPV6):
-                    ip_state = iface.ip_state(family)
-                    if ip_state.is_dynamic and (not ip_state.auto_dns):
-                        if family == Interface.IPV4:
-                            ipv4_iface = iface.name
-                        else:
-                            ipv6_iface = iface.name
-
         return (ipv4_iface, ipv6_iface)
 
     def verify(self, cur_dns_state):
+        if not self.config_changed:
+            return
         cur_dns = DnsState(
             des_dns_state=None,
             cur_dns_state=cur_dns_state,
