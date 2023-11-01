@@ -1931,3 +1931,34 @@ def test_auto_ip_with_pre_exist_address_without_dhcp_srv(eth1_up):
     }
 
     libnmstate.apply(desired_state)
+
+
+def test_append_static_dns_before_auto_dns(dhcpcli_up_with_dns_cleanup):
+    ipv4_state = _create_ipv4_state(enabled=True, dhcp=True, auto_dns=True)
+    ipv6_state = _create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True, auto_dns=True
+    )
+    desired_state = {
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [IPV4_DNS_NAMESERVER],
+            }
+        },
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: ipv4_state,
+                Interface.IPV6: ipv6_state,
+            }
+        ],
+    }
+
+    libnmstate.apply(desired_state)
+
+    assert _poll(_has_ipv4_dhcp_nameserver)
+
+    cur_name_servers = _get_nameservers()
+    assert cur_name_servers.index(
+        IPV4_DNS_NAMESERVER
+    ) < cur_name_servers.index(DHCP_SRV_IP4)

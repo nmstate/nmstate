@@ -15,7 +15,10 @@ use super::super::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
         deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
         dispatch::apply_dispatch_script,
-        dns::{purge_global_dns_config, store_dns_config_via_global_api},
+        dns::{
+            is_iface_dns_desired, purge_global_dns_config,
+            store_dns_config_via_global_api,
+        },
         is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
         is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
         is_vxlan_changed, save_nm_profiles,
@@ -80,29 +83,50 @@ pub(crate) fn nm_apply(
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
     {
         purge_global_dns_config(&mut nm_api)?;
-    }
 
-    if merged_state.dns.is_search_or_option_only() {
-        // When user desire static DNS search and dynamic DNS nameserver,
-        // we cannot use global DNS in this case because global DNS suppress
-        // DNS nameserver learn from DHCP/autoconf.
-        store_dns_search_or_option_to_iface(
-            &mut merged_state,
-            &nm_acs,
-            &nm_devs,
-        )?;
-    } else if let Err(e) =
-        store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
-    {
-        log::warn!(
-            "Cannot store DNS to NetworkManager interface connection: {e}"
-        );
-        store_dns_config_via_global_api(
-            &mut nm_api,
-            merged_state.dns.servers.as_slice(),
-            merged_state.dns.searches.as_slice(),
-            merged_state.dns.options.as_slice(),
-        )?;
+        if merged_state.dns.is_search_or_option_only() {
+            // When user desire static DNS search and dynamic DNS nameserver,
+            // we cannot use global DNS in this case because global DNS suppress
+            // DNS nameserver learn from DHCP/autoconf.
+            store_dns_search_or_option_to_iface(
+                &mut merged_state,
+                &nm_acs,
+                &nm_devs,
+            )?;
+        } else if is_iface_dns_desired(&merged_state) {
+            if let Err(e) =
+                store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
+            {
+                log::info!(
+                    "Cannot store DNS to interface profile: {e}, \
+                    will try to set via global DNS"
+                );
+                store_dns_config_via_global_api(
+                    &mut nm_api,
+                    merged_state.dns.servers.as_slice(),
+                    merged_state.dns.searches.as_slice(),
+                    merged_state.dns.options.as_slice(),
+                )?;
+            }
+        } else if merged_state
+            .dns
+            .desired
+            .config
+            .as_ref()
+            .map(|c| c.is_purge())
+            == Some(true)
+        {
+            // Also need to purge interface level DNS
+            store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
+                .ok();
+        } else {
+            store_dns_config_via_global_api(
+                &mut nm_api,
+                merged_state.dns.servers.as_slice(),
+                merged_state.dns.searches.as_slice(),
+                merged_state.dns.options.as_slice(),
+            )?;
+        }
     }
 
     let PerparedNmConnections {

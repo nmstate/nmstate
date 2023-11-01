@@ -3,13 +3,14 @@
 use std::str::FromStr;
 
 use super::super::{
+    dns::extract_ipv6_link_local_iface_from_dns_srv,
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmDnsEntry, NmGlobalDnsConfig, NmSettingIp},
 };
 
 use crate::{
     ip::is_ipv6_unicast_link_local, DnsClientState, DnsState, Interfaces,
-    NmstateError,
+    MergedNetworkState, NmstateError,
 };
 
 pub(crate) fn nm_dns_to_nmstate(
@@ -226,5 +227,58 @@ pub(crate) fn nm_global_dns_to_nmstate(
     DnsState {
         running: Some(config.clone()),
         config: Some(config),
+    }
+}
+
+// To save us from NM iface-DNS mess, we prefer global DNS over iface DNS,
+// unless use case like:
+//  1. Has IPv6 link-local address as name server: e.g. `fe80::deef:1%eth1`
+//  2. User want static DNS server appended before dynamic one. In this case,
+//     user should define `auto-dns: true` explicitly along with static DNS.
+//  3. User want to force DNS server stored in interface for static IP
+//     interface. This case, user need to state static DNS config along with
+//     static IP config.
+pub(crate) fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
+    if merged_state.dns.is_changed() {
+        if extract_ipv6_link_local_iface_from_dns_srv(
+            merged_state.dns.servers.as_slice(),
+        )
+        .is_some()
+        {
+            return true;
+        }
+
+        for iface in merged_state
+            .interfaces
+            .kernel_ifaces
+            .values()
+            .filter_map(|i| i.for_apply.as_ref())
+        {
+            if iface
+                .base_iface()
+                .ipv4
+                .as_ref()
+                .map(|i| i.is_auto() && i.auto_dns == Some(true))
+                == Some(true)
+                || iface
+                    .base_iface()
+                    .ipv6
+                    .as_ref()
+                    .map(|i| i.is_auto() && i.auto_dns == Some(true))
+                    == Some(true)
+            {
+                return true;
+            }
+            if iface.base_iface().ipv4.as_ref().map(|i| i.is_static())
+                == Some(true)
+                || iface.base_iface().ipv6.as_ref().map(|i| i.is_static())
+                    == Some(true)
+            {
+                return true;
+            }
+        }
+        false
+    } else {
+        false
     }
 }
