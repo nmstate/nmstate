@@ -3,12 +3,12 @@
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceState,
-    InterfaceType, MergedInterface, MergedInterfaces, NmstateError,
-    OvsDbIfaceConfig,
+    InterfaceType, LinuxBridgeStpOptions, MergedInterface, MergedInterfaces,
+    NmstateError, OvsDbIfaceConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -279,9 +279,9 @@ pub struct OvsBridgeOptions {
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
+        deserialize_with = "ovs_stp_deserializer"
     )]
-    pub stp: Option<bool>,
+    pub stp: Option<OvsBridgeStpOptions>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
@@ -805,5 +805,49 @@ impl MergedInterfaces {
                 }
             }
         }
+    }
+}
+
+pub type OvsBridgeStpOptions = LinuxBridgeStpOptions;
+
+impl OvsBridgeStpOptions {
+    pub(crate) fn new_enabled(enabled: bool) -> Self {
+        Self {
+            enabled: Some(enabled),
+            ..Default::default()
+        }
+    }
+}
+
+pub(crate) fn ovs_stp_deserializer<'de, D>(
+    deserializer: D,
+) -> Result<Option<OvsBridgeStpOptions>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v = serde_json::Value::deserialize(deserializer)?;
+
+    match v {
+        serde_json::Value::Bool(enabled) => {
+            Ok(Some(OvsBridgeStpOptions::new_enabled(enabled)))
+        }
+        serde_json::Value::String(v) => match v.to_lowercase().as_str() {
+            "1" | "true" | "yes" | "on" | "y" => {
+                Ok(Some(OvsBridgeStpOptions::new_enabled(true)))
+            }
+            "0" | "false" | "no" | "off" | "n" => {
+                Ok(Some(OvsBridgeStpOptions::new_enabled(true)))
+            }
+            _ => Err(de::Error::custom(
+                "Need to be boolean: 1|0|true|false|yes|no|on|off|y|n",
+            )),
+        },
+        serde_json::Value::Object(_) => Ok(Some(
+            OvsBridgeStpOptions::deserialize(v)
+                .map_err(serde::de::Error::custom)?,
+        )),
+        _ => Err(de::Error::custom(
+            "Need to be boolean or map like {enabled: true}",
+        )),
     }
 }

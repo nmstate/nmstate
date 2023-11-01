@@ -19,7 +19,8 @@ interfaces:
         fail-mode: ''
         mcast-snooping-enable: false
         rstp: false
-        stp: true
+        stp:
+          enabled: true
       port:
         - name: eth1
         - name: ovs0

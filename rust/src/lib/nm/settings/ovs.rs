@@ -119,7 +119,7 @@ pub(crate) fn gen_nm_ovs_br_setting(
 
     if let Some(br_conf) = &ovs_br_iface.bridge {
         if let Some(br_opts) = &br_conf.options {
-            nm_ovs_br_set.stp = br_opts.stp;
+            nm_ovs_br_set.stp = br_opts.stp.as_ref().and_then(|s| s.enabled);
             nm_ovs_br_set.rstp = br_opts.rstp;
             nm_ovs_br_set.mcast_snooping_enable = br_opts.mcast_snooping_enable;
             if let Some(fail_mode) = &br_opts.fail_mode {

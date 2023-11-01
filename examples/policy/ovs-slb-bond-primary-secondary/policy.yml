@@ -14,7 +14,8 @@ desiredState:
       state: up
       bridge:
         options:
-          stp: false
+          stp:
+            enabled: false
           mcast-snooping-enable: false
           rstp: false
         port:

@@ -136,7 +136,9 @@ def test_create_and_remove_ovs_bridge_options_specified():
             OVSBridge.Options.FAIL_MODE: "",
             OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
             OVSBridge.Options.RSTP: False,
-            OVSBridge.Options.STP: True,
+            OVSBridge.STP_SUBTREE: {
+                OVSBridge.STP.ENABLED: True,
+            },
         }
     )
 
@@ -1360,7 +1362,8 @@ def test_attach_linux_bond_to_ovs_bridge(
             state: up
             bridge:
               options:
-                stp: false
+                stp:
+                  enabled: false
               port:
                 - name: bond1
             """,

@@ -5,7 +5,8 @@ interfaces:
     state: up
     bridge:
       options:
-        stp: false
+        stp:
+          enabled: false
       port:
         - name: ovs-bond1
           link-aggregation:

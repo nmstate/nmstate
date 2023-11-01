@@ -10,7 +10,8 @@ interfaces:
     state: up
     bridge:
       options:
-        stp: true
+        stp:
+          enabled: true
       port:
         - name: patch0
   - name: patch1
@@ -23,6 +24,7 @@ interfaces:
     state: up
     bridge:
       options:
-        stp: true
+        stp:
+          enabled: true
       port:
         - name: patch1

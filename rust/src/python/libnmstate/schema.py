@@ -192,6 +192,14 @@ class Bridge:
     OPTIONS_SUBTREE = "options"
     PORT_SUBTREE = "port"
     PORTS_SUBTREE = "ports"
+    STP_SUBTREE = "stp"
+
+    class STP:
+        ENABLED = "enabled"
+        FORWARD_DELAY = "forward-delay"
+        HELLO_TIME = "hello-time"
+        MAX_AGE = "max-age"
+        PRIORITY = "priority"
 
     class Port:
         NAME = "name"
@@ -217,7 +225,6 @@ class Bridge:
 
 class LinuxBridge(Bridge):
     TYPE = "linux-bridge"
-    STP_SUBTREE = "stp"
     MULTICAST_SUBTREE = "multicast"
 
     class Options:
@@ -251,13 +258,6 @@ class LinuxBridge(Bridge):
         STP_HAIRPIN_MODE = "stp-hairpin-mode"
         STP_PATH_COST = "stp-path-cost"
         STP_PRIORITY = "stp-priority"
-
-    class STP:
-        ENABLED = "enabled"
-        FORWARD_DELAY = "forward-delay"
-        HELLO_TIME = "hello-time"
-        MAX_AGE = "max-age"
-        PRIORITY = "priority"
 
 
 class Ethernet:
