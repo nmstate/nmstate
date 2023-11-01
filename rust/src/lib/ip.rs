@@ -147,6 +147,9 @@ pub struct InterfaceIpv4 {
     pub addresses: Option<Vec<InterfaceIpAddr>>,
     /// Whether to apply DNS resolver information retrieved from DHCP server.
     /// Serialize and deserialize to/from `auto-dns`.
+    /// If you want to append static DNS name server before DHCP provided
+    /// servers, please set `auto-dns: true` explicitly a along with static
+    /// DNS server.
     pub auto_dns: Option<bool>,
     /// Whether to set default gateway retrieved from DHCP server.
     /// Serialize and deserialize to/from `auto-gateway`.
@@ -534,6 +537,9 @@ pub struct InterfaceIpv6 {
     /// Whether to apply DNS resolver information retrieved from DHCPv6 or
     /// autoconf.
     /// Serialize and deserialize to/from `auto-dns`.
+    /// If you want to append static DNS name server before DHCP/Autoconf
+    /// provided servers, please set `auto-dns: true` explicitly a along with
+    /// static DNS server.
     pub auto_dns: Option<bool>,
     /// Whether to set default gateway retrieved from autoconf.
     /// Serialize and deserialize to/from `auto-gateway`.

@@ -65,6 +65,7 @@ pub(crate) fn store_dns_config_to_iface(
 //  * If current interface which holding the DNS still valid for DNS also listed
 //    in desire state
 //  * Interfaces in desired with manual IP stack enabled or `auto_dns: false`
+//  * Interfaces in desired with IP enabled
 //  * Interfaces in current with manual IP stack enabled or `auto_dns: false`
 //    and current interface is not marked as external managed or unmanaged.
 //  * TODO: loopback interface
@@ -204,7 +205,7 @@ fn find_dns_iface(
     None
 }
 
-fn extract_ipv6_link_local_iface_from_dns_srv(
+pub(crate) fn extract_ipv6_link_local_iface_from_dns_srv(
     srvs: &[String],
 ) -> Option<String> {
     for srv in srvs {
@@ -324,8 +325,8 @@ fn _save_dns_to_iface(
         return Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
-                "Failed to find suitable(IP enabled with DHCP off \
-                or auto-dns: false) interface for DNS server {servers:?}"
+                "Failed to find suitable(IP enabled) \
+                interface for DNS server {servers:?}"
             ),
         ));
     }
@@ -525,17 +526,11 @@ impl MergedInterface {
     pub(crate) fn is_iface_valid_for_dns(&self, is_ipv6: bool) -> bool {
         if is_ipv6 {
             self.merged.base_iface().ipv6.as_ref().map(|ip_conf| {
-                ip_conf.enabled
-                    && (ip_conf.is_static()
-                        || (ip_conf.is_auto()
-                            && ip_conf.auto_dns == Some(false)))
+                ip_conf.enabled && (ip_conf.is_static() || (ip_conf.is_auto()))
             }) == Some(true)
         } else {
             self.merged.base_iface().ipv4.as_ref().map(|ip_conf| {
-                ip_conf.enabled
-                    && (ip_conf.is_static()
-                        || (ip_conf.is_auto()
-                            && ip_conf.auto_dns == Some(false)))
+                ip_conf.enabled && (ip_conf.is_static() || (ip_conf.is_auto()))
             }) == Some(true)
         }
     }
