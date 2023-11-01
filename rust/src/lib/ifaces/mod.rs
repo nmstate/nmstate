@@ -51,7 +51,7 @@ pub use macsec::{MacSecConfig, MacSecInterface, MacSecValidate};
 pub use ovs::{
     OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
-    OvsDpdkConfig, OvsInterface, OvsPatchConfig,
+    OvsBridgeStpOptions, OvsDpdkConfig, OvsInterface, OvsPatchConfig,
 };
 pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{VlanConfig, VlanInterface, VlanProtocol};

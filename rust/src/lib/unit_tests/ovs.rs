@@ -154,7 +154,7 @@ bridge:
     let opts = br_conf.options.as_ref().unwrap();
     let port_conf = &br_conf.ports.as_ref().unwrap()[0];
     let bond_conf = port_conf.bond.as_ref().unwrap();
-    assert_eq!(opts.stp, Some(true));
+    assert_eq!(opts.stp.as_ref().and_then(|s| s.enabled), Some(true));
     assert_eq!(opts.rstp, Some(false));
     assert_eq!(opts.mcast_snooping_enable, Some(false));
     assert_eq!(bond_conf.bond_downdelay, Some(100));
@@ -834,4 +834,70 @@ fn test_ignore_patch_ports_for_apply() {
 
     assert!(patch0_iface.for_apply.is_none());
     assert!(patch1_iface.for_apply.is_none());
+}
+
+#[test]
+fn test_ovs_stp_option_as_dict() {
+    let iface: OvsBridgeInterface = serde_yaml::from_str(
+        r"---
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+          - name: eth1
+          options:
+            stp:
+              enabled: true",
+    )
+    .unwrap();
+
+    assert_eq!(
+        iface
+            .bridge
+            .as_ref()
+            .unwrap()
+            .options
+            .as_ref()
+            .unwrap()
+            .stp
+            .as_ref()
+            .unwrap()
+            .enabled,
+        Some(true)
+    );
+
+    // Make sure we are using new-dict format when serializing
+    assert!(!serde_json::to_string(&iface).unwrap().contains("stp: true"));
+}
+
+#[test]
+fn test_ovs_stp_option_as_bool() {
+    let iface: OvsBridgeInterface = serde_yaml::from_str(
+        r"---
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+          - name: eth1
+          options:
+            stp: true",
+    )
+    .unwrap();
+
+    assert_eq!(
+        iface
+            .bridge
+            .as_ref()
+            .unwrap()
+            .options
+            .as_ref()
+            .unwrap()
+            .stp
+            .as_ref()
+            .unwrap()
+            .enabled,
+        Some(true)
+    );
 }

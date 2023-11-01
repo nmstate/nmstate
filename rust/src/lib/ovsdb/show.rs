@@ -10,8 +10,9 @@ use crate::{
     BridgePortVlanRange, Interface, InterfaceType, Interfaces, NetworkState,
     NmstateError, OvsBridgeBondConfig, OvsBridgeBondMode,
     OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgeOptions, OvsBridgePortConfig, OvsDbIfaceConfig, OvsDpdkConfig,
-    OvsInterface, OvsPatchConfig, UnknownInterface,
+    OvsBridgeOptions, OvsBridgePortConfig, OvsBridgeStpOptions,
+    OvsDbIfaceConfig, OvsDpdkConfig, OvsInterface, OvsPatchConfig,
+    UnknownInterface,
 };
 
 use super::db::{parse_str_map, OvsDbConnection, OvsDbEntry};
@@ -114,7 +115,7 @@ fn parse_ovs_bridge_options(
         ret.fail_mode = Some(String::new());
     }
     if let Some(Value::Bool(v)) = ovsdb_opts.get("stp_enable") {
-        ret.stp = Some(*v)
+        ret.stp = Some(OvsBridgeStpOptions::new_enabled(*v))
     }
     if let Some(Value::Bool(v)) = ovsdb_opts.get("rstp_enable") {
         ret.rstp = Some(*v)
