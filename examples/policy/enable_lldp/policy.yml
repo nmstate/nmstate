@@ -1,0 +1,9 @@
+---
+capture:
+  ethernets: interfaces.type=="ethernet"
+  ethernets-up: capture.ethernets | interfaces.state=="up"
+  ethernets-lldp: capture.ethernets-up | interfaces.lldp.enabled:=true
+  ethernets-lldp-skip-eth-conf: >-
+    capture.ethernets-lldp | interfaces.ethernet := null
+desiredState:
+  interfaces: '{{ capture.ethernets-lldp-skip-eth-conf.interfaces }}'

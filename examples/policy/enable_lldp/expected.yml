@@ -1,0 +1,14 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    lldp:
+      enabled: true
+    mac-address: 1c:c1:0c:32:3b:ff
+    ipv4:
+      address:
+        - ip: 192.0.2.251
+          prefix-length: 24
+      dhcp: false
+      enabled: true

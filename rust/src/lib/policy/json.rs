@@ -175,7 +175,7 @@ fn get_leaf_array_value(
 pub(crate) fn update_json_value(
     item_name: &str,
     prop_path: &[String],
-    value: &str,
+    value: Option<&str>,
     data: &mut serde_json::Map<String, serde_json::Value>,
 ) -> Result<(), NmstateError> {
     match prop_path.len().cmp(&1) {
@@ -191,23 +191,31 @@ pub(crate) fn update_json_value(
                     &prop_path[0],
                     item_name,
                     old_value,
-                    value
+                    value.unwrap_or("null")
                 );
                 data.insert(
                     prop_path[0].to_string(),
-                    serde_json::Value::String(value.to_string()),
+                    if let Some(v) = value {
+                        serde_json::Value::String(v.to_string())
+                    } else {
+                        serde_json::Value::Null
+                    },
                 );
                 Ok(())
             } else {
                 log::debug!(
                     "Inserting new property {}:{} to {}",
                     &prop_path[0],
-                    value,
+                    value.unwrap_or("null"),
                     item_name
                 );
                 data.insert(
                     prop_path[0].to_string(),
-                    serde_json::Value::String(value.to_string()),
+                    if let Some(v) = value {
+                        serde_json::Value::String(v.to_string())
+                    } else {
+                        serde_json::Value::Null
+                    },
                 );
                 Ok(())
             }
@@ -268,7 +276,7 @@ pub(crate) fn update_json_value(
 pub(crate) fn update_items<T>(
     item_name: &str,
     prop_path: &[String],
-    value: &str,
+    value: Option<&str>,
     items: &[T],
     line: &str,
     pos: usize,
@@ -300,7 +308,8 @@ where
                     NmstateError::new(
                         ErrorKind::Bug,
                         format!(
-                            "Failed to deserialize {item_value:?} into {item_name}: {e}"
+                            "Failed to deserialize {item_value:?} into \
+                            {item_name}: {e}"
                         ),
                     )
                 })?,
