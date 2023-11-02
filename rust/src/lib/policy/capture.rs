@@ -196,11 +196,12 @@ impl NetworkCaptureCommand {
             }
         }
 
-        let matching_value = value_to_string(&get_value(
-            &self.value,
-            &input,
-            self.line.as_str(),
-        )?);
+        let matching_value =
+            match get_value(&self.value, &input, self.line.as_str())? {
+                serde_json::Value::Null => None,
+                v => Some(value_to_string(&v)),
+            };
+        let matching_value_str = matching_value.clone().unwrap_or_default();
 
         let mut ret = NetworkState::new();
 
@@ -222,14 +223,14 @@ impl NetworkCaptureCommand {
                 ret.routes = match self.action {
                     NetworkCaptureAction::Equal => get_route_match(
                         &keys[1..],
-                        matching_value.as_str(),
+                        matching_value_str.as_str(),
                         &input,
                         self.line.as_str(),
                         key_pos + "routes.".len(),
                     )?,
                     NetworkCaptureAction::Replace => update_routes(
                         &keys[1..],
-                        matching_value.as_str(),
+                        matching_value.as_deref(),
                         &input,
                         self.line.as_str(),
                         key_pos + "routes.".len(),
@@ -241,14 +242,14 @@ impl NetworkCaptureCommand {
                 ret.rules = match self.action {
                     NetworkCaptureAction::Equal => get_route_rule_match(
                         &keys[1..],
-                        matching_value.as_str(),
+                        matching_value_str.as_str(),
                         &input,
                         self.line.as_str(),
                         key_pos + "route-rules.".len(),
                     )?,
                     NetworkCaptureAction::Replace => update_route_rules(
                         &keys[1..],
-                        matching_value.as_str(),
+                        matching_value.as_deref(),
                         &input,
                         self.line.as_str(),
                         key_pos + "route-rules.".len(),
@@ -260,14 +261,14 @@ impl NetworkCaptureCommand {
                 ret.interfaces = match self.action {
                     NetworkCaptureAction::Equal => get_iface_match(
                         &keys[1..],
-                        matching_value.as_str(),
+                        matching_value_str.as_str(),
                         &input,
                         self.line.as_str(),
                         key_pos + "interfaces.".len(),
                     )?,
                     NetworkCaptureAction::Replace => update_ifaces(
                         &keys[1..],
-                        matching_value.as_str(),
+                        matching_value.as_deref(),
                         &input,
                         self.line.as_str(),
                         key_pos + "interfaces.".len(),
@@ -353,6 +354,9 @@ pub(crate) fn get_value(
 
         NetworkCaptureToken::Value(v, _) => {
             Ok(serde_json::Value::String(v.clone()))
+        }
+        NetworkCaptureToken::Null(_) => {
+            Ok(serde_json::Value::Null)
         }
         _ => todo!(),
     }
@@ -494,6 +498,7 @@ fn get_condition_value(
             })
         }
         NetworkCaptureToken::Value(_, _) => Ok((tokens[0].clone(), None)),
+        NetworkCaptureToken::Null(_) => Ok((tokens[0].clone(), None)),
         _ => Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(

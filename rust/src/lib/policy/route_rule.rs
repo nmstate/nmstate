@@ -45,7 +45,7 @@ pub(crate) fn get_route_rule_match(
 
 pub(crate) fn update_route_rules(
     prop_path: &[String],
-    value: &str,
+    value: Option<&str>,
     state: &NetworkState,
     line: &str,
     pos: usize,

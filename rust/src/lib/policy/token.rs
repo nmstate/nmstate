@@ -13,6 +13,7 @@ pub(crate) enum NetworkCaptureToken {
     Pipe(usize),              // |
     Replace(usize),           // :=
     Equal(usize),             // ==
+    Null(usize),              // Unquoted null or NULL or Null
 }
 
 impl Default for NetworkCaptureToken {
@@ -28,7 +29,8 @@ impl NetworkCaptureToken {
             | Self::Value(_, p)
             | Self::Pipe(p)
             | Self::Replace(p)
-            | Self::Equal(p) => *p,
+            | Self::Equal(p)
+            | Self::Null(p) => *p,
         }
     }
 }
@@ -167,7 +169,11 @@ pub(crate) fn parse_str_to_capture_tokens(
                         pos,
                     ));
                 } else if !block.is_empty() {
-                    ret.push(NetworkCaptureToken::Value(block, pos));
+                    if block.to_lowercase() == "null" {
+                        ret.push(NetworkCaptureToken::Null(pos));
+                    } else {
+                        ret.push(NetworkCaptureToken::Value(block, pos));
+                    }
                 }
             }
         }

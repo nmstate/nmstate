@@ -28,7 +28,7 @@ pub(crate) fn get_iface_match(
 
 pub(crate) fn update_ifaces(
     prop_path: &[String],
-    value: &str,
+    value: Option<&str>,
     state: &NetworkState,
     line: &str,
     pos: usize,
