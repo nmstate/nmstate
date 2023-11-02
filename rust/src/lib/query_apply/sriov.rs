@@ -40,12 +40,10 @@ impl SrIovConfig {
             match cur_ifaces.get_iface(pf_name, InterfaceType::Ethernet) {
                 Some(Interface::Ethernet(i)) => i,
                 _ => {
-                    let e = NmstateError::new(
-                        ErrorKind::VerificationError,
+                    return Err(NmstateError::new(
+                        ErrorKind::SrIovVfNotFound,
                         format!("Failed to find PF interface {pf_name}"),
-                    );
-                    log::error!("{}", e);
-                    return Err(e);
+                    ));
                 }
             };
 
@@ -61,29 +59,25 @@ impl SrIovConfig {
         };
         for vf in vfs {
             if vf.iface_name.is_empty() {
-                let e = NmstateError::new(
-                    ErrorKind::VerificationError,
+                return Err(NmstateError::new(
+                    ErrorKind::SrIovVfNotFound,
                     format!(
                         "Failed to find VF {} interface name of PF {pf_name}",
                         vf.id
                     ),
-                );
-                log::error!("{}", e);
-                return Err(e);
+                ));
             } else if cur_ifaces
                 .get_iface(vf.iface_name.as_str(), InterfaceType::Ethernet)
                 .is_none()
             {
-                let e = NmstateError::new(
-                    ErrorKind::VerificationError,
+                return Err(NmstateError::new(
+                    ErrorKind::SrIovVfNotFound,
                     format!(
                         "Find VF {} interface name {} of PF {pf_name} \
                         is not exist yet",
                         vf.id, &vf.iface_name
                     ),
-                );
-                log::error!("{}", e);
-                return Err(e);
+                ));
             }
         }
         Ok(())
