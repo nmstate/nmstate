@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.18] - 2023-11-02
+### Breaking changes
+ - ovs: Align STP property of OVS bridge and Linux bridge. (2934b894)
+
+### New features
+ - nmpolicy: Allowing remove a property or section. (7b99493a)
+ - Support appending static DNS before dynamic DNS. (56ecba6f)
+
+### Bug fixes
+ - SRIOV: Fix VerificationError on switchdev mode SRIOV. (3fcf1386)
+ - nm: Fix `gc` mode for route rule action. (2ee3aaf9)
+ - nm: Suppress unused_imports warning for nm_dbus. (0a01c28a)
 ## [2.2.17] - 2023-10-19
 ### Breaking changes
  - macsec: rename parent property to base-iface. (ccc6882b)
