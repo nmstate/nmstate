@@ -1,4 +1,18 @@
 # Changelog
+## [1.4.5] - 2023-11-02
+### Breaking changes
+ - N/A
+
+### New features
+ - Support appending static DNS before dynamic DNS. (2cf775d3)
+ - Support DNS options. (1cd5f28a)
+ - Support treating string as int for `prefix-length`. (645fad34)
+ - Support static route with auto ip. (7c80a3ac)
+
+### Bug fixes
+ - Do not attach ovs-bridge to itself when creating a profile. (88b785ee)
+ - Differentiate IP family for route table search. (4eaf0f0a)
+
 ## [1.4.4] - 2023-04-20
 ### Breaking changes
  - N/A
