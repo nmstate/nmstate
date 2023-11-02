@@ -791,14 +791,15 @@ fn test_sriov_vf_revert_to_default() {
 }
 
 #[test]
-fn test_has_sriov_with_unknown_iface_type() {
+fn test_get_sriov_vf_count() {
     let desired = serde_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           state: up
           ethernet:
             sr-iov:
-              total-vfs: 2
+              total-vfs: 16
+        - name: eth2
         ",
     )
     .unwrap();
@@ -810,7 +811,19 @@ fn test_has_sriov_with_unknown_iface_type() {
           state: up
           ethernet:
             sr-iov:
-              total-vfs: 1
+              total-vfs: 2
+        - name: eth2
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 16
+        - name: eth3
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 16
         ",
     )
     .unwrap();
@@ -818,5 +831,5 @@ fn test_has_sriov_with_unknown_iface_type() {
     let merged_ifaces =
         MergedInterfaces::new(desired, current, false, false).unwrap();
 
-    assert!(merged_ifaces.has_sriov());
+    assert_eq!(merged_ifaces.get_sriov_vf_count(), 32);
 }

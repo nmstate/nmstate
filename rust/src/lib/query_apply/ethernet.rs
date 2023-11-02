@@ -114,7 +114,7 @@ impl NetworkState {
         self.has_sriov(current) && self.has_missing_eth(current)
     }
 
-    pub(crate) fn has_sriov(&self, current: &Self) -> bool {
+    fn has_sriov(&self, current: &Self) -> bool {
         for iface in
             self.interfaces.kernel_ifaces.values().filter(|i| i.is_up())
         {
@@ -185,21 +185,21 @@ impl NetworkState {
 }
 
 impl MergedInterfaces {
-    pub(crate) fn has_sriov(&self) -> bool {
+    pub(crate) fn get_sriov_vf_count(&self) -> u32 {
+        let mut ret = 0u32;
         for iface in self.kernel_ifaces.values().filter(|i| {
-            i.is_desired() && i.merged.iface_type() == InterfaceType::Ethernet
+            (i.is_desired() || i.is_changed())
+                && i.merged.iface_type() == InterfaceType::Ethernet
         }) {
-            if let (
-                Some(Interface::Ethernet(des_iface)),
-                Some(Interface::Ethernet(cur_iface)),
-            ) = (iface.for_apply.as_ref(), iface.current.as_ref())
-            {
-                if des_iface.sriov_is_enabled() || cur_iface.sriov_is_enabled()
-                {
-                    return true;
-                }
+            if let Interface::Ethernet(iface) = &iface.merged {
+                ret += iface
+                    .ethernet
+                    .as_ref()
+                    .and_then(|e| e.sr_iov.as_ref())
+                    .and_then(|s| s.total_vfs)
+                    .unwrap_or_default();
             }
         }
-        false
+        ret
     }
 }

@@ -7,13 +7,15 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
     ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
-    ErrorKind, MergedNetworkState, NetworkState, NmstateError,
+    ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
+    NmstateError,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
-const VERIFY_RETRY_COUNT: usize = 5;
-const VERIFY_RETRY_COUNT_SRIOV: usize = 300;
+const VERIFY_RETRY_COUNT_DEFAULT: usize = 5;
+const VERIFY_RETRY_COUNT_SRIOV_MIN: usize = 30;
+const VERIFY_RETRY_COUNT_SRIOV_MAX: usize = 300;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 const RETRY_NM_COUNT: usize = 2;
 const RETRY_NM_INTERVAL_MILLISECONDS: u64 = 2000;
@@ -137,20 +139,12 @@ impl NetworkState {
             )?);
         }
 
-        let mut timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
-        // We need to use merge state in case PF does not have
-        // interface type defined, we need merged_state to have `unknown` type
-        // resolved
-        let verify_count = if pf_state.is_some()
-            || merged_state.as_ref().map(|s| s.interfaces.has_sriov())
-                == Some(true)
-        {
-            timeout = VERIFY_RETRY_COUNT_SRIOV as u32
-                * VERIFY_RETRY_INTERVAL_MILLISECONDS as u32
-                / 1000;
-            VERIFY_RETRY_COUNT_SRIOV
+        let timeout = if let Some(t) = self.timeout {
+            t
+        } else if pf_state.is_some() {
+            VERIFY_RETRY_COUNT_SRIOV_MAX as u32
         } else {
-            VERIFY_RETRY_COUNT
+            DEFAULT_ROLLBACK_TIMEOUT
         };
 
         let checkpoint = match nm_checkpoint_create(timeout) {
@@ -178,6 +172,8 @@ impl NetworkState {
                     false,
                     self.memory_only,
                 )?;
+                let verify_count =
+                    get_proper_verify_retry_count(&pf_merged_state.interfaces);
                 self.apply_with_nm_backend_and_under_checkpoint(
                     &pf_merged_state,
                     &cur_net_state,
@@ -205,6 +201,8 @@ impl NetworkState {
                         .into(),
                 ));
             };
+            let verify_count =
+                get_proper_verify_retry_count(&merged_state.interfaces);
 
             self.interfaces.check_sriov_capability()?;
 
@@ -357,7 +355,11 @@ where
     while cur_count < count {
         if let Err(e) = func() {
             if cur_count == count - 1 || !e.kind().can_retry() {
-                return Err(e);
+                if e.kind().can_ignore() {
+                    return Ok(());
+                } else {
+                    return Err(e);
+                }
             } else {
                 log::info!("Retrying on: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
@@ -393,5 +395,14 @@ impl MergedNetworkState {
         self.ovsdb.verify(&current.ovsdb)?;
         self.ovn.verify(&current.ovn)?;
         Ok(())
+    }
+}
+
+fn get_proper_verify_retry_count(merged_ifaces: &MergedInterfaces) -> usize {
+    match merged_ifaces.get_sriov_vf_count() {
+        0 => VERIFY_RETRY_COUNT_DEFAULT,
+        v if v >= 64 => VERIFY_RETRY_COUNT_SRIOV_MAX,
+        v if v <= 16 => VERIFY_RETRY_COUNT_SRIOV_MIN,
+        v => v as usize / 64 * VERIFY_RETRY_COUNT_SRIOV_MAX,
     }
 }
