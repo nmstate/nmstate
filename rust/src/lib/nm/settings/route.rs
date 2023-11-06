@@ -33,9 +33,7 @@ pub(crate) fn gen_nm_ip_routes(
         };
         nm_route.next_hop = route.next_hop_addr.as_ref().cloned();
         if let Some(weight) = route.weight {
-            if let Ok(w) = u32::try_from(weight) {
-                nm_route.weight = Some(w);
-            }
+            nm_route.weight = Some(weight as u32);
         }
         ret.push(nm_route);
     }
