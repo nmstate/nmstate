@@ -44,7 +44,9 @@ impl MergedRoutes {
         if let Some(cur_rts) = current.config.as_ref() {
             for cur_rt in cur_rts {
                 if let Some(via) = cur_rt.next_hop_iface.as_ref() {
-                    if ignored_ifaces.contains(&via.as_str()) {
+                    if ignored_ifaces.contains(&via.as_str())
+                        && cur_rt.route_type.is_none()
+                    {
                         continue;
                     }
                 }
@@ -76,6 +78,24 @@ impl MergedRoutes {
                             "Desired absent route {rt} still found \
                             after apply: {cur_rt}",
                         ),
+                    ));
+                }
+            } else if rt.route_type.is_some() {
+                // In nispor, the IPv4 route with route type `Blackhole`,
+                // `Unreachable`, `Prohibit` does not have the route oif
+                // setting.
+                let mut route_type_rt = rt.clone();
+                if !route_type_rt.is_ipv6() {
+                    route_type_rt.next_hop_iface = None;
+                }
+                if !cur_routes
+                    .as_slice()
+                    .iter()
+                    .any(|cur_rt| route_type_rt.is_match(cur_rt))
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::VerificationError,
+                        format!("Desired route {rt} not found after apply"),
                     ));
                 }
             } else if !cur_routes

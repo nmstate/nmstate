@@ -1,6 +1,6 @@
 use log::warn;
 
-use crate::{RouteEntry, Routes};
+use crate::{RouteEntry, RouteType, Routes};
 
 const SUPPORTED_ROUTE_SCOPE: [nispor::RouteScope; 2] =
     [nispor::RouteScope::Universe, nispor::RouteScope::Link];
@@ -26,7 +26,11 @@ const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 pub(crate) fn get_routes(running_config_only: bool) -> Routes {
     let mut ret = Routes::new();
     let mut np_routes: Vec<nispor::Route> = Vec::new();
-
+    let route_type = [
+        nispor::RouteType::BlackHole,
+        nispor::RouteType::Unreachable,
+        nispor::RouteType::Prohibit,
+    ];
     let protocols = if running_config_only {
         SUPPORTED_STATIC_ROUTE_PROTOCOL.as_slice()
     } else {
@@ -64,6 +68,8 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
                 for route in flat_multipath_route(np_route) {
                     running_routes.push(route);
                 }
+            } else if route_type.contains(&np_route.route_type) {
+                running_routes.push(np_routetype_to_nmstate(np_route));
             } else if np_route.oif.is_some() {
                 running_routes.push(np_route_to_nmstate(np_route));
             }
@@ -80,12 +86,58 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
             for route in flat_multipath_route(np_route) {
                 config_routes.push(route);
             }
+        } else if route_type.contains(&np_route.route_type) {
+            config_routes.push(np_routetype_to_nmstate(np_route));
         } else if np_route.oif.is_some() {
             config_routes.push(np_route_to_nmstate(np_route));
         }
     }
     ret.config = Some(config_routes);
     ret
+}
+
+fn np_routetype_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
+    let destination = match &np_route.dst {
+        Some(dst) => Some(dst.to_string()),
+        None => match np_route.address_family {
+            nispor::AddressFamily::IPv4 => {
+                Some(IPV4_DEFAULT_GATEWAY.to_string())
+            }
+            nispor::AddressFamily::IPv6 => {
+                Some(IPV6_DEFAULT_GATEWAY.to_string())
+            }
+            _ => {
+                warn!(
+                    "Route {:?} is holding unknown IP family {:?}",
+                    np_route, np_route.address_family
+                );
+                None
+            }
+        },
+    };
+
+    let mut route_entry = RouteEntry::new();
+    route_entry.destination = destination;
+    if np_route.address_family == nispor::AddressFamily::IPv6 {
+        route_entry.next_hop_iface = np_route.oif.as_ref().cloned();
+    }
+    route_entry.metric = np_route.metric.map(i64::from);
+    route_entry.table_id = Some(np_route.table);
+    match np_route.route_type {
+        nispor::RouteType::BlackHole => {
+            route_entry.route_type = Some(RouteType::Blackhole)
+        }
+        nispor::RouteType::Unreachable => {
+            route_entry.route_type = Some(RouteType::Unreachable)
+        }
+        nispor::RouteType::Prohibit => {
+            route_entry.route_type = Some(RouteType::Prohibit)
+        }
+        _ => {
+            log::debug!("Got unsupported route {:?}", np_route);
+        }
+    }
+    route_entry
 }
 
 fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {

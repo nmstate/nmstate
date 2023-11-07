@@ -30,7 +30,7 @@ def assert_routes(routes, state, nic="eth1"):
     routes.sort(key=_route_sort_key)
     config_routes = []
     for config_route in state[Route.KEY][Route.CONFIG]:
-        if config_route[Route.NEXT_HOP_INTERFACE] == nic:
+        if config_route.get(Route.NEXT_HOP_INTERFACE, None) == nic:
             config_routes.append(config_route)
 
     # The kernel routes contains more route entries than desired config

@@ -40,6 +40,10 @@ class Route:
     NEXT_HOP_ADDRESS = "next-hop-address"
     METRIC = "metric"
     WEIGHT = "weight"
+    ROUTETYPE = "route-type"
+    ROUTETYPE_BLACKHOLE = "blackhole"
+    ROUTETYPE_UNREACHABLE = "unreachable"
+    ROUTETYPE_PROHIBIT = "prohibit"
     USE_DEFAULT_METRIC = -1
     USE_DEFAULT_ROUTE_TABLE = 0
 

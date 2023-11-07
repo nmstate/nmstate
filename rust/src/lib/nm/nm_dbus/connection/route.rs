@@ -16,6 +16,7 @@ pub struct NmIpRoute {
     pub table: Option<u32>,
     pub metric: Option<u32>,
     pub weight: Option<u32>,
+    pub route_type: Option<String>,
     _other: DbusDictionary,
 }
 
@@ -35,6 +36,7 @@ impl TryFrom<DbusDictionary> for NmIpRoute {
             table: _from_map!(v, "table", u32::try_from)?,
             metric: _from_map!(v, "metric", u32::try_from)?,
             weight,
+            route_type: _from_map!(v, "type", String::try_from)?,
             _other: v,
         })
     }
@@ -82,7 +84,12 @@ impl NmIpRoute {
                 zvariant::Value::new(zvariant::Value::new(v)),
             )?;
         }
-
+        if let Some(v) = &self.route_type {
+            ret.append(
+                zvariant::Value::new("type"),
+                zvariant::Value::new(zvariant::Value::new(v)),
+            )?;
+        }
         for (key, value) in self._other.iter() {
             ret.append(
                 zvariant::Value::new(key.as_str()),
