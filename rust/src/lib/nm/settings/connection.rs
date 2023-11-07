@@ -22,6 +22,7 @@ use super::{
     user::gen_nm_user_setting,
     veth::create_veth_peer_profile_if_not_found,
     vlan::gen_nm_vlan_setting,
+    vpn::gen_nm_ipsec_vpn_setting,
     wired::gen_nm_wired_setting,
 };
 
@@ -45,6 +46,7 @@ pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
 pub(crate) const NM_SETTING_VXLAN_SETTING_NAME: &str = "vxlan";
 pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
 pub(crate) const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
+pub(crate) const NM_SETTING_VPN_SETTING_NAME: &str = "vpn";
 
 pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
     NM_SETTING_OVS_BRIDGE_SETTING_NAME,
@@ -251,6 +253,9 @@ pub(crate) fn iface_to_nm_connections(
         Interface::Loopback(iface) => {
             gen_nm_loopback_setting(iface, &mut nm_conn);
         }
+        Interface::Ipsec(iface) => {
+            gen_nm_ipsec_vpn_setting(iface, &mut nm_conn);
+        }
         _ => (),
     };
 
@@ -366,6 +371,7 @@ pub(crate) fn iface_type_to_nm(
             Ok(NM_SETTING_LOOPBACK_SETTING_NAME.to_string())
         }
         InterfaceType::MacSec => Ok(NM_SETTING_MACSEC_SETTING_NAME.to_string()),
+        InterfaceType::Ipsec => Ok(NM_SETTING_VPN_SETTING_NAME.to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,
@@ -421,7 +427,9 @@ pub(crate) fn gen_nm_conn_setting(
         new_nm_conn_set
     };
 
-    if iface.base_iface().identifier == InterfaceIdentifier::Name {
+    if iface.iface_type() != InterfaceType::Ipsec
+        && iface.base_iface().identifier == InterfaceIdentifier::Name
+    {
         nm_conn_set.iface_name = Some(iface.name().to_string());
     } else {
         nm_conn_set.iface_name = None;

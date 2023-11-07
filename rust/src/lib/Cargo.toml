@@ -10,7 +10,7 @@ repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
 categories = ["network-programming", "os::linux-apis"]
 rust-version = "1.58"
-edition = "2018"
+edition = "2021"
 
 [lib]
 path = "lib.rs"

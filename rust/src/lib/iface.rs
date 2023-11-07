@@ -7,10 +7,10 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
-    InfiniBandInterface, LinuxBridgeInterface, LoopbackInterface,
-    MacSecInterface, MacVlanInterface, MacVtapInterface, NmstateError,
-    OvsBridgeInterface, OvsInterface, VlanInterface, VrfInterface,
-    VxlanInterface,
+    InfiniBandInterface, IpsecInterface, LinuxBridgeInterface,
+    LoopbackInterface, MacSecInterface, MacVlanInterface, MacVtapInterface,
+    NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
+    VrfInterface, VxlanInterface,
 };
 
 use crate::state::merge_json_value;
@@ -67,6 +67,8 @@ pub enum InterfaceType {
     /// MACsec interface.
     /// Deserialize and serialize from/to 'macsec'
     MacSec,
+    /// Ipsec connection.
+    Ipsec,
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
@@ -98,6 +100,7 @@ impl From<&str> for InterfaceType {
             "infiniband" => InterfaceType::InfiniBand,
             "tun" => InterfaceType::Tun,
             "macsec" => InterfaceType::MacSec,
+            "ipsec" => InterfaceType::Ipsec,
             "unknown" => InterfaceType::Unknown,
             _ => InterfaceType::Other(s.to_string()),
         }
@@ -127,6 +130,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Unknown => "unknown",
                 InterfaceType::Tun => "tun",
                 InterfaceType::MacSec => "macsec",
+                InterfaceType::Ipsec => "ipsec",
                 InterfaceType::Other(ref s) => s,
             }
         )
@@ -156,7 +160,7 @@ impl<'de> Deserialize<'de> for InterfaceType {
 }
 
 impl InterfaceType {
-    const USERSPACE_IFACE_TYPES: [Self; 1] = [Self::OvsBridge];
+    const USERSPACE_IFACE_TYPES: [Self; 2] = [Self::OvsBridge, Self::Ipsec];
     const CONTROLLER_IFACES_TYPES: [Self; 4] =
         [Self::Bond, Self::LinuxBridge, Self::OvsBridge, Self::Vrf];
 
@@ -303,6 +307,8 @@ pub enum Interface {
     Loopback(LoopbackInterface),
     /// MACsec interface.
     MacSec(MacSecInterface),
+    /// Ipsec connection
+    Ipsec(IpsecInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -408,6 +414,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = MacSecInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::MacSec(inner))
+            }
+            Some(InterfaceType::Ipsec) => {
+                let inner = IpsecInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Ipsec(inner))
             }
             Some(iface_type) => {
                 log::warn!("Unsupported interface type {}", iface_type);
@@ -519,6 +530,11 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::MacSec(new_iface)
             }
+            Self::Ipsec(iface) => {
+                let mut new_iface = IpsecInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Ipsec(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -614,6 +630,7 @@ impl Interface {
             Self::InfiniBand(iface) => &iface.base,
             Self::Loopback(iface) => &iface.base,
             Self::MacSec(iface) => &iface.base,
+            Self::Ipsec(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -634,6 +651,7 @@ impl Interface {
             Self::InfiniBand(iface) => &mut iface.base,
             Self::Loopback(iface) => &mut iface.base,
             Self::MacSec(iface) => &mut iface.base,
+            Self::Ipsec(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }

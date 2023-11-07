@@ -9,7 +9,7 @@ documentation = "https://nmstate.io"
 repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
 categories = ["network-programming", "os::linux"]
-edition = "2018"
+edition = "2021"
 rust-version = "1.58"
 
 [[bin]]

@@ -48,6 +48,10 @@ pub(crate) fn nispor_retrieve(
         if np_iface.name == "ovs-netdev" {
             continue;
         }
+        // The vti interface is reserved for Ipsec
+        if np_iface.iface_type == nispor::IfaceType::Other("Vti".into()) {
+            continue;
+        }
 
         let base_iface = np_iface_to_base_iface(np_iface, running_config_only);
         let iface = match &base_iface.iface_type {

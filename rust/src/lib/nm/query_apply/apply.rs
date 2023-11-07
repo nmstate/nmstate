@@ -22,6 +22,7 @@ use super::super::{
         is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
         is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
         is_vxlan_changed, save_nm_profiles,
+        vpn::get_match_ipsec_nm_conn,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -206,6 +207,17 @@ fn delete_ifaces(
         .filter(|i| i.is_changed() && i.merged.is_absent())
     {
         let iface = &merged_iface.merged;
+
+        if iface.iface_type() == InterfaceType::Ipsec {
+            for nm_conn in get_match_ipsec_nm_conn(iface.name(), &all_nm_conns)
+            {
+                if let Some(uuid) = nm_conn.uuid() {
+                    uuids_to_delete.insert(uuid);
+                }
+            }
+            continue;
+        }
+
         // If interface type not mentioned, we delete all profile with interface
         // name
         let mut nm_conns_to_delete: Vec<&NmConnection> =

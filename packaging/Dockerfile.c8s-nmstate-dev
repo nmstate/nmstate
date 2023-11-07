@@ -20,7 +20,8 @@ RUN dnf update -y && \
                    rust-toolset \
                    NetworkManager \
                    NetworkManager-ovs \
-                   NetworkManager-team \
+                   libreswan \
+                   NetworkManager-libreswan \
                    NetworkManager-config-server \
                    openvswitch2.11 \
                    systemd-udev \
@@ -46,14 +47,13 @@ RUN dnf update -y && \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
-    dnf clean all && \
-    systemctl enable openvswitch
+    dnf clean all
 
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf
 COPY network_manager_keyfile.conf \
      /etc/NetworkManager/conf.d/96-keyfile.conf
 
-RUN systemctl enable dbus systemd-udevd NetworkManager
+RUN systemctl enable dbus systemd-udevd NetworkManager ipsec openvswitch
 
 CMD ["/usr/sbin/init"]

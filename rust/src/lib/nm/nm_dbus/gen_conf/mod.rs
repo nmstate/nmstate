@@ -16,6 +16,7 @@ mod sriov;
 mod user;
 mod veth;
 mod vlan;
+mod vpn;
 mod vrf;
 mod vxlan;
 mod wired;

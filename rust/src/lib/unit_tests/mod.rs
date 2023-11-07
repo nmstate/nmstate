@@ -21,6 +21,8 @@ mod infiniband;
 #[cfg(test)]
 mod ip;
 #[cfg(test)]
+mod ipsec;
+#[cfg(test)]
 mod lldp;
 #[cfg(test)]
 mod mac_vlan;

@@ -1,0 +1,88 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            de:42:a3:47:7a:aa:d4:f3:d4:78:6a:76:d6:80:34:f4
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=nmstate-test-ca.example.org
+        Validity
+            Not Before: Jul  6 06:18:30 2023 GMT
+            Not After : Jun 12 06:18:30 2123 GMT
+        Subject: CN=hostb.example.org
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:b3:50:6d:aa:ce:68:94:f4:aa:96:ae:e2:96:bb:
+                    d4:07:d7:6e:3a:21:83:7e:2e:86:50:7f:ab:0d:19:
+                    1c:c5:76:6a:6b:d2:db:b5:52:aa:97:5f:07:ed:e9:
+                    6d:0c:79:77:e1:05:05:57:d2:cd:32:ab:c1:29:6d:
+                    13:25:1f:f4:3b:57:d6:14:1d:a6:62:aa:4a:34:10:
+                    97:17:0a:a4:83:35:a3:e8:c3:50:e3:f4:a4:f9:dd:
+                    14:5c:d2:4e:ed:83:10:b2:2a:3d:90:ba:ed:d3:78:
+                    7f:a2:cf:69:7f:45:8d:01:86:b7:6a:da:a1:19:8c:
+                    07:4b:c9:11:32:2f:7e:39:b5:ac:92:07:1b:c3:dd:
+                    db:01:32:c6:75:38:cb:b7:90:21:9c:2a:9b:90:f9:
+                    11:14:99:28:7d:36:83:d4:db:04:01:5a:3e:b9:11:
+                    f4:83:8d:69:73:eb:d8:96:ab:6b:f2:6a:c9:87:99:
+                    89:4b:3e:17:bf:4e:87:d0:e1:c8:eb:bf:8c:61:c4:
+                    d4:9e:f3:26:df:22:8c:53:b9:ce:48:ba:14:0f:f5:
+                    d2:1d:02:b6:e3:e7:03:1d:dc:01:6e:5a:08:00:71:
+                    10:d1:11:18:f1:08:90:e5:15:e6:06:8e:d8:4e:97:
+                    ef:da:9c:6c:e9:54:ad:a4:89:24:fd:fa:f7:09:42:
+                    ca:21
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Subject Key Identifier: 
+                AC:31:6B:E0:23:4C:94:D8:47:12:14:A3:40:E1:65:12:C4:60:FD:7A
+            X509v3 Authority Key Identifier: 
+                keyid:8F:6C:FA:6D:FF:43:5B:51:E3:E1:A4:12:99:45:7D:FF:FA:C1:75:32
+                DirName:/CN=nmstate-test-ca.example.org
+                serial:6E:82:40:7E:22:29:50:E1:53:BD:4E:A7:05:88:62:94:E8:C6:06:E1
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Key Usage: 
+                Digital Signature, Key Encipherment
+            X509v3 Subject Alternative Name: 
+                DNS:hostb.example.org
+    Signature Algorithm: sha256WithRSAEncryption
+    Signature Value:
+        59:18:e3:79:9e:6b:da:c7:be:44:ce:84:18:1d:7e:cf:c5:1e:
+        ea:41:30:69:63:9f:af:84:ef:7d:a7:4f:cb:f3:6a:cf:4f:da:
+        5d:58:02:40:49:e6:56:b2:2c:4a:b2:e6:f9:ed:09:d7:b4:11:
+        f7:b8:1c:40:35:46:ac:a3:e7:9b:fa:22:44:57:4f:a5:7d:52:
+        6e:8a:4c:f0:0b:2b:16:22:74:82:0d:d8:09:dd:06:d5:15:97:
+        b6:4e:0e:35:48:96:62:0c:3b:db:cb:9d:56:01:a3:9a:37:b2:
+        10:81:bd:d5:74:10:44:e2:ff:ba:43:67:43:42:a2:23:1a:49:
+        29:cf:af:05:9d:dc:9a:11:2f:46:ce:b0:77:d3:42:39:5e:b2:
+        1e:b4:57:f0:a9:75:e1:7f:8b:52:c4:e6:24:b7:33:71:f2:59:
+        66:5c:7c:1c:38:60:17:9a:29:22:01:9f:45:b7:8a:17:f1:97:
+        b9:8f:5b:75:4e:db:d3:0d:3c:b1:1b:2d:3e:b0:ce:23:d1:df:
+        39:87:91:d3:89:da:ea:64:c4:96:94:fa:65:55:cf:b0:33:15:
+        00:1b:ed:f6:6e:12:a3:64:d3:ef:86:45:c9:31:3a:81:20:c1:
+        cf:96:d5:c6:26:36:f8:e9:dd:c1:0b:e6:ee:d0:f6:9b:a1:47:
+        ac:f1:80:ee
+-----BEGIN CERTIFICATE-----
+MIIDoDCCAoigAwIBAgIRAN5Co0d6qtTz1HhqdtaANPQwDQYJKoZIhvcNAQELBQAw
+JjEkMCIGA1UEAwwbbm1zdGF0ZS10ZXN0LWNhLmV4YW1wbGUub3JnMCAXDTIzMDcw
+NjA2MTgzMFoYDzIxMjMwNjEyMDYxODMwWjAcMRowGAYDVQQDDBFob3N0Yi5leGFt
+cGxlLm9yZzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALNQbarOaJT0
+qpau4pa71AfXbjohg34uhlB/qw0ZHMV2amvS27VSqpdfB+3pbQx5d+EFBVfSzTKr
+wSltEyUf9DtX1hQdpmKqSjQQlxcKpIM1o+jDUOP0pPndFFzSTu2DELIqPZC67dN4
+f6LPaX9FjQGGt2raoRmMB0vJETIvfjm1rJIHG8Pd2wEyxnU4y7eQIZwqm5D5ERSZ
+KH02g9TbBAFaPrkR9IONaXPr2Jara/JqyYeZiUs+F79Oh9DhyOu/jGHE1J7zJt8i
+jFO5zki6FA/10h0CtuPnAx3cAW5aCABxENERGPEIkOUV5gaO2E6X79qcbOlUraSJ
+JP369wlCyiECAwEAAaOB0DCBzTAJBgNVHRMEAjAAMB0GA1UdDgQWBBSsMWvgI0yU
+2EcSFKNA4WUSxGD9ejBhBgNVHSMEWjBYgBSPbPpt/0NbUePhpBKZRX3/+sF1MqEq
+pCgwJjEkMCIGA1UEAwwbbm1zdGF0ZS10ZXN0LWNhLmV4YW1wbGUub3JnghRugkB+
+IilQ4VO9TqcFiGKU6MYG4TATBgNVHSUEDDAKBggrBgEFBQcDATALBgNVHQ8EBAMC
+BaAwHAYDVR0RBBUwE4IRaG9zdGIuZXhhbXBsZS5vcmcwDQYJKoZIhvcNAQELBQAD
+ggEBAFkY43mea9rHvkTOhBgdfs/FHupBMGljn6+E732nT8vzas9P2l1YAkBJ5lay
+LEqy5vntCde0Efe4HEA1Rqyj55v6IkRXT6V9Um6KTPALKxYidIIN2AndBtUVl7ZO
+DjVIlmIMO9vLnVYBo5o3shCBvdV0EETi/7pDZ0NCoiMaSSnPrwWd3JoRL0bOsHfT
+Qjlesh60V/CpdeF/i1LE5iS3M3HyWWZcfBw4YBeaKSIBn0W3ihfxl7mPW3VO29MN
+PLEbLT6wziPR3zmHkdOJ2upkxJaU+mVVz7AzFQAb7fZuEqNk0++GRckxOoEgwc+W
+1cYmNvjp3cEL5u7Q9puhR6zxgO4=
+-----END CERTIFICATE-----

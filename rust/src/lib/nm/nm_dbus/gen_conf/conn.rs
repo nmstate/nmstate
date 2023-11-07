@@ -88,6 +88,12 @@ impl NmConnection {
         if let Some(ovs_other_cfgs) = &self.ovs_other_config {
             sections.push(("ovs-other-config", ovs_other_cfgs.to_keyfile()?));
         }
+        if let Some(vpn_cfg) = &self.vpn {
+            sections.push(("vpn", vpn_cfg.to_keyfile()?));
+            if let Some(s) = vpn_cfg.secrets_to_keyfile() {
+                sections.push(("vpn-secrets", s));
+            }
+        }
 
         keyfile_sections_to_string(&sections)
     }

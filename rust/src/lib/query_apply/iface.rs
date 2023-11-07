@@ -217,13 +217,24 @@ impl Interface {
                     );
                 }
             }
+            Self::Ipsec(iface) => {
+                if let Self::Ipsec(other_iface) = other {
+                    iface.update_ipsec(other_iface);
+                } else {
+                    log::warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface,
+                        other
+                    );
+                }
+            }
             _ => (),
         }
     }
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 15] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 16] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -239,5 +250,6 @@ impl InterfaceType {
         InterfaceType::Loopback,
         InterfaceType::MacSec,
         InterfaceType::Vrf,
+        InterfaceType::Ipsec,
     ];
 }
