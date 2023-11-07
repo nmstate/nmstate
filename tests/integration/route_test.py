@@ -141,6 +141,175 @@ def test_add_static_route_without_next_hop_address(eth1_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 42,
+    reason="Loopback is only support on NM 1.42+, and blackhole type route "
+    "is stored in loopback",
+)
+def test_add_static_route_with_route_type(eth1_up):
+    route = [
+        {
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_INTERFACE: "lo",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+        },
+        {
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.ROUTETYPE: Route.ROUTETYPE_UNREACHABLE,
+        },
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.ROUTETYPE: Route.ROUTETYPE_PROHIBIT,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: route},
+        }
+    )
+    routes_output4 = _get_routes_from_iproute(4, "main")
+    routes_output6 = _get_routes_from_iproute(6, "main")
+    assert IPV4_TEST_NET1 in routes_output4
+    assert Route.ROUTETYPE_BLACKHOLE in routes_output4
+    assert "198.51.100.0/24" in routes_output4
+    assert Route.ROUTETYPE_PROHIBIT in routes_output4
+    assert IPV6_TEST_NET1 in routes_output6
+    assert Route.ROUTETYPE_UNREACHABLE in routes_output6
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 42,
+    reason="Loopback is only support on NM 1.42+, and blackhole type route "
+    "is stored in loopback",
+)
+def test_add_static_route_and_apply_route_absent(eth1_up):
+    routes = [
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+        },
+        {
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+        },
+        {
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_ADDRESS: "2001:db8:1::b",
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    absent_route = routes[0]
+    absent_route[Route.STATE] = Route.STATE_ABSENT
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: [absent_route]},
+        }
+    )
+    remaining_routes = routes[1:]
+    cur_state = libnmstate.show()
+    assert_routes(remaining_routes, cur_state)
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 42,
+    reason="Loopback is only support on NM 1.42+, and blackhole type route "
+    "is stored in loopback",
+)
+def test_add_static_Ipv4_route_with_route_type(eth1_up):
+    routes = [
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.NEXT_HOP_INTERFACE: "lo",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    current_routes = cur_state[Route.KEY][Route.CONFIG]
+    for route in current_routes:
+        if route.get(Route.ROUTETYPE, None) == Route.ROUTETYPE_BLACKHOLE:
+            assert route.get(Route.NEXT_HOP_INTERFACE, None) is None
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 42,
+    reason="Loopback is only support on NM 1.42+, and blackhole type route "
+    "is stored in loopback",
+)
+def test_route_type_with_next_hop_interface(eth1_up):
+    route = [
+        {
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+        },
+    ]
+    state = {
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {Route.CONFIG: route},
+    }
+
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(state)
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 42,
+    reason="Loopback is only support on NM 1.42+, and blackhole type route "
+    "is stored in loopback",
+)
+def test_apply_route_with_route_type_multiple_times(eth1_up):
+    routes = [
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+        },
+        {
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.ROUTETYPE: Route.ROUTETYPE_UNREACHABLE,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    _, routes_out_v4, _ = cmdlib.exec_cmd(
+        "nmcli -g ipv4.routes con show lo".split(), check=True
+    )
+    _, routes_out_v6, _ = cmdlib.exec_cmd(
+        "nmcli -g ipv6.routes con show lo".split(), check=True
+    )
+    assert routes_out_v4.count("blackhole") == 1
+    assert routes_out_v6.count("unreachable") == 1
+
+
+@pytest.mark.tier1
 def test_add_gateway(eth1_up):
     routes = [_get_ipv4_gateways()[0], _get_ipv6_test_routes()[0]]
     libnmstate.apply(

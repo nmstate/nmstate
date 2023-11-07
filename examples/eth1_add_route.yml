@@ -17,3 +17,5 @@ routes:
       next-hop-address: 192.0.2.1
       next-hop-interface: eth1
       table-id: 254
+    - destination: 198.51.200.0/24
+      route-type: blackhole

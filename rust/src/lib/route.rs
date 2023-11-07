@@ -11,6 +11,9 @@ use crate::{
     ErrorKind, InterfaceType, MergedInterfaces, NmstateError,
 };
 
+const DEFAULT_TABLE_ID: u32 = 254; // main route table ID
+const LOOPBACK_IFACE_NAME: &str = "lo";
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
@@ -64,17 +67,45 @@ impl Routes {
     }
 
     pub fn validate(&self) -> Result<(), NmstateError> {
-        // All desire non-absent route should have next hop interface
+        // All desire non-absent route should have next hop interface except
+        // for route with route type `Blackhole`, `Unreachable`, `Prohibit`.
         if let Some(config_routes) = self.config.as_ref() {
             for route in config_routes.iter() {
-                if !route.is_absent() && route.next_hop_iface.is_none() {
-                    return Err(NmstateError::new(
-                        ErrorKind::NotImplementedError,
-                        format!(
-                            "Route with empty next hop interface \
+                let no_nexthop_route_type = [
+                    RouteType::Blackhole,
+                    RouteType::Unreachable,
+                    RouteType::Prohibit,
+                ];
+                if !route.is_absent() {
+                    if route.route_type.is_some()
+                        && no_nexthop_route_type
+                            .contains(&route.route_type.unwrap())
+                        && (route.next_hop_iface.is_some()
+                            && route.next_hop_iface
+                                != Some(LOOPBACK_IFACE_NAME.to_string())
+                            || route.next_hop_addr.is_some())
+                    {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "A {:?} Route cannot have a next \
+                                hop : {route:?}",
+                                route.route_type.unwrap()
+                            ),
+                        ));
+                    } else if route.next_hop_iface.is_none()
+                        && (route.route_type.is_none()
+                            || !no_nexthop_route_type
+                                .contains(&route.route_type.unwrap()))
+                    {
+                        return Err(NmstateError::new(
+                            ErrorKind::NotImplementedError,
+                            format!(
+                                "Route with empty next hop interface \
                             is not supported: {route:?}"
-                        ),
-                    ));
+                            ),
+                        ));
+                    }
                 }
                 if let Some(dst) = route.destination.as_deref() {
                     validate_route_dst(dst)?;
@@ -118,7 +149,8 @@ pub struct RouteEntry {
     )]
     /// Route next hop interface name.
     /// Serialize and deserialize to/from `next-hop-interface`.
-    /// Mandatory for every non-absent routes.
+    /// Mandatory for every non-absent routes except for route with
+    /// route type `Blackhole`, `Unreachable`, `Prohibit`.
     pub next_hop_iface: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -154,6 +186,48 @@ pub struct RouteEntry {
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
     pub weight: Option<u16>,
+    /// Route type
+    /// Serialize and deserialize to/from `route-type`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub route_type: Option<RouteType>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+#[serde(deny_unknown_fields)]
+pub enum RouteType {
+    Blackhole,
+    Unreachable,
+    Prohibit,
+}
+
+impl std::fmt::Display for RouteType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Blackhole => "blackhole",
+                Self::Unreachable => "unreachable",
+                Self::Prohibit => "prohibit",
+            }
+        )
+    }
+}
+
+const RTN_BLACKHOLE: u8 = 6;
+const RTN_UNREACHABLE: u8 = 7;
+const RTN_PROHIBIT: u8 = 8;
+
+impl From<RouteType> for u8 {
+    fn from(v: RouteType) -> u8 {
+        match v {
+            RouteType::Blackhole => RTN_BLACKHOLE,
+            RouteType::Unreachable => RTN_UNREACHABLE,
+            RouteType::Prohibit => RTN_PROHIBIT,
+        }
+    }
 }
 
 impl RouteEntry {
@@ -195,6 +269,9 @@ impl RouteEntry {
         if self.weight.is_some() && self.weight != other.weight {
             return false;
         }
+        if self.route_type.is_some() && self.route_type != other.route_type {
+            return false;
+        }
         true
     }
 
@@ -208,8 +285,10 @@ impl RouteEntry {
                 .as_ref()
                 .map(|d| is_ipv6_addr(d.as_str()))
                 .unwrap_or_default(),
-            self.table_id.unwrap_or(RouteEntry::USE_DEFAULT_ROUTE_TABLE),
-            self.next_hop_iface.as_deref().unwrap_or(""),
+            self.table_id.unwrap_or(DEFAULT_TABLE_ID),
+            self.next_hop_iface
+                .as_deref()
+                .unwrap_or(LOOPBACK_IFACE_NAME),
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
             self.weight.unwrap_or_default(),
@@ -411,6 +490,8 @@ impl MergedRoutes {
                     ));
                 }
                 changed_ifaces.insert(via.as_str());
+            } else if rt.route_type.is_some() {
+                changed_ifaces.insert(LOOPBACK_IFACE_NAME);
             }
         }
 
@@ -423,6 +504,8 @@ impl MergedRoutes {
                     if absent_rt.is_match(rt) {
                         if let Some(via) = rt.next_hop_iface.as_ref() {
                             changed_ifaces.insert(via.as_str());
+                        } else {
+                            changed_ifaces.insert(LOOPBACK_IFACE_NAME);
                         }
                     }
                 }
@@ -475,6 +558,13 @@ impl MergedRoutes {
             if let Some(via) = rt.next_hop_iface.as_ref() {
                 let rts: &mut Vec<RouteEntry> =
                     match indexed.entry(via.to_string()) {
+                        Entry::Occupied(o) => o.into_mut(),
+                        Entry::Vacant(v) => v.insert(Vec::new()),
+                    };
+                rts.push(rt);
+            } else if rt.route_type.is_some() {
+                let rts: &mut Vec<RouteEntry> =
+                    match indexed.entry(LOOPBACK_IFACE_NAME.to_string()) {
                         Entry::Occupied(o) => o.into_mut(),
                         Entry::Vacant(v) => v.insert(Vec::new()),
                     };

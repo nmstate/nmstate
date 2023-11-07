@@ -177,7 +177,7 @@ pub use crate::policy::{
     NetworkCaptureRules, NetworkPolicy, NetworkStateTemplate,
 };
 pub(crate) use crate::route::MergedRoutes;
-pub use crate::route::{RouteEntry, RouteState, Routes};
+pub use crate::route::{RouteEntry, RouteState, RouteType, Routes};
 pub(crate) use crate::route_rule::MergedRouteRules;
 pub use crate::route_rule::{
     RouteRuleAction, RouteRuleEntry, RouteRuleState, RouteRules,

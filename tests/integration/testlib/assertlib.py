@@ -141,7 +141,7 @@ def assert_no_config_route_to_iface(iface_name):
     assert not any(
         route
         for route in current_state[Route.KEY][Route.CONFIG]
-        if route[Route.NEXT_HOP_INTERFACE] == iface_name
+        if route.get(Route.NEXT_HOP_INTERFACE, None) == iface_name
     )
 
 

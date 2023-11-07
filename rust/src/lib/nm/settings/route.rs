@@ -4,7 +4,9 @@ use std::convert::TryFrom;
 
 use super::super::nm_dbus::NmIpRoute;
 
-use crate::{ip::is_ipv6_addr, InterfaceIpAddr, NmstateError, RouteEntry};
+use crate::{
+    ip::is_ipv6_addr, InterfaceIpAddr, NmstateError, RouteEntry, RouteType,
+};
 
 pub(crate) fn gen_nm_ip_routes(
     routes: &[RouteEntry],
@@ -35,6 +37,12 @@ pub(crate) fn gen_nm_ip_routes(
         if let Some(weight) = route.weight {
             nm_route.weight = Some(weight as u32);
         }
+        nm_route.route_type = match route.route_type {
+            Some(RouteType::Blackhole) => Some("blackhole".to_string()),
+            Some(RouteType::Prohibit) => Some("prohibit".to_string()),
+            Some(RouteType::Unreachable) => Some("unreachable".to_string()),
+            None => None,
+        };
         ret.push(nm_route);
     }
     Ok(ret)

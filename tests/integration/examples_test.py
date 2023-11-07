@@ -115,6 +115,11 @@ def test_dns_edit(eth1_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 42,
+    reason="Loopback is only support on NM 1.42+, and blackhole type route "
+    "is stored in loopback",
+)
 def test_add_remove_routes(eth1_up):
     """
     Test adding a strict route and removing all routes next hop to eth1.

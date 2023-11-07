@@ -26,6 +26,9 @@ impl NmIpRoute {
             if let Some(weight) = self.weight {
                 write!(opt_string, ",weight={}", weight).ok();
             }
+            if let Some(route_type) = self.route_type.as_ref() {
+                write!(opt_string, ",type={}", route_type).ok();
+            }
             ret.insert("options".to_string(), opt_string);
         }
         ret
