@@ -14,6 +14,8 @@ RUN dnf update -y && \
         tcpreplay wpa_supplicant hostapd libndp procps-ng dpdk nispor \
         python3-gobject-base && dnf clean all
 
+RUN go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
+
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf
 COPY network_manager_keyfile.conf \
