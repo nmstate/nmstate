@@ -193,6 +193,7 @@ function upgrade_nm_from_copr {
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd "dnf install --assumeyes NetworkManager NetworkManager-ovs  \
         --disablerepo '*' --enablerepo '${copr_repo_id}'"
+    exec_cmd "dnf install --assumeyes NetworkManager-libreswan"
 }
 
 function upgrade_nm_from_rpm_dir {

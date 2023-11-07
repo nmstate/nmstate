@@ -17,7 +17,7 @@ use super::{
         is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
         nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
         ovs::merge_ovs_netdev_tun_iface, query_nmstate_wait_ip,
-        retrieve_dns_info,
+        retrieve_dns_info, vpn::get_supported_vpn_ifaces,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_OVS_IFACE_SETTING_NAME,
@@ -77,6 +77,10 @@ pub(crate) fn nm_retrieve(
                     && n.iface_type == NM_SETTING_OVS_IFACE_SETTING_NAME
             })
         {
+            continue;
+        }
+        if nm_dev.name.as_str() == "ip_vti0" {
+            log::debug!("Skipping libreswan ip_vti0 interface");
             continue;
         }
         match nm_dev.state {
@@ -170,6 +174,10 @@ pub(crate) fn nm_retrieve(
             }
         }
     }
+    for iface in get_supported_vpn_ifaces(&nm_saved_conn_uuid_index, &nm_acs)? {
+        net_state.append_interface_data(iface);
+    }
+
     for iface in net_state
         .interfaces
         .kernel_ifaces
@@ -218,13 +226,20 @@ pub(crate) fn nm_retrieve(
     Ok(net_state)
 }
 
+// When nm_dev is None, this function will not set interface type.
 pub(crate) fn nm_conn_to_base_iface(
-    nm_dev: &NmDevice,
+    nm_dev: Option<&NmDevice>,
     nm_conn: &NmConnection,
     nm_saved_conn: Option<&NmConnection>,
     lldp_neighbors: Option<Vec<NmLldpNeighbor>>,
 ) -> Option<BaseInterface> {
-    if let Some(iface_name) = nm_conn.iface_name() {
+    if let Some(iface_name) = nm_conn.iface_name().or_else(|| {
+        if nm_conn.iface_type() == Some("vpn") {
+            nm_conn.id()
+        } else {
+            None
+        }
+    }) {
         let ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
         let ipv6 = nm_conn
             .ipv6
@@ -246,7 +261,11 @@ pub(crate) fn nm_conn_to_base_iface(
             "profile_name",
         ];
         base_iface.state = InterfaceState::Up;
-        base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
+        base_iface.iface_type = if let Some(nm_dev) = nm_dev {
+            nm_dev_iface_type_to_nmstate(nm_dev)
+        } else {
+            InterfaceType::Unknown
+        };
         if base_iface.iface_type.is_userspace() {
             // Only override iface type for user space. For other interface,
             // we trust nispor to set the correct interface type.
@@ -284,9 +303,12 @@ fn iface_get(
     nm_saved_conn: Option<&NmConnection>,
     lldp_neighbors: Option<Vec<NmLldpNeighbor>>,
 ) -> Option<Interface> {
-    if let Some(base_iface) =
-        nm_conn_to_base_iface(nm_dev, nm_conn, nm_saved_conn, lldp_neighbors)
-    {
+    if let Some(base_iface) = nm_conn_to_base_iface(
+        Some(nm_dev),
+        nm_conn,
+        nm_saved_conn,
+        lldp_neighbors,
+    ) {
         let iface = match &base_iface.iface_type {
             InterfaceType::LinuxBridge => Interface::LinuxBridge({
                 let mut iface = LinuxBridgeInterface::new();

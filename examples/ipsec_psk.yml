@@ -1,0 +1,14 @@
+---
+interfaces:
+  - name: hosta_conn
+    type: ipsec
+    ipv4:
+      enabled: true
+      dhcp: true
+    libreswan:
+      right: 192.0.2.252
+      rightid: 'srv-id.example.org'
+      left: 192.0.2.251
+      leftid: 'cli-id.example.org'
+      psk: "psk_password"
+      ikev2: insist

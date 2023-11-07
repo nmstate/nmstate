@@ -14,6 +14,7 @@ mod route;
 mod user;
 mod veth;
 mod vlan;
+pub(crate) mod vpn;
 mod vrf;
 mod vxlan;
 

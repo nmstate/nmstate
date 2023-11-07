@@ -27,6 +27,7 @@ use super::super::{
     connection::user::NmSettingUser,
     connection::veth::NmSettingVeth,
     connection::vlan::NmSettingVlan,
+    connection::vpn::NmSettingVpn,
     connection::vrf::NmSettingVrf,
     connection::vxlan::NmSettingVxlan,
     connection::wired::NmSettingWired,
@@ -105,6 +106,7 @@ pub struct NmConnection {
     pub infiniband: Option<NmSettingInfiniBand>,
     pub loopback: Option<NmSettingLoopback>,
     pub macsec: Option<NmSettingMacSec>,
+    pub vpn: Option<NmSettingVpn>,
     #[serde(skip)]
     pub obj_path: String,
     #[serde(skip)]
@@ -181,6 +183,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
                 NmSettingInfiniBand::try_from
             )?,
             loopback: _from_map!(v, "loopback", NmSettingLoopback::try_from)?,
+            vpn: _from_map!(v, "vpn", NmSettingVpn::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -291,6 +294,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.bond_port {
             ret.insert("bond-port", v.to_value()?);
+        }
+        if let Some(v) = &self.vpn {
+            ret.insert("vpn", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =
@@ -467,6 +473,15 @@ pub(crate) fn nm_con_get_from_obj_path(
         {
             if let Some(nm_secret) = nm_secrets.get("macsec") {
                 macsec_conf.fill_secrets(nm_secret);
+            }
+        }
+    }
+    if let Some(vpn_conf) = nm_conn.vpn.as_mut() {
+        if let Ok(nm_secrets) =
+            proxy.call::<&str, NmConnectionDbusOwnedValue>("GetSecrets", &"vpn")
+        {
+            if let Some(nm_secret) = nm_secrets.get("vpn") {
+                vpn_conf.fill_secrets(nm_secret);
             }
         }
     }

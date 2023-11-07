@@ -1,0 +1,14 @@
+---
+interfaces:
+  - name: hosta_conn
+    type: ipsec
+    ipv4:
+      enabled: true
+      dhcp: true
+    libreswan:
+      left: 192.0.2.251
+      leftid: '%fromcert'
+      leftcert: hosta.example.org
+      right: 192.0.2.252
+      rightid: 'hostb.example.org'
+      ikev2: insist

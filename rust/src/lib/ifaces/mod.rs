@@ -5,6 +5,7 @@ mod dummy;
 mod ethernet;
 mod ethtool;
 pub(crate) mod inter_ifaces;
+mod ipsec;
 mod loopback;
 mod vrf;
 mod vxlan;
@@ -40,6 +41,7 @@ pub use ethtool::{
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
 pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;
+pub use ipsec::{IpsecInterface, LibreswanConfig};
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
     LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,

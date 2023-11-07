@@ -113,6 +113,7 @@ class InterfaceType:
     VETH = "veth"
     OTHER = "other"
     LOOPBACK = "loopback"
+    IPSEC = "ipsec"
 
     VIRT_TYPES = (
         BOND,
@@ -125,6 +126,7 @@ class InterfaceType:
         VETH,
         VLAN,
         VXLAN,
+        IPSEC,
     )
 
 
