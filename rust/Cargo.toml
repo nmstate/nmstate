@@ -4,3 +4,9 @@ members = [
     "src/clib",
     "src/lib",
 ]
+
+[workspace.metadata.vendor-filter]
+# For now we only care about tier 1+2 Linux
+platforms = ["*-unknown-linux-gnu"]
+tier = "2"
+all-features = true
