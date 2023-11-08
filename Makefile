@@ -148,9 +148,9 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	mv $(TMPDIR)/$(TARBALL) ./
 	if [ $(RELEASE) == 1 ];then \
 		cd rust; \
-		cargo vendor-filterer \
-			--platform x86_64-unknown-linux-gnu \
-			--platform s390x-unknown-linux-gnu $(TMPDIR)/vendor; \
+		cargo vendor-filterer $(TMPDIR)/vendor || \
+		(echo -en "\nNot cargo-vendor-filterer, Please install via "; \
+		 echo -e "'cargo install cargo-vendor-filterer'\n";); \
 		cd $(TMPDIR); \
 		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
 	fi
