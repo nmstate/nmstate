@@ -9,8 +9,8 @@ use super::{
 use crate::nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 use crate::{
     BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
-    InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, NmstateError, RouteEntry,
-    WaitIp,
+    InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode,
+    NmstateError, RouteEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -33,12 +33,20 @@ fn gen_nm_ipv4_setting(
         Some(i) => i,
     };
 
+    let nmstate_ip_addrs: Vec<InterfaceIpAddr> = iface_ip
+        .addresses
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .filter(|i| !i.is_auto())
+        .cloned()
+        .collect();
+
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
         if iface_ip.dhcp == Some(true) {
             NmSettingIpMethod::Auto
-        } else if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
-        {
+        } else if !nmstate_ip_addrs.is_empty() {
             NmSettingIpMethod::Manual
         } else {
             NmSettingIpMethod::Disabled
@@ -46,10 +54,8 @@ fn gen_nm_ipv4_setting(
     } else {
         NmSettingIpMethod::Disabled
     };
-    if let Some(addrs) = iface_ip.addresses.as_ref() {
-        for ip_addr in addrs {
-            addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
-        }
+    for ip_addr in nmstate_ip_addrs {
+        addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
     }
     let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
@@ -132,6 +138,14 @@ fn gen_nm_ipv6_setting(
         }
         Some(i) => i,
     };
+    let nmstate_ip_addrs: Vec<InterfaceIpAddr> = iface_ip
+        .addresses
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .filter(|i| !i.is_auto())
+        .cloned()
+        .collect();
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
         match (
@@ -147,8 +161,7 @@ fn gen_nm_ipv6_setting(
                 ))
             }
             (false, false) => {
-                if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
-                {
+                if !nmstate_ip_addrs.is_empty() {
                     NmSettingIpMethod::Manual
                 } else {
                     NmSettingIpMethod::LinkLocal
@@ -158,10 +171,8 @@ fn gen_nm_ipv6_setting(
     } else {
         NmSettingIpMethod::Disabled
     };
-    if let Some(addrs) = iface_ip.addresses.as_deref() {
-        for ip_addr in addrs {
-            addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
-        }
+    for ip_addr in nmstate_ip_addrs {
+        addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
     }
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
