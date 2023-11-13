@@ -1295,3 +1295,17 @@ def test_controller_detach_from_linux_bridge(bridge0_with_port0):
         )
         == 0
     )
+
+
+def test_linux_bridge_deprecated_prop(eth1_up, eth2_up):
+    bridge_state = _create_bridge_subtree_config(("eth1", "eth2"))
+    with linux_bridge(TEST_BRIDGE0, bridge_state, create=False) as state:
+        original_state = deepcopy(state)
+
+        state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]["slaves"] = state[
+            Interface.KEY
+        ][0][LinuxBridge.CONFIG_SUBTREE].pop(LinuxBridge.PORT_SUBTREE)
+
+        libnmstate.apply(state)
+
+        assertlib.assert_state_match(original_state)

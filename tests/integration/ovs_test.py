@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 from contextlib import contextmanager
+from copy import deepcopy
 import os
 import pytest
 import yaml
@@ -2220,3 +2221,18 @@ def test_raise_error_on_unknown_ovsdb_global_section():
 def remove_ovn_state_present(state):
     for ovn_map in state.get(Ovn.BRIDGE_MAPPINGS, []):
         ovn_map.pop(Ovn.BridgeMappings.STATE, None)
+
+
+def test_ovs_bridge_deprecated_prop(eth1_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port("eth1")
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    original_state = deepcopy(bridge.state)
+    bridge.bridge_iface[OVSBridge.CONFIG_SUBTREE][
+        "slaves"
+    ] = bridge.bridge_iface[OVSBridge.CONFIG_SUBTREE].pop(
+        OVSBridge.PORT_SUBTREE
+    )
+
+    with bridge.create():
+        assertlib.assert_state_match(original_state)
