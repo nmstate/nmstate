@@ -56,10 +56,10 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
 
     if !running_config_only {
         let mut running_routes = Vec::new();
-        for np_route in np_routes.iter().filter(|np_route| {
-            SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope)
-                && np_route.oif.as_ref() != Some(&"lo".to_string())
-        }) {
+        for np_route in np_routes
+            .iter()
+            .filter(|np_route| SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope))
+        {
             if is_multipath(np_route) {
                 for route in flat_multipath_route(np_route) {
                     running_routes.push(route);
@@ -75,7 +75,6 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
     for np_route in np_routes.iter().filter(|np_route| {
         SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope)
             && SUPPORTED_STATIC_ROUTE_PROTOCOL.contains(&np_route.protocol)
-            && np_route.oif.as_ref() != Some(&"lo".to_string())
     }) {
         if is_multipath(np_route) {
             for route in flat_multipath_route(np_route) {
