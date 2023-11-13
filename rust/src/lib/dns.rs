@@ -7,14 +7,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ip::is_ipv6_addr, ErrorKind, MergedNetworkState, NmstateError};
 
-const SUPPORTED_DNS_OPTIONS: [&str; 18] = [
-    "attempts",
+const SUPPORTED_DNS_OPTS_NO_VALUE: [&str; 15] = [
     "debug",
     "edns0",
     "inet6",
     "ip6-bytestring",
     "ip6-dotint",
-    "ndots",
     "no-aaaa",
     "no-check-names",
     "no-ip6-dotint",
@@ -23,10 +21,12 @@ const SUPPORTED_DNS_OPTIONS: [&str; 18] = [
     "rotate",
     "single-request",
     "single-request-reopen",
-    "timeout",
     "trust-ad",
     "use-vc",
 ];
+
+const SUPPORTED_DNS_OPTS_WITH_VALUE: [&str; 3] =
+    ["ndots", "timeout", "attempts"];
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -166,15 +166,37 @@ impl DnsClientState {
         }
         if let Some(opts) = self.options.as_ref() {
             for opt in opts {
-                if !SUPPORTED_DNS_OPTIONS.contains(&opt.as_str()) {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Unsupported DNS option {opt}, \
-                            only support: {}",
-                            SUPPORTED_DNS_OPTIONS.join(", ")
-                        ),
-                    ));
+                match opt.find(':') {
+                    Some(i) => {
+                        let opt = &opt[..i];
+                        if !SUPPORTED_DNS_OPTS_WITH_VALUE.contains(&opt) {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Option '{opt}' is not supported to hold \
+                                    a value, only support these without \
+                                    value: {} and these with values: {}:n",
+                                    SUPPORTED_DNS_OPTS_NO_VALUE.join(", "),
+                                    SUPPORTED_DNS_OPTS_WITH_VALUE.join(":n, ")
+                                ),
+                            ));
+                        }
+                    }
+                    None => {
+                        if !SUPPORTED_DNS_OPTS_NO_VALUE.contains(&opt.as_str())
+                        {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Unsupported DNS option {opt}, \
+                                    only support these without value: {} \
+                                    and these with values: {}",
+                                    SUPPORTED_DNS_OPTS_NO_VALUE.join(", "),
+                                    SUPPORTED_DNS_OPTS_WITH_VALUE.join(":n, ")
+                                ),
+                            ));
+                        }
+                    }
                 }
             }
         }
