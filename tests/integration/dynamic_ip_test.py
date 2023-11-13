@@ -8,6 +8,7 @@ from operator import itemgetter
 import os
 import time
 
+import yaml
 import pytest
 
 import libnmstate
@@ -537,7 +538,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
     assertlib.assert_state(desired_state)
     # When converting from DHCP to static without address mentioned,
     # nmstate should convert existing dynamic IP addresses to static
-    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv4_addr_as_static)
     assert not _poll_till_not(_has_ipv4_dhcp_nameserver)
     assert not _has_ipv4_dhcp_gateway()
     assert not _has_ipv4_classless_route()
@@ -814,6 +815,25 @@ def _has_dhcpv6_addr(nic=DHCP_CLI_NIC):
         if (
             addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
             and DHCP_SRV_IP6_PREFIX in addr[InterfaceIPv6.ADDRESS_IP]
+            and addr.get(InterfaceIPv6.ADDRESS_VALID_LEFT, "forever")
+            != "forever"
+        ):
+            has_dhcp_ip_addr = True
+            break
+    return has_dhcp_ip_addr
+
+
+def _has_dhcpv6_addr_as_static(nic=DHCP_CLI_NIC):
+    current_state = statelib.show_only((nic,))[Interface.KEY][0]
+    has_dhcp_ip_addr = False
+    addrs = current_state[Interface.IPV6].get(InterfaceIPv6.ADDRESS, [])
+    logging.debug("Current IPv6 address of {}: {}".format(nic, addrs))
+    for addr in addrs:
+        if (
+            addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
+            and DHCP_SRV_IP6_PREFIX in addr[InterfaceIPv6.ADDRESS_IP]
+            and addr.get(InterfaceIPv6.ADDRESS_VALID_LEFT, "forever")
+            == "forever"
         ):
             has_dhcp_ip_addr = True
             break
@@ -827,8 +847,27 @@ def _has_dhcpv4_addr(nic=DHCP_CLI_NIC):
     logging.debug("Current IPv4 address of {}: {}".format(nic, addrs))
     for addr in addrs:
         if (
-            addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 24
+            addr[InterfaceIPv4.ADDRESS_PREFIX_LENGTH] == 24
             and DHCP_SRV_IP4_PREFIX in addr[InterfaceIPv4.ADDRESS_IP]
+            and addr.get(InterfaceIPv4.ADDRESS_VALID_LEFT, "forever")
+            != "forever"
+        ):
+            has_dhcp_ip_addr = True
+            break
+    return has_dhcp_ip_addr
+
+
+def _has_dhcpv4_addr_as_static(nic=DHCP_CLI_NIC):
+    current_state = statelib.show_only((nic,))[Interface.KEY][0]
+    has_dhcp_ip_addr = False
+    addrs = current_state[Interface.IPV4].get(InterfaceIPv4.ADDRESS, [])
+    logging.debug("Current IPv4 address of {}: {}".format(nic, addrs))
+    for addr in addrs:
+        if (
+            addr[InterfaceIPv4.ADDRESS_PREFIX_LENGTH] == 24
+            and DHCP_SRV_IP4_PREFIX in addr[InterfaceIPv4.ADDRESS_IP]
+            and addr.get(InterfaceIPv4.ADDRESS_VALID_LEFT, "forever")
+            == "forever"
         ):
             has_dhcp_ip_addr = True
             break
@@ -1248,10 +1287,10 @@ def clean_state():
     current_state = libnmstate.show()
     desired_state = deepcopy(current_state)
     for iface_state in desired_state[Interface.KEY]:
-        if iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]:
+        if iface_state.get(Interface.IPV4, {}).get(InterfaceIPv4.ENABLED):
             iface_state[Interface.IPV4][InterfaceIPv4.AUTO_DNS] = False
             iface_state[Interface.IPV4][InterfaceIPv4.AUTO_ROUTES] = False
-        if iface_state[Interface.IPV6][InterfaceIPv6.ENABLED]:
+        if iface_state.get(Interface.IPV6, {}).get(InterfaceIPv6.ENABLED):
             iface_state[Interface.IPV6][InterfaceIPv6.AUTO_DNS] = False
             iface_state[Interface.IPV6][InterfaceIPv6.AUTO_ROUTES] = False
 
@@ -1790,8 +1829,8 @@ def test_switch_auto_to_static_with_dynamic_ips(dhcpcli_up):
     libnmstate.apply(new_desired_state)
     assert not _poll_till_not(_has_ipv4_dhcp_nameserver)
     assert not _poll_till_not(_has_ipv6_auto_gateway)
-    assert _poll(_has_dhcpv4_addr)
-    assert _poll(_has_dhcpv6_addr)
+    assert _poll(_has_dhcpv4_addr_as_static)
+    assert _poll(_has_dhcpv6_addr_as_static)
 
 
 def test_set_dhcp_fqdn_and_remove(dhcpcli_up):
@@ -1962,3 +2001,52 @@ def test_append_static_dns_before_auto_dns(dhcpcli_up_with_dns_cleanup):
     assert cur_name_servers.index(
         IPV4_DNS_NAMESERVER
     ) < cur_name_servers.index(DHCP_SRV_IP4)
+
+
+# https://issues.redhat.com/browse/CNV-34844
+@pytest.mark.tier1
+def test_static_ipv6_route_not_covert_auto_ip(dhcpcli_up_with_dynamic_ip):
+    iface_state = dhcpcli_up_with_dynamic_ip[Interface.KEY][0]
+
+    (pre_dhcpv4_addrs, pre_dhcpv6_addrs) = get_dhcp_addr(iface_state)
+
+    state_yml = """---
+    routes:
+      config:
+        - destination: ::/0
+          next-hop-interface: dhcpcli
+          next-hop-address: fe80::1
+    """
+    desired_state = yaml.load(state_yml, Loader=yaml.SafeLoader)
+
+    libnmstate.apply(desired_state)
+    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv6_addr)
+
+    current_state = statelib.show_only((DHCP_CLI_NIC,))
+    (new_dhcpv4_addrs, new_dhcpv6_addrs) = get_dhcp_addr(
+        current_state[Interface.KEY][0]
+    )
+    assert pre_dhcpv4_addrs == new_dhcpv4_addrs
+    assert pre_dhcpv6_addrs == new_dhcpv6_addrs
+
+
+def get_dhcp_addr(iface_state):
+    """
+    Return ([DHCPV4_ADDR], [DHCPV6_ADDR])
+    """
+    DHCPV4_ADDRS = [
+        addr[InterfaceIPv4.ADDRESS_IP]
+        for addr in iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
+        if addr.get(InterfaceIPv4.ADDRESS_PREFERRED_LEFT, "forever")
+        != "forever"
+    ]
+
+    DHCPV6_ADDRS = [
+        addr[InterfaceIPv6.ADDRESS_IP]
+        for addr in iface_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+        if addr.get(InterfaceIPv6.ADDRESS_PREFERRED_LEFT, "forever")
+        != "forever"
+        and addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
+    ]
+    return (DHCPV4_ADDRS, DHCPV6_ADDRS)
