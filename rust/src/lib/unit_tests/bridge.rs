@@ -719,3 +719,23 @@ fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
     assert_eq!(desired_old, expected);
     assert_eq!(desired_new, expected);
 }
+
+#[test]
+fn test_linux_bridge_deprecated_prop() {
+    let mut iface: LinuxBridgeInterface = serde_yaml::from_str(
+        r"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          slaves:
+            - name: eth1
+            - name: eth2
+        ",
+    )
+    .unwrap();
+
+    iface.post_deserialize_cleanup();
+
+    assert_eq!(iface.ports(), Some(vec!["eth1", "eth2"]));
+}

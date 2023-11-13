@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+import copy
 import os
 import time
 
@@ -1348,3 +1349,16 @@ def test_change_bond_option_arp_missed_max(bond99_with_2_port):
     bond_options["arp_missed_max"] = 200
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_bond_deprecated_prop(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99, port=["eth1", "eth2"], create=False
+    ) as state:
+        original_state = copy.deepcopy(state)
+        state[Interface.KEY][0][Bond.CONFIG_SUBTREE]["slaves"] = state[
+            Interface.KEY
+        ][0][Bond.CONFIG_SUBTREE].pop(Bond.PORT)
+
+        libnmstate.apply(state)
+        assertlib.assert_state_match(original_state)

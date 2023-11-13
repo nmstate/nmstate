@@ -623,6 +623,14 @@ impl MergedInterfaces {
             MergedInterface,
         > = HashMap::new();
 
+        for iface in desired
+            .kernel_ifaces
+            .values_mut()
+            .chain(desired.user_ifaces.values_mut())
+        {
+            iface.post_deserialize_cleanup();
+        }
+
         if gen_conf_mode {
             desired.set_unknown_iface_to_eth()?;
             desired.set_missing_port_to_eth();
