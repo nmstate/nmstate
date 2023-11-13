@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{DnsState, MergedDnsState};
+use crate::{DnsState, ErrorKind, MergedDnsState};
 
 #[test]
 fn test_dns_verify_uncompressed_srvs() {
@@ -49,4 +49,37 @@ fn test_dns_verify_uncompressed_srvs() {
     let merged = MergedDnsState::new(desired, DnsState::new()).unwrap();
 
     merged.verify(&current).unwrap();
+}
+
+#[test]
+fn test_dns_option_with_value() {
+    let mut desired: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          options:
+          - rotate
+          - ndots:9
+        ",
+    )
+    .unwrap();
+    desired.sanitize().unwrap();
+}
+
+#[test]
+fn test_invalid_dns_option_with_value() {
+    let mut desired: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          options:
+          - rotate
+          - ndot:9
+        ",
+    )
+    .unwrap();
+    let result = desired.sanitize();
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
 }
