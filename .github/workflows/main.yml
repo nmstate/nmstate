@@ -1,5 +1,7 @@
 name: CI
 
+concurrency: ci-${{ github.ref }}
+
 on:
   pull_request:
    types: [opened, synchronize, reopened]
