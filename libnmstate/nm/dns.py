@@ -158,7 +158,11 @@ def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
     for nm_ac, ip_profile in chain(
         acs_and_ipv6_profiles, acs_and_ipv4_profiles
     ):
-        if ip_profile.props.dns or ip_profile.props.dns_search:
+        if (
+            ip_profile.props.dns
+            or ip_profile.props.dns_search
+            or ip_profile.props.dns_options
+        ):
             try:
                 iface_name = nm_ac.get_devices()[0].get_iface()
                 iface_names.append(iface_name)
