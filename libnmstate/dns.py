@@ -19,14 +19,12 @@ EMPTY_DNS = {
 REMOVE_DNS_CONFIG = {DNS.CONFIG: EMPTY_DNS}
 
 
-SUPPORTED_DNS_OPTIONS = [
-    "attempts",
+SUPPORTED_DNS_OPTS_NO_VALUE = [
     "debug",
     "edns0",
     "inet6",
     "ip6-bytestring",
     "ip6-dotint",
-    "ndots",
     "no-aaaa",
     "no-check-names",
     "no-ip6-dotint",
@@ -35,9 +33,14 @@ SUPPORTED_DNS_OPTIONS = [
     "rotate",
     "single-request",
     "single-request-reopen",
-    "timeout",
     "trust-ad",
     "use-vc",
+]
+
+SUPPORTED_DNS_OPTS_WITH_VALUE = [
+    "ndots",
+    "timeout",
+    "attempts",
 ]
 
 
@@ -73,10 +76,24 @@ class DnsState:
 
     def _canonicalize_dns_options(self):
         for opt in self.config_options:
-            if opt not in SUPPORTED_DNS_OPTIONS:
+            if opt.find(":") > 0:
+                opt = opt[: opt.find(":")]
+                if opt not in SUPPORTED_DNS_OPTS_WITH_VALUE:
+                    raise NmstateValueError(
+                        "Option '{}' is not supported to hold "
+                        "a value, only support these without "
+                        "value: {} and these with values: {}:n",
+                        opt,
+                        ", ".join(SUPPORTED_DNS_OPTS_NO_VALUE),
+                        ":n, ".join(SUPPORTED_DNS_OPTS_WITH_VALUE),
+                    )
+            elif opt not in SUPPORTED_DNS_OPTS_NO_VALUE:
                 raise NmstateValueError(
-                    f"Unsupported DNS option {opt}, only support: "
-                    f"{', '.join(SUPPORTED_DNS_OPTIONS)}",
+                    "Option '{}' is not supported, only support these "
+                    "without value: {} and these with values: {}:n",
+                    opt,
+                    ", ".join(SUPPORTED_DNS_OPTS_NO_VALUE),
+                    ":n, ".join(SUPPORTED_DNS_OPTS_WITH_VALUE),
                 )
 
     @property
