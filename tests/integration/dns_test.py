@@ -498,3 +498,36 @@ def test_set_invalid_dns_options(static_dns):
     )
     with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state)
+
+
+def test_set_dns_option_with_value(static_dns):
+    desired_state = yaml.load(
+        """---
+        dns-resolver:
+          config:
+            options:
+            - rotate
+            - debug
+            - ndots:9
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
+    assert "ndots:9" in current_state[DNS.KEY][DNS.CONFIG][DNS.OPTIONS]
+
+
+def test_invalid_dns_option_with_value(static_dns):
+    desired_state = yaml.load(
+        """---
+        dns-resolver:
+          config:
+            options:
+            - rotate
+            - debug
+            - ndot:9
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(desired_state)
