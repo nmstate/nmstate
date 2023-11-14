@@ -147,9 +147,9 @@ def test_dns_edit_3_more_nameservers(dns_servers):
 @pytest.mark.tier1
 @pytest.mark.parametrize(
     "empty_dns_config",
-    [{DNS.SERVER: [], DNS.SEARCH: []}, {}],
+    [{DNS.SERVER: [], DNS.SEARCH: [], DNS.OPTIONS: []}, {}],
     ids=[
-        "empty_server_and_search",
+        "empty_server_search_and_opt",
         "empty_dict",
     ],
 )
@@ -573,3 +573,47 @@ def test_invalid_dns_option_with_value(static_dns):
     )
     with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def static_dns_with_options(static_dns):
+    desired_state = {
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.OPTIONS: ["debug", "rotate"],
+            }
+        },
+    }
+    libnmstate.apply(desired_state)
+
+
+def test_remove_all_dns_options(static_dns_with_options):
+    pre_apply_state = libnmstate.show()
+
+    desired_state = {
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.OPTIONS: [],
+            }
+        },
+    }
+    libnmstate.apply(desired_state)
+
+    current_state = libnmstate.show()
+    assert DNS.OPTIONS not in current_state[DNS.KEY][DNS.CONFIG]
+    assert (
+        current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+        == pre_apply_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+    )
+    assert (
+        current_state[DNS.KEY][DNS.CONFIG][DNS.SEARCH]
+        == pre_apply_state[DNS.KEY][DNS.CONFIG][DNS.SEARCH]
+    )
+
+
+def test_purge_dns_full_config(static_dns_with_options):
+    desired_state = {DNS.KEY: {DNS.CONFIG: {}}}
+    libnmstate.apply(desired_state)
+
+    current_state = libnmstate.show()
+    assert not current_state[DNS.KEY][DNS.CONFIG]
