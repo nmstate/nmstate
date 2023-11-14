@@ -54,6 +54,12 @@ const SUPPORTED_DNS_OPTS_WITH_VALUE: [&str; 3] =
 ///      - trust-ad
 ///      - rotate
 /// ```
+/// To purge all static DNS configuration:
+/// ```yml
+/// ---
+/// dns-resolver:
+///   config: {}
+/// ```
 pub struct DnsState {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// The running effective state. The DNS server might be from DHCP(IPv6
@@ -120,11 +126,15 @@ impl DnsClientState {
         self.server.is_none() && self.search.is_none() && self.options.is_none()
     }
 
-    // Whether user want to purge all DNS settings
+    // Any of these conditions means purge full DNS config:
+    //  * `server`, `search` and `options` are None. Equal to desire state
+    //    `config: {}`
+    //  * `server`, `search` and `options` are `Some<Vec::new()>`.
     pub(crate) fn is_purge(&self) -> bool {
-        self.server.as_deref().unwrap_or_default().is_empty()
-            && self.search.as_deref().unwrap_or_default().is_empty()
-            && self.options.as_deref().unwrap_or_default().is_empty()
+        self.server.is_none() && self.search.is_none() & self.options.is_none()
+            || self.server.as_deref() == Some(&[])
+                && self.search.as_deref() == Some(&[])
+                && self.options.as_deref() == Some(&[])
     }
 
     pub(crate) fn is_null(&self) -> bool {

@@ -83,3 +83,40 @@ fn test_invalid_dns_option_with_value() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_is_purge_dns_empty_dict() {
+    let desired: DnsState = serde_yaml::from_str(
+        r"---
+        config: {}
+        ",
+    )
+    .unwrap();
+    assert!(desired.config.unwrap().is_purge());
+}
+
+#[test]
+fn test_is_purge_dns_full_empty_dict() {
+    let desired: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          server: []
+          search: []
+          options: []
+        ",
+    )
+    .unwrap();
+    assert!(desired.config.unwrap().is_purge());
+}
+
+#[test]
+fn test_not_purge() {
+    let desired: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          search: []
+        ",
+    )
+    .unwrap();
+    assert!(!desired.config.unwrap().is_purge());
+}

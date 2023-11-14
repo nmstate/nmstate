@@ -171,11 +171,7 @@ def auto_eth1(eth1_up):
         }
     )
     yield
-    libnmstate.apply(
-        {
-            DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
-        }
-    )
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
 
 
 def test_static_dns_search_with_auto_dns(auto_eth1):
