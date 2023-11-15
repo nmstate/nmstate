@@ -1,4 +1,19 @@
 # Changelog
+## [2.2.19] - 2023-11-15
+### Breaking changes
+ - N/A
+
+### New features
+ - Support IpSec tunnel. (4a88d33d, 626714e3)
+
+### Bug fixes
+ - brdige/bond: Add support of `slaves` back as deprecated. (631ff655)
+ - dns: Fix purging DNS config. (ab07783b)
+ - dns: Fix DNS option `ndots`, `timeout` and `attempts`. (75e2f042)
+ - ip: Do not convert auto IP to static IP. (a3ae6e3a)
+ - clib: Fix SONAME for all linux build target. (0f8026e8)
+ - go: Configure GOPROXY and GOSUMDB. (661ffd89)
+
 ## [2.2.18] - 2023-11-02
 ### Breaking changes
  - ovs: Align STP property of OVS bridge and Linux bridge. (2934b894)
