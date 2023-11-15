@@ -366,7 +366,9 @@ def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(
             leftcert: hosta.example.org
             right: 192.0.2.252
             rightid: 'hostb.example.org'
-            ikev2: insist""",
+            ikev2: insist
+            ikelifetime: 24h
+            salifetime: 24h""",
         Loader=yaml.SafeLoader,
     )
     libnmstate.apply(desired_state)

@@ -81,6 +81,14 @@ pub struct LibreswanConfig {
     /// PSK authentication, if not defined, will use X.509 PKI authentication
     #[serde(skip_serializing_if = "Option::is_none")]
     pub psk: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ikelifetime: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub salifetime: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ike: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub esp: Option<String>,
 }
 
 impl LibreswanConfig {
