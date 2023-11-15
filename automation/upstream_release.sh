@@ -121,6 +121,24 @@ else
     echo "Please visit $URL to create new release"
 fi
 
+while true; do
+    echo "Press 'y' to bump version or 'n' to exit."
+    read -s -n 1 key
+    case $key in
+            y|Y)
+            echo "You pressed 'y'. Continuing..."
+            break
+            ;;
+        n|N)
+            echo "You pressed 'n'. Exiting..."
+            exit 1
+            ;;
+        *)
+            echo "Invalid input. Please press 'y' or 'n'."
+            ;;
+    esac
+done
+
 # Bump version
 git branch bump_version || true
 git checkout bump_version
