@@ -7,9 +7,6 @@ use crate::{
     NmstateError,
 };
 
-const SRIOV_VF_NAMING_PREFIX: &str = "sriov:";
-const SRIOV_VF_NAMING_SEPERATOR: char = ':';
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
@@ -63,6 +60,9 @@ pub struct SrIovConfig {
 }
 
 impl SrIovConfig {
+    pub(crate) const VF_NAMING_PREFIX: &'static str = "sriov:";
+    pub(crate) const VF_NAMING_SEPERATOR: char = ':';
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -127,8 +127,10 @@ impl SrIovConfig {
 pub struct SrIovVfConfig {
     #[serde(deserialize_with = "crate::deserializer::u32_or_string")]
     pub id: u32,
-    #[serde(skip)]
-    pub(crate) iface_name: String,
+    /// Interface name for this VF, only for querying, will be ignored
+    /// when applying network state.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub iface_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Deserialize and serialize from/to `mac-address`.
     pub mac_address: Option<String>,
@@ -301,9 +303,9 @@ impl Interfaces {
 fn parse_sriov_vf_naming(
     iface_name: &str,
 ) -> Result<Option<(&str, u32)>, NmstateError> {
-    if iface_name.starts_with(SRIOV_VF_NAMING_PREFIX) {
+    if iface_name.starts_with(SrIovConfig::VF_NAMING_PREFIX) {
         let names: Vec<&str> =
-            iface_name.split(SRIOV_VF_NAMING_SEPERATOR).collect();
+            iface_name.split(SrIovConfig::VF_NAMING_SEPERATOR).collect();
         if names.len() == 3 {
             match names[2].parse::<u32>() {
                 Ok(vf_id) => Ok(Some((names[1], vf_id))),
