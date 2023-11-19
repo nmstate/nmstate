@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    unit_tests::testlib::new_eth_iface, BridgePortVlanMode, ErrorKind,
-    EthernetConfig, EthernetDuplex, Interface, InterfaceType, Interfaces,
-    MergedInterfaces, NetworkState, SrIovConfig, SrIovVfConfig,
+    state::get_json_value_difference, unit_tests::testlib::new_eth_iface,
+    BridgePortVlanMode, ErrorKind, EthernetConfig, EthernetDuplex, Interface,
+    InterfaceType, Interfaces, MergedInterfaces, NetworkState, SrIovConfig,
+    SrIovVfConfig,
 };
 
 #[test]
@@ -575,15 +576,20 @@ fn test_sriov_vf_auto_fill_vf_conf() {
         .for_apply
         .as_ref()
         .unwrap();
+    let cur_iface = cur_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap();
 
+    // The cur_iface will has extra property `iface_name` comparing to
+    // desire iface, hence we use get_json_value_difference() to
+    // compare matches.
     assert_eq!(
-        serde_yaml::to_string(iface).unwrap(),
-        serde_yaml::to_string(
-            cur_ifaces
-                .get_iface("eth1", InterfaceType::Ethernet)
-                .unwrap()
-        )
-        .unwrap()
+        get_json_value_difference(
+            "interfaces".to_string(),
+            &serde_json::to_value(iface).unwrap(),
+            &serde_json::to_value(cur_iface).unwrap()
+        ),
+        None
     );
 }
 

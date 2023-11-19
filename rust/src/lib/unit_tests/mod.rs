@@ -49,6 +49,8 @@ mod route_rule;
 #[cfg(test)]
 mod sriov;
 #[cfg(test)]
+mod statistic;
+#[cfg(test)]
 mod testlib;
 #[cfg(test)]
 mod vlan;
