@@ -252,8 +252,8 @@ impl InterfaceIpv4 {
             self.addresses = current.addresses.clone();
             if let Some(addrs) = self.addresses.as_mut() {
                 addrs.as_mut_slice().iter_mut().for_each(|a| {
-                    a.valid_left = None;
-                    a.preferred_left = None;
+                    a.valid_life_time = None;
+                    a.preferred_life_time = None;
                 });
             }
         }
@@ -357,8 +357,8 @@ impl InterfaceIpv4 {
             }
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
-                a.valid_left = None;
-                a.preferred_left = None
+                a.valid_life_time = None;
+                a.preferred_life_time = None
             });
         }
 
@@ -662,8 +662,8 @@ impl InterfaceIpv6 {
             }
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
-                a.valid_left = None;
-                a.preferred_left = None
+                a.valid_life_time = None;
+                a.preferred_life_time = None
             });
         }
 
@@ -816,8 +816,8 @@ impl InterfaceIpv6 {
             self.addresses = current.addresses.clone();
             if let Some(addrs) = self.addresses.as_mut() {
                 addrs.as_mut_slice().iter_mut().for_each(|a| {
-                    a.valid_left = None;
-                    a.preferred_left = None;
+                    a.valid_life_time = None;
+                    a.preferred_life_time = None;
                 });
             }
         }
@@ -925,15 +925,26 @@ pub struct InterfaceIpAddr {
     /// Remaining time for IP address been valid. The output format is
     /// "32sec" or "forever".
     /// This property is query only, it will be ignored when applying.
-    /// Serialize and deserialize to/from `valid-left`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub valid_left: Option<String>,
+    /// Serialize to `valid-life-time`.
+    /// Deserialize from `valid-life-time` or `valid-left` or `valid-lft`.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "valid-left",
+        alias = "valid-lft"
+    )]
+    pub valid_life_time: Option<String>,
     /// Remaining time for IP address been preferred. The output format is
     /// "32sec" or "forever".
     /// This property is query only, it will be ignored when applying.
-    /// Serialize and deserialize to/from `preferred-left`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub preferred_left: Option<String>,
+    /// Serialize to `preferred-life-time`.
+    /// Deserialize from `preferred-life-time` or `preferred-left` or
+    /// `preferred-lft`.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "preferred-left",
+        alias = "preferred-lft"
+    )]
+    pub preferred_life_time: Option<String>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -942,8 +953,8 @@ impl Default for InterfaceIpAddr {
             ip: IpAddr::V6(std::net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)),
             prefix_length: 128,
             mptcp_flags: None,
-            valid_left: None,
-            preferred_left: None,
+            valid_life_time: None,
+            preferred_life_time: None,
         }
     }
 }
@@ -953,11 +964,11 @@ impl std::fmt::Display for InterfaceIpAddr {
         if self.is_auto() {
             write!(
                 f,
-                "{}/{} valid_left {} preferred_left {}",
+                "{}/{} valid_life_time {} preferred_lft {}",
                 self.ip,
                 self.prefix_length,
-                self.valid_left.as_deref().unwrap_or(FOREVER),
-                self.preferred_left.as_deref().unwrap_or(FOREVER)
+                self.valid_life_time.as_deref().unwrap_or(FOREVER),
+                self.preferred_life_time.as_deref().unwrap_or(FOREVER)
             )
         } else {
             write!(f, "{}/{}", self.ip, self.prefix_length)
@@ -967,7 +978,8 @@ impl std::fmt::Display for InterfaceIpAddr {
 
 impl InterfaceIpAddr {
     pub(crate) fn is_auto(&self) -> bool {
-        self.valid_left.is_some() && self.valid_left.as_deref() != Some(FOREVER)
+        self.valid_life_time.is_some()
+            && self.valid_life_time.as_deref() != Some(FOREVER)
     }
 }
 
@@ -1015,8 +1027,8 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             ip,
             prefix_length,
             mptcp_flags: None,
-            valid_left: None,
-            preferred_left: None,
+            valid_life_time: None,
+            preferred_life_time: None,
         })
     }
 }

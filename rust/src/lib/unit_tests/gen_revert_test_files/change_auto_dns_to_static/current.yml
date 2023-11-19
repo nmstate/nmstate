@@ -18,16 +18,16 @@ interfaces:
       address:
       - ip: 192.0.2.251
         prefix-length: 24
-        valid-left: 300sec
-        preferred-left: 300sec
+        valid-life-time: 300sec
+        preferred-life-time: 300sec
       dhcp: true
       enabled: true
     ipv6:
       address:
       - ip: 2001:db8:1::1
         prefix-length: 64
-        valid-left: 300sec
-        preferred-left: 300sec
+        valid-life-time: 300sec
+        preferred-life-time: 300sec
       dhcp: true
       enabled: true
       autoconf: true

@@ -245,7 +245,7 @@ def test_static_ip_with_auto_ip_enabled(dhcpcli_up):
         # Nmstate is supposed to ignore IP address with lifetime when DHCPv4
         # is enabled
         create_ipv4_address_state(
-            IPV4_ADDRESS4, 24, valid_left="30sec", preferred_left="30sec"
+            IPV4_ADDRESS4, 24, valid_lft="30sec", prefferred_lft="30sec"
         ),
     ]
     ipv6_state = _create_ipv6_state(enabled=True, dhcp=True, autoconf=True)
@@ -254,7 +254,7 @@ def test_static_ip_with_auto_ip_enabled(dhcpcli_up):
         # Nmstate is supposed to ignore IP address with lifetime when
         # autoconf/DHCPv6 is enabled
         create_ipv6_address_state(
-            IPV6_ADDRESS4, 64, valid_left="30sec", preferred_left="30sec"
+            IPV6_ADDRESS4, 64, valid_lft="30sec", prefferred_lft="30sec"
         ),
     ]
 
@@ -815,7 +815,7 @@ def _has_dhcpv6_addr(nic=DHCP_CLI_NIC):
         if (
             addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
             and DHCP_SRV_IP6_PREFIX in addr[InterfaceIPv6.ADDRESS_IP]
-            and addr.get(InterfaceIPv6.ADDRESS_VALID_LEFT, "forever")
+            and addr.get(InterfaceIPv6.ADDRESS_VALID_LIFE_TIME, "forever")
             != "forever"
         ):
             has_dhcp_ip_addr = True
@@ -832,7 +832,7 @@ def _has_dhcpv6_addr_as_static(nic=DHCP_CLI_NIC):
         if (
             addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
             and DHCP_SRV_IP6_PREFIX in addr[InterfaceIPv6.ADDRESS_IP]
-            and addr.get(InterfaceIPv6.ADDRESS_VALID_LEFT, "forever")
+            and addr.get(InterfaceIPv6.ADDRESS_VALID_LIFE_TIME, "forever")
             == "forever"
         ):
             has_dhcp_ip_addr = True
@@ -849,7 +849,7 @@ def _has_dhcpv4_addr(nic=DHCP_CLI_NIC):
         if (
             addr[InterfaceIPv4.ADDRESS_PREFIX_LENGTH] == 24
             and DHCP_SRV_IP4_PREFIX in addr[InterfaceIPv4.ADDRESS_IP]
-            and addr.get(InterfaceIPv4.ADDRESS_VALID_LEFT, "forever")
+            and addr.get(InterfaceIPv4.ADDRESS_VALID_LIFE_TIME, "forever")
             != "forever"
         ):
             has_dhcp_ip_addr = True
@@ -866,7 +866,7 @@ def _has_dhcpv4_addr_as_static(nic=DHCP_CLI_NIC):
         if (
             addr[InterfaceIPv4.ADDRESS_PREFIX_LENGTH] == 24
             and DHCP_SRV_IP4_PREFIX in addr[InterfaceIPv4.ADDRESS_IP]
-            and addr.get(InterfaceIPv4.ADDRESS_VALID_LEFT, "forever")
+            and addr.get(InterfaceIPv4.ADDRESS_VALID_LIFE_TIME, "forever")
             == "forever"
         ):
             has_dhcp_ip_addr = True
@@ -920,24 +920,24 @@ def _create_ipv6_state(
 
 
 def create_ipv4_address_state(
-    address, prefix_length, valid_left=None, preferred_left=None
+    address, prefix_length, valid_lft=None, prefferred_lft=None
 ):
     return {
         InterfaceIPv4.ADDRESS_IP: address,
         InterfaceIPv4.ADDRESS_PREFIX_LENGTH: prefix_length,
-        InterfaceIPv4.ADDRESS_VALID_LEFT: valid_left,
-        InterfaceIPv4.ADDRESS_PREFERRED_LEFT: preferred_left,
+        InterfaceIPv4.ADDRESS_VALID_LIFE_TIME: valid_lft,
+        InterfaceIPv4.ADDRESS_PREFERRED_LIFE_TIME: prefferred_lft,
     }
 
 
 def create_ipv6_address_state(
-    address, prefix_length, valid_left=None, preferred_left=None
+    address, prefix_length, valid_lft=None, prefferred_lft=None
 ):
     return {
         InterfaceIPv6.ADDRESS_IP: address,
         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: prefix_length,
-        InterfaceIPv6.ADDRESS_VALID_LEFT: valid_left,
-        InterfaceIPv6.ADDRESS_PREFERRED_LEFT: preferred_left,
+        InterfaceIPv6.ADDRESS_VALID_LIFE_TIME: valid_lft,
+        InterfaceIPv6.ADDRESS_PREFERRED_LIFE_TIME: prefferred_lft,
     }
 
 
@@ -1307,8 +1307,8 @@ def _sort_ip_addresses(addresses):
 
 def _remove_ip_lifetime(addresses):
     for addr in addresses:
-        addr.pop(InterfaceIP.ADDRESS_VALID_LEFT, None)
-        addr.pop(InterfaceIP.ADDRESS_PREFERRED_LEFT, None)
+        addr.pop(InterfaceIP.ADDRESS_VALID_LIFE_TIME, None)
+        addr.pop(InterfaceIP.ADDRESS_PREFERRED_LIFE_TIME, None)
 
 
 def test_enable_dhcp_with_no_server(dummy00):
@@ -1948,13 +1948,13 @@ def test_auto_ip_with_pre_exist_address_without_dhcp_srv(eth1_up):
     ipv4_state = _create_ipv4_state(enabled=True, dhcp=True)
     ipv4_state[InterfaceIPv4.ADDRESS] = [
         create_ipv4_address_state(
-            IPV4_ADDRESS4, 24, valid_left="30sec", preferred_left="30sec"
+            IPV4_ADDRESS4, 24, valid_lft="30sec", prefferred_lft="30sec"
         ),
     ]
     ipv6_state = _create_ipv6_state(enabled=True, dhcp=True, autoconf=True)
     ipv6_state[InterfaceIPv6.ADDRESS] = [
         create_ipv6_address_state(
-            IPV6_ADDRESS4, 64, valid_left="30sec", preferred_left="30sec"
+            IPV6_ADDRESS4, 64, valid_lft="30sec", prefferred_lft="30sec"
         ),
     ]
 
@@ -2038,14 +2038,14 @@ def get_dhcp_addr(iface_state):
     DHCPV4_ADDRS = [
         addr[InterfaceIPv4.ADDRESS_IP]
         for addr in iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
-        if addr.get(InterfaceIPv4.ADDRESS_PREFERRED_LEFT, "forever")
+        if addr.get(InterfaceIPv4.ADDRESS_PREFERRED_LIFE_TIME, "forever")
         != "forever"
     ]
 
     DHCPV6_ADDRS = [
         addr[InterfaceIPv6.ADDRESS_IP]
         for addr in iface_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
-        if addr.get(InterfaceIPv6.ADDRESS_PREFERRED_LEFT, "forever")
+        if addr.get(InterfaceIPv6.ADDRESS_PREFERRED_LIFE_TIME, "forever")
         != "forever"
         and addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
     ]

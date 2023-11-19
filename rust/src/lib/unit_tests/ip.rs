@@ -461,3 +461,83 @@ fn test_sanitize_ip_network_ipv6_net() {
         "2001:db8:1::/64"
     );
 }
+
+#[test]
+fn test_auto_ip_lift_time() {
+    let left_fmt: BaseInterface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: "true"
+          dhcp: "false"
+          address:
+          - ip: "192.168.1.1"
+            prefix-length: "24"
+            valid-left: "60sec"
+            preferred-left: "60sec"
+        ipv6:
+          enabled: "true"
+          dhcp: "false"
+          address:
+          - ip: "2001:0db8:85a3:0000:0000:8a2e:0370:7331"
+            prefix-length: "64"
+            valid-left: "60sec"
+            preferred-left: "60sec"
+        "#,
+    )
+    .unwrap();
+    let life_time_fmt: BaseInterface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: "true"
+          dhcp: "false"
+          address:
+          - ip: "192.168.1.1"
+            prefix-length: "24"
+            valid-life-time: "60sec"
+            preferred-life-time: "60sec"
+        ipv6:
+          enabled: "true"
+          dhcp: "false"
+          address:
+          - ip: "2001:0db8:85a3:0000:0000:8a2e:0370:7331"
+            prefix-length: "64"
+            valid-life-time: "60sec"
+            preferred-life-time: "60sec"
+        "#,
+    )
+    .unwrap();
+
+    let iproute_fmt: BaseInterface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: "true"
+          dhcp: "false"
+          address:
+          - ip: "192.168.1.1"
+            prefix-length: "24"
+            valid-lft: "60sec"
+            preferred-lft: "60sec"
+        ipv6:
+          enabled: "true"
+          dhcp: "false"
+          address:
+          - ip: "2001:0db8:85a3:0000:0000:8a2e:0370:7331"
+            prefix-length: "64"
+            valid-lft: "60sec"
+            preferred-lft: "60sec"
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(left_fmt, life_time_fmt);
+    assert_eq!(iproute_fmt, life_time_fmt);
+}
