@@ -4,7 +4,6 @@ import pytest
 from contextlib import contextmanager
 
 import libnmstate
-from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -482,10 +481,6 @@ def test_activate_nmcli_down_linux_bridge(br0_down):
     assertlib.assert_state_match(br0_up_state)
 
 
-@pytest.mark.xfail(
-    raises=NmstateVerificationError,
-    reason="https://issues.redhat.com/browse/RHEL-14144",
-)
 def test_create_down_linux_bridge(br0_down):
     state = br0_down
     state[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
