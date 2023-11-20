@@ -343,3 +343,17 @@ fn apply_nmstate_wait_ip(
         None => (),
     }
 }
+
+// Even user not desired IP section changes, we should set ipv4.dhcp_timeout
+// and ipv6.dhcp_timeout to i32::MAX to make sure NetworkManager never
+// deactivate a desired interface
+pub(crate) fn fix_ip_dhcp_timeout(nm_conns: &mut [NmConnection]) {
+    for nm_conn in nm_conns {
+        if let Some(nm_ip_set) = nm_conn.ipv4.as_mut() {
+            nm_ip_set.dhcp_timeout = Some(i32::MAX);
+        }
+        if let Some(nm_ip_set) = nm_conn.ipv6.as_mut() {
+            nm_ip_set.dhcp_timeout = Some(i32::MAX);
+        }
+    }
+}
