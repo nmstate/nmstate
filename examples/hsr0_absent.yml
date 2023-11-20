@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: hsr0
+    type: hsr
+    state: absent

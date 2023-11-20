@@ -6,6 +6,7 @@ mod dispatch;
 mod dns;
 mod ethernet;
 mod hostname;
+mod hsr;
 mod iface;
 mod infiniband;
 mod inter_ifaces;

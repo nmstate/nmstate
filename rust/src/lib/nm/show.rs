@@ -26,12 +26,12 @@ use super::{
 };
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
-    EthernetInterface, InfiniBandInterface, Interface, InterfaceIdentifier,
-    InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
-    LoopbackInterface, MacSecConfig, MacSecInterface, MacVlanInterface,
-    MacVtapInterface, NetworkState, NmstateError, OvsBridgeInterface,
-    OvsInterface, UnknownInterface, VlanInterface, VrfInterface,
-    VxlanInterface,
+    EthernetInterface, HsrInterface, InfiniBandInterface, Interface,
+    InterfaceIdentifier, InterfaceState, InterfaceType, Interfaces,
+    LinuxBridgeInterface, LoopbackInterface, MacSecConfig, MacSecInterface,
+    MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
+    OvsBridgeInterface, OvsInterface, UnknownInterface, VlanInterface,
+    VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -397,6 +397,11 @@ fn iface_get(
                 }
                 iface
             }),
+            InterfaceType::Hsr => Interface::Hsr({
+                let mut iface = HsrInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);
                 return None;
@@ -559,6 +564,11 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
         }),
         InterfaceType::MacSec => Interface::MacSec({
             let mut iface = MacSecInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::Hsr => Interface::Hsr({
+            let mut iface = HsrInterface::new();
             iface.base = base_iface;
             iface
         }),

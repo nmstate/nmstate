@@ -15,6 +15,7 @@ fn np_iface_type_to_nmstate(
         nispor::IfaceType::Bridge => InterfaceType::LinuxBridge,
         nispor::IfaceType::Dummy => InterfaceType::Dummy,
         nispor::IfaceType::Ethernet => InterfaceType::Ethernet,
+        nispor::IfaceType::Hsr => InterfaceType::Hsr,
         nispor::IfaceType::Loopback => InterfaceType::Loopback,
         nispor::IfaceType::MacSec => InterfaceType::MacSec,
         nispor::IfaceType::MacVlan => InterfaceType::MacVlan,
