@@ -42,6 +42,7 @@ pub(crate) use self::connection::{
 pub(crate) use self::inter_connections::{
     use_uuid_for_controller_reference, use_uuid_for_parent_reference,
 };
+pub(crate) use self::ip::fix_ip_dhcp_timeout;
 
 #[cfg(feature = "query_apply")]
 pub(crate) use self::bond::get_bond_balance_slb;

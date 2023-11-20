@@ -19,6 +19,8 @@ IPV6_ADDRESS1 = "2001:db8:1::1"
 IPV6_ADDRESS2 = "2001:db8:1::2"
 IPV6_NET1 = "2001:db8:a::/64"
 
+I32_MAX = 0x7FFFFFFF
+
 
 def test_get_applied_config_for_dhcp_state_with_dhcp_enabeld_on_disk(eth1_up):
     iface_state = eth1_up[Interface.KEY][0]
@@ -183,4 +185,41 @@ def test_switch_static_gateway_to_dhcp(eth1_up_with_nm_gateway):
     assert (
         cmdlib.exec_cmd("nmcli -g ipv6.gateway c show eth1".split())[1].strip()
         == ""
+    )
+
+
+@pytest.fixture
+def dummy1_with_small_dhcp_timeout():
+    cmdlib.exec_cmd(
+        "nmcli c add type dummy ifname dummy1 connection.id dummy1 "
+        "ipv4.method auto ipv4.dhcp-timeout 5 "
+        "ipv6.method auto ipv6.dhcp-timeout 5 ".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd("nmcli c del dummy1".split(), check=True)
+
+
+def test_fix_dhcp_timeout_even_not_desired(dummy1_with_small_dhcp_timeout):
+    iface_state = {
+        Interface.NAME: "dummy1",
+        Interface.DESCRIPTION: "test_only",
+    }
+    libnmstate.apply({Interface.KEY: [iface_state]})
+
+    assert (
+        int(
+            cmdlib.exec_cmd(
+                "nmcli -g ipv4.dhcp-timeout c show dummy1".split()
+            )[1].strip()
+        )
+        == I32_MAX
+    )
+    assert (
+        int(
+            cmdlib.exec_cmd(
+                "nmcli -g ipv6.dhcp-timeout c show dummy1".split()
+            )[1].strip()
+        )
+        == I32_MAX
     )

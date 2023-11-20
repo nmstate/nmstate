@@ -2,8 +2,9 @@
 
 use super::nm_dbus::{NmActiveConnection, NmConnection};
 use super::settings::{
-    get_exist_profile, iface_to_nm_connections, remove_nm_mptcp_set,
-    use_uuid_for_controller_reference, use_uuid_for_parent_reference,
+    fix_ip_dhcp_timeout, get_exist_profile, iface_to_nm_connections,
+    remove_nm_mptcp_set, use_uuid_for_controller_reference,
+    use_uuid_for_parent_reference,
 };
 
 use crate::{
@@ -117,6 +118,8 @@ pub(crate) fn perpare_nm_conns(
             nm_conns_to_update.push(nm_conn);
         }
     }
+
+    fix_ip_dhcp_timeout(&mut nm_conns_to_update);
 
     use_uuid_for_controller_reference(
         &mut nm_conns_to_update,
