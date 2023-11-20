@@ -148,6 +148,32 @@ fn can_skip_activation(
     nm_conn: &NmConnection,
     exist_nm_conns: &[NmConnection],
 ) -> bool {
+    // if the controller is desired to be down or absent, activating the
+    // connection on the port will risk making the controller activate again,
+    // therefore skip the activation on the port
+    if let Some(desired_iface) = merged_iface.for_apply.as_ref() {
+        if let (Some(ctrl_iface), Some(ctrl_type)) = (
+            desired_iface.base_iface().controller.as_deref(),
+            desired_iface.base_iface().controller_type.as_ref(),
+        ) {
+            if let Some(merged_ctrl_iface) =
+                merged_ifaces.get_iface(ctrl_iface, ctrl_type.clone())
+            {
+                if merged_ctrl_iface.for_apply.is_some()
+                    && (merged_ctrl_iface.merged.is_absent()
+                        || merged_ctrl_iface.merged.is_down())
+                {
+                    log::info!(
+                        "Skipping activation of {} as its controller {} \
+                        desire to be down or absent",
+                        merged_iface.merged.name(),
+                        ctrl_iface
+                    );
+                    return true;
+                }
+            }
+        }
+    }
     // Reapply of connection never reactivate its subordinates, hence we do not
     // skip activation when modifying the connection.
     if let Some(uuid) = nm_conn.uuid() {
