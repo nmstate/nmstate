@@ -22,6 +22,8 @@ impl Interface {
         self.base_iface_mut().sanitize_desired_for_verify();
         if let Interface::Ethernet(iface) = self {
             iface.sanitize_desired_for_verify();
+        } else if let Interface::Hsr(iface) = self {
+            iface.sanitize_desired_for_verify();
         }
     }
 
@@ -217,6 +219,17 @@ impl Interface {
                     );
                 }
             }
+            Self::Hsr(iface) => {
+                if let Self::Hsr(other_iface) = other {
+                    iface.update_hsr(other_iface);
+                } else {
+                    log::warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface,
+                        other
+                    );
+                }
+            }
             Self::Ipsec(iface) => {
                 if let Self::Ipsec(other_iface) = other {
                     iface.update_ipsec(other_iface);
@@ -234,7 +247,7 @@ impl Interface {
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 17] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 18] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -250,6 +263,7 @@ impl InterfaceType {
         InterfaceType::Loopback,
         InterfaceType::MacSec,
         InterfaceType::Vrf,
+        InterfaceType::Hsr,
         InterfaceType::Ipsec,
         InterfaceType::Xfrm,
     ];

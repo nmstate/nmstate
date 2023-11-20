@@ -21,6 +21,7 @@ mod bridge;
 mod conn;
 mod dns;
 mod ethtool;
+mod hsr;
 mod ieee8021x;
 mod infiniband;
 mod ip;
@@ -47,6 +48,7 @@ pub use self::conn::{
     NmConnection, NmRange, NmSettingConnection, NmSettingsConnectionFlag,
 };
 pub use self::ethtool::NmSettingEthtool;
+pub use self::hsr::NmSettingHsr;
 pub use self::ieee8021x::NmSetting8021X;
 pub use self::infiniband::NmSettingInfiniBand;
 pub use self::ip::{NmSettingIp, NmSettingIpMethod};

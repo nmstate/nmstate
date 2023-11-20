@@ -263,6 +263,20 @@ def test_add_macsec_and_remove_example(eth1_up):
 
 
 @pytest.mark.skipif(
+    nm_minor_version() < 45,
+    reason="HSR is supported only in NetworkManager 1.45+",
+)
+@pytest.mark.tier1
+def test_add_hsr_and_remove_example(eth1_up):
+    with example_state(
+        "hsr0_up.yml", cleanup="hsr0_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("hsr0")
+
+
+@pytest.mark.skipif(
     nm_minor_version() <= 44,
     reason="Bond port config is not supported on NetworkManager 1.44-",
 )

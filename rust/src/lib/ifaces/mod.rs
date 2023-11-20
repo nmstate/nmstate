@@ -4,6 +4,7 @@ mod bridge_vlan;
 mod dummy;
 mod ethernet;
 mod ethtool;
+mod hsr;
 pub(crate) mod inter_ifaces;
 mod ipsec;
 mod loopback;
@@ -40,6 +41,7 @@ pub use ethtool::{
     EthtoolCoalesceConfig, EthtoolConfig, EthtoolFeatureConfig,
     EthtoolPauseConfig, EthtoolRingConfig,
 };
+pub use hsr::{HsrConfig, HsrInterface, HsrProtocol};
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
 pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;

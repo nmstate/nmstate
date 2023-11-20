@@ -1,0 +1,10 @@
+---
+interfaces:
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp

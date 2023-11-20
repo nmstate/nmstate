@@ -5,6 +5,7 @@ mod error;
 mod ethernet;
 mod ethtool;
 mod hostname;
+mod hsr;
 mod infiniband;
 mod ip;
 mod linux_bridge;

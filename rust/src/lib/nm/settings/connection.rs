@@ -8,6 +8,7 @@ use super::{
     bond::{gen_nm_bond_port_setting, gen_nm_bond_setting},
     bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     ethtool::gen_ethtool_setting,
+    hsr::gen_nm_hsr_setting,
     ieee8021x::gen_nm_802_1x_setting,
     infiniband::gen_nm_ib_setting,
     ip::gen_nm_ip_setting,
@@ -46,6 +47,7 @@ pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
 pub(crate) const NM_SETTING_VXLAN_SETTING_NAME: &str = "vxlan";
 pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
 pub(crate) const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
+pub(crate) const NM_SETTING_HSR_SETTING_NAME: &str = "hsr";
 pub(crate) const NM_SETTING_VPN_SETTING_NAME: &str = "vpn";
 
 pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
@@ -53,7 +55,7 @@ pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
     NM_SETTING_OVS_PORT_SETTING_NAME,
 ];
 
-pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 13] = [
+pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 14] = [
     NM_SETTING_WIRED_SETTING_NAME,
     NM_SETTING_VETH_SETTING_NAME,
     NM_SETTING_BOND_SETTING_NAME,
@@ -67,6 +69,7 @@ pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 13] = [
     NM_SETTING_LOOPBACK_SETTING_NAME,
     NM_SETTING_INFINIBAND_SETTING_NAME,
     NM_SETTING_MACSEC_SETTING_NAME,
+    NM_SETTING_HSR_SETTING_NAME,
 ];
 
 pub(crate) fn iface_to_nm_connections(
@@ -253,6 +256,9 @@ pub(crate) fn iface_to_nm_connections(
         Interface::Loopback(iface) => {
             gen_nm_loopback_setting(iface, &mut nm_conn);
         }
+        Interface::Hsr(iface) => {
+            gen_nm_hsr_setting(iface, &mut nm_conn);
+        }
         Interface::Ipsec(iface) => {
             gen_nm_ipsec_vpn_setting(iface, &mut nm_conn);
         }
@@ -371,6 +377,7 @@ pub(crate) fn iface_type_to_nm(
             Ok(NM_SETTING_LOOPBACK_SETTING_NAME.to_string())
         }
         InterfaceType::MacSec => Ok(NM_SETTING_MACSEC_SETTING_NAME.to_string()),
+        InterfaceType::Hsr => Ok(NM_SETTING_HSR_SETTING_NAME.to_string()),
         InterfaceType::Ipsec => Ok(NM_SETTING_VPN_SETTING_NAME.to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
