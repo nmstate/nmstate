@@ -4,6 +4,7 @@ members = [
     "src/cli",
     "src/clib",
     "src/lib",
+    "src/go/apigen",
 ]
 
 [workspace.metadata.vendor-filter]

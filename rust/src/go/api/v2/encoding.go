@@ -1,8 +1,11 @@
+//go:generate cargo run --bin nmstate-go-apigen ../../../lib zz_generated.types.go
+//go:generate ./controller-gen.sh object:headerFile="boilerplate.go.txt" paths="."
 package v2
 
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 func (o *BridgeOptions) UnmarshalJSON(data []byte) error {
@@ -28,19 +31,22 @@ func (o BridgeOptions) MarshalJSON() ([]byte, error) {
 
 func (o *BridgePortConfig) UnmarshalJSON(data []byte) error {
 	linuxBridgePortConfig := struct {
-		BridgePortConfigMetadata
+		BridgePortConfigMetaData
 		*LinuxBridgePortConfig
 	}{}
 	ovsBridgePortConfig := struct {
-		BridgePortConfigMetadata
+		BridgePortConfigMetaData
 		*OvsBridgePortConfig
 	}{}
-	if err := strictDecoder(data).Decode(&linuxBridgePortConfig); err == nil {
-		o.BridgePortConfigMetadata = linuxBridgePortConfig.BridgePortConfigMetadata
+	var linuxErr, ovsErr error
+	if linuxErr = strictDecoder(data).Decode(&linuxBridgePortConfig); linuxErr == nil {
+		o.BridgePortConfigMetaData = linuxBridgePortConfig.BridgePortConfigMetaData
 		o.LinuxBridgePortConfig = linuxBridgePortConfig.LinuxBridgePortConfig
-	} else if err := strictDecoder(data).Decode(&ovsBridgePortConfig); err == nil {
-		o.BridgePortConfigMetadata = ovsBridgePortConfig.BridgePortConfigMetadata
+	} else if ovsErr = strictDecoder(data).Decode(&ovsBridgePortConfig); ovsErr == nil {
+		o.BridgePortConfigMetaData = ovsBridgePortConfig.BridgePortConfigMetaData
 		o.OvsBridgePortConfig = ovsBridgePortConfig.OvsBridgePortConfig
+	} else {
+		return fmt.Errorf("failed unmarshaling bridge port, linux: %v, ovs: %v", linuxErr, ovsErr)
 	}
 	return nil
 }
@@ -48,28 +54,27 @@ func (o *BridgePortConfig) UnmarshalJSON(data []byte) error {
 func (o BridgePortConfig) MarshalJSON() ([]byte, error) {
 	if o.LinuxBridgePortConfig != nil {
 		return json.Marshal(struct {
-			BridgePortConfigMetadata
+			BridgePortConfigMetaData
 			*LinuxBridgePortConfig
 		}{
-			o.BridgePortConfigMetadata,
+			o.BridgePortConfigMetaData,
 			o.LinuxBridgePortConfig,
 		})
 	}
 	if o.OvsBridgePortConfig != nil {
 		return json.Marshal(struct {
-			BridgePortConfigMetadata
+			BridgePortConfigMetaData
 			*OvsBridgePortConfig
 		}{
-			o.BridgePortConfigMetadata,
+			o.BridgePortConfigMetaData,
 			o.OvsBridgePortConfig,
 		})
 	}
-	return json.Marshal(o.BridgePortConfigMetadata)
+	return json.Marshal(o.BridgePortConfigMetaData)
 }
 
 func (o *OvsBridgeStpOptions) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &o.Enabled); err == nil {
-		o.marshalNested = true
 		return nil
 	}
 	type ovsBridgeStpOptions OvsBridgeStpOptions
@@ -82,9 +87,6 @@ func (o *OvsBridgeStpOptions) UnmarshalJSON(data []byte) error {
 }
 
 func (o OvsBridgeStpOptions) MarshalJSON() ([]byte, error) {
-	if o.marshalNested {
-		return json.Marshal(&o.Enabled)
-	}
 	type ovsBridgeStpOptions OvsBridgeStpOptions
 	stp := ovsBridgeStpOptions{}
 	stp.Enabled = o.Enabled
