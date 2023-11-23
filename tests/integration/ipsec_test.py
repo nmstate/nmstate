@@ -2,6 +2,7 @@
 
 import os
 import glob
+import re
 import shutil
 
 import pytest
@@ -27,11 +28,13 @@ HOSTA_NAME = "hosta.example.org"
 HOSTA_NIC = "hosta_nic"
 HOSTA_IPV4 = "192.0.2.251"
 HOSTA_IPV4_PSK = "192.0.2.250"
+HOSTA_IPV4_RSA = "192.0.2.249"
 HOSTA_IPSEC_CONN_NAME = "hosta_conn"
 HOSTB_NAME = "hostb.example.org"
 HOSTB_NIC = "hostb_nic"
 HOSTB_IPV4 = "192.0.2.252"
 HOSTB_IPV4_PSK = "192.0.2.253"
+HOSTB_IPV4_RSA = "192.0.2.254"
 HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
 HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
 HOSTB_EXT_IP = "198.51.100.1"
@@ -39,6 +42,7 @@ HOSTB_DUMMY_NIC = "dummy0"
 HOSTB_NS = "nmstate_ipsec_test"
 HOSTB_IPSEC_CONN_NAME = "hostb_conn"
 HOSTB_IPSEC_PSK_CONN_NAME = "hostb_conn_psk"
+HOSTB_IPSEC_RSA_CONN_NAME = "hostb_conn_rsa"
 HOSTB_IPSEC_CONN_CONTENT = """
 config setup
     protostack=netkey
@@ -69,6 +73,20 @@ conn hostb_conn_psk
     right=192.0.2.250
     rightid=@hosta-psk.example.org
     authby=secret
+
+conn hostb_conn_rsa
+    hostaddrfamily=ipv4
+    left=192.0.2.254
+    leftid=@hostb-rsa.example.org
+    leftrsasigkey={RSA_SIGNATURE_HOSTB}
+    leftsubnet=0.0.0.0/0
+    rightaddresspool=203.0.113.102-203.0.113.200
+    rightrsasigkey={RSA_SIGNATURE_HOSTA}
+    leftmodecfgserver=yes
+    rightmodecfgclient=yes
+    right=192.0.2.249
+    rightid=@hosta-rsa.example.org
+    authby=rsasig
 """
 HOSTB_IPSEC_NSS_DIR = "/tmp/hostb_ipsec_nss"
 HOSTB_IPSEC_SECRETS_FILE = "/tmp/hostb_ipsec_secrets"
@@ -83,6 +101,8 @@ include /tmp/hostb_ipsec_conf/ipsec.d/*.conf
 PSK = "JjyNzrnHTnMqzloKaMuq2uCfJvSSUqTYdAXqD2U2OCFyVIJUUEHmXihBbPrUcmik"
 SECRET_LINE = f""": PSK "{PSK}"
 """
+
+RSA_SIGNATURES = {}
 
 if is_el8():
     DEFAULT_IPSEC_NSS_DIR = "/etc/ipsec.d"
@@ -105,22 +125,29 @@ def setup_hostb_ipsec_conn():
             os.mkdir(f"{HOSTB_IPSEC_CONF_DIR}/ipsec.d")
         if not os.path.exists(HOSTB_IPSEC_NSS_DIR):
             os.mkdir(f"{HOSTB_IPSEC_NSS_DIR}")
-        conn_conf_file_path = (
-            f"{HOSTB_IPSEC_CONF_DIR}/ipsec.d/{HOSTB_IPSEC_CONN_NAME}.conf"
-        )
-        with open(conn_conf_file_path, "w") as fd:
-            fd.write(HOSTB_IPSEC_CONN_CONTENT)
-        with open(f"{HOSTB_IPSEC_CONF_DIR}/ipsec.conf", "w") as fd:
-            fd.write(HOSTB_IPSEC_CONF_CONTENT)
-        with open(HOSTB_IPSEC_SECRETS_FILE, "w") as fd:
-            fd.write(SECRET_LINE)
 
         shutil.copytree(
             "/etc/ipsec.d/policies/", f"{HOSTB_IPSEC_CONF_DIR}/policies"
         )
 
         _init_libreswan_nss_db(HOSTB_IPSEC_NSS_DIR)
+        RSA_SIGNATURES["hostb"] = _new_rsa_hostkey(HOSTB_IPSEC_NSS_DIR)
         _import_certs(HOSTB_IPSEC_NSS_DIR)
+
+        conn_conf_file_path = (
+            f"{HOSTB_IPSEC_CONF_DIR}/ipsec.d/{HOSTB_IPSEC_CONN_NAME}.conf"
+        )
+        with open(conn_conf_file_path, "w") as fd:
+            fd.write(
+                HOSTB_IPSEC_CONN_CONTENT.format(
+                    RSA_SIGNATURE_HOSTA=RSA_SIGNATURES["hosta"],
+                    RSA_SIGNATURE_HOSTB=RSA_SIGNATURES["hostb"],
+                )
+            )
+        with open(f"{HOSTB_IPSEC_CONF_DIR}/ipsec.conf", "w") as fd:
+            fd.write(HOSTB_IPSEC_CONF_CONTENT)
+        with open(HOSTB_IPSEC_SECRETS_FILE, "w") as fd:
+            fd.write(SECRET_LINE)
 
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} "
@@ -145,6 +172,11 @@ def setup_hostb_ipsec_conn():
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} "
             f"ip addr add {HOSTB_IPV4_PSK}/24 dev {HOSTB_NIC}".split(),
+            check=True,
+        )
+        cmdlib.exec_cmd(
+            f"ip netns exec {HOSTB_NS} "
+            f"ip addr add {HOSTB_IPV4_RSA}/24 dev {HOSTB_NIC}".split(),
             check=True,
         )
         cmdlib.exec_cmd(
@@ -178,6 +210,13 @@ def setup_hostb_ipsec_conn():
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} "
             f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
+            f"--config {conn_conf_file_path} "
+            f"--add {HOSTB_IPSEC_RSA_CONN_NAME}".split(),
+            check=True,
+        )
+        cmdlib.exec_cmd(
+            f"ip netns exec {HOSTB_NS} "
+            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
             f"--asynchronous --up {HOSTB_IPSEC_CONN_NAME}".split(),
             check=True,
         )
@@ -185,6 +224,12 @@ def setup_hostb_ipsec_conn():
             f"ip netns exec {HOSTB_NS} "
             f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
             f"--asynchronous --up {HOSTB_IPSEC_PSK_CONN_NAME}".split(),
+            check=True,
+        )
+        cmdlib.exec_cmd(
+            f"ip netns exec {HOSTB_NS} "
+            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
+            f"--asynchronous --up {HOSTB_IPSEC_RSA_CONN_NAME}".split(),
             check=True,
         )
         yield
@@ -211,6 +256,7 @@ def _clean_hostb():
 @pytest.fixture(scope="module")
 def setup_hosta_ipsec_env(setup_hosta_ip):
     _init_libreswan_nss_db(DEFAULT_IPSEC_NSS_DIR)
+    RSA_SIGNATURES["hosta"] = _new_rsa_hostkey(DEFAULT_IPSEC_NSS_DIR)
     _import_certs(DEFAULT_IPSEC_NSS_DIR)
     cmdlib.exec_cmd("systemctl restart ipsec".split())
     yield
@@ -223,6 +269,24 @@ def ipsec_veth_peer():
     create_veth_pair(HOSTA_NIC, HOSTB_NIC, HOSTB_NS)
     yield
     remove_veth_pair(HOSTA_NIC, HOSTB_NS)
+
+
+def _new_rsa_hostkey(nss_path):
+    cmdlib.exec_cmd(
+        f"ipsec newhostkey --nssdir {nss_path}".split(), check=True
+    )
+    output = cmdlib.exec_cmd(
+        f"ipsec showhostkey --nssdir {nss_path} --list".split(), check=True
+    )[1].strip()
+    ckaid = re.search("ckaid: ([a-f0-9]+)", output).group(1)
+    return re.search(
+        "leftrsasigkey=(.+)$",
+        cmdlib.exec_cmd(
+            f"ipsec showhostkey --nssdir {nss_path} "
+            f"--left --ckaid {ckaid}".split(),
+            check=True,
+        )[1].strip(),
+    ).group(1)
 
 
 def _init_libreswan_nss_db(path):
@@ -291,6 +355,10 @@ def setup_hosta_ip():
                             },
                             {
                                 InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_PSK,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            },
+                            {
+                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_RSA,
                                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                             },
                         ],
@@ -450,6 +518,34 @@ def test_ipsec_apply_with_hiden_psk(ipsec_hosta_conn_cleanup):
 
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec, HOSTA_IPV4_PSK, HOSTB_IPV4_PSK
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
+    )
+
+
+def test_ipsec_rsa_authenticate(ipsec_hosta_conn_cleanup):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            leftrsasigkey: {RSA_SIGNATURES["hosta"]}
+            left: {HOSTA_IPV4_RSA}
+            leftid: 'hosta-rsa.example.org'
+            right: {HOSTB_IPV4_RSA}
+            rightrsasigkey: {RSA_SIGNATURES["hostb"]}
+            rightid: 'hostb-rsa.example.org'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state, verify_change=False)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_RSA, HOSTB_IPV4_RSA
     )
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
