@@ -1,0 +1,20 @@
+name: 'Test Report'
+on:
+  workflow_run:
+    workflows: ['CI']                     # runs after CI workflow
+    types:
+      - completed
+permissions:
+  contents: read
+  actions: read
+  checks: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: dorny/test-reporter@v1
+      with:
+        artifact: /nmstate-test-artifact-(.*)/  # artifact name
+        name: Integration tests                 # Name of the check run which will be created
+        path: 'junit*.xml'                      # Path to test results (inside artifact .zip)
+        reporter: junit                         # Format of test results
