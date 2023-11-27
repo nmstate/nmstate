@@ -160,12 +160,18 @@ def test_eth_with_802_1x(ieee_802_1x_env):
             Ieee8021X.PRIVATE_KEY_PASSWORD
         ]
     )
-
-    assert len(
-        cmdlib.exec_cmd(
-            f"nmcli -g 802-1x c  show {TEST_1X_CLI_NIC}".split(), check=True
-        )[1]
-    )
+    all_con_dev_pair = cmdlib.exec_cmd(
+        "nmcli -g NAME,DEVICE connection show --active".split(), check=True
+    )[1]
+    for con_dev_pair in all_con_dev_pair.split("\n"):
+        if TEST_1X_CLI_NIC in con_dev_pair:
+            con_name = con_dev_pair.split(":")[0]
+            assert len(
+                cmdlib.exec_cmd(
+                    ["nmcli", "-g", "802-1x", "c", "show", con_name],
+                    check=True,
+                )[1]
+            )
 
 
 @pytest.fixture
