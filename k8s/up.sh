@@ -19,8 +19,7 @@ for node in $(./k8s/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
         "sudo dnf upgrade -y \
             openvswitch \
             NetworkManager \
-            NetworkManager-ovs \
-            NetworkManager-config-server && \
+            NetworkManager-ovs && \
         sudo systemctl enable openvswitch && \
         sudo sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
             -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \

@@ -64,8 +64,6 @@ Summary:        C binding of nmstate
 # Use Recommends for NetworkManager because only access to NM DBus is required,
 # but NM could be running on a different host
 Recommends:     NetworkManager
-# Avoid automatically generated profiles
-Recommends:     NetworkManager-config-server
 License:        Apache-2.0
 
 %description libs
@@ -94,8 +92,6 @@ Summary:        nmstate Python 3 API library
 # Use Recommends for NetworkManager because only access to NM DBus is required,
 # but NM could be running on a different host
 Recommends:     NetworkManager
-# Avoid automatically generated profiles
-Recommends:     NetworkManager-config-server
 Recommends:     (NetworkManager-ovs if openvswitch)
 Provides:       nmstate-plugin-ovsdb = %{version}-%{release}
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}

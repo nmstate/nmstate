@@ -22,7 +22,6 @@ RUN dnf update -y && \
                    NetworkManager-ovs \
                    libreswan \
                    NetworkManager-libreswan \
-                   NetworkManager-config-server \
                    openvswitch2.11 \
                    systemd-udev \
                    python3-devel \

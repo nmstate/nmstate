@@ -329,6 +329,18 @@ def _import_certs(nss_dir):
 
 @pytest.fixture(scope="module")
 def setup_hosta_ip():
+    # NM creates the default connection 'Wired connection 1' with dhcp4
+    # enabled, but the lack of dhcp server will cause the activation
+    # pending and necessitate ipsec test failures
+    all_con_dev_pair = cmdlib.exec_cmd(
+        "nmcli -g NAME,DEVICE connection show --active".split(), check=True
+    )[1]
+    for con_dev_pair in all_con_dev_pair.split("\n"):
+        if HOSTA_NIC in con_dev_pair:
+            con_name = con_dev_pair.split(":")[0]
+            cmdlib.exec_cmd(
+                ["nmcli", "connection", "del", con_name], check=True
+            )
     libnmstate.apply(
         {
             # NetworkManager need default gateway to start ipsec connection
