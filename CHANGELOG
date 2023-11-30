@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.20] - 2023-11-30
+### Breaking changes
+ - Changed query output `valid-left` to `valid-life-time`. (c2809592)
+
+### New features
+ - Add support for the `route-type`. (f8c57a88)
+ - Support generate statistic data. (54f4d6dd)
+
+### Bug fixes
+ - Fix `ipv4.dhcp-timeout` even when ip not desired. (6b6caeec)
+ - Drop the filtering for the nispor loopback routes. (af88bb24)
+
 ## [2.2.19] - 2023-11-15
 ### Breaking changes
  - N/A
