@@ -11,6 +11,7 @@ from . import cmdlib
 
 @contextmanager
 def nm_unmanaged_dummy(name):
+    cmdlib.exec_cmd(f"ip link del {name}".split(), check=False)
     cmdlib.exec_cmd(f"ip link add name {name} type dummy".split(), check=True)
     cmdlib.exec_cmd(f"ip link set {name} up".split(), check=True)
     cmdlib.exec_cmd(f"nmcli d set {name} managed false".split(), check=True)
