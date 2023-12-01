@@ -159,10 +159,10 @@ pub use crate::ip::{
 };
 pub use crate::lldp::{
     LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,
-    LldpMacPhyConf, LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs,
-    LldpNeighborTlv, LldpPortId, LldpPortIdType, LldpPpvids,
-    LldpSystemCapabilities, LldpSystemCapability, LldpSystemDescription,
-    LldpSystemName, LldpVlan, LldpVlans,
+    LldpMacPhy, LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs, LldpNeighborTlv,
+    LldpPortId, LldpPortIdType, LldpPpvids, LldpSystemCapabilities,
+    LldpSystemCapability, LldpSystemDescription, LldpSystemName, LldpVlan,
+    LldpVlans,
 };
 pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
 pub(crate) use crate::net_state::MergedNetworkState;

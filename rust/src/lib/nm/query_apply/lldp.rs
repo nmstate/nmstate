@@ -8,10 +8,10 @@ use super::super::nm_dbus::{
 };
 
 use crate::{
-    LldpAddressFamily, LldpChassisId, LldpConfig, LldpMacPhyConf,
-    LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs, LldpNeighborTlv, LldpPortId,
-    LldpPpvids, LldpSystemCapabilities, LldpSystemDescription, LldpSystemName,
-    LldpVlan, LldpVlans,
+    LldpAddressFamily, LldpChassisId, LldpConfig, LldpMacPhy, LldpMaxFrameSize,
+    LldpMgmtAddr, LldpMgmtAddrs, LldpNeighborTlv, LldpPortId, LldpPpvids,
+    LldpSystemCapabilities, LldpSystemDescription, LldpSystemName, LldpVlan,
+    LldpVlans,
 };
 
 pub(crate) fn is_lldp_enabled(nm_conn: &NmConnection) -> bool {
@@ -81,7 +81,7 @@ impl From<&[NmLldpNeighbor8021Vlan]> for LldpVlans {
             }
         }
 
-        LldpVlans(vlans)
+        LldpVlans::new(vlans)
     }
 }
 
@@ -101,11 +101,10 @@ fn get_chassis_id(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
         (nm_info.chassis_id_type, nm_info.chassis_id.as_deref())
     {
         if let Ok(id_type) = u8::try_from(id_type) {
-            let chassis_id = LldpChassisId {
-                id: id.to_string(),
-                id_type: id_type.into(),
-            };
-            return Some(LldpNeighborTlv::ChassisId(chassis_id));
+            return Some(LldpNeighborTlv::ChassisId(LldpChassisId::new(
+                id.to_string(),
+                id_type.into(),
+            )));
         } else {
             log::warn!(
                 "Got unsupported chassis_id_type {}, expecting u8",
@@ -121,11 +120,10 @@ fn get_port_id(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
         (nm_info.port_id_type, nm_info.port_id.as_deref())
     {
         if let Ok(id_type) = u8::try_from(id_type) {
-            let port_id = LldpPortId {
-                id: id.to_string(),
-                id_type: id_type.into(),
-            };
-            return Some(LldpNeighborTlv::PortId(port_id));
+            return Some(LldpNeighborTlv::PortId(LldpPortId::new(
+                id.to_string(),
+                id_type.into(),
+            )));
         } else {
             log::warn!(
                 "Got unsupported port_id_type {}, expecting u8",
@@ -140,7 +138,7 @@ fn get_sys_caps(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
     if let Some(s) = nm_info.system_capabilities {
         if let Ok(caps) = u16::try_from(s) {
             return Some(LldpNeighborTlv::SystemCapabilities(
-                LldpSystemCapabilities(caps),
+                LldpSystemCapabilities::from(caps),
             ));
         }
     }
@@ -149,7 +147,7 @@ fn get_sys_caps(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
 
 fn get_sys_name(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
     if let Some(s) = nm_info.system_name.as_deref() {
-        return Some(LldpNeighborTlv::SystemName(LldpSystemName(
+        return Some(LldpNeighborTlv::SystemName(LldpSystemName::new(
             s.to_string(),
         )));
     }
@@ -159,7 +157,7 @@ fn get_sys_name(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
 fn get_sys_description(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
     if let Some(s) = nm_info.system_description.as_deref() {
         return Some(LldpNeighborTlv::SystemDescription(
-            LldpSystemDescription(s.to_string()),
+            LldpSystemDescription::new(s.to_string()),
         ));
     }
     None
@@ -180,12 +178,9 @@ fn get_mac_phy_conf(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
             nm_conf.operational_mau_type,
         ) {
             if let (Ok(o), Ok(p)) = (u16::try_from(o), u16::try_from(p)) {
-                let conf = LldpMacPhyConf {
-                    autoneg: a > 0,
-                    operational_mau_type: o,
-                    pmd_autoneg_cap: p,
-                };
-                return Some(LldpNeighborTlv::Ieee8023MacPhyConf(conf));
+                return Some(LldpNeighborTlv::Ieee8023MacPhyConf(
+                    LldpMacPhy::new(a > 0, o, p),
+                ));
             }
         }
     }
@@ -200,7 +195,7 @@ fn get_ppvids(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
                 ppvids.push(p);
             }
         }
-        return Some(LldpNeighborTlv::Ieee8021Ppvids(LldpPpvids(ppvids)));
+        return Some(LldpNeighborTlv::Ieee8021Ppvids(LldpPpvids::new(ppvids)));
     }
     None
 }
@@ -248,7 +243,7 @@ fn get_mgmt_addrs(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
                 }
             }
         }
-        return Some(LldpNeighborTlv::ManagementAddresses(LldpMgmtAddrs(
+        return Some(LldpNeighborTlv::ManagementAddresses(LldpMgmtAddrs::new(
             addrs,
         )));
     }
@@ -257,9 +252,9 @@ fn get_mgmt_addrs(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
 
 fn get_max_frame_size(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
     if let Some(s) = nm_info.ieee_802_3_max_frame_size {
-        return Some(LldpNeighborTlv::Ieee8023MaxFrameSize(LldpMaxFrameSize(
-            s,
-        )));
+        return Some(LldpNeighborTlv::Ieee8023MaxFrameSize(
+            LldpMaxFrameSize::new(s),
+        ));
     }
     None
 }

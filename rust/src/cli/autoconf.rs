@@ -98,7 +98,7 @@ fn get_lldp_vlans(net_state: &NetworkState) -> HashMap<(u32, &str), Vec<&str>> {
                 for lldp_tlv in lldp_tlvs {
                     if let LldpNeighborTlv::Ieee8021Vlans(lldp_vlans) = lldp_tlv
                     {
-                        for lldp_vlan in &lldp_vlans.0 {
+                        for lldp_vlan in &lldp_vlans.ieee_802_1_vlans {
                             match ret
                                 .entry((lldp_vlan.vid, lldp_vlan.name.as_str()))
                             {

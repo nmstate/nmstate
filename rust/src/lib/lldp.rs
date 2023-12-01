@@ -1,47 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::{
-    de::IgnoredAny, ser::SerializeStruct, Deserialize, Deserializer, Serialize,
-    Serializer,
-};
-
-const LLDP_CHASSIS_ID_TYPE: u8 = 1;
-const LLDP_PORT_TYPE: u8 = 2;
-const LLDP_SYSTEM_NAME_TYPE: u8 = 5;
-const LLDP_SYSTEM_DESCRIPTION_TYPE: u8 = 6;
-const LLDP_SYSTEM_CAPABILITIES_TYPE: u8 = 7;
-const LLDP_MANAGEMENT_ADDRESSES_TYPE: u8 = 8;
-const LLDP_ORGANIZATION_SPECIFIC_TYPE: u8 = 127;
-
-const LLDP_CHASSIS_ID_RESERVED: u8 = 0;
-const LLDP_CHASSIS_ID_CHASSIS_COMPONENT: u8 = 1;
-const LLDP_CHASSIS_ID_IFACE_ALIAS: u8 = 2;
-const LLDP_CHASSIS_ID_PORT_COMPONENT: u8 = 3;
-const LLDP_CHASSIS_ID_MAC_ADDR: u8 = 4;
-const LLDP_CHASSIS_ID_NET_ADDR: u8 = 5;
-const LLDP_CHASSIS_ID_IFACE_NAME: u8 = 6;
-const LLDP_CHASSIS_ID_LOCAL: u8 = 7;
-
-const LLDP_PORT_ID_RESERVED: u8 = 0;
-const LLDP_PORT_ID_IFACE_ALIAS: u8 = 1;
-const LLDP_PORT_ID_PORT_COMPONENT: u8 = 2;
-const LLDP_PORT_ID_MAC_ADDR: u8 = 3;
-const LLDP_PORT_ID_NET_ADDR: u8 = 4;
-const LLDP_PORT_ID_IFACE_NAME: u8 = 5;
-const LLDP_PORT_ID_AGENT_CIRCUIT_ID: u8 = 6;
-const LLDP_PORT_ID_LOCAL: u8 = 7;
-
-const LLDP_ORG_OIU_VLAN: &str = "00:80:c2";
-const LLDP_ORG_SUBTYPE_VLAN: u8 = 3;
-
-const LLDP_ORG_OIU_MAC_PHY_CONF: &str = "00:12:0f";
-const LLDP_ORG_SUBTYPE_MAC_PHY_CONF: u8 = 1;
-
-const LLDP_ORG_OIU_PPVIDS: &str = "00:80:c2";
-const LLDP_ORG_SUBTYPE_PPVIDS: u8 = 2;
-
-const LLDP_ORG_OIU_MAX_FRAME_SIZE: &str = "00:12:0f";
-const LLDP_ORG_SUBTYPE_MAX_FRAME_SIZE: u8 = 4;
+use serde::{de::IgnoredAny, Deserialize, Deserializer, Serialize};
 
 const LLDP_SYS_CAP_OTHER: u16 = 1;
 const LLDP_SYS_CAP_REPEATER: u16 = 2;
@@ -54,6 +13,53 @@ const LLDP_SYS_CAP_STATION_ONLY: u16 = 8;
 const LLDP_SYS_CAP_CVLAN: u16 = 9;
 const LLDP_SYS_CAP_SVLAN: u16 = 10;
 const LLDP_SYS_CAP_TWO_PORT_MAC_RELAY: u16 = 11;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[repr(u8)]
+#[serde(into = "u8")]
+pub enum LldpNeighborTlvType {
+    ChassisId = 1,
+    Port = 2,
+    SystemName = 5,
+    SystemDescription = 6,
+    SystemCapabilities = 7,
+    ManagementAddress = 8,
+    OrganizationSpecific = 127,
+}
+
+impl From<LldpNeighborTlvType> for u8 {
+    fn from(value: LldpNeighborTlvType) -> Self {
+        value as Self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[repr(u8)]
+#[serde(into = "u8")]
+pub enum LldpOrgSubtype {
+    Vlan = 3,
+    MacPhyConf = 1,
+    Ppvids = 2,
+    MaxFrameSize = 4,
+}
+
+impl From<LldpOrgSubtype> for u8 {
+    fn from(value: LldpOrgSubtype) -> Self {
+        value as Self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum LldpOrgOiu {
+    #[serde(rename = "00:80:c2")]
+    Vlan,
+    #[serde(rename = "00:12:0f")]
+    MacPhyConf,
+    #[serde(rename = "00:80:c2")]
+    Ppvids,
+    #[serde(rename = "00:12:0f")]
+    MaxFrameSize,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[non_exhaustive]
@@ -98,115 +104,126 @@ pub enum LldpNeighborTlv {
     ChassisId(LldpChassisId),
     PortId(LldpPortId),
     Ieee8021Vlans(LldpVlans),
-    Ieee8023MacPhyConf(LldpMacPhyConf),
+    Ieee8023MacPhyConf(LldpMacPhy),
     Ieee8021Ppvids(LldpPpvids),
     ManagementAddresses(LldpMgmtAddrs),
     Ieee8023MaxFrameSize(LldpMaxFrameSize),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct LldpSystemName(pub String);
-
-impl Serialize for LldpSystemName {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_system_name", 2)?;
-        serial_struct.serialize_field("type", &LLDP_SYSTEM_NAME_TYPE)?;
-        serial_struct.serialize_field("system-name", &self.0)?;
-        serial_struct.end()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct LldpSystemDescription(pub String);
-
-impl Serialize for LldpSystemDescription {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_system_description", 2)?;
-        serial_struct.serialize_field("type", &LLDP_SYSTEM_DESCRIPTION_TYPE)?;
-        serial_struct.serialize_field("system-description", &self.0)?;
-        serial_struct.end()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
-pub struct LldpChassisId {
-    pub id: String,
-    pub id_type: LldpChassisIdType,
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LldpSystemName {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub system_name: String,
 }
 
-impl Serialize for LldpChassisId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_chassis_id", 4)?;
-        serial_struct.serialize_field("_description", &self.id_type)?;
-        serial_struct
-            .serialize_field("chassis-id-type", &(self.id_type as u8))?;
-        serial_struct.serialize_field("type", &LLDP_CHASSIS_ID_TYPE)?;
-        serial_struct.serialize_field("chassis-id", &self.id)?;
-        serial_struct.end()
+impl LldpSystemName {
+    pub fn new(value: String) -> Self {
+        Self {
+            system_name: value,
+            ty: LldpNeighborTlvType::SystemName,
+        }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LldpSystemDescription {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub system_description: String,
+}
+
+impl LldpSystemDescription {
+    pub fn new(value: String) -> Self {
+        Self {
+            system_description: value,
+            ty: LldpNeighborTlvType::SystemDescription,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LldpChassisId {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub chassis_id: String,
+    pub chassis_id_type: LldpChassisIdType,
+    #[serde(rename = "_description")]
+    pub description: String,
+}
+
+impl LldpChassisId {
+    pub fn new(chassis_id: String, chassis_id_type: LldpChassisIdType) -> Self {
+        Self {
+            chassis_id,
+            chassis_id_type: chassis_id_type.clone(),
+            description: chassis_id_type.into(),
+            ty: LldpNeighborTlvType::ChassisId,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[repr(u8)]
+#[serde(into = "u8")]
 pub enum LldpChassisIdType {
-    Reserved,
-    #[serde(rename = "Chassis component")]
-    ChassisComponent,
-    #[serde(rename = "Interface alias")]
-    InterfaceAlias,
-    #[serde(rename = "Port component")]
-    PortComponent,
-    #[serde(rename = "MAC address")]
-    MacAddress,
-    #[serde(rename = "Network address")]
-    NetworkAddress,
-    #[serde(rename = "Interface name")]
-    InterfaceName,
-    #[serde(rename = "Locally assigned")]
-    LocallyAssigned,
+    Reserved = 0,
+    ChassisComponent = 1,
+    InterfaceAlias = 2,
+    PortComponent = 3,
+    MacAddress = 4,
+    NetworkAddress = 5,
+    InterfaceName = 6,
+    LocallyAssigned = 7,
 }
 
 impl From<LldpChassisIdType> for u8 {
-    fn from(v: LldpChassisIdType) -> u8 {
-        match v {
-            LldpChassisIdType::Reserved => LLDP_CHASSIS_ID_RESERVED,
-            LldpChassisIdType::ChassisComponent => {
-                LLDP_CHASSIS_ID_CHASSIS_COMPONENT
-            }
-            LldpChassisIdType::InterfaceAlias => LLDP_CHASSIS_ID_IFACE_ALIAS,
-            LldpChassisIdType::PortComponent => LLDP_CHASSIS_ID_PORT_COMPONENT,
-            LldpChassisIdType::MacAddress => LLDP_CHASSIS_ID_MAC_ADDR,
-            LldpChassisIdType::NetworkAddress => LLDP_CHASSIS_ID_NET_ADDR,
-            LldpChassisIdType::InterfaceName => LLDP_CHASSIS_ID_IFACE_NAME,
-            LldpChassisIdType::LocallyAssigned => LLDP_CHASSIS_ID_LOCAL,
-        }
+    fn from(value: LldpChassisIdType) -> Self {
+        value as Self
     }
 }
 
 impl From<u8> for LldpChassisIdType {
-    fn from(i: u8) -> Self {
-        match i {
-            LLDP_CHASSIS_ID_CHASSIS_COMPONENT => Self::ChassisComponent,
-            LLDP_CHASSIS_ID_IFACE_ALIAS => Self::InterfaceAlias,
-            LLDP_CHASSIS_ID_PORT_COMPONENT => Self::PortComponent,
-            LLDP_CHASSIS_ID_MAC_ADDR => Self::MacAddress,
-            LLDP_CHASSIS_ID_NET_ADDR => Self::NetworkAddress,
-            LLDP_CHASSIS_ID_IFACE_NAME => Self::InterfaceName,
-            LLDP_CHASSIS_ID_LOCAL => Self::LocallyAssigned,
-            _ => Self::Reserved,
+    fn from(v: u8) -> LldpChassisIdType {
+        if v == LldpChassisIdType::ChassisComponent as u8 {
+            LldpChassisIdType::ChassisComponent
+        } else if v == LldpChassisIdType::InterfaceAlias as u8 {
+            LldpChassisIdType::InterfaceAlias
+        } else if v == LldpChassisIdType::PortComponent as u8 {
+            LldpChassisIdType::PortComponent
+        } else if v == LldpChassisIdType::MacAddress as u8 {
+            LldpChassisIdType::MacAddress
+        } else if v == LldpChassisIdType::NetworkAddress as u8 {
+            LldpChassisIdType::NetworkAddress
+        } else if v == LldpChassisIdType::InterfaceName as u8 {
+            LldpChassisIdType::InterfaceName
+        } else if v == LldpChassisIdType::LocallyAssigned as u8 {
+            LldpChassisIdType::LocallyAssigned
+        } else {
+            LldpChassisIdType::Reserved
         }
+    }
+}
+
+impl From<LldpChassisIdType> for String {
+    fn from(v: LldpChassisIdType) -> String {
+        match v {
+            LldpChassisIdType::Reserved => "Reserved",
+            LldpChassisIdType::ChassisComponent => "Chasis compontent",
+            LldpChassisIdType::InterfaceAlias => "Interface alias",
+            LldpChassisIdType::PortComponent => "Port component",
+            LldpChassisIdType::MacAddress => "MAC address",
+            LldpChassisIdType::NetworkAddress => "Network address",
+            LldpChassisIdType::InterfaceName => "Interface name",
+            LldpChassisIdType::LocallyAssigned => "Locally assigned",
+        }
+        .to_string()
     }
 }
 
@@ -216,61 +233,62 @@ impl Default for LldpChassisIdType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
-pub struct LldpSystemCapabilities(pub u16);
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LldpSystemCapabilities {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub system_capabilities: Vec<LldpSystemCapability>,
+}
 
-impl Serialize for LldpSystemCapabilities {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_system_capabilities", 2)?;
-        serial_struct
-            .serialize_field("type", &LLDP_SYSTEM_CAPABILITIES_TYPE)?;
-        serial_struct
-            .serialize_field("system-capabilities", &parse_sys_caps(self.0))?;
-        serial_struct.end()
+impl LldpSystemCapabilities {
+    pub fn new(system_capabilities: Vec<LldpSystemCapability>) -> Self {
+        Self {
+            system_capabilities,
+            ty: LldpNeighborTlvType::SystemCapabilities,
+        }
     }
 }
 
-fn parse_sys_caps(caps: u16) -> Vec<LldpSystemCapability> {
-    let mut ret = Vec::new();
-    if (caps & 1 << (LLDP_SYS_CAP_OTHER - 1)) > 0 {
-        ret.push(LldpSystemCapability::Other);
+impl From<u16> for LldpSystemCapabilities {
+    fn from(caps: u16) -> Self {
+        let mut ret = Vec::new();
+        if (caps & 1 << (LLDP_SYS_CAP_OTHER - 1)) > 0 {
+            ret.push(LldpSystemCapability::Other);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_REPEATER - 1)) > 0 {
+            ret.push(LldpSystemCapability::Repeater);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_MAC_BRIDGE - 1)) > 0 {
+            ret.push(LldpSystemCapability::MacBridgeComponent);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_AP - 1)) > 0 {
+            ret.push(LldpSystemCapability::AccessPoint);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_ROUTER - 1)) > 0 {
+            ret.push(LldpSystemCapability::Router);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_TELEPHONE - 1)) > 0 {
+            ret.push(LldpSystemCapability::Telephone);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_DOCSIS - 1)) > 0 {
+            ret.push(LldpSystemCapability::DocsisCableDevice);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_STATION_ONLY - 1)) > 0 {
+            ret.push(LldpSystemCapability::StationOnly);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_CVLAN - 1)) > 0 {
+            ret.push(LldpSystemCapability::CVlanComponent);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_SVLAN - 1)) > 0 {
+            ret.push(LldpSystemCapability::SVlanComponent);
+        }
+        if (caps & 1 << (LLDP_SYS_CAP_TWO_PORT_MAC_RELAY - 1)) > 0 {
+            ret.push(LldpSystemCapability::TwoPortMacRelayComponent);
+        }
+        Self::new(ret)
     }
-    if (caps & 1 << (LLDP_SYS_CAP_REPEATER - 1)) > 0 {
-        ret.push(LldpSystemCapability::Repeater);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_MAC_BRIDGE - 1)) > 0 {
-        ret.push(LldpSystemCapability::MacBridgeComponent);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_AP - 1)) > 0 {
-        ret.push(LldpSystemCapability::AccessPoint);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_ROUTER - 1)) > 0 {
-        ret.push(LldpSystemCapability::Router);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_TELEPHONE - 1)) > 0 {
-        ret.push(LldpSystemCapability::Telephone);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_DOCSIS - 1)) > 0 {
-        ret.push(LldpSystemCapability::DocsisCableDevice);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_STATION_ONLY - 1)) > 0 {
-        ret.push(LldpSystemCapability::StationOnly);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_CVLAN - 1)) > 0 {
-        ret.push(LldpSystemCapability::CVlanComponent);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_SVLAN - 1)) > 0 {
-        ret.push(LldpSystemCapability::SVlanComponent);
-    }
-    if (caps & 1 << (LLDP_SYS_CAP_TWO_PORT_MAC_RELAY - 1)) > 0 {
-        ret.push(LldpSystemCapability::TwoPortMacRelayComponent);
-    }
-    ret
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -302,45 +320,83 @@ impl Default for LldpSystemCapability {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LldpPortId {
-    pub id: String,
-    pub id_type: LldpPortIdType,
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub port_id: String,
+    pub port_id_type: LldpPortIdType,
+    #[serde(rename = "_description")]
+    pub description: String,
 }
 
-impl Serialize for LldpPortId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_port_id", 4)?;
-        serial_struct.serialize_field("_description", &self.id_type)?;
-        serial_struct.serialize_field("port-id-type", &(self.id_type as u8))?;
-        serial_struct.serialize_field("type", &LLDP_PORT_TYPE)?;
-        serial_struct.serialize_field("port-id", &self.id)?;
-        serial_struct.end()
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[repr(u8)]
+#[serde(into = "u8")]
+pub enum LldpPortIdType {
+    Reserved = 0,
+    InterfaceAlias = 1,
+    PortComponent = 2,
+    MacAddress = 3,
+    NetworkAddress = 4,
+    InterfaceName = 5,
+    AgentCircuitId = 6,
+    LocallyAssigned = 7,
+}
+
+impl From<LldpPortIdType> for u8 {
+    fn from(value: LldpPortIdType) -> Self {
+        value as Self
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum LldpPortIdType {
-    Reserved,
-    #[serde(rename = "Interface alias")]
-    InterfaceAlias,
-    #[serde(rename = "Port component")]
-    PortComponent,
-    #[serde(rename = "MAC address")]
-    MacAddress,
-    #[serde(rename = "Network address")]
-    NetworkAddress,
-    #[serde(rename = "Interface name")]
-    InterfaceName,
-    #[serde(rename = "Agent circuit ID")]
-    AgentCircuitId,
-    #[serde(rename = "Locally assigned")]
-    LocallyAssigned,
+impl From<LldpPortIdType> for String {
+    fn from(v: LldpPortIdType) -> String {
+        match v {
+            LldpPortIdType::Reserved => "Reserved",
+            LldpPortIdType::InterfaceAlias => "Interface alias",
+            LldpPortIdType::PortComponent => "Port component",
+            LldpPortIdType::MacAddress => "MAC address",
+            LldpPortIdType::NetworkAddress => "Network address",
+            LldpPortIdType::InterfaceName => "Interface name",
+            LldpPortIdType::AgentCircuitId => "Agent circuit ID",
+            LldpPortIdType::LocallyAssigned => "Locally assigned",
+        }
+        .to_string()
+    }
+}
+
+impl From<u8> for LldpPortIdType {
+    fn from(v: u8) -> LldpPortIdType {
+        if v == LldpPortIdType::InterfaceName as u8 {
+            LldpPortIdType::InterfaceName
+        } else if v == LldpPortIdType::PortComponent as u8 {
+            LldpPortIdType::PortComponent
+        } else if v == LldpPortIdType::MacAddress as u8 {
+            LldpPortIdType::MacAddress
+        } else if v == LldpPortIdType::NetworkAddress as u8 {
+            LldpPortIdType::NetworkAddress
+        } else if v == LldpPortIdType::AgentCircuitId as u8 {
+            LldpPortIdType::AgentCircuitId
+        } else if v == LldpPortIdType::LocallyAssigned as u8 {
+            LldpPortIdType::LocallyAssigned
+        } else {
+            LldpPortIdType::Reserved
+        }
+    }
+}
+
+impl LldpPortId {
+    pub fn new(port_id: String, port_id_type: LldpPortIdType) -> Self {
+        Self {
+            port_id,
+            port_id_type: port_id_type.clone(),
+            description: port_id_type.into(),
+            ty: LldpNeighborTlvType::Port,
+        }
+    }
 }
 
 impl Default for LldpPortIdType {
@@ -349,52 +405,25 @@ impl Default for LldpPortIdType {
     }
 }
 
-impl From<LldpPortIdType> for u8 {
-    fn from(v: LldpPortIdType) -> u8 {
-        match v {
-            LldpPortIdType::Reserved => LLDP_PORT_ID_RESERVED,
-            LldpPortIdType::InterfaceAlias => LLDP_PORT_ID_IFACE_ALIAS,
-            LldpPortIdType::PortComponent => LLDP_PORT_ID_PORT_COMPONENT,
-            LldpPortIdType::MacAddress => LLDP_PORT_ID_MAC_ADDR,
-            LldpPortIdType::NetworkAddress => LLDP_PORT_ID_NET_ADDR,
-            LldpPortIdType::InterfaceName => LLDP_PORT_ID_IFACE_NAME,
-            LldpPortIdType::AgentCircuitId => LLDP_PORT_ID_AGENT_CIRCUIT_ID,
-            LldpPortIdType::LocallyAssigned => LLDP_PORT_ID_LOCAL,
-        }
-    }
-}
-
-impl From<u8> for LldpPortIdType {
-    fn from(v: u8) -> Self {
-        match v {
-            LLDP_PORT_ID_IFACE_ALIAS => Self::InterfaceAlias,
-            LLDP_PORT_ID_PORT_COMPONENT => Self::PortComponent,
-            LLDP_PORT_ID_MAC_ADDR => Self::MacAddress,
-            LLDP_PORT_ID_NET_ADDR => Self::NetworkAddress,
-            LLDP_PORT_ID_IFACE_NAME => Self::InterfaceName,
-            LLDP_PORT_ID_AGENT_CIRCUIT_ID => Self::AgentCircuitId,
-            LLDP_PORT_ID_LOCAL => Self::LocallyAssigned,
-            _ => Self::Reserved,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
-pub struct LldpVlans(pub Vec<LldpVlan>);
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LldpVlans {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub ieee_802_1_vlans: Vec<LldpVlan>,
+    pub oui: LldpOrgOiu,
+    pub subtype: LldpOrgSubtype,
+}
 
-impl Serialize for LldpVlans {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct = serializer.serialize_struct("lldp_vlans", 4)?;
-        serial_struct
-            .serialize_field("type", &LLDP_ORGANIZATION_SPECIFIC_TYPE)?;
-        serial_struct.serialize_field("ieee-802-1-vlans", &self.0)?;
-        serial_struct.serialize_field("oui", LLDP_ORG_OIU_VLAN)?;
-        serial_struct.serialize_field("subtype", &LLDP_ORG_SUBTYPE_VLAN)?;
-        serial_struct.end()
+impl LldpVlans {
+    pub fn new(ieee_802_1_vlans: Vec<LldpVlan>) -> Self {
+        Self {
+            ieee_802_1_vlans,
+            oui: LldpOrgOiu::Vlan,
+            subtype: LldpOrgSubtype::Vlan,
+            ty: LldpNeighborTlvType::OrganizationSpecific,
+        }
     }
 }
 
@@ -405,86 +434,82 @@ pub struct LldpVlan {
     pub vid: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
+pub struct LldpMacPhy {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub ieee_802_3_mac_phy_conf: LldpMacPhyConf,
+    pub oui: LldpOrgOiu,
+    pub subtype: LldpOrgSubtype,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 pub struct LldpMacPhyConf {
     pub autoneg: bool,
     pub operational_mau_type: u16,
     pub pmd_autoneg_cap: u16,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[non_exhaustive]
-#[serde(rename_all = "kebab-case")]
-struct _LldpMacPhyConf {
-    autoneg: bool,
-    operational_mau_type: u16,
-    pmd_autoneg_cap: u16,
-}
-
-impl From<&LldpMacPhyConf> for _LldpMacPhyConf {
-    fn from(conf: &LldpMacPhyConf) -> Self {
+impl LldpMacPhy {
+    pub fn new(
+        autoneg: bool,
+        operational_mau_type: u16,
+        pmd_autoneg_cap: u16,
+    ) -> Self {
         Self {
-            autoneg: conf.autoneg,
-            operational_mau_type: conf.operational_mau_type,
-            pmd_autoneg_cap: conf.pmd_autoneg_cap,
+            ieee_802_3_mac_phy_conf: LldpMacPhyConf {
+                autoneg,
+                operational_mau_type,
+                pmd_autoneg_cap,
+            },
+            oui: LldpOrgOiu::MacPhyConf,
+            subtype: LldpOrgSubtype::MacPhyConf,
+            ty: LldpNeighborTlvType::OrganizationSpecific,
         }
     }
 }
 
-impl Serialize for LldpMacPhyConf {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_mac_phy_conf", 4)?;
-        serial_struct
-            .serialize_field("type", &LLDP_ORGANIZATION_SPECIFIC_TYPE)?;
-        serial_struct.serialize_field(
-            "ieee-802-3-mac-phy-conf",
-            &_LldpMacPhyConf::from(self),
-        )?;
-        serial_struct.serialize_field("oui", LLDP_ORG_OIU_MAC_PHY_CONF)?;
-        serial_struct
-            .serialize_field("subtype", &LLDP_ORG_SUBTYPE_MAC_PHY_CONF)?;
-        serial_struct.end()
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LldpPpvids {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub ieee_802_1_ppvids: Vec<u32>,
+    pub oui: LldpOrgOiu,
+    pub subtype: LldpOrgSubtype,
+}
+
+impl LldpPpvids {
+    pub fn new(ieee_802_1_ppvids: Vec<u32>) -> Self {
+        Self {
+            ieee_802_1_ppvids,
+            oui: LldpOrgOiu::Ppvids,
+            subtype: LldpOrgSubtype::Ppvids,
+            ty: LldpNeighborTlvType::OrganizationSpecific,
+        }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
-pub struct LldpPpvids(pub Vec<u32>);
-impl Serialize for LldpPpvids {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_ppvids", 4)?;
-        serial_struct
-            .serialize_field("type", &LLDP_ORGANIZATION_SPECIFIC_TYPE)?;
-        serial_struct.serialize_field("ieee-802-1-ppvids", &self.0)?;
-        serial_struct.serialize_field("oui", LLDP_ORG_OIU_PPVIDS)?;
-        serial_struct.serialize_field("subtype", &LLDP_ORG_SUBTYPE_PPVIDS)?;
-        serial_struct.end()
-    }
+#[serde(rename_all = "kebab-case")]
+pub struct LldpMgmtAddrs {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub management_addresses: Vec<LldpMgmtAddr>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-#[non_exhaustive]
-pub struct LldpMgmtAddrs(pub Vec<LldpMgmtAddr>);
-impl Serialize for LldpMgmtAddrs {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_mgmt_addrs", 2)?;
-        serial_struct
-            .serialize_field("type", &LLDP_MANAGEMENT_ADDRESSES_TYPE)?;
-        serial_struct.serialize_field("management-addresses", &self.0)?;
-        serial_struct.end()
+impl LldpMgmtAddrs {
+    pub fn new(management_addresses: Vec<LldpMgmtAddr>) -> Self {
+        Self {
+            management_addresses,
+            ty: LldpNeighborTlvType::ManagementAddress,
+        }
     }
 }
 
@@ -531,22 +556,24 @@ impl From<u16> for LldpAddressFamily {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
-pub struct LldpMaxFrameSize(pub u32);
-impl Serialize for LldpMaxFrameSize {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut serial_struct =
-            serializer.serialize_struct("lldp_max_frame_size", 4)?;
-        serial_struct
-            .serialize_field("type", &LLDP_ORGANIZATION_SPECIFIC_TYPE)?;
-        serial_struct.serialize_field("ieee-802-3-max-frame-size", &self.0)?;
-        serial_struct.serialize_field("oui", LLDP_ORG_OIU_MAX_FRAME_SIZE)?;
-        serial_struct
-            .serialize_field("subtype", &LLDP_ORG_SUBTYPE_MAX_FRAME_SIZE)?;
-        serial_struct.end()
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LldpMaxFrameSize {
+    #[serde(rename = "type")]
+    pub ty: LldpNeighborTlvType,
+    pub ieee_802_3_max_frame_size: u32,
+    pub oui: LldpOrgOiu,
+    pub subtype: LldpOrgSubtype,
+}
+
+impl LldpMaxFrameSize {
+    pub fn new(ieee_802_3_max_frame_size: u32) -> Self {
+        Self {
+            ieee_802_3_max_frame_size,
+            oui: LldpOrgOiu::MaxFrameSize,
+            subtype: LldpOrgSubtype::MaxFrameSize,
+            ty: LldpNeighborTlvType::OrganizationSpecific,
+        }
     }
 }
