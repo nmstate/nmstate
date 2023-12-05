@@ -196,6 +196,7 @@ pub(crate) fn clean_up(
 
     if !netdir.exists() {
         log::info!("{} does not exist, no need to clean up", netdir.display());
+        return Ok("".to_string());
     }
     let stamp_path = netdir.join(NMSTATE_PERSIST_STAMP);
     let cleanup_pending = stamp_path.exists();
@@ -204,6 +205,7 @@ pub(crate) fn clean_up(
             "{} does not exist, no need to clean up",
             stamp_path.display()
         );
+        return Ok("".to_string());
     }
 
     let mut pinned_ifaces: HashMap<String, PathBuf> = HashMap::new();
