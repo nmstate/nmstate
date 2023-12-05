@@ -15,6 +15,6 @@ jobs:
     - uses: dorny/test-reporter@v1
       with:
         artifact: /nmstate-test-junit-artifact-(.*)/  # artifact name
-        name: Integration tests $1                    # Name of the check run which will be created
+        name: Test Results $1                         # Name of the check run which will be created
         path: 'junit*.xml'                            # Path to test results (inside artifact .zip)
         reporter: java-junit                          # Format of test results
