@@ -30,12 +30,12 @@ fn np_iface_type_to_nmstate(
     }
 }
 
-impl From<(&nispor::IfaceState, &[nispor::IfaceFlags])> for InterfaceState {
-    fn from(tuple: (&nispor::IfaceState, &[nispor::IfaceFlags])) -> Self {
+impl From<(&nispor::IfaceState, &[nispor::IfaceFlag])> for InterfaceState {
+    fn from(tuple: (&nispor::IfaceState, &[nispor::IfaceFlag])) -> Self {
         let (state, flags) = tuple;
         if *state == nispor::IfaceState::Up
-            || flags.contains(&nispor::IfaceFlags::Up)
-            || flags.contains(&nispor::IfaceFlags::Running)
+            || flags.contains(&nispor::IfaceFlag::Up)
+            || flags.contains(&nispor::IfaceFlag::Running)
         {
             InterfaceState::Up
         } else if *state == nispor::IfaceState::Down {
@@ -92,7 +92,7 @@ pub(crate) fn np_iface_to_base_iface(
         },
         accept_all_mac_addresses: if np_iface
             .flags
-            .contains(&nispor::IfaceFlags::Promisc)
+            .contains(&nispor::IfaceFlag::Promisc)
         {
             Some(true)
         } else {
