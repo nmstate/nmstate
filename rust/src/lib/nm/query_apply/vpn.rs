@@ -53,6 +53,7 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
         ret.left = data.get("left").cloned();
         ret.leftid = data.get("leftid").cloned();
         ret.leftcert = data.get("leftcert").cloned();
+        ret.leftrsasigkey = data.get("leftrsasigkey").cloned();
         ret.ikev2 = data.get("ikev2").cloned();
         ret.ikelifetime = data.get("ikelifetime").cloned();
         ret.salifetime = data.get("salifetime").cloned();
