@@ -550,3 +550,35 @@ def test_ipsec_rsa_authenticate(ipsec_hosta_conn_cleanup):
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
     )
+
+
+def test_ipsec_ipv4_libreswan_fromcert(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            left: 192.0.2.251
+            leftid: '%fromcert'
+            leftcert: hosta.example.org
+            leftrsasigkey: '%cert'
+            right: 192.0.2.252
+            rightid: '%fromcert'
+            ikev2: insist
+            ikelifetime: 24h
+            salifetime: 24h""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4, HOSTB_IPV4
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
+    )
