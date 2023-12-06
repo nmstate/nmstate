@@ -5,12 +5,12 @@ use log::warn;
 use crate::{AddressFamily, RouteRuleAction, RouteRuleEntry, RouteRules};
 
 // Due to a bug in NetworkManager all route rules added using NetworkManager are
-// using RTM_PROTOCOL UnSpec. Therefore, we need to support it until it is
+// using RTM_PROTOCOL Unspec. Therefore, we need to support it until it is
 // fixed.
 const SUPPORTED_STATIC_ROUTE_PROTOCOL: [nispor::RouteProtocol; 3] = [
     nispor::RouteProtocol::Boot,
     nispor::RouteProtocol::Static,
-    nispor::RouteProtocol::UnSpec,
+    nispor::RouteProtocol::Unspec,
 ];
 
 const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 8] = [
@@ -21,7 +21,7 @@ const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 8] = [
     nispor::RouteProtocol::Mrouted,
     nispor::RouteProtocol::KeepAlived,
     nispor::RouteProtocol::Babel,
-    nispor::RouteProtocol::UnSpec,
+    nispor::RouteProtocol::Unspec,
 ];
 
 pub(crate) fn get_route_rules(
