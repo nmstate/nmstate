@@ -117,6 +117,15 @@ impl Default for NmVlanProtocol {
     }
 }
 
+impl From<crate::VlanProtocol> for NmVlanProtocol {
+    fn from(proto: crate::VlanProtocol) -> Self {
+        match proto {
+            crate::VlanProtocol::Ieee8021Q => Self::Dot1Q,
+            crate::VlanProtocol::Ieee8021Ad => Self::Dot1Ad,
+        }
+    }
+}
+
 impl TryFrom<String> for NmVlanProtocol {
     type Error = NmError;
     fn try_from(vlan_protocol: String) -> Result<Self, Self::Error> {

@@ -92,7 +92,7 @@ impl EthernetInterface {
         if let Some(sriov_conf) =
             self.ethernet.as_mut().and_then(|e| e.sr_iov.as_mut())
         {
-            sriov_conf.sanitize();
+            sriov_conf.sanitize()?
         }
 
         Ok(())

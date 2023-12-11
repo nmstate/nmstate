@@ -1,6 +1,6 @@
 use crate::{
     BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
-    SrIovConfig, SrIovVfConfig,
+    SrIovConfig, SrIovVfConfig, VlanProtocol,
 };
 
 pub(crate) fn np_ethernet_to_nmstate(
@@ -54,6 +54,17 @@ fn gen_sriov_conf(sriov_info: &nispor::SriovInfo) -> SrIovConfig {
         vf.max_tx_rate = Some(vf_info.max_tx_rate);
         vf.vlan_id = Some(vf_info.vlan_id);
         vf.qos = Some(vf_info.qos);
+        vf.vlan_proto = match &vf_info.vlan_proto {
+            nispor::VlanProtocol::Ieee8021Q => Some(VlanProtocol::Ieee8021Q),
+            nispor::VlanProtocol::Ieee8021AD => Some(VlanProtocol::Ieee8021Ad),
+            p => {
+                log::warn!(
+                    "Got unknown VLAN protocol {p:?} on SR-IOV VF {}",
+                    vf_info.id
+                );
+                None
+            }
+        };
         vfs.push(vf);
     }
     ret.total_vfs = Some(vfs.len() as u32);
