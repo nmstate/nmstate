@@ -73,9 +73,11 @@ fn test_ignore_sriov_if_not_desired() {
         spoof-check: true
         vlan-id: 102
         qos: 5
+        vlan-proto: 802.1q
       - id: 1
         vlan-id: 101
         qos: 6
+        vlan-proto: 802.1ad
 ",
     )
     .unwrap();

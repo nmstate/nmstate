@@ -69,6 +69,7 @@ fn gen_nm_vfs(
             let mut nm_vf_vlan = NmSettingSriovVfVlan::default();
             nm_vf_vlan.id = v;
             nm_vf_vlan.qos = vf.qos.unwrap_or_default();
+            nm_vf_vlan.protocol = vf.vlan_proto.unwrap_or_default().into();
             nm_vf.vlans = Some(vec![nm_vf_vlan]);
         }
         ret.push(nm_vf);
