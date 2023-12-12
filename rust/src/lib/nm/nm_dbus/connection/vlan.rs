@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 
 use log::error;
@@ -15,7 +15,52 @@ pub struct NmSettingVlan {
     pub parent: Option<String>,
     pub id: Option<u32>,
     pub protocol: Option<String>,
+    pub flags: Vec<NmSettingVlanFlag>,
     _other: HashMap<String, zvariant::OwnedValue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NmSettingVlanFlag {
+    ReorderHeaders = 1,
+    Gvrp = 2,
+    LooseBinding = 4,
+    Mvrp = 8,
+}
+
+fn from_u32_to_vec_nm_vlan_flags(i: u32) -> Vec<NmSettingVlanFlag> {
+    let mut ret = Vec::new();
+    if i & NmSettingVlanFlag::ReorderHeaders as u32 > 0 {
+        ret.push(NmSettingVlanFlag::ReorderHeaders);
+    }
+    if i & NmSettingVlanFlag::Gvrp as u32 > 0 {
+        ret.push(NmSettingVlanFlag::Gvrp);
+    }
+    if i & NmSettingVlanFlag::LooseBinding as u32 > 0 {
+        ret.push(NmSettingVlanFlag::LooseBinding);
+    }
+    if i & NmSettingVlanFlag::Mvrp as u32 > 0 {
+        ret.push(NmSettingVlanFlag::Mvrp);
+    }
+    ret
+}
+
+fn from_vec_nm_vlan_flags_u32(flags: Vec<NmSettingVlanFlag>) -> u32 {
+    let mut ret: u32 = 0;
+    for flag in flags {
+        ret |= flag as u32;
+    }
+    ret
+}
+
+fn from_dic_to_vec_nm_vlan_flags(
+    v: &mut DbusDictionary,
+    key: &str,
+) -> Result<Vec<NmSettingVlanFlag>, NmError> {
+    if let Some(flags) = v.remove(key) {
+        Ok(from_u32_to_vec_nm_vlan_flags(u32::try_from(flags)?))
+    } else {
+        Ok(Vec::new())
+    }
 }
 
 impl TryFrom<DbusDictionary> for NmSettingVlan {
@@ -25,6 +70,7 @@ impl TryFrom<DbusDictionary> for NmSettingVlan {
             parent: _from_map!(v, "parent", String::try_from)?,
             id: _from_map!(v, "id", u32::try_from)?,
             protocol: _from_map!(v, "protocol", String::try_from)?,
+            flags: from_dic_to_vec_nm_vlan_flags(&mut v, "flags")?,
             _other: v,
         })
     }
@@ -42,6 +88,12 @@ impl ToDbusValue for NmSettingVlan {
         if let Some(protocol) = self.protocol.as_ref() {
             ret.insert("protocol", zvariant::Value::new(protocol));
         }
+        ret.insert(
+            "flags",
+            zvariant::Value::new(from_vec_nm_vlan_flags_u32(
+                self.flags.clone(),
+            )),
+        );
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
         }));

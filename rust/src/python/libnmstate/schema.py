@@ -312,6 +312,12 @@ class VLAN:
     PROTOCOL = "protocol"
     PROTOCOL_802_1AD = "802.1ad"
     PROTOCOL_802_1Q = "802.1q"
+    REGISTRATION_PROTOCOL = "registration-protocol"
+    REGISTRATION_PROTOCOL_GVRP = "gvrp"
+    REGISTRATION_PROTOCOL_MVRP = "mvrp"
+    REGISTRATION_PROTOCOL_NONE = "none"
+    REORDER_HEADERS = "reorder-headers"
+    LOOSE_BINDING = "loose-binding"
 
 
 class VXLAN:

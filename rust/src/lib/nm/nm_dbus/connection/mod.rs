@@ -63,7 +63,7 @@ pub use self::route_rule::{NmIpRouteRule, NmIpRouteRuleAction};
 pub use self::sriov::{NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan};
 pub use self::user::NmSettingUser;
 pub use self::veth::NmSettingVeth;
-pub use self::vlan::{NmSettingVlan, NmVlanProtocol};
+pub use self::vlan::{NmSettingVlan, NmSettingVlanFlag, NmVlanProtocol};
 pub use self::vpn::NmSettingVpn;
 pub use self::vrf::NmSettingVrf;
 pub use self::vxlan::NmSettingVxlan;

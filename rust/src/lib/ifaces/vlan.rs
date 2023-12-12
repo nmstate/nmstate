@@ -63,6 +63,15 @@ pub struct VlanConfig {
     /// Could be `802.1q` or `802.1ad`. Default to `802.1q` if not defined.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol: Option<VlanProtocol>,
+    /// Could be `gvrp`, `mvrp` or `none`. Default to none if not defined.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_protocol: Option<VlanRegistrationProtocol>,
+    /// reordering of output packet headers
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reorder_headers: Option<bool>,
+    /// loose binding of the interface to its master device's operating state
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loose_binding: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -92,4 +101,15 @@ impl std::fmt::Display for VlanProtocol {
             }
         )
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum VlanRegistrationProtocol {
+    /// GARP VLAN Registration Protocol
+    Gvrp,
+    /// Multiple VLAN Registration Protocol
+    Mvrp,
+    /// No Registration Protocol
+    None,
 }
