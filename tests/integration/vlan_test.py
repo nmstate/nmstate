@@ -342,3 +342,105 @@ def test_add_qinq_vlan(eth1_up):
     ) as desired_state:
         assertlib.assert_state_match(desired_state)
     assertlib.assert_absent(VLAN_IFNAME)
+
+
+def test_configure_vlan_with_reaorder_headers(vlan_on_eth1):
+    flags_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.REORDER_HEADERS: True,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)
+
+    flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
+        VLAN.REORDER_HEADERS
+    ] = False
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)
+
+
+def test_configure_vlan_with_loose_binding(vlan_on_eth1):
+    flags_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.LOOSE_BINDING: True,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)
+
+    flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
+        VLAN.LOOSE_BINDING
+    ] = False
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)
+
+
+def test_configure_vlan_with_gvrp(vlan_on_eth1):
+    protocol = VLAN.REGISTRATION_PROTOCOL_GVRP
+    flags_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.REGISTRATION_PROTOCOL: protocol,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)
+
+    flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
+        VLAN.REGISTRATION_PROTOCOL
+    ] = VLAN.REGISTRATION_PROTOCOL_NONE
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)
+
+
+def test_configure_vlan_with_mvrp(vlan_on_eth1):
+    protocol = VLAN.REGISTRATION_PROTOCOL_MVRP
+    flags_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.REGISTRATION_PROTOCOL: protocol,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)
+
+    flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
+        VLAN.REGISTRATION_PROTOCOL
+    ] = VLAN.REGISTRATION_PROTOCOL_NONE
+    libnmstate.apply(flags_state)
+    assertlib.assert_state_match(flags_state)

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, VlanConfig, VlanInterface, VlanProtocol};
+use crate::{
+    BaseInterface, VlanConfig, VlanInterface, VlanProtocol,
+    VlanRegistrationProtocol,
+};
 
 pub(crate) fn np_vlan_to_nmstate(
     np_iface: &nispor::Iface,
@@ -19,6 +22,17 @@ pub(crate) fn np_vlan_to_nmstate(
                 );
                 None
             }
+        },
+        reorder_headers: Some(np_vlan_info.is_reorder_hdr),
+        loose_binding: Some(np_vlan_info.is_loose_binding),
+        // They are mutually exclusive, vlan cannot be gvrp and mvrp at the
+        // same time
+        registration_protocol: if np_vlan_info.is_gvrp {
+            Some(VlanRegistrationProtocol::Gvrp)
+        } else if np_vlan_info.is_mvrp {
+            Some(VlanRegistrationProtocol::Mvrp)
+        } else {
+            Some(VlanRegistrationProtocol::None)
         },
     });
 
