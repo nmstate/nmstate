@@ -1362,3 +1362,17 @@ def test_bond_deprecated_prop(eth1_up, eth2_up):
 
         libnmstate.apply(state)
         assertlib.assert_state_match(original_state)
+
+
+def test_change_mtu_of_bond_port(bond99_with_2_port):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.MTU: 1280,
+                }
+            ]
+        }
+    )

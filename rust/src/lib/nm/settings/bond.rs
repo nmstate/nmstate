@@ -232,8 +232,22 @@ pub(crate) fn gen_nm_bond_port_setting(
         return;
     };
 
+    // NetworkManager 1.34- does not support bond_port yet, we skip creating
+    // this NmSettingBondPort on default value unless it pre-exist.
+    if (bond_port_conf.priority.is_none() || bond_port_conf.priority == Some(0))
+        && (bond_port_conf.queue_id.is_none()
+            || bond_port_conf.queue_id == Some(0))
+        && nm_conn.bond_port.is_none()
+    {
+        return;
+    }
+
+    // NetworkManager 1.42.8- does not support priority, hence we do not touch
+    // it unless non-default defined or pre-exist.
     if let Some(v) = bond_port_conf.priority {
-        nm_set.priority = Some(v);
+        if nm_set.priority.is_some() || v != 0 {
+            nm_set.priority = Some(v);
+        }
     }
 
     if let Some(v) = bond_port_conf.queue_id {
