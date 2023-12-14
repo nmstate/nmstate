@@ -74,7 +74,7 @@ while true; do
     esac
 done
 git push origin +new_release
-hub pull-request -b $MAIN_BRANCH_NAME --no-edit -o
+hub pull-request -b $MAIN_BRANCH_NAME --no-edit
 
 while true; do
     echo "Press 'y' to do tagging on new release or 'n' to exit."
@@ -152,4 +152,4 @@ sed -i -e "s/$CUR_VERSION/$NEXT_VERSION/" \
     rust/src/python/libnmstate/__init__.py
 git commit -a --signoff -m "Bump version to $NEXT_VERSION"
 git push origin +bump_version
-hub pull-request -b $MAIN_BRANCH_NAME --no-edit -o
+hub pull-request -b $MAIN_BRANCH_NAME --no-edit
