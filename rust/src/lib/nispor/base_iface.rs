@@ -26,6 +26,7 @@ fn np_iface_type_to_nmstate(
         nispor::IfaceType::Vxlan => InterfaceType::Vxlan,
         nispor::IfaceType::Ipoib => InterfaceType::InfiniBand,
         nispor::IfaceType::Tun => InterfaceType::Tun,
+        nispor::IfaceType::Other(v) if v == "xfrm" => InterfaceType::Xfrm,
         _ => InterfaceType::Other(format!("{np_iface_type:?}")),
     }
 }

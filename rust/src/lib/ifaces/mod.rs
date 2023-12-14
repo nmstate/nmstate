@@ -9,6 +9,7 @@ mod ipsec;
 mod loopback;
 mod vrf;
 mod vxlan;
+mod xfrm;
 // The pub(crate) is only for unit test
 mod infiniband;
 pub(crate) mod inter_ifaces_controller;
@@ -20,6 +21,7 @@ mod ovs;
 mod sriov;
 mod vlan;
 
+pub use self::xfrm::XfrmInterface;
 pub use base::*;
 pub use bond::{
     BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,

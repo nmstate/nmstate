@@ -21,7 +21,7 @@ use crate::{
         vxlan::np_vxlan_to_nmstate,
     },
     DummyInterface, Interface, InterfaceType, Interfaces, LoopbackInterface,
-    NetworkState, NmstateError, OvsInterface, UnknownInterface,
+    NetworkState, NmstateError, OvsInterface, UnknownInterface, XfrmInterface,
 };
 
 pub(crate) fn nispor_retrieve(
@@ -129,6 +129,11 @@ pub(crate) fn nispor_retrieve(
             }
             InterfaceType::MacSec => {
                 Interface::MacSec(np_macsec_to_nmstate(np_iface, base_iface))
+            }
+            InterfaceType::Xfrm => {
+                let mut iface = XfrmInterface::new();
+                iface.base = base_iface;
+                Interface::Xfrm(iface)
             }
             _ => {
                 log::info!(

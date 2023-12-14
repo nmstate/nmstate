@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{BaseInterface, InterfaceType, NetworkState};
 
@@ -89,10 +89,72 @@ pub struct LibreswanConfig {
     pub ike: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub esp: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
+    pub dpddelay: Option<u64>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
+    pub dpdtimeout: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dpdaction: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "ipsec-interface",
+        default,
+        deserialize_with = "parse_ipsec_iface"
+    )]
+    pub ipsec_interface: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authby: Option<String>,
 }
 
 impl LibreswanConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+fn parse_ipsec_iface<'de, D>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v = serde_json::Value::deserialize(deserializer)?;
+
+    match v {
+        serde_json::Value::Number(d) => {
+            if let Some(d) = d.as_u64() {
+                Ok(Some(d.to_string()))
+            } else {
+                Err(serde::de::Error::custom(
+                    "Invalid ipsec-interface value, should be \
+                    unsigned integer, string 'yes' or 'no'",
+                ))
+            }
+        }
+        serde_json::Value::String(s) => match s.as_str() {
+            "yes" | "no" => Ok(Some(s)),
+            _ => {
+                if s.parse::<u32>().is_ok() {
+                    Ok(Some(s))
+                } else {
+                    Err(serde::de::Error::custom(
+                        "Invalid ipsec-interface value, should be \
+                        unsigned integer, string 'yes' or 'no'",
+                    ))
+                }
+            }
+        },
+        _ => Err(serde::de::Error::custom(
+            "Invalid ipsec-interface value, should be \
+            unsigned integer, string 'yes' or 'no'",
+        )),
     }
 }
