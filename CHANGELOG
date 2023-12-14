@@ -1,4 +1,18 @@
 # Changelog
+## [2.2.21] - 2023-12-14
+### Breaking changes
+ - N/A
+
+### New features
+ - Support VLAN flags. (5780fccc)
+ - Support `ipsec-interface`, `authby` and DPD options. (c81fa8a0)
+
+### Bug fixes
+ - Fix error on NetworkManager does not support bond-port. (e1ee8ea0)
+ - CLI: Do not exit with error if stamp or systemd folder not found. (1e76eeb3)
+ - Use new nispor 1.2.15 which fixes error on new kernel. (efe4c20d)
+ - ipsec: Fix VerificationError on `leftrsasigkey: '%cert'`. (1420fb0e)
+
 ## [2.2.20] - 2023-11-30
 ### Breaking changes
  - Changed query output `valid-left` to `valid-life-time`. (c2809592)
