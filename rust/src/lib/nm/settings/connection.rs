@@ -565,3 +565,7 @@ fn persisten_iface_cur_conf(
         gen_conf_mode,
     )
 }
+
+pub(crate) fn is_nm_iface_type_userspace(nm_iface_type: &str) -> bool {
+    NM_SETTING_USER_SPACES.contains(&nm_iface_type)
+}

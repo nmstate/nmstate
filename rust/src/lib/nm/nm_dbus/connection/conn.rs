@@ -338,6 +338,18 @@ impl NmConnection {
         }
         None
     }
+
+    pub fn parent(&self) -> Option<&str> {
+        self.infiniband
+            .as_ref()
+            .and_then(|i| i.parent.as_deref())
+            .or_else(|| self.macsec.as_ref().and_then(|i| i.parent.as_deref()))
+            .or_else(|| {
+                self.mac_vlan.as_ref().and_then(|i| i.parent.as_deref())
+            })
+            .or_else(|| self.vxlan.as_ref().and_then(|i| i.parent.as_deref()))
+            .or_else(|| self.vlan.as_ref().and_then(|i| i.parent.as_deref()))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]

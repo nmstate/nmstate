@@ -1,21 +1,5 @@
-#
-# Copyright (c) 2018-2020 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 from contextlib import contextmanager
 
 from libnmstate import error
@@ -59,3 +43,14 @@ def get_proxy_port_profile_uuid_of_ovs_interface(iface_name):
         check=True,
     )
     return proxy_port_uuid
+
+
+def iface_hold_in_memory_connection(iface_name):
+    output = cmdlib.exec_cmd(
+        f"nmcli -g FILENAME,DEVICE c show  --active".split(),
+        check=True,
+    )[1].strip()
+    for line in output.split("\n"):
+        if line.endswith(f":{iface_name}"):
+            return line.startswith("/run/")
+    return False

@@ -4,14 +4,20 @@ use std::collections::{hash_map::Entry, HashMap};
 use std::str::FromStr;
 
 use super::{
-    super::nm_dbus::{NmActiveConnection, NmConnection},
-    connection::{NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_USER_SPACES},
+    super::nm_dbus::{
+        NmActiveConnection, NmConnection, NmSettingsConnectionFlag,
+    },
+    connection::{
+        is_nm_iface_type_userspace, NM_SETTING_INFINIBAND_SETTING_NAME,
+    },
     ovs::get_ovs_port_name,
 };
 
 use crate::{
     ErrorKind, Interface, InterfaceType, MergedInterfaces, NmstateError,
 };
+
+const NM_UUID_LEN: usize = 36;
 
 pub(crate) fn use_uuid_for_controller_reference(
     nm_conns: &mut [NmConnection],
@@ -144,11 +150,13 @@ pub(crate) fn use_uuid_for_controller_reference(
             return Err(e);
         }
     }
+
     for (nm_conn, uuid) in pending_changes {
         if let Some(nm_conn_set) = &mut nm_conn.connection {
             nm_conn_set.controller = Some(uuid.to_string());
         }
     }
+
     Ok(())
 }
 
@@ -188,7 +196,7 @@ pub(crate) fn use_uuid_for_parent_reference(
             (nm_conn.iface_name(), nm_conn.iface_type())
         {
             // InfiniBand parent does not support UUID reference
-            if !NM_SETTING_USER_SPACES.contains(&nm_iface_type)
+            if !is_nm_iface_type_userspace(nm_iface_type)
                 && nm_iface_type != NM_SETTING_INFINIBAND_SETTING_NAME
             {
                 if let Some(parent_uuid) = pending_changes.get(iface_name) {
@@ -208,7 +216,7 @@ fn search_uuid_of_kernel_nm_conns(
             (nm_conn.iface_name(), nm_conn.iface_type(), nm_conn.uuid())
         {
             if cur_iface_name == iface_name
-                && !NM_SETTING_USER_SPACES.contains(&nm_iface_type)
+                && !is_nm_iface_type_userspace(nm_iface_type)
             {
                 return Some(uuid.to_string());
             }
@@ -222,11 +230,203 @@ fn search_uuid_of_kernel_nm_acs(
     iface_name: &str,
 ) -> Option<String> {
     for nm_ac in nm_acs {
-        if !NM_SETTING_USER_SPACES.contains(&nm_ac.iface_type.as_str())
+        if !is_nm_iface_type_userspace(nm_ac.iface_type.as_str())
             && nm_ac.iface_name.as_str() == iface_name
         {
             return Some(nm_ac.uuid.to_string());
         }
     }
     None
+}
+
+// Copy NmConnection with specified UUID and its controllers/parents to
+// `nm_conns_to_update`
+fn parents_and_controllers_in_memory(
+    nm_conns_to_update: &[NmConnection],
+    in_memory_nm_conns: &HashMap<String, &NmConnection>,
+    name_or_uuid: &str,
+    nm_iface_type: Option<&str>,
+) -> Vec<NmConnection> {
+    let mut ret: Vec<NmConnection> = Vec::new();
+
+    // TODO: Create NmConnectionBank to hold all the search and
+    // priority(like prefer activated over other) code in single place
+    let nm_conn = if name_or_uuid.len() == NM_UUID_LEN {
+        let uuid = name_or_uuid;
+        if let Some(c) =
+            nm_conns_to_update.iter().find(|c| c.uuid() == Some(uuid))
+        {
+            c
+        } else if let Some(nm_conn) = in_memory_nm_conns.get(uuid) {
+            ret.push((*nm_conn).clone());
+            nm_conn
+        } else {
+            return ret;
+        }
+    } else {
+        let name = name_or_uuid;
+        if nm_iface_type.is_none() {
+            // We should ignore all user space interfaces
+            if let Some(c) = nm_conns_to_update.iter().find(|c| {
+                c.iface_name() == Some(name)
+                    && !is_nm_iface_type_userspace(c.iface_type().unwrap_or(""))
+            }) {
+                c
+            } else if let Some(nm_conn) =
+                in_memory_nm_conns.values().find(|c| {
+                    c.iface_name() == Some(name)
+                        && !is_nm_iface_type_userspace(
+                            c.iface_type().unwrap_or(""),
+                        )
+                })
+            {
+                ret.push((*nm_conn).clone());
+                nm_conn
+            } else {
+                return ret;
+            }
+        } else {
+            // nm_iface_type defined
+            if let Some(c) = nm_conns_to_update.iter().find(|c| {
+                c.iface_name() == Some(name) && c.iface_type() == nm_iface_type
+            }) {
+                c
+            } else if let Some(nm_conn) =
+                in_memory_nm_conns.values().find(|c| {
+                    c.iface_name() == Some(name)
+                        && c.iface_type() == nm_iface_type
+                })
+            {
+                ret.push((*nm_conn).clone());
+                nm_conn
+            } else {
+                return ret;
+            }
+        }
+    };
+
+    if let Some(parent) = nm_conn.parent() {
+        ret.extend(parents_and_controllers_in_memory(
+            nm_conns_to_update,
+            in_memory_nm_conns,
+            parent,
+            None,
+        ));
+    }
+    if let (Some(ctrl), ctrl_type) =
+        (nm_conn.controller(), nm_conn.controller_type())
+    {
+        ret.extend(parents_and_controllers_in_memory(
+            nm_conns_to_update,
+            in_memory_nm_conns,
+            ctrl,
+            ctrl_type,
+        ));
+    }
+    ret
+}
+
+// Find all NmConnection in memory and not listed in `nm_conns_to_update`
+// Only activated NmConnection included.
+fn get_in_memory_nm_conns<'a>(
+    nm_conns_to_update: &[NmConnection],
+    exist_nm_conns: &'a [NmConnection],
+    nm_acs: &[NmActiveConnection],
+) -> HashMap<String, &'a NmConnection> {
+    let mut ret: HashMap<String, &NmConnection> = HashMap::new();
+    let nm_ac_uuids: Vec<&str> =
+        nm_acs.iter().map(|a| a.uuid.as_str()).collect();
+    for nm_conn in exist_nm_conns {
+        if nm_conn.flags.contains(&NmSettingsConnectionFlag::Unsaved) {
+            if let Some(uuid) = nm_conn.uuid() {
+                if nm_ac_uuids.contains(&uuid)
+                    && !nm_conns_to_update
+                        .iter()
+                        .any(|c| c.uuid() == Some(uuid))
+                {
+                    ret.insert(uuid.to_string(), nm_conn);
+                }
+            }
+        }
+    }
+    ret
+}
+
+pub(crate) fn save_parent_port_and_ctrl_to_disk(
+    nm_conns_to_update: &mut Vec<NmConnection>,
+    exist_nm_conns: &[NmConnection],
+    nm_acs: &[NmActiveConnection],
+) {
+    let mut pending_changes: HashMap<String, NmConnection> = HashMap::new();
+
+    let in_memory_nm_conns =
+        get_in_memory_nm_conns(nm_conns_to_update, exist_nm_conns, nm_acs);
+
+    for nm_conn in nm_conns_to_update
+        .as_slice()
+        .iter()
+        .filter(|c| c.parent().is_some() || c.controller().is_some())
+    {
+        if let Some(uuid) = nm_conn.uuid() {
+            for new_nm_conn in parents_and_controllers_in_memory(
+                nm_conns_to_update.as_slice(),
+                &in_memory_nm_conns,
+                uuid,
+                None,
+            ) {
+                if let Some(new_conn_uuid) = new_nm_conn.uuid() {
+                    pending_changes
+                        .insert(new_conn_uuid.to_string(), new_nm_conn);
+                }
+            }
+        }
+    }
+
+    // The ports of controllers should also be persistent so the controller
+    // is not partially configured.
+
+    // We need to run this loop twice, because ovs-iface might refer to
+    // ovs-port which is not added into pending_changes yet.
+    for _ in 0..2 {
+        for (uuid, nm_conn) in in_memory_nm_conns.iter() {
+            if !pending_changes.contains_key(uuid.as_str()) {
+                if let (Some(ctrl), ctrl_type) =
+                    (nm_conn.controller(), nm_conn.controller_type())
+                {
+                    // Check if this in-memory connection is refer to
+                    // anyone in `nm_conns_to_update`
+                    if ctrl.len() == NM_UUID_LEN {
+                        if pending_changes.contains_key(ctrl) {
+                            pending_changes
+                                .insert(uuid.to_string(), (*nm_conn).clone());
+                        }
+                    } else if pending_changes.values().any(|c| {
+                        c.iface_name() == Some(ctrl)
+                            && c.iface_type() == ctrl_type
+                    }) {
+                        pending_changes
+                            .insert(uuid.to_string(), (*nm_conn).clone());
+                    }
+                }
+            }
+        }
+    }
+
+    for (uuid, nm_conn) in pending_changes.drain() {
+        log::info!(
+            "Persistent NM connection {uuid} id {:?} name {:?} type {:?} \
+            because its parent, port or controller of other persistent \
+            desired interface",
+            nm_conn.id(),
+            nm_conn.iface_name(),
+            nm_conn.iface_type()
+        );
+        if !nm_conns_to_update
+            .as_slice()
+            .iter()
+            .any(|c| c.uuid() == Some(&uuid))
+        {
+            nm_conns_to_update.push(nm_conn);
+        }
+    }
 }

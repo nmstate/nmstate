@@ -40,7 +40,8 @@ pub(crate) use self::connection::{
     NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
 };
 pub(crate) use self::inter_connections::{
-    use_uuid_for_controller_reference, use_uuid_for_parent_reference,
+    save_parent_port_and_ctrl_to_disk, use_uuid_for_controller_reference,
+    use_uuid_for_parent_reference,
 };
 pub(crate) use self::ip::fix_ip_dhcp_timeout;
 

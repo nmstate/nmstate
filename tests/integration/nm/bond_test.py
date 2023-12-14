@@ -14,6 +14,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 
+from .testlib import iface_hold_in_memory_connection
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
@@ -214,3 +215,31 @@ def test_vlan_over_bond_reconnect_on_link_revive(
     cmdlib.exec_cmd("ip link set eth1 up".split(), check=True)
     cmdlib.exec_cmd("ip link set eth2 up".split(), check=True)
     assert retry_till_true_or_timeout(RETRY_TIMEOUT, vlan_is_up_with_ip)
+
+
+@pytest.fixture
+def bond0_in_memory():
+    with bond_interface(name=BOND0, port=[], create=False) as state:
+        libnmstate.apply(
+            state,
+            save_to_disk=False,
+        )
+        assert iface_hold_in_memory_connection(BOND0)
+        yield
+
+
+def test_change_bond_port_convert_controller_to_persistent(
+    bond0_in_memory, eth1_up
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.CONTROLLER: BOND0,
+                }
+            ]
+        }
+    )
+    assert not iface_hold_in_memory_connection(BOND0)

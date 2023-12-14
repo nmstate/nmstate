@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-import pytest
+import copy
 
+import pytest
 import yaml
 
 import libnmstate
@@ -12,6 +13,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import VLAN
 
+from .testlib import iface_hold_in_memory_connection
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
@@ -22,6 +24,8 @@ from ..testlib.retry import retry_till_true_or_timeout
 BRIDGE0 = "brtest0"
 BRIDGE1 = "brtest1"
 IFACE0 = "ovstest0"
+PORT1 = "testovs1"
+PORT2 = "testovs2"
 OVSDB_EXT_IDS_CONF1 = {"foo": "abc", "bak": 1}
 OVSDB_EXT_IDS_CONF1_STR = {"foo": "abc", "bak": "1"}
 OVSDB_EXT_IDS_CONF2 = {"bak": 2}
@@ -555,3 +559,40 @@ def test_gc_on_ovs_dpdk():
     assert "n-txq-desc=2048" in ovs_iface_conf
     assert "n-rxq=100" in ovs_iface_conf
     assert "devargs=0000:af:00.1" in ovs_iface_conf
+
+
+@pytest.fixture
+def ovs_brige1_in_memory_with_two_internal_ports():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1)
+    bridge.add_internal_port(PORT2)
+    desired_state = copy.deepcopy(bridge.state)
+    libnmstate.apply(desired_state, save_to_disk=False)
+    assert iface_hold_in_memory_connection(PORT1)
+    assert iface_hold_in_memory_connection(PORT2)
+    yield
+    for iface in desired_state[Interface.KEY]:
+        iface[Interface.STATE] = InterfaceState.ABSENT
+    libnmstate.apply(desired_state)
+
+
+def test_create_vlan_over_ovs_iface_convert_bridge_to_persist(
+    ovs_brige1_in_memory_with_two_internal_ports,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: f"{PORT1}.101",
+                    Interface.TYPE: InterfaceType.VLAN,
+                    VLAN.CONFIG_SUBTREE: {
+                        VLAN.ID: 101,
+                        VLAN.BASE_IFACE: PORT1,
+                    },
+                }
+            ]
+        }
+    )
+    assert not iface_hold_in_memory_connection(f"{PORT1}.101")
+    assert not iface_hold_in_memory_connection(PORT1)
+    assert not iface_hold_in_memory_connection(PORT2)
