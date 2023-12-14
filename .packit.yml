@@ -28,3 +28,4 @@ jobs:
     metadata:
       targets:
         - centos-stream-9-x86_64
+        - epel-9-x86_64
