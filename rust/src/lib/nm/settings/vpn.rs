@@ -45,6 +45,21 @@ pub(crate) fn gen_nm_ipsec_vpn_setting(
         if let Some(v) = conf.esp.as_deref() {
             vpn_data.insert("esp".into(), v.to_string());
         }
+        if let Some(v) = conf.dpddelay {
+            vpn_data.insert("dpddelay".into(), v.to_string());
+        }
+        if let Some(v) = conf.dpdtimeout {
+            vpn_data.insert("dpdtimeout".into(), v.to_string());
+        }
+        if let Some(v) = conf.dpdaction.as_deref() {
+            vpn_data.insert("dpdaction".into(), v.to_string());
+        }
+        if let Some(v) = conf.ipsec_interface.as_deref() {
+            vpn_data.insert("ipsec-interface".into(), v.to_string());
+        }
+        if let Some(v) = conf.authby.as_deref() {
+            vpn_data.insert("authby".into(), v.to_string());
+        }
 
         let mut nm_vpn_set = NmSettingVpn::default();
         nm_vpn_set.data = Some(vpn_data);

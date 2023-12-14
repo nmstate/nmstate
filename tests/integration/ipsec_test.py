@@ -26,30 +26,31 @@ from .testlib.statelib import show_only
 CA_NAME = "nmstate-test-ca.example.org"
 HOSTA_NAME = "hosta.example.org"
 HOSTA_NIC = "hosta_nic"
-HOSTA_IPV4 = "192.0.2.251"
+HOSTA_IPV4_CRT = "192.0.2.251"
 HOSTA_IPV4_PSK = "192.0.2.250"
 HOSTA_IPV4_RSA = "192.0.2.249"
 HOSTA_IPSEC_CONN_NAME = "hosta_conn"
 HOSTB_NAME = "hostb.example.org"
 HOSTB_NIC = "hostb_nic"
-HOSTB_IPV4 = "192.0.2.252"
-HOSTB_IPV4_PSK = "192.0.2.253"
-HOSTB_IPV4_RSA = "192.0.2.254"
+HOSTB_IPV4_CRT = "192.0.2.152"
+HOSTB_IPV4_PSK = "192.0.2.153"
+HOSTB_IPV4_RSA = "192.0.2.154"
 HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
 HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
 HOSTB_EXT_IP = "198.51.100.1"
 HOSTB_DUMMY_NIC = "dummy0"
 HOSTB_NS = "nmstate_ipsec_test"
-HOSTB_IPSEC_CONN_NAME = "hostb_conn"
+HOSTB_IPSEC_CONF_NAME = "hostb_conn"
+HOSTB_IPSEC_CRT_CONN_NAME = "hostb_conn_crt"
 HOSTB_IPSEC_PSK_CONN_NAME = "hostb_conn_psk"
 HOSTB_IPSEC_RSA_CONN_NAME = "hostb_conn_rsa"
 HOSTB_IPSEC_CONN_CONTENT = """
 config setup
     protostack=netkey
 
-conn hostb_conn
+conn hostb_conn_crt
     hostaddrfamily=ipv4
-    left=192.0.2.252
+    left=192.0.2.152
     leftid=@hostb.example.org
     leftcert=hostb.example.org
     leftsubnet=0.0.0.0/0
@@ -64,7 +65,7 @@ conn hostb_conn
 
 conn hostb_conn_psk
     hostaddrfamily=ipv4
-    left=192.0.2.253
+    left=192.0.2.153
     leftid=@hostb-psk.example.org
     leftsubnet=0.0.0.0/0
     rightaddresspool=203.0.113.102-203.0.113.200
@@ -76,7 +77,7 @@ conn hostb_conn_psk
 
 conn hostb_conn_rsa
     hostaddrfamily=ipv4
-    left=192.0.2.254
+    left=192.0.2.154
     leftid=@hostb-rsa.example.org
     leftrsasigkey={RSA_SIGNATURE_HOSTB}
     leftsubnet=0.0.0.0/0
@@ -135,7 +136,7 @@ def setup_hostb_ipsec_conn():
         _import_certs(HOSTB_IPSEC_NSS_DIR)
 
         conn_conf_file_path = (
-            f"{HOSTB_IPSEC_CONF_DIR}/ipsec.d/{HOSTB_IPSEC_CONN_NAME}.conf"
+            f"{HOSTB_IPSEC_CONF_DIR}/ipsec.d/{HOSTB_IPSEC_CONF_NAME}.conf"
         )
         with open(conn_conf_file_path, "w") as fd:
             fd.write(
@@ -166,24 +167,20 @@ def setup_hostb_ipsec_conn():
         )
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} "
-            f"ip addr add {HOSTB_IPV4}/24 dev {HOSTB_NIC}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ip addr add {HOSTB_IPV4_PSK}/24 dev {HOSTB_NIC}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ip addr add {HOSTB_IPV4_RSA}/24 dev {HOSTB_NIC}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
             f"ip route add {HOSTB_VPN_SUBNET} dev {HOSTB_NIC}".split(),
             check=True,
         )
+
+        for ip in [
+            HOSTB_IPV4_CRT,
+            HOSTB_IPV4_PSK,
+            HOSTB_IPV4_RSA,
+        ]:
+            cmdlib.exec_cmd(
+                f"ip netns exec {HOSTB_NS} "
+                f"ip addr add {ip}/24 dev {HOSTB_NIC}".split(),
+                check=True,
+            )
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} ipsec pluto "
             f"--config {HOSTB_IPSEC_CONF_DIR}/ipsec.conf "
@@ -193,45 +190,24 @@ def setup_hostb_ipsec_conn():
             f"--rundir {HOSTB_IPSEC_RUN_DIR}".split(),
             check=True,
         )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
-            f"--config {conn_conf_file_path} "
-            f"--add {HOSTB_IPSEC_CONN_NAME}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
-            f"--config {conn_conf_file_path} "
-            f"--add {HOSTB_IPSEC_PSK_CONN_NAME}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
-            f"--config {conn_conf_file_path} "
-            f"--add {HOSTB_IPSEC_RSA_CONN_NAME}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
-            f"--asynchronous --up {HOSTB_IPSEC_CONN_NAME}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
-            f"--asynchronous --up {HOSTB_IPSEC_PSK_CONN_NAME}".split(),
-            check=True,
-        )
-        cmdlib.exec_cmd(
-            f"ip netns exec {HOSTB_NS} "
-            f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
-            f"--asynchronous --up {HOSTB_IPSEC_RSA_CONN_NAME}".split(),
-            check=True,
-        )
+        for conn_name in [
+            HOSTB_IPSEC_CRT_CONN_NAME,
+            HOSTB_IPSEC_RSA_CONN_NAME,
+            HOSTB_IPSEC_PSK_CONN_NAME,
+        ]:
+            cmdlib.exec_cmd(
+                f"ip netns exec {HOSTB_NS} "
+                f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
+                f"--config {conn_conf_file_path} "
+                f"--add {conn_name}".split(),
+                check=True,
+            )
+            cmdlib.exec_cmd(
+                f"ip netns exec {HOSTB_NS} "
+                f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
+                f"--asynchronous --up {conn_name}".split(),
+                check=True,
+            )
         yield
     finally:
         _clean_hostb()
@@ -349,7 +325,7 @@ def setup_hosta_ip():
                     {
                         Route.NEXT_HOP_INTERFACE: HOSTA_NIC,
                         Route.DESTINATION: "0.0.0.0/0",
-                        Route.NEXT_HOP_ADDRESS: HOSTB_IPV4,
+                        Route.NEXT_HOP_ADDRESS: HOSTB_IPV4_CRT,
                     },
                 ]
             },
@@ -362,7 +338,7 @@ def setup_hosta_ip():
                         InterfaceIPv4.ENABLED: True,
                         InterfaceIPv4.ADDRESS: [
                             {
-                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4,
+                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_CRT,
                                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                             },
                             {
@@ -408,10 +384,15 @@ def _check_ipsec(left, right):
 
 
 def _check_ipsec_ip(ip_net_prefix, nic):
-    iface_state = show_only([nic])[Interface.KEY][0]
-    for ip in iface_state.get(Interface.IPV4, {}).get(InterfaceIP.ADDRESS, []):
-        if ip.get(InterfaceIP.ADDRESS_IP, "").startswith(ip_net_prefix):
-            return True
+    try:
+        iface_state = show_only([nic])[Interface.KEY][0]
+        for ip in iface_state.get(Interface.IPV4, {}).get(
+            InterfaceIP.ADDRESS, []
+        ):
+            if ip.get(InterfaceIP.ADDRESS_IP, "").startswith(ip_net_prefix):
+                return True
+    except Exception:
+        pass
     return False
 
 
@@ -433,7 +414,7 @@ def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(
     ipsec_hosta_conn_cleanup,
 ):
     desired_state = yaml.load(
-        """---
+        f"""---
         interfaces:
         - name: hosta_conn
           type: ipsec
@@ -441,10 +422,10 @@ def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(
             enabled: true
             dhcp: true
           libreswan:
-            left: 192.0.2.251
+            left: {HOSTA_IPV4_CRT}
             leftid: '%fromcert'
             leftcert: hosta.example.org
-            right: 192.0.2.252
+            right: {HOSTB_IPV4_CRT}
             rightid: 'hostb.example.org'
             ikev2: insist
             ikelifetime: 24h
@@ -453,7 +434,7 @@ def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(
     )
     libnmstate.apply(desired_state)
     assert retry_till_true_or_timeout(
-        RETRY_COUNT, _check_ipsec, HOSTA_IPV4, HOSTB_IPV4
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_CRT, HOSTB_IPV4_CRT
     )
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
@@ -473,9 +454,9 @@ def test_ipsec_ipv4_libreswan_psk_auth_add_and_remove(
             dhcp: true
           libreswan:
             psk: {PSK}
-            left: 192.0.2.250
+            left: {HOSTA_IPV4_PSK}
             leftid: 'hosta-psk.example.org'
-            right: 192.0.2.253
+            right: {HOSTB_IPV4_PSK}
             rightid: 'hostb-psk.example.org'
             ikev2: insist""",
         Loader=yaml.SafeLoader,
@@ -500,9 +481,9 @@ def test_ipsec_apply_with_hiden_psk(ipsec_hosta_conn_cleanup):
             dhcp: true
           libreswan:
             psk: {PSK}
-            left: 192.0.2.250
+            left: {HOSTA_IPV4_PSK}
             leftid: 'hosta-psk.example.org'
-            right: 192.0.2.253
+            right: {HOSTB_IPV4_PSK}
             rightid: 'hostb-psk.example.org'
             ikev2: insist""",
         Loader=yaml.SafeLoader,
@@ -510,7 +491,7 @@ def test_ipsec_apply_with_hiden_psk(ipsec_hosta_conn_cleanup):
     libnmstate.apply(desired_state)
 
     desired_state = yaml.load(
-        """---
+        f"""---
         interfaces:
         - name: hosta_conn
           type: ipsec
@@ -519,9 +500,9 @@ def test_ipsec_apply_with_hiden_psk(ipsec_hosta_conn_cleanup):
             dhcp: true
           libreswan:
             psk: <_password_hid_by_nmstate>
-            left: 192.0.2.250
+            left: {HOSTA_IPV4_PSK}
             leftid: 'hosta-psk.example.org'
-            right: 192.0.2.253
+            right: {HOSTB_IPV4_PSK}
             rightid: 'hostb-psk.example.org'
             ikev2: insist""",
         Loader=yaml.SafeLoader,
@@ -555,7 +536,7 @@ def test_ipsec_rsa_authenticate(ipsec_hosta_conn_cleanup):
             ikev2: insist""",
         Loader=yaml.SafeLoader,
     )
-    libnmstate.apply(desired_state, verify_change=False)
+    libnmstate.apply(desired_state)
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec, HOSTA_IPV4_RSA, HOSTB_IPV4_RSA
     )
@@ -568,7 +549,7 @@ def test_ipsec_ipv4_libreswan_fromcert(
     ipsec_hosta_conn_cleanup,
 ):
     desired_state = yaml.load(
-        """---
+        f"""---
         interfaces:
         - name: hosta_conn
           type: ipsec
@@ -576,11 +557,11 @@ def test_ipsec_ipv4_libreswan_fromcert(
             enabled: true
             dhcp: true
           libreswan:
-            left: 192.0.2.251
+            left: {HOSTA_IPV4_CRT}
             leftid: '%fromcert'
             leftcert: hosta.example.org
             leftrsasigkey: '%cert'
-            right: 192.0.2.252
+            right: {HOSTB_IPV4_CRT}
             rightid: '%fromcert'
             ikev2: insist
             ikelifetime: 24h
@@ -589,8 +570,111 @@ def test_ipsec_ipv4_libreswan_fromcert(
     )
     libnmstate.apply(desired_state)
     assert retry_till_true_or_timeout(
-        RETRY_COUNT, _check_ipsec, HOSTA_IPV4, HOSTB_IPV4
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_CRT, HOSTB_IPV4_CRT
     )
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
+    )
+
+
+@pytest.mark.xfail(
+    reason="NetworkManager-libreswan might be too old",
+)
+def test_ipsec_ipv4_libreswan_psk_auth_with_ipsec_iface(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            psk: {PSK}
+            left: {HOSTA_IPV4_PSK}
+            leftid: 'hosta-psk.example.org'
+            right: {HOSTB_IPV4_PSK}
+            rightid: 'hostb-psk.example.org'
+            ipsec-interface: 9
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_PSK, HOSTB_IPV4_PSK
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec9"
+    )
+
+
+@pytest.mark.xfail(
+    reason="NetworkManager-libreswan might be too old",
+)
+def test_ipsec_ipv4_libreswan_psk_auth_with_dpd(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            psk: {PSK}
+            left: {HOSTA_IPV4_PSK}
+            leftid: 'hosta-psk.example.org'
+            right: {HOSTB_IPV4_PSK}
+            rightid: 'hostb-psk.example.org'
+            dpddelay: 1
+            dpdtimeout: 60
+            dpdaction: restart
+            ipsec-interface: "10"
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_PSK, HOSTB_IPV4_PSK
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec10"
+    )
+
+
+@pytest.mark.xfail(
+    reason="NetworkManager-libreswan might be too old",
+)
+def test_ipsec_ipv4_libreswan_authby(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            psk: {PSK}
+            left: {HOSTA_IPV4_PSK}
+            leftid: 'hosta-psk.example.org'
+            right: {HOSTB_IPV4_PSK}
+            rightid: 'hostb-psk.example.org'
+            ipsec-interface: 77
+            authby: secret
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_PSK, HOSTB_IPV4_PSK
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec77"
     )

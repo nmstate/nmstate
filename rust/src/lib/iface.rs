@@ -10,7 +10,7 @@ use crate::{
     InfiniBandInterface, IpsecInterface, LinuxBridgeInterface,
     LoopbackInterface, MacSecInterface, MacVlanInterface, MacVtapInterface,
     NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
-    VrfInterface, VxlanInterface,
+    VrfInterface, VxlanInterface, XfrmInterface,
 };
 
 use crate::state::merge_json_value;
@@ -69,6 +69,8 @@ pub enum InterfaceType {
     MacSec,
     /// Ipsec connection.
     Ipsec,
+    /// Linux Xfrm kernel interface
+    Xfrm,
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
@@ -102,6 +104,7 @@ impl From<&str> for InterfaceType {
             "macsec" => InterfaceType::MacSec,
             "ipsec" => InterfaceType::Ipsec,
             "unknown" => InterfaceType::Unknown,
+            "xfrm" => InterfaceType::Xfrm,
             _ => InterfaceType::Other(s.to_string()),
         }
     }
@@ -131,6 +134,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Tun => "tun",
                 InterfaceType::MacSec => "macsec",
                 InterfaceType::Ipsec => "ipsec",
+                InterfaceType::Xfrm => "xfrm",
                 InterfaceType::Other(ref s) => s,
             }
         )
@@ -309,6 +313,8 @@ pub enum Interface {
     MacSec(MacSecInterface),
     /// Ipsec connection
     Ipsec(IpsecInterface),
+    /// Linux xfrm interface
+    Xfrm(XfrmInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -419,6 +425,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = IpsecInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Ipsec(inner))
+            }
+            Some(InterfaceType::Xfrm) => {
+                let inner = XfrmInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Xfrm(inner))
             }
             Some(iface_type) => {
                 log::warn!("Unsupported interface type {}", iface_type);
@@ -535,6 +546,11 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Ipsec(new_iface)
             }
+            Self::Xfrm(iface) => {
+                let mut new_iface = XfrmInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Xfrm(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -631,6 +647,7 @@ impl Interface {
             Self::Loopback(iface) => &iface.base,
             Self::MacSec(iface) => &iface.base,
             Self::Ipsec(iface) => &iface.base,
+            Self::Xfrm(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -652,6 +669,7 @@ impl Interface {
             Self::Loopback(iface) => &mut iface.base,
             Self::MacSec(iface) => &mut iface.base,
             Self::Ipsec(iface) => &mut iface.base,
+            Self::Xfrm(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }

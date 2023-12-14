@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::{
     Interface, InterfaceType, IpsecInterface, LibreswanConfig, NmstateError,
@@ -59,6 +60,12 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
         ret.salifetime = data.get("salifetime").cloned();
         ret.ike = data.get("ike").cloned();
         ret.esp = data.get("esp").cloned();
+        ret.dpddelay = data.get("dpddelay").and_then(|d| u64::from_str(d).ok());
+        ret.dpdtimeout =
+            data.get("dpdtimeout").and_then(|d| u64::from_str(d).ok());
+        ret.dpdaction = data.get("dpdaction").cloned();
+        ret.ipsec_interface = data.get("ipsec-interface").cloned();
+        ret.authby = data.get("authby").cloned();
     }
     if let Some(secrets) = nm_set_vpn.secrets.as_ref() {
         ret.psk = secrets.get("pskvalue").cloned();
