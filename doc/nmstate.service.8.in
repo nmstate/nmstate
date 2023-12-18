@@ -9,8 +9,8 @@ nmstate\&.service
 nmstate\&.service invokes \fBnmstatectl service\fR command which
 apply all network state files ending with \fB.yml\fR in
 \fB/etc/nmstate\fR folder.
-The applied network state file will be renamed with postfix \fB.applied\fR
-to prevent repeated applied on next service start.
+The applied network state file sha256 digest will be stored at \fB.applied\fR
+file to prevent repeated applied on next service start.
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
 .SH COPYRIGHT

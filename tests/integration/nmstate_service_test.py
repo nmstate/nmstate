@@ -2,6 +2,8 @@
 
 import os
 import shutil
+import hashlib
+from pathlib import Path
 
 import yaml
 import pytest
@@ -73,6 +75,13 @@ TEST_CONFIG3_APPLIED_FILE_PATH = f"{CONFIG_DIR}/03-nmstate-policy-test.applied"
 DUMMY1 = "dummy1"
 
 
+def sha256sum(filename):
+    with open(filename, "rb", buffering=0) as f:
+        digest = hashlib.sha256()
+        digest.update(f.read())
+        return digest.hexdigest()
+
+
 @pytest.fixture
 def nmstate_etc_config():
     if not os.path.isdir(CONFIG_DIR):
@@ -103,6 +112,8 @@ def nmstate_etc_config():
     )
     os.remove(TEST_CONFIG1_APPLIED_FILE_PATH)
     os.remove(TEST_CONFIG2_APPLIED_FILE_PATH)
+    os.remove(TEST_CONFIG1_FILE_PATH)
+    os.remove(TEST_CONFIG2_FILE_PATH)
 
 
 def test_nmstate_service_apply(nmstate_etc_config):
@@ -111,10 +122,14 @@ def test_nmstate_service_apply(nmstate_etc_config):
     desire_state = yaml.load(TEST_YAML2_CONTENT, Loader=yaml.SafeLoader)
     assert_state_match(desire_state)
 
-    assert not os.path.exists(TEST_CONFIG1_FILE_PATH)
-    assert os.path.isfile(TEST_CONFIG1_APPLIED_FILE_PATH)
-    assert not os.path.exists(TEST_CONFIG2_FILE_PATH)
-    assert os.path.isfile(TEST_CONFIG2_APPLIED_FILE_PATH)
+    assert os.path.isfile(TEST_CONFIG1_FILE_PATH)
+    assert Path(TEST_CONFIG1_APPLIED_FILE_PATH).read_text() == sha256sum(
+        TEST_CONFIG1_FILE_PATH
+    )
+    assert os.path.isfile(TEST_CONFIG2_FILE_PATH)
+    assert Path(TEST_CONFIG2_APPLIED_FILE_PATH).read_text() == sha256sum(
+        TEST_CONFIG2_FILE_PATH
+    )
 
 
 @pytest.fixture
@@ -153,9 +168,13 @@ def test_nmstate_service_apply_nmpolicy(dummy1_up):
     try:
         exec_cmd("systemctl restart nmstate".split(), check=True)
         assert_absent(DUMMY1)
-        assert os.path.isfile(TEST_CONFIG3_APPLIED_FILE_PATH)
+        assert os.path.isfile(TEST_CONFIG3_FILE_PATH)
+        assert Path(TEST_CONFIG3_APPLIED_FILE_PATH).read_text() == sha256sum(
+            TEST_CONFIG3_FILE_PATH
+        )
     finally:
         os.remove(TEST_CONFIG3_APPLIED_FILE_PATH)
+        os.remove(TEST_CONFIG3_FILE_PATH)
 
 
 def test_nmstate_service_without_etc_folder():
