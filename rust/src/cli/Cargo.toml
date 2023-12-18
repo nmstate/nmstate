@@ -28,6 +28,7 @@ ctrlc = { version = "3.2.1", optional = true }
 uuid = { version = "1.1", features = ["v4"] }
 chrono = "0.4"
 nispor = { version = "1.2", optional = true }
+ring = "0.17.7"
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
