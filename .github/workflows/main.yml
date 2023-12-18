@@ -96,8 +96,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - job_type: "c8s-nm_stable-format"
-          - job_type: "c8s-nm_stable-lint"
+          - job_type: "c9s-nm_stable-format"
+          - job_type: "c9s-nm_stable-lint"
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
@@ -119,14 +119,6 @@ jobs:
           - job_type: "c9s-nm_main-integ_tier2"
           - job_type: "c9s-nm_main-integ_slow"
           - job_type: "c9s-nm_main-rust_go"
-          - job_type: "c8s-nm_stable-integ_tier1"
-          - job_type: "c8s-nm_stable-integ_tier2"
-          - job_type: "c8s-nm_stable-integ_slow"
-          - job_type: "c8s-nm_stable-rust_go"
-          - job_type: "c8s-nm_main-integ_tier1"
-          - job_type: "c8s-nm_main-integ_tier2"
-          - job_type: "c8s-nm_main-integ_slow"
-          - job_type: "c8s-nm_main-rust_go"
           - job_type: "c9s-nm_1.42-integ_tier1"
           - job_type: "c9s-nm_1.42-integ_tier2"
           - job_type: "c9s-nm_1.42-integ_slow"
