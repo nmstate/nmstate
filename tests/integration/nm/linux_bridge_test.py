@@ -414,8 +414,8 @@ def test_linux_bridge_store_stp_setting_even_disabled(
 
 @pytest.fixture
 def unmangaed_dummy1_dummy2():
-    exec_cmd("ip link add dummy1 type dummy".split(), check=True)
-    exec_cmd("ip link add dummy2 type dummy".split(), check=True)
+    exec_cmd("ip link add dummy1 type dummy".split(), check=False)
+    exec_cmd("ip link add dummy2 type dummy".split(), check=False)
     exec_cmd("ip link set dummy1 up".split(), check=True)
     exec_cmd("ip link set dummy2 up".split(), check=True)
     exec_cmd("nmcli dev set dummy1 managed false".split(), check=True)
