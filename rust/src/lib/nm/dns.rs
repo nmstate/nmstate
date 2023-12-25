@@ -521,19 +521,6 @@ impl MergedInterface {
             false
         }
     }
-
-    // IP stack is merged with current at this point.
-    pub(crate) fn is_iface_valid_for_dns(&self, is_ipv6: bool) -> bool {
-        if is_ipv6 {
-            self.merged.base_iface().ipv6.as_ref().map(|ip_conf| {
-                ip_conf.enabled && (ip_conf.is_static() || (ip_conf.is_auto()))
-            }) == Some(true)
-        } else {
-            self.merged.base_iface().ipv4.as_ref().map(|ip_conf| {
-                ip_conf.enabled && (ip_conf.is_static() || (ip_conf.is_auto()))
-            }) == Some(true)
-        }
-    }
 }
 
 fn is_external_managed(
