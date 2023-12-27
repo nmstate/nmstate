@@ -246,14 +246,14 @@ impl OvsBridgeInterface {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgeConfig {
-    #[serde(skip_serializing, default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// Only validate for applying, when set to `true`, extra OVS patch ports
     /// will not fail the verification. Default is false.
     /// This property will not be persisted, every time you modify
     /// ports of specified OVS bridge, you need to explicitly define this
     /// property if not using default value.
     /// Deserialize from `allow-extra-patch-ports`.
-    pub allow_extra_patch_ports: bool,
+    pub allow_extra_patch_ports: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<OvsBridgeOptions>,
     #[serde(
@@ -810,7 +810,7 @@ impl MergedInterfaces {
         for merged_iface in self.iter_mut().filter(|i| {
             if let Some(Interface::OvsBridge(o)) = i.desired.as_ref() {
                 o.base.state == InterfaceState::Up
-                    && o.bridge.as_ref().map(|c| c.allow_extra_patch_ports)
+                    && o.bridge.as_ref().and_then(|c| c.allow_extra_patch_ports)
                         == Some(true)
             } else {
                 false
