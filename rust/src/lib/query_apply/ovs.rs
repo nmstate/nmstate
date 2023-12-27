@@ -146,7 +146,7 @@ impl MergedInterfaces {
     // This function remove extra(undesired) ovs patch port from post-apply
     // current, so it will not interfere with verification
     pub(crate) fn process_allow_extra_ovs_patch_ports_for_verify(
-        &self,
+        &mut self,
         current: &mut Interfaces,
     ) {
         let mut ovs_patch_port_names: HashSet<String> = HashSet::new();
@@ -162,12 +162,20 @@ impl MergedInterfaces {
             }
         }
 
-        for des_iface in self.iter().filter_map(|i| {
-            if let Some(Interface::OvsBridge(o)) = i.desired.as_ref() {
-                if o.bridge.as_ref().map(|c| c.allow_extra_patch_ports)
+        for des_iface in self.iter_mut().filter_map(|i| {
+            if let Some(Interface::OvsBridge(o)) = i.desired.as_mut() {
+                if o.bridge.as_ref().and_then(|c| c.allow_extra_patch_ports)
                     == Some(true)
                     && o.base.state == InterfaceState::Up
                 {
+                    // Remove allow_extra_patch_ports as current state
+                    // does not have it
+                    if let Some(Interface::OvsBridge(c)) = i.for_verify.as_mut()
+                    {
+                        if let Some(c) = c.bridge.as_mut() {
+                            c.allow_extra_patch_ports = None;
+                        }
+                    }
                     Some(o)
                 } else {
                     None
