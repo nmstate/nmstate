@@ -265,3 +265,26 @@ fn test_ovn_map_support_state_present() {
         }]
     )
 }
+
+#[test]
+fn test_ovn_serialize_state_absent() {
+    let desired: OvnConfiguration = serde_yaml::from_str(
+        r#"---
+        bridge-mappings:
+        - localnet: blue
+          state: absent
+        - localnet: red
+          state: absent
+        - localnet: yellow
+          state: absent
+        - localnet: green
+        "#,
+    )
+    .unwrap();
+
+    let new: OvnConfiguration =
+        serde_yaml::from_str(&serde_yaml::to_string(&desired).unwrap())
+            .unwrap();
+
+    assert_eq!(desired, new);
+}
