@@ -86,11 +86,10 @@ struct InterfaceIp {
     #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
     #[serde(
-        default = "default_allow_extra_address",
-        skip_serializing,
+        skip_serializing_if = "Option::is_none",
         rename = "allow-extra-address"
     )]
-    pub allow_extra_address: bool,
+    pub allow_extra_address: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
     #[serde(
@@ -105,7 +104,7 @@ struct InterfaceIp {
     pub dhcp_custom_hostname: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 #[serde(into = "InterfaceIp")]
 #[non_exhaustive]
 /// IPv4 configuration of interface.
@@ -169,7 +168,7 @@ pub struct InterfaceIpv4 {
     /// check on IP address.
     /// Ignore when serializing.
     /// Deserialize from `allow-extra-address`
-    pub allow_extra_address: bool,
+    pub allow_extra_address: Option<bool>,
     /// Metric for routes retrieved from DHCP server.
     /// Only available for DHCPv4 enabled interface.
     /// Deserialize from `auto-route-metric`
@@ -192,28 +191,6 @@ pub struct InterfaceIpv4 {
     pub dhcp_custom_hostname: Option<String>,
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
-}
-
-impl Default for InterfaceIpv4 {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            prop_list: Vec::new(),
-            dhcp: None,
-            dhcp_client_id: None,
-            addresses: None,
-            dns: None,
-            rules: None,
-            auto_dns: None,
-            auto_gateway: None,
-            auto_routes: None,
-            auto_table_id: None,
-            allow_extra_address: default_allow_extra_address(),
-            auto_route_metric: None,
-            dhcp_send_hostname: None,
-            dhcp_custom_hostname: None,
-        }
-    }
 }
 
 impl InterfaceIpv4 {
@@ -488,7 +465,7 @@ impl From<InterfaceIpv4> for InterfaceIp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 #[non_exhaustive]
 #[serde(into = "InterfaceIp")]
 /// IPv6 configurations of interface.
@@ -559,7 +536,7 @@ pub struct InterfaceIpv6 {
     /// check on IP address.
     /// Ignored when serializing.
     /// Deserialize from `allow-extra-address`.
-    pub allow_extra_address: bool,
+    pub allow_extra_address: Option<bool>,
     /// Metric for routes retrieved from DHCP server.
     /// Only available for autoconf enabled interface.
     /// Deserialize from `auto-route-metric`.
@@ -580,31 +557,6 @@ pub struct InterfaceIpv6 {
 
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
-}
-
-impl Default for InterfaceIpv6 {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            prop_list: Vec::new(),
-            dhcp: None,
-            dhcp_duid: None,
-            autoconf: None,
-            addr_gen_mode: None,
-            addresses: None,
-            dns: None,
-            rules: None,
-            auto_dns: None,
-            auto_gateway: None,
-            auto_routes: None,
-            auto_table_id: None,
-            allow_extra_address: default_allow_extra_address(),
-            auto_route_metric: None,
-            token: None,
-            dhcp_send_hostname: None,
-            dhcp_custom_hostname: None,
-        }
-    }
 }
 
 impl InterfaceIpv6 {
@@ -1368,11 +1320,6 @@ fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
     } else {
         true
     }
-}
-
-// Allow extra IP by default
-fn default_allow_extra_address() -> bool {
-    true
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]

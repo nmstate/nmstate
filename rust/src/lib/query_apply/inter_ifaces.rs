@@ -161,8 +161,8 @@ impl MergedInterfaces {
             iface.sanitize_desired_for_verify();
         }
 
-        for des_iface in merged.iter().filter(|i| i.is_desired()) {
-            let iface = if let Some(i) = des_iface.for_verify.as_ref() {
+        for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
+            let iface = if let Some(i) = des_iface.for_verify.as_mut() {
                 i
             } else {
                 continue;
