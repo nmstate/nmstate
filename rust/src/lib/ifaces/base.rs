@@ -108,7 +108,7 @@ pub struct BaseInterface {
     /// accept all packages, also known as promiscuous mode.
     /// Serialize and deserialize to/from `accpet-all-mac-addresses`.
     pub accept_all_mac_addresses: Option<bool>,
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// Copy the MAC address from specified interface.
     /// Ignored during serializing.
     /// Deserialize from `copy-mac-from`.
