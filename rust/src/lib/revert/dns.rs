@@ -3,11 +3,11 @@
 use crate::{DnsState, MergedDnsState};
 
 impl MergedDnsState {
-    pub(crate) fn generate_revert(&self) -> DnsState {
+    pub(crate) fn generate_revert(&self) -> Option<DnsState> {
         if self.is_changed() {
-            self.current.clone()
+            Some(self.current.clone())
         } else {
-            DnsState::new()
+            None
         }
     }
 }

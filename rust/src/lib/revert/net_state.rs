@@ -21,7 +21,6 @@ impl NetworkState {
             ovsdb: merged_state.ovsdb.generate_revert(),
             ovn: merged_state.ovn.generate_revert(),
             hostname: merged_state.hostname.generate_revert(),
-            prop_list: vec!["interfaces"],
             ..Default::default()
         })
     }

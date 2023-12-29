@@ -112,8 +112,8 @@ pub(crate) fn nm_apply(
         } else if merged_state
             .dns
             .desired
-            .config
             .as_ref()
+            .and_then(|d| d.config.as_ref())
             .map(|c| c.is_purge())
             == Some(true)
         {

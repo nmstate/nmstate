@@ -38,7 +38,6 @@ pub(crate) fn nm_retrieve(
     running_config_only: bool,
 ) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
-    net_state.prop_list = vec!["interfaces", "dns"];
     let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
     let nm_conns = nm_api
         .applied_connections_get()
@@ -192,23 +191,23 @@ pub(crate) fn nm_retrieve(
             iface.base_iface_mut().state = InterfaceState::Ignore;
         }
     }
-    if let Ok(nm_global_dns_conf) = nm_api
+    let mut dns_config = if let Ok(nm_global_dns_conf) = nm_api
         .get_global_dns_configuration()
         .map_err(nm_error_to_nmstate)
     {
         if nm_global_dns_conf.is_empty() {
-            net_state.dns =
-                retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+            retrieve_dns_info(&mut nm_api, &net_state.interfaces)?
         } else {
-            net_state.dns = nm_global_dns_to_nmstate(&nm_global_dns_conf);
+            nm_global_dns_to_nmstate(&nm_global_dns_conf)
         }
     } else {
-        net_state.dns = retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
-    }
-    net_state.dns.sanitize().ok();
+        retrieve_dns_info(&mut nm_api, &net_state.interfaces)?
+    };
+    dns_config.sanitize().ok();
     if running_config_only {
-        net_state.dns.running = None;
+        dns_config.running = None;
     }
+    net_state.dns = Some(dns_config);
 
     for (iface_name, conf) in get_dispatches().drain() {
         if let Some(iface) =

@@ -6,8 +6,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{ErrorKind, MergedOvnConfiguration, NmstateError};
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct OvsDbGlobalConfig {
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -23,8 +24,6 @@ pub struct OvsDbGlobalConfig {
         serialize_with = "show_as_ordered_map"
     )]
     pub other_config: Option<HashMap<String, Option<String>>>,
-    #[serde(skip)]
-    pub(crate) prop_list: Vec<&'static str>,
 }
 
 impl OvsDbGlobalConfig {
@@ -33,7 +32,7 @@ impl OvsDbGlobalConfig {
 
     // User want to remove all settings except OVN.
     pub(crate) fn is_purge(&self) -> bool {
-        self.prop_list.is_empty()
+        self.external_ids.is_none() && self.other_config.is_none()
     }
 
     pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
@@ -75,39 +74,6 @@ where
 impl OvsDbGlobalConfig {
     pub fn is_none(&self) -> bool {
         self.external_ids.is_none() && self.other_config.is_none()
-    }
-}
-
-impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let mut ret = Self::default();
-        let mut v = serde_json::Value::deserialize(deserializer)?;
-        if let Some(v) = v.as_object_mut() {
-            if let Some(v) = v.remove("external_ids") {
-                ret.prop_list.push("external_ids");
-                ret.external_ids = Some(value_to_hash_map(&v));
-            }
-            if let Some(v) = v.remove("other_config") {
-                ret.prop_list.push("other_config");
-                ret.other_config = Some(value_to_hash_map(&v));
-            }
-            if !v.is_empty() {
-                let remain_keys: Vec<String> = v.keys().cloned().collect();
-                return Err(serde::de::Error::custom(format!(
-                    "Unsupported section names '{}', only supports \
-                    `external_ids` and `other_config`",
-                    remain_keys.join(", ")
-                )));
-            }
-        } else {
-            return Err(serde::de::Error::custom(format!(
-                "Expecting dict/HashMap, but got {v:?}"
-            )));
-        }
-        Ok(ret)
     }
 }
 
@@ -213,7 +179,7 @@ fn value_to_hash_map(
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct MergedOvsDbGlobalConfig {
-    pub(crate) desired: OvsDbGlobalConfig,
+    pub(crate) desired: Option<OvsDbGlobalConfig>,
     pub(crate) current: OvsDbGlobalConfig,
     pub(crate) external_ids: HashMap<String, Option<String>>,
     pub(crate) other_config: HashMap<String, Option<String>>,
@@ -226,7 +192,7 @@ impl MergedOvsDbGlobalConfig {
     //  * Use `ovsdb: {}` to remove all settings.
     //  * To remove a key from existing, use `foo: None`.
     pub(crate) fn new(
-        desired: OvsDbGlobalConfig,
+        mut desired: Option<OvsDbGlobalConfig>,
         current: OvsDbGlobalConfig,
         merged_ovn: &MergedOvnConfiguration,
     ) -> Result<Self, NmstateError> {
@@ -235,20 +201,31 @@ impl MergedOvsDbGlobalConfig {
 
         let empty_map: HashMap<String, Option<String>> = HashMap::new();
 
-        if !desired.is_purge() {
-            desired.sanitize()?;
+        let mut cur_external_ids: HashMap<String, Option<String>> =
+            current.external_ids.as_ref().unwrap_or(&empty_map).clone();
 
-            merge_ovsdb_confs(
-                desired.external_ids.as_ref(),
-                current.external_ids.as_ref().unwrap_or(&empty_map),
-                &mut external_ids,
-            );
+        let cur_other_config: HashMap<String, Option<String>> =
+            current.other_config.as_ref().unwrap_or(&empty_map).clone();
 
-            merge_ovsdb_confs(
-                desired.other_config.as_ref(),
-                current.other_config.as_ref().unwrap_or(&empty_map),
-                &mut other_config,
-            );
+        if let Some(desired) = &mut desired {
+            if !desired.is_purge() {
+                desired.sanitize()?;
+
+                merge_ovsdb_confs(
+                    desired.external_ids.as_ref(),
+                    current.external_ids.as_ref().unwrap_or(&empty_map),
+                    &mut external_ids,
+                );
+
+                merge_ovsdb_confs(
+                    desired.other_config.as_ref(),
+                    current.other_config.as_ref().unwrap_or(&empty_map),
+                    &mut other_config,
+                );
+            }
+        } else {
+            external_ids = cur_external_ids.clone();
+            other_config = cur_other_config.clone();
         }
 
         if let Some(v) = merged_ovn.to_ovsdb_external_id_value() {
@@ -258,18 +235,12 @@ impl MergedOvsDbGlobalConfig {
             );
         }
 
-        let mut cur_external_ids: HashMap<String, Option<String>> =
-            current.external_ids.as_ref().unwrap_or(&empty_map).clone();
-
         if let Some(v) = merged_ovn.current.to_ovsdb_external_id_value() {
             cur_external_ids.insert(
                 OvsDbGlobalConfig::OVN_BRIDGE_MAPPINGS_KEY.to_string(),
                 Some(v),
             );
         }
-
-        let cur_other_config: HashMap<String, Option<String>> =
-            current.other_config.as_ref().unwrap_or(&empty_map).clone();
 
         let is_changed = cur_other_config != other_config
             || cur_external_ids != external_ids;
