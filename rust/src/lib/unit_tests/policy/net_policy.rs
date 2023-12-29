@@ -249,7 +249,8 @@ fn test_policy_convert_dhcp_to_static_with_dns() {
     assert_eq!(routes[0].next_hop_iface, Some("eth1".to_string()));
     assert_eq!(routes[1].destination, Some("192.51.100.0/24".to_string()));
     assert_eq!(routes[1].next_hop_iface, Some("eth1".to_string()));
-    let dns_config = state.dns.config.as_ref().unwrap();
+    let dns_config =
+        state.dns.as_ref().and_then(|d| d.config.as_ref()).unwrap();
     assert_eq!(
         dns_config.server,
         Some(vec![

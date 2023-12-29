@@ -29,7 +29,6 @@ pub(crate) fn nispor_retrieve(
 ) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState {
         hostname: get_hostname_state(),
-        prop_list: vec!["interfaces", "routes", "rules", "hostname"],
         ..Default::default()
     };
     let mut filter = nispor::NetStateFilter::default();

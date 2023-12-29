@@ -219,7 +219,7 @@ impl DnsClientState {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct MergedDnsState {
-    pub(crate) desired: DnsState,
+    pub(crate) desired: Option<DnsState>,
     pub(crate) current: DnsState,
     pub(crate) servers: Vec<String>,
     pub(crate) searches: Vec<String>,
@@ -228,10 +228,9 @@ pub(crate) struct MergedDnsState {
 
 impl MergedDnsState {
     pub(crate) fn new(
-        mut desired: DnsState,
+        desired: Option<DnsState>,
         mut current: DnsState,
     ) -> Result<Self, NmstateError> {
-        desired.sanitize()?;
         current.sanitize().ok();
         let mut servers = current
             .config
@@ -249,6 +248,21 @@ impl MergedDnsState {
             .as_ref()
             .and_then(|c| c.options.clone())
             .unwrap_or_default();
+
+        let mut desired = match desired {
+            Some(d) => d,
+            None => {
+                return Ok(Self {
+                    desired: None,
+                    current,
+                    servers,
+                    searches,
+                    options,
+                });
+            }
+        };
+
+        desired.sanitize()?;
 
         if let Some(conf) = desired.config.as_ref() {
             if conf.is_purge() {
@@ -272,7 +286,7 @@ impl MergedDnsState {
         }
 
         Ok(Self {
-            desired,
+            desired: Some(desired),
             current,
             servers,
             searches,
