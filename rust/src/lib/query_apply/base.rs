@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, InterfaceType, OvsDbIfaceConfig};
+use crate::{BaseInterface, InterfaceState, InterfaceType, OvsDbIfaceConfig};
 
 impl BaseInterface {
     pub(crate) fn sanitize_current_for_verify(&mut self) {
@@ -47,64 +47,59 @@ impl BaseInterface {
     }
 
     pub(crate) fn update(&mut self, other: &BaseInterface) {
-        if other.prop_list.contains(&"name") {
-            self.name = other.name.clone();
-        }
-        if other.prop_list.contains(&"description") {
+        if other.description.is_some() {
             self.description = other.description.clone();
         }
-        if other.prop_list.contains(&"iface_type")
-            && other.iface_type != InterfaceType::Unknown
-        {
+        if other.iface_type != InterfaceType::Unknown {
             self.iface_type = other.iface_type.clone();
         }
-        if other.prop_list.contains(&"state") {
+        if other.state != InterfaceState::Unknown {
             self.state = other.state;
         }
-        if other.prop_list.contains(&"mtu") {
+        if other.mtu.is_some() {
             self.mtu = other.mtu;
         }
-        if other.prop_list.contains(&"min_mtu") {
+        if other.min_mtu.is_some() {
             self.min_mtu = other.min_mtu;
         }
-        if other.prop_list.contains(&"max_mtu") {
+        if other.max_mtu.is_some() {
             self.max_mtu = other.max_mtu;
         }
-        if other.prop_list.contains(&"mac_address") {
+        if other.mac_address.is_some() {
             self.mac_address = other.mac_address.clone();
         }
-        if other.prop_list.contains(&"permanent_mac_address") {
+        if other.permanent_mac_address.is_some() {
             self.permanent_mac_address = other.permanent_mac_address.clone();
         }
-        if other.prop_list.contains(&"controller") {
+        if other.controller.is_some() {
             self.controller = other.controller.clone();
         }
-        if other.prop_list.contains(&"controller_type") {
+        if other.controller_type.is_some() {
             self.controller_type = other.controller_type.clone();
         }
-        if other.prop_list.contains(&"accept_all_mac_addresses") {
+        if other.accept_all_mac_addresses.is_some() {
             self.accept_all_mac_addresses = other.accept_all_mac_addresses;
         }
-        if other.prop_list.contains(&"ovsdb") {
+        if other.ovsdb.is_some() {
             self.ovsdb = other.ovsdb.clone();
         }
-        if other.prop_list.contains(&"ieee8021x") {
+        if other.ieee8021x.is_some() {
             self.ieee8021x = other.ieee8021x.clone();
         }
-        if other.prop_list.contains(&"lldp") {
+        if other.lldp.is_some() {
             self.lldp = other.lldp.clone();
         }
-        if other.prop_list.contains(&"ethtool") {
+        if other.ethtool.is_some() {
             self.ethtool = other.ethtool.clone();
         }
-        if other.prop_list.contains(&"mptcp") {
+        if other.mptcp.is_some() {
             self.mptcp = other.mptcp.clone();
         }
-        if other.prop_list.contains(&"wait_ip") {
+        if other.wait_ip.is_some() {
             self.wait_ip = other.wait_ip;
         }
 
-        if other.prop_list.contains(&"ipv4") {
+        if other.ipv4.is_some() {
             if let Some(ref other_ipv4) = other.ipv4 {
                 if let Some(ref mut self_ipv4) = self.ipv4 {
                     self_ipv4.update(other_ipv4);
@@ -114,7 +109,7 @@ impl BaseInterface {
             }
         }
 
-        if other.prop_list.contains(&"ipv6") {
+        if other.ipv6.is_some() {
             if let Some(ref other_ipv6) = other.ipv6 {
                 if let Some(ref mut self_ipv6) = self.ipv6 {
                     self_ipv6.update(other_ipv6);
@@ -123,21 +118,16 @@ impl BaseInterface {
                 }
             }
         }
-        if other.prop_list.contains(&"mptcp") {
+        if other.mptcp.is_some() {
             self.mptcp = other.mptcp.clone();
         }
-        if other.prop_list.contains(&"identifier") {
+        if other.identifier.is_some() {
             self.identifier = other.identifier;
         }
-        if other.prop_list.contains(&"profile_name") {
+        if other.profile_name.is_some() {
             self.profile_name = other.profile_name.clone();
         }
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name)
-            }
-        }
-        if other.prop_list.contains(&"dispatch") {
+        if other.dispatch.is_some() {
             self.dispatch = other.dispatch.clone();
         }
     }

@@ -159,7 +159,6 @@ pub(crate) fn nm_retrieve(
                     // NetworkManager, so user will not get failure when they
                     // apply the returned state.
                     if !mptcp_supported {
-                        iface.base_iface_mut().prop_list.push("mptcp");
                         iface.base_iface_mut().mptcp = None;
                     }
 
@@ -185,9 +184,6 @@ pub(crate) fn nm_retrieve(
     {
         // Do not touch interfaces nmstate does not support yet
         if !InterfaceType::SUPPORTED_LIST.contains(&iface.iface_type()) {
-            if !iface.base_iface_mut().prop_list.contains(&"state") {
-                iface.base_iface_mut().prop_list.push("state");
-            }
             iface.base_iface_mut().state = InterfaceState::Ignore;
         }
     }
@@ -213,7 +209,6 @@ pub(crate) fn nm_retrieve(
         if let Some(iface) =
             net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
         {
-            iface.base_iface_mut().prop_list.push("dispatch");
             iface.base_iface_mut().dispatch = Some(conf);
         }
     }
@@ -247,28 +242,16 @@ pub(crate) fn nm_conn_to_base_iface(
 
         let mut base_iface = BaseInterface::new();
         base_iface.name = iface_name.to_string();
-        base_iface.prop_list = vec![
-            "name",
-            "state",
-            "ipv4",
-            "ipv6",
-            "ieee8021x",
-            "description",
-            "lldp",
-            "wait_ip",
-            "identifier",
-            "profile_name",
-        ];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = if let Some(nm_dev) = nm_dev {
             nm_dev_iface_type_to_nmstate(nm_dev)
         } else {
             InterfaceType::Unknown
         };
-        if base_iface.iface_type.is_userspace() {
+        if !base_iface.iface_type.is_userspace() {
             // Only override iface type for user space. For other interface,
             // we trust nispor to set the correct interface type.
-            base_iface.prop_list.push("iface_type");
+            base_iface.iface_type = InterfaceType::Unknown;
         }
         base_iface.ipv4 = ipv4;
         base_iface.ipv6 = ipv6;
@@ -276,7 +259,7 @@ pub(crate) fn nm_conn_to_base_iface(
             query_nmstate_wait_ip(nm_conn.ipv4.as_ref(), nm_conn.ipv6.as_ref());
         base_iface.controller = nm_conn.controller().map(|c| c.to_string());
         base_iface.description = get_description(nm_conn);
-        base_iface.identifier = get_identifier(nm_conn);
+        base_iface.identifier = Some(get_identifier(nm_conn));
         base_iface.profile_name = get_connection_name(nm_conn);
         if base_iface.profile_name.as_ref() == Some(&base_iface.name) {
             base_iface.profile_name = None;
@@ -466,8 +449,6 @@ fn set_ovs_iface_controller_info(ifaces: &mut Interfaces) {
     }
     for (iface_name, ctrl_name) in pending_changes {
         if let Some(ref mut iface) = ifaces.kernel_ifaces.get_mut(iface_name) {
-            iface.base_iface_mut().prop_list.push("controller");
-            iface.base_iface_mut().prop_list.push("controller_type");
             iface.base_iface_mut().controller = Some(ctrl_name.to_string());
             iface.base_iface_mut().controller_type =
                 Some(InterfaceType::OvsBridge);
@@ -482,7 +463,6 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
     } else {
         base_iface.name = nm_dev.name.clone();
     }
-    base_iface.prop_list = vec!["name", "state"];
     match nm_dev.state {
         NmDeviceState::Unmanaged => {
             if !nm_dev.real {
@@ -604,10 +584,10 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
             }
         }
     };
-    if iface.iface_type().is_userspace() {
+    if !iface.iface_type().is_userspace() {
         // Only override iface type for user space. For other interface,
         // we trust nispor to set the correct interface type.
-        iface.base_iface_mut().prop_list.push("iface_type");
+        iface.base_iface_mut().iface_type = InterfaceType::Unknown;
     }
     Some(iface)
 }
