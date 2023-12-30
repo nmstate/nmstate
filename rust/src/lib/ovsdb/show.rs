@@ -35,10 +35,6 @@ pub(crate) fn ovsdb_retrieve() -> Result<NetworkState, NmstateError> {
     for ovsdb_br in ovsdb_brs.values() {
         let mut iface = OvsBridgeInterface::new();
         iface.base.name = ovsdb_br.name.to_string();
-        iface.base.prop_list.push("ovsdb");
-        iface.base.prop_list.push("bridge");
-        iface.base.prop_list.push("iface_type");
-        iface.base.prop_list.push("state");
         let external_ids = HashMap::from_iter(
             ovsdb_br
                 .external_ids
@@ -352,15 +348,10 @@ fn ovsdb_iface_to_nmstate(
 
     let mut iface = match ovsdb_iface.iface_type.as_str() {
         "system" => Interface::Unknown(UnknownInterface::new()),
-        "internal" => {
-            let mut ovs_iface = OvsInterface::new();
-            ovs_iface.base.prop_list.push("iface_type");
-            Interface::OvsInterface(ovs_iface)
-        }
+        "internal" => Interface::OvsInterface(OvsInterface::new()),
         "patch" => {
             let mut ovs_iface = OvsInterface::new();
             ovs_iface.patch = parse_ovs_patch_conf(ovsdb_iface);
-            ovs_iface.base.prop_list.push("iface_type");
             Interface::OvsInterface(ovs_iface)
         }
         "dpdk" => {
@@ -369,8 +360,6 @@ fn ovsdb_iface_to_nmstate(
             // DPDK interface does not have kernel representative, the MTU is
             // set in ovsdb.
             ovs_iface.base.mtu = get_dpdk_mtu(ovsdb_iface);
-            ovs_iface.base.prop_list.push("iface_type");
-            ovs_iface.base.prop_list.push("mtu");
             Interface::OvsInterface(ovs_iface)
         }
         i => {
@@ -379,13 +368,10 @@ fn ovsdb_iface_to_nmstate(
         }
     };
     iface.base_iface_mut().name = ovsdb_iface.name.to_string();
-    iface.base_iface_mut().prop_list.push("ovsdb");
 
     if let Some(ctrl) = port_to_ctrl.get(&iface.name()) {
         iface.base_iface_mut().controller = Some(ctrl.to_string());
         iface.base_iface_mut().controller_type = Some(InterfaceType::OvsBridge);
-        iface.base_iface_mut().prop_list.push("controller");
-        iface.base_iface_mut().prop_list.push("controller_type");
     }
 
     let external_ids = HashMap::from_iter(
