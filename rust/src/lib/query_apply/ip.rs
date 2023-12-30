@@ -32,54 +32,48 @@ impl InterfaceIpv4 {
         }
     }
     pub(crate) fn update(&mut self, other: &Self) {
-        if other.prop_list.contains(&"enabled") {
+        if other.enabled_defined {
             self.enabled = other.enabled;
         }
 
-        if other.prop_list.contains(&"dhcp") {
+        if other.dhcp.is_some() {
             self.dhcp = other.dhcp;
         }
-        if other.prop_list.contains(&"dhcp_client_id") {
+        if other.dhcp_client_id.is_some() {
             self.dhcp_client_id = other.dhcp_client_id.clone();
         }
-        if other.prop_list.contains(&"addresses") {
+        if other.addresses.is_some() {
             self.addresses = other.addresses.clone();
         }
-        if other.prop_list.contains(&"dns") {
+        if other.dns.is_some() {
             self.dns = other.dns.clone();
         }
-        if other.prop_list.contains(&"rules") {
+        if other.rules.is_some() {
             self.rules = other.rules.clone();
         }
-        if other.prop_list.contains(&"auto_dns") {
+        if other.auto_dns.is_some() {
             self.auto_dns = other.auto_dns;
         }
-        if other.prop_list.contains(&"auto_gateway") {
+        if other.auto_gateway.is_some() {
             self.auto_gateway = other.auto_gateway;
         }
-        if other.prop_list.contains(&"auto_routes") {
+        if other.auto_routes.is_some() {
             self.auto_routes = other.auto_routes;
         }
-        if other.prop_list.contains(&"auto_table_id") {
+        if other.auto_table_id.is_some() {
             self.auto_table_id = other.auto_table_id;
         }
-        if other.prop_list.contains(&"allow_extra_address") {
+        if other.allow_extra_address.is_some() {
             self.allow_extra_address = other.allow_extra_address;
         }
-        if other.prop_list.contains(&"auto_route_metric") {
+        if other.auto_route_metric.is_some() {
             self.auto_route_metric = other.auto_route_metric;
         }
-        if other.prop_list.contains(&"dhcp_send_hostname") {
+        if other.dhcp_send_hostname.is_some() {
             self.dhcp_send_hostname = other.dhcp_send_hostname;
         }
-        if other.prop_list.contains(&"dhcp_custom_hostname") {
+        if other.dhcp_custom_hostname.is_some() {
             self.dhcp_custom_hostname = other.dhcp_custom_hostname.clone();
-        }
-
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name);
-            }
         }
     }
 }
@@ -124,61 +118,56 @@ impl InterfaceIpv6 {
         }
     }
     pub(crate) fn update(&mut self, other: &Self) {
-        if other.prop_list.contains(&"enabled") {
+        if other.enabled_defined {
             self.enabled = other.enabled;
         }
-        if other.prop_list.contains(&"dhcp") {
+        if other.dhcp.is_some() {
             self.dhcp = other.dhcp;
         }
-        if other.prop_list.contains(&"dhcp_duid") {
+        if other.dhcp_duid.is_some() {
             self.dhcp_duid = other.dhcp_duid.clone();
         }
-        if other.prop_list.contains(&"autoconf") {
+        if other.autoconf.is_some() {
             self.autoconf = other.autoconf;
         }
-        if other.prop_list.contains(&"addr_gen_mode") {
+        if other.addr_gen_mode.is_some() {
             self.addr_gen_mode = other.addr_gen_mode.clone();
         }
-        if other.prop_list.contains(&"addresses") {
+        if other.addresses.is_some() {
             self.addresses = other.addresses.clone();
         }
-        if other.prop_list.contains(&"auto_dns") {
+        if other.auto_dns.is_some() {
             self.auto_dns = other.auto_dns;
         }
-        if other.prop_list.contains(&"auto_gateway") {
+        if other.auto_gateway.is_some() {
             self.auto_gateway = other.auto_gateway;
         }
-        if other.prop_list.contains(&"auto_routes") {
+        if other.auto_routes.is_some() {
             self.auto_routes = other.auto_routes;
         }
-        if other.prop_list.contains(&"auto_table_id") {
+        if other.auto_table_id.is_some() {
             self.auto_table_id = other.auto_table_id;
         }
-        if other.prop_list.contains(&"dns") {
+        if other.dns.is_some() {
             self.dns = other.dns.clone();
         }
-        if other.prop_list.contains(&"rules") {
+        if other.rules.is_some() {
             self.rules = other.rules.clone();
         }
-        if other.prop_list.contains(&"addr_gen_mode") {
+        if other.addr_gen_mode.is_some() {
             self.addr_gen_mode = other.addr_gen_mode.clone();
         }
-        if other.prop_list.contains(&"auto_route_metric") {
+        if other.auto_route_metric.is_some() {
             self.auto_route_metric = other.auto_route_metric;
         }
-        if other.prop_list.contains(&"token") {
+        if other.token.is_some() {
             self.token = other.token.clone();
         }
-        if other.prop_list.contains(&"dhcp_send_hostname") {
+        if other.dhcp_send_hostname.is_some() {
             self.dhcp_send_hostname = other.dhcp_send_hostname;
         }
-        if other.prop_list.contains(&"dhcp_custom_hostname") {
+        if other.dhcp_custom_hostname.is_some() {
             self.dhcp_custom_hostname = other.dhcp_custom_hostname.clone();
-        }
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name);
-            }
         }
     }
 }
