@@ -44,25 +44,12 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             parse_dhcp_opts(nm_ip_setting);
         InterfaceIpv4 {
             enabled,
+            enabled_defined: true,
             dhcp,
             auto_dns,
             auto_routes,
             auto_gateway,
             auto_table_id,
-            prop_list: vec![
-                "enabled",
-                "dhcp",
-                "dhcp_client_id",
-                "dns",
-                "auto_dns",
-                "auto_routes",
-                "auto_gateway",
-                "auto_table_id",
-                "auto_route_metric",
-                "rules",
-                "dhcp_send_hostname",
-                "dhcp_custom_hostname",
-            ],
             dns: Some(nm_dns_to_nmstate("", nm_ip_setting)),
             rules: nm_rules_to_nmstate(false, nm_ip_setting),
             dhcp_client_id: if enabled && dhcp == Some(true) {
@@ -113,28 +100,13 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             parse_dhcp_opts(nm_ip_setting);
         let mut ret = InterfaceIpv6 {
             enabled,
+            enabled_defined: true,
             dhcp,
             autoconf,
             auto_dns,
             auto_routes,
             auto_gateway,
             auto_table_id,
-            prop_list: vec![
-                "enabled",
-                "dhcp",
-                "autoconf",
-                "dns",
-                "rules",
-                "auto_dns",
-                "auto_routes",
-                "auto_gateway",
-                "auto_table_id",
-                "dhcp_duid",
-                "addr_gen_mode",
-                "auto_route_metric",
-                "dhcp_send_hostname",
-                "dhcp_custom_hostname",
-            ],
             dns: Some(nm_dns_to_nmstate(iface_name, nm_ip_setting)),
             rules: nm_rules_to_nmstate(true, nm_ip_setting),
             dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
@@ -163,7 +135,6 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
         // on nispor kernel IPv6 token, we set IPv6 token based on information
         // provided by NM connection.
         if let Some(token) = nm_ip_setting.token.as_ref() {
-            ret.prop_list.push("token");
             ret.token = Some(token.to_string());
         }
         ret
