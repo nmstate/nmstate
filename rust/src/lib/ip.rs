@@ -1035,128 +1035,104 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
-#[serde(from = "String", into = "String")]
 /// DHCPv4 client ID
 pub enum Dhcpv4ClientId {
     /// Use link layer address as DHCPv4 client ID.
     /// Serialize and deserialize to/from `ll`.
+    #[serde(rename = "ll", alias = "LL")]
     LinkLayerAddress,
     /// RFC 4361 type 255, 32 bits IAID followed by DUID.
     /// Serialize and deserialize to/from `iaid+duid`.
+    #[serde(rename = "iaid+duid", alias = "IAID+DUID")]
     IaidPlusDuid,
     /// hex string or backend specific client id type
+    #[serde(untagged)]
     Other(String),
 }
 
 impl std::fmt::Display for Dhcpv4ClientId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", String::from(self.clone()))
-    }
-}
-
-impl From<String> for Dhcpv4ClientId {
-    fn from(s: String) -> Self {
-        return match s.as_str() {
-            "ll" | "LL" => Self::LinkLayerAddress,
-            "iaid+duid" | "IAID+DUID" => Self::IaidPlusDuid,
-            _ => Self::Other(s),
-        };
-    }
-}
-
-impl From<Dhcpv4ClientId> for String {
-    fn from(v: Dhcpv4ClientId) -> Self {
-        match v {
-            Dhcpv4ClientId::LinkLayerAddress => "ll".to_string(),
-            Dhcpv4ClientId::IaidPlusDuid => "iaid+duid".to_string(),
-            Dhcpv4ClientId::Other(s) => s,
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                Dhcpv4ClientId::LinkLayerAddress => "ll",
+                Dhcpv4ClientId::IaidPlusDuid => "iaid+duid",
+                Dhcpv4ClientId::Other(s) => s,
+            }
+        )
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
-#[serde(from = "String", into = "String")]
+#[serde(rename_all = "kebab-case")]
 /// DHCPv6 Unique Identifier
 pub enum Dhcpv6Duid {
     /// DUID Based on Link-Layer Address Plus Time
     /// Serialize and deserialize to/from `llt`.
+    #[serde(rename = "llt", alias = "LLT")]
     LinkLayerAddressPlusTime,
     /// DUID Assigned by Vendor Based on Enterprise Number
     /// Serialize and deserialize to/from `en`.
+    #[serde(rename = "en", alias = "EN")]
     EnterpriseNumber,
     /// DUID Assigned by Vendor Based on Enterprise Number
     /// Serialize and deserialize to/from `ll`.
+    #[serde(rename = "ll", alias = "LL")]
     LinkLayerAddress,
     /// DUID Based on Universally Unique Identifier
     /// Serialize and deserialize to/from `uuid`.
+    #[serde(alias = "UUID")]
     Uuid,
     /// Backend specific
+    #[serde(untagged)]
     Other(String),
 }
 
 impl std::fmt::Display for Dhcpv6Duid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", String::from(self.clone()))
-    }
-}
-
-impl From<String> for Dhcpv6Duid {
-    fn from(s: String) -> Self {
-        return match s.as_str() {
-            "llt" | "LLT" => Self::LinkLayerAddressPlusTime,
-            "en" | "EN" => Self::EnterpriseNumber,
-            "ll" | "LL" => Self::LinkLayerAddress,
-            "uuid" | "UUID" => Self::Uuid,
-            _ => Self::Other(s),
-        };
-    }
-}
-
-impl From<Dhcpv6Duid> for String {
-    fn from(v: Dhcpv6Duid) -> Self {
-        match v {
-            Dhcpv6Duid::LinkLayerAddressPlusTime => "llt".to_string(),
-            Dhcpv6Duid::EnterpriseNumber => "en".to_string(),
-            Dhcpv6Duid::LinkLayerAddress => "ll".to_string(),
-            Dhcpv6Duid::Uuid => "uuid".to_string(),
-            Dhcpv6Duid::Other(s) => s,
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                Dhcpv6Duid::LinkLayerAddressPlusTime => "llt",
+                Dhcpv6Duid::EnterpriseNumber => "en",
+                Dhcpv6Duid::LinkLayerAddress => "ll",
+                Dhcpv6Duid::Uuid => "uuid",
+                Dhcpv6Duid::Other(s) => s,
+            }
+        )
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[non_exhaustive]
-#[serde(from = "String", into = "String")]
 /// IPv6 address generation mode
 pub enum Ipv6AddrGenMode {
     /// EUI-64 format defined by RFC 4862
     /// Serialize and deserialize to/from `eui64`.
+    #[serde(rename = "eui64", alias = "EUI64")]
     Eui64,
     /// Semantically Opaque Interface Identifiers defined by RFC 7217
     /// Serialize and deserialize to/from `stable-privacy`.
+    #[serde(rename = "stable-privacy", alias = "STABLE-PRIVACY")]
     StablePrivacy,
     /// Backend specific
+    #[serde(untagged)]
     Other(String),
 }
 
-impl From<String> for Ipv6AddrGenMode {
-    fn from(s: String) -> Self {
-        return match s.as_str() {
-            "eui64" | "EUI64" => Self::Eui64,
-            "stable-privacy" | "STABLE-PRIVACY" => Self::StablePrivacy,
-            _ => Self::Other(s),
-        };
-    }
-}
-
-impl From<Ipv6AddrGenMode> for String {
-    fn from(v: Ipv6AddrGenMode) -> Self {
-        match v {
-            Ipv6AddrGenMode::Eui64 => "eui64".to_string(),
-            Ipv6AddrGenMode::StablePrivacy => "stable-privacy".to_string(),
-            Ipv6AddrGenMode::Other(s) => s,
-        }
+impl std::fmt::Display for Ipv6AddrGenMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Ipv6AddrGenMode::Eui64 => "eui64",
+                Ipv6AddrGenMode::StablePrivacy => "stable-privacy",
+                Ipv6AddrGenMode::Other(s) => s,
+            }
+        )
     }
 }
 

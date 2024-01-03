@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
@@ -15,8 +14,11 @@ use crate::{
 
 use crate::state::merge_json_value;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 /// Interface type
 pub enum InterfaceType {
     /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
@@ -63,12 +65,14 @@ pub enum InterfaceType {
     Vxlan,
     /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     /// Deserialize and serialize from/to 'infiniband'.
+    #[serde(rename = "infiniband")]
     InfiniBand,
     /// TUN interface. Only used for query, will be ignored when applying.
     /// Deserialize and serialize from/to 'tun'.
     Tun,
     /// MACsec interface.
     /// Deserialize and serialize from/to 'macsec'
+    #[serde(rename = "macsec")]
     MacSec,
     /// Ipsec connection.
     Ipsec,
@@ -86,34 +90,7 @@ impl Default for InterfaceType {
     }
 }
 
-impl From<&str> for InterfaceType {
-    fn from(s: &str) -> Self {
-        match s {
-            "bond" => InterfaceType::Bond,
-            "linux-bridge" => InterfaceType::LinuxBridge,
-            "dummy" => InterfaceType::Dummy,
-            "ethernet" => InterfaceType::Ethernet,
-            "hsr" => InterfaceType::Hsr,
-            "loopback" => InterfaceType::Loopback,
-            "mac-vlan" => InterfaceType::MacVlan,
-            "mac-vtap" => InterfaceType::MacVtap,
-            "ovs-bridge" => InterfaceType::OvsBridge,
-            "ovs-interface" => InterfaceType::OvsInterface,
-            "veth" => InterfaceType::Veth,
-            "vlan" => InterfaceType::Vlan,
-            "vrf" => InterfaceType::Vrf,
-            "vxlan" => InterfaceType::Vxlan,
-            "infiniband" => InterfaceType::InfiniBand,
-            "tun" => InterfaceType::Tun,
-            "macsec" => InterfaceType::MacSec,
-            "ipsec" => InterfaceType::Ipsec,
-            "unknown" => InterfaceType::Unknown,
-            "xfrm" => InterfaceType::Xfrm,
-            _ => InterfaceType::Other(s.to_string()),
-        }
-    }
-}
-
+//NOTE: Remember to add new interface types also here
 impl std::fmt::Display for InterfaceType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -143,28 +120,6 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Other(ref s) => s,
             }
         )
-    }
-}
-
-impl Serialize for InterfaceType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(format!("{self}").as_str())
-    }
-}
-
-impl<'de> Deserialize<'de> for InterfaceType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let v = serde_json::Value::deserialize(deserializer)?;
-        match v.as_str() {
-            Some(s) => Ok(InterfaceType::from(s)),
-            None => Ok(InterfaceType::Unknown),
-        }
     }
 }
 
