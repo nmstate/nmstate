@@ -104,21 +104,9 @@ pub struct NetworkState {
     /// The OVN configuration in the system
     pub ovn: OvnConfiguration,
     #[serde(skip)]
-    pub(crate) kernel_only: bool,
+    pub(crate) apply_options: NetworkStateApplyOption,
     #[serde(skip)]
-    pub(crate) no_verify: bool,
-    #[serde(skip)]
-    pub(crate) no_commit: bool,
-    #[serde(skip)]
-    pub(crate) timeout: Option<u32>,
-    #[serde(skip)]
-    pub(crate) include_secrets: bool,
-    #[serde(skip)]
-    pub(crate) include_status_data: bool,
-    #[serde(skip)]
-    pub(crate) running_config_only: bool,
-    #[serde(skip)]
-    pub(crate) memory_only: bool,
+    pub(crate) query_options: NetworkStateQueryOption,
 }
 
 impl NetworkState {
@@ -141,7 +129,8 @@ impl NetworkState {
     /// querying/applying the network state.
     /// Default is false.
     pub fn set_kernel_only(&mut self, value: bool) -> &mut Self {
-        self.kernel_only = value;
+        self.query_options.kernel_only = value;
+        self.apply_options.kernel_only = value;
         self
     }
 
@@ -151,7 +140,7 @@ impl NetworkState {
     /// before apply(only when [NetworkState::set_kernel_only()] set to false.
     /// When set to false, no verification will be performed.
     pub fn set_verify_change(&mut self, value: bool) -> &mut Self {
-        self.no_verify = !value;
+        self.apply_options.no_verify = !value;
         self
     }
 
@@ -161,7 +150,7 @@ impl NetworkState {
     /// [NetworkState::set_timeout()].  Default to true for making the network
     /// state persistent.
     pub fn set_commit(&mut self, value: bool) -> &mut Self {
-        self.no_commit = !value;
+        self.apply_options.no_commit = !value;
         self
     }
 
@@ -169,20 +158,20 @@ impl NetworkState {
     /// The time to wait before rolling back the network state to the state
     /// before [NetworkState::apply()` invoked.
     pub fn set_timeout(&mut self, value: u32) -> &mut Self {
-        self.timeout = Some(value);
+        self.apply_options.timeout = Some(value);
         self
     }
 
     /// Whether to include secrets(like password) in [NetworkState::retrieve()]
     /// Default is false.
     pub fn set_include_secrets(&mut self, value: bool) -> &mut Self {
-        self.include_secrets = value;
+        self.query_options.include_secrets = value;
         self
     }
 
     /// Deprecated. No use at all.
     pub fn set_include_status_data(&mut self, value: bool) -> &mut Self {
-        self.include_status_data = value;
+        self.query_options.include_status_data = value;
         self
     }
 
@@ -192,14 +181,14 @@ impl NetworkState {
     /// * Routes retrieved by DHCPv4 or IPv6 router advertisement.
     /// * LLDP neighbor information.
     pub fn set_running_config_only(&mut self, value: bool) -> &mut Self {
-        self.running_config_only = value;
+        self.query_options.running_config_only = value;
         self
     }
 
     /// When set to true, the network state be applied and only stored in memory
     /// which will be purged after system reboot.
     pub fn set_memory_only(&mut self, value: bool) -> &mut Self {
-        self.memory_only = value;
+        self.apply_options.memory_only = value;
         self
     }
 
@@ -299,7 +288,7 @@ pub(crate) struct MergedNetworkState {
     pub(crate) ovsdb: MergedOvsDbGlobalConfig,
     pub(crate) routes: MergedRoutes,
     pub(crate) rules: MergedRouteRules,
-    pub(crate) memory_only: bool,
+    pub(crate) apply_options: NetworkStateApplyOption,
 }
 
 impl MergedNetworkState {
@@ -307,8 +296,8 @@ impl MergedNetworkState {
         desired: NetworkState,
         current: NetworkState,
         gen_conf_mode: bool,
-        memory_only: bool,
     ) -> Result<Self, NmstateError> {
+        let memory_only = desired.apply_options.memory_only;
         let interfaces = MergedInterfaces::new(
             desired.interfaces,
             current.interfaces,
@@ -346,10 +335,29 @@ impl MergedNetworkState {
             ovn,
             ovsdb,
             hostname,
-            memory_only,
+            apply_options: desired.apply_options,
         };
         ret.validate_ipv6_link_local_address_dns_srv()?;
 
         Ok(ret)
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct NetworkStateApplyOption {
+    pub(crate) kernel_only: bool,
+    pub(crate) no_verify: bool,
+    pub(crate) no_commit: bool,
+    pub(crate) timeout: Option<u32>,
+    pub(crate) memory_only: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct NetworkStateQueryOption {
+    pub(crate) kernel_only: bool,
+    pub(crate) include_secrets: bool,
+    pub(crate) include_status_data: bool,
+    pub(crate) running_config_only: bool,
 }

@@ -27,8 +27,7 @@ fn test_add_rules_to_new_interface() {
     des_net_state.rules = gen_test_rules_conf();
 
     let mut merged_state =
-        MergedNetworkState::new(des_net_state, cur_net_state, false, false)
-            .unwrap();
+        MergedNetworkState::new(des_net_state, cur_net_state, false).unwrap();
     store_route_rule_config(&mut merged_state).unwrap();
 
     let iface = merged_state
@@ -137,7 +136,7 @@ route-rules:
     .unwrap();
 
     let mut merged_state =
-        MergedNetworkState::new(desired, current, false, false).unwrap();
+        MergedNetworkState::new(desired, current, false).unwrap();
 
     store_route_rule_config(&mut merged_state).unwrap();
 
@@ -217,7 +216,7 @@ route-rules:
     .unwrap();
 
     let mut merged_state =
-        MergedNetworkState::new(desired, current, false, false).unwrap();
+        MergedNetworkState::new(desired, current, false).unwrap();
 
     store_route_rule_config(&mut merged_state).unwrap();
 
@@ -283,7 +282,7 @@ route-rules:
     .unwrap();
 
     let mut merged_state =
-        MergedNetworkState::new(desired, current, false, false).unwrap();
+        MergedNetworkState::new(desired, current, false).unwrap();
 
     store_route_rule_config(&mut merged_state).unwrap();
 
@@ -355,7 +354,7 @@ interfaces:
     .unwrap();
 
     let mut merged_state =
-        MergedNetworkState::new(desired, current, false, false).unwrap();
+        MergedNetworkState::new(desired, current, false).unwrap();
 
     store_route_rule_config(&mut merged_state).unwrap();
 

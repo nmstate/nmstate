@@ -20,8 +20,7 @@ impl NetworkState {
         let merged_state = MergedNetworkState::new(
             self.clone(),
             NetworkState::new(),
-            true,  // gen_conf mode
-            false, // memory only
+            true, // gen_conf mode
         )?;
         ret.insert("NetworkManager".to_string(), nm_gen_conf(&merged_state)?);
         Ok(ret)
