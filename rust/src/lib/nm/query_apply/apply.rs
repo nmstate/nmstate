@@ -51,7 +51,7 @@ pub(crate) fn nm_apply(
     nm_api.set_checkpoint(checkpoint, timeout);
     nm_api.set_checkpoint_auto_refresh(true);
 
-    if !merged_state.memory_only {
+    if !merged_state.apply_options.memory_only {
         delete_ifaces(&mut nm_api, merged_state)?;
     }
 
@@ -61,7 +61,7 @@ pub(crate) fn nm_apply(
         .as_ref()
         .and_then(|c| c.config.as_ref())
     {
-        if merged_state.memory_only {
+        if merged_state.apply_options.memory_only {
             log::debug!(
                 "NM: Cannot change configure hostname in memory only mode, \
                 ignoring"
@@ -168,9 +168,9 @@ pub(crate) fn nm_apply(
     save_nm_profiles(
         &mut nm_api,
         nm_conns_to_store.as_slice(),
-        merged_state.memory_only,
+        merged_state.apply_options.memory_only,
     )?;
-    if !merged_state.memory_only {
+    if !merged_state.apply_options.memory_only {
         delete_exist_profiles(
             &mut nm_api,
             &exist_nm_conns,

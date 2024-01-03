@@ -40,7 +40,7 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
-        let state = nispor_retrieve(self.running_config_only)?;
+        let state = nispor_retrieve(self.query_options.running_config_only)?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;
@@ -56,12 +56,12 @@ impl NetworkState {
                 }
             }
         }
-        if !self.kernel_only {
-            let nm_state = nm_retrieve(self.running_config_only)?;
+        if !self.query_options.kernel_only {
+            let nm_state = nm_retrieve(self.query_options.running_config_only)?;
             // TODO: Priority handling
             self.update_state(&nm_state);
         }
-        if !self.include_secrets {
+        if !self.query_options.include_secrets {
             self.hide_secrets();
         }
 
@@ -86,7 +86,7 @@ impl NetworkState {
                 MAX_SUPPORTED_INTERFACES,
             );
         }
-        if !self.kernel_only {
+        if !self.apply_options.kernel_only {
             self.apply_with_nm_backend()
         } else {
             // TODO: Need checkpoint for kernel only mode
@@ -97,7 +97,7 @@ impl NetworkState {
     fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
         let mut merged_state = None;
         let mut cur_net_state = NetworkState::new();
-        cur_net_state.set_kernel_only(self.kernel_only);
+        cur_net_state.set_kernel_only(self.apply_options.kernel_only);
         cur_net_state.set_include_secrets(true);
         if let Err(e) = cur_net_state.retrieve() {
             if e.kind().can_retry() {
@@ -127,11 +127,10 @@ impl NetworkState {
                 self.clone(),
                 cur_net_state.clone(),
                 false,
-                self.memory_only,
             )?);
         }
 
-        let timeout = if let Some(t) = self.timeout {
+        let timeout = if let Some(t) = self.apply_options.timeout {
             t
         } else if pf_state.is_some() {
             VERIFY_RETRY_COUNT_SRIOV_MAX as u32
@@ -156,13 +155,12 @@ impl NetworkState {
 
         log::info!("Created checkpoint {}", &checkpoint);
 
-        with_nm_checkpoint(&checkpoint, self.no_commit, || {
+        with_nm_checkpoint(&checkpoint, self.apply_options.no_commit, || {
             if let Some(pf_state) = pf_state {
                 let pf_merged_state = MergedNetworkState::new(
                     pf_state,
                     cur_net_state.clone(),
                     false,
-                    self.memory_only,
                 )?;
                 let verify_count =
                     get_proper_verify_retry_count(&pf_merged_state.interfaces);
@@ -179,7 +177,6 @@ impl NetworkState {
                     self.clone(),
                     cur_net_state.clone(),
                     false,
-                    self.memory_only,
                 )?);
             }
 
@@ -229,7 +226,7 @@ impl NetworkState {
             {
                 set_running_hostname(running_hostname)?;
             }
-            if !self.no_verify {
+            if !self.apply_options.no_verify {
                 with_retry(
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,
                     retry_count,
@@ -249,7 +246,7 @@ impl NetworkState {
 
     fn apply_without_nm_backend(&self) -> Result<(), NmstateError> {
         let mut cur_net_state = NetworkState::new();
-        cur_net_state.set_kernel_only(self.kernel_only);
+        cur_net_state.set_kernel_only(self.apply_options.kernel_only);
         cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve()?;
 
@@ -257,7 +254,6 @@ impl NetworkState {
             self.clone(),
             cur_net_state.clone(),
             false,
-            self.memory_only,
         )?;
 
         nispor_apply(&merged_state)?;
@@ -266,7 +262,7 @@ impl NetworkState {
         {
             set_running_hostname(running_hostname)?;
         }
-        if !self.no_verify {
+        if !self.apply_options.no_verify {
             with_retry(
                 VERIFY_RETRY_INTERVAL_MILLISECONDS,
                 VERIFY_RETRY_COUNT_KERNEL_MODE,
