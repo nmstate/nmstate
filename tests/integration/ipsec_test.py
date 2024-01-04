@@ -29,12 +29,14 @@ HOSTA_NIC = "hosta_nic"
 HOSTA_IPV4_CRT = "192.0.2.251"
 HOSTA_IPV4_PSK = "192.0.2.250"
 HOSTA_IPV4_RSA = "192.0.2.249"
+HOSTA_IPV4_CRT_P2P = "192.0.2.248"
 HOSTA_IPSEC_CONN_NAME = "hosta_conn"
 HOSTB_NAME = "hostb.example.org"
 HOSTB_NIC = "hostb_nic"
 HOSTB_IPV4_CRT = "192.0.2.152"
 HOSTB_IPV4_PSK = "192.0.2.153"
 HOSTB_IPV4_RSA = "192.0.2.154"
+HOSTB_IPV4_CRT_P2P = "192.0.2.155"
 HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
 HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
 HOSTB_EXT_IP = "198.51.100.1"
@@ -44,6 +46,7 @@ HOSTB_IPSEC_CONF_NAME = "hostb_conn"
 HOSTB_IPSEC_CRT_CONN_NAME = "hostb_conn_crt"
 HOSTB_IPSEC_PSK_CONN_NAME = "hostb_conn_psk"
 HOSTB_IPSEC_RSA_CONN_NAME = "hostb_conn_rsa"
+HOSTB_IPSEC_CRT_P2P_CONN_NAME = "hostb_conn_crt_p2p"
 HOSTB_IPSEC_CONN_CONTENT = """
 config setup
     protostack=netkey
@@ -88,6 +91,20 @@ conn hostb_conn_rsa
     right=192.0.2.249
     rightid=@hosta-rsa.example.org
     authby=rsasig
+
+conn hostb_conn_crt_p2p
+    hostaddrfamily=ipv4
+    left=192.0.2.155
+    leftsubnet=192.0.2.155/32
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=yes
+    right=192.0.2.248
+    rightsubnet=192.0.2.248/32
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    rightmodecfgclient=yes
+    ikev2=insist
 """
 HOSTB_IPSEC_NSS_DIR = "/tmp/hostb_ipsec_nss"
 HOSTB_IPSEC_SECRETS_FILE = "/tmp/hostb_ipsec_secrets"
@@ -175,6 +192,7 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPV4_CRT,
             HOSTB_IPV4_PSK,
             HOSTB_IPV4_RSA,
+            HOSTB_IPV4_CRT_P2P,
         ]:
             cmdlib.exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
@@ -194,6 +212,7 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPSEC_CRT_CONN_NAME,
             HOSTB_IPSEC_RSA_CONN_NAME,
             HOSTB_IPSEC_PSK_CONN_NAME,
+            HOSTB_IPSEC_CRT_P2P_CONN_NAME,
         ]:
             cmdlib.exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
@@ -347,6 +366,10 @@ def setup_hosta_ip():
                             },
                             {
                                 InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_RSA,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            },
+                            {
+                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_CRT_P2P,
                                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                             },
                         ],
@@ -677,4 +700,29 @@ def test_ipsec_ipv4_libreswan_authby(
     )
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec77"
+    )
+
+
+def test_ipsec_ipv4_libreswan_p2p_cert_auth_add_and_remove(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          libreswan:
+            left: {HOSTA_IPV4_CRT_P2P}
+            leftid: 'hosta.example.org'
+            leftcert: hosta.example.org
+            right: {HOSTB_IPV4_CRT_P2P}
+            rightid: 'hostb.example.org'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    import time
+    time.sleep(10000)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_CRT_P2P, HOSTB_IPV4_CRT_P2P
     )
