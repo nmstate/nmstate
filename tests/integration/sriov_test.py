@@ -271,13 +271,13 @@ class TestSrIov:
                                     Ethernet.SRIOV.VFS.ID: 0,
                                     Ethernet.SRIOV.VFS.VLAN_ID: 100,
                                     Ethernet.SRIOV.VFS.QOS: 5,
-                                    Ethernet.SRIOV.VFS.PROTO: "802.1ad",
+                                    Ethernet.SRIOV.VFS.VLAN_PROTO: "802.1ad",
                                 },
                                 {
                                     Ethernet.SRIOV.VFS.ID: 1,
                                     Ethernet.SRIOV.VFS.VLAN_ID: 102,
                                     Ethernet.SRIOV.VFS.QOS: 6,
-                                    Ethernet.SRIOV.VFS.PROTO: "802.1q",
+                                    Ethernet.SRIOV.VFS.VLAN_PROTO: "802.1q",
                                 },
                             ],
                         }
