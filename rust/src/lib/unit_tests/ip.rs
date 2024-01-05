@@ -541,3 +541,28 @@ fn test_auto_ip_lift_time() {
     assert_eq!(left_fmt, life_time_fmt);
     assert_eq!(iproute_fmt, life_time_fmt);
 }
+
+#[test]
+fn test_ip_serlize_allow_extra_address() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: "true"
+            dhcp: "false"
+            allow-extra-address: false
+          ipv6:
+            enabled: "true"
+            dhcp: "false"
+        "#,
+    )
+    .unwrap();
+
+    let new: Interfaces =
+        serde_yaml::from_str(&serde_yaml::to_string(&desired).unwrap())
+            .unwrap();
+
+    assert_eq!(desired, new);
+}
