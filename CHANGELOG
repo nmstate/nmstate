@@ -1,4 +1,19 @@
 # Changelog
+## [2.2.22] - 2024-01-05
+### Breaking changes
+ - N/A
+
+### New features
+ - Add support to HSR/PRP interface. (b23da648)
+ - Add sriov vlan protocol support. (d2248623, b4981756)
+
+### Bug fixes
+ - package: Ignore minimum rust version. (108e0451)
+ - service: Mark .applied with checksum. (dbb98e1d)
+ - Cargo: Use optional dependency instead of internal feature. (9e4a36f5)
+ - lldp: Simplify rust structs and serde. (ac1eb9d4)
+ - ipsec: Fix error when `ipsec-interface` set to yes or a number. (9203d781)
+
 ## [2.2.21] - 2023-12-14
 ### Breaking changes
  - N/A
