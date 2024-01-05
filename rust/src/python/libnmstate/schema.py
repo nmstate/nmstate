@@ -294,7 +294,7 @@ class Ethernet:
             MAX_TX_RATE = "max-tx-rate"
             VLAN_ID = "vlan-id"
             QOS = "qos"
-            PROTO = "vlan-proto"
+            VLAN_PROTO = "vlan-proto"
 
 
 class Veth:
