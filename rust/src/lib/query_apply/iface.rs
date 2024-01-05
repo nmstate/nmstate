@@ -27,11 +27,14 @@ impl Interface {
         }
     }
 
-    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+    pub(crate) fn verify(
+        &mut self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
         let mut current = current.clone();
         self.process_allow_extra_address(&mut current);
 
-        let self_value = serde_json::to_value(self)?;
+        let self_value = serde_json::to_value(&self)?;
         let current_value = serde_json::to_value(&current)?;
 
         if let Some((reference, desire, current)) = get_json_value_difference(
