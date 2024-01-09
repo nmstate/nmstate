@@ -112,6 +112,10 @@ pub struct LibreswanConfig {
     pub ipsec_interface: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authby: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rightsubnet: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leftmodecfgclient: Option<bool>,
 }
 
 impl LibreswanConfig {
