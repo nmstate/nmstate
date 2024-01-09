@@ -366,6 +366,7 @@ pub struct NmSettingConnection {
 impl TryFrom<DbusDictionary> for NmSettingConnection {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        v.remove("controller");
         Ok(Self {
             id: _from_map!(v, "id", String::try_from)?,
             uuid: _from_map!(v, "uuid", String::try_from)?,
