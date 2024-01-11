@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
-use std::convert::TryFrom;
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::IntoDeserializer, Deserialize, Deserializer, Serialize, Serializer,
+};
 
 use crate::{
     deserializer::NumberAsString, BaseInterface, ErrorKind, Interface,
@@ -385,57 +386,60 @@ impl BondInterface {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
-#[serde(try_from = "NumberAsString")]
+#[serde(remote = "BondMode")]
 /// Bond mode
 pub enum BondMode {
-    #[serde(rename = "balance-rr")]
+    #[serde(rename = "balance-rr", alias = "0")]
     /// Deserialize and serialize from/to `balance-rr`.
     /// You can use integer 0 for deserializing to this mode.
     RoundRobin,
-    #[serde(rename = "active-backup")]
+    #[serde(rename = "active-backup", alias = "1")]
     /// Deserialize and serialize from/to `active-backup`.
     /// You can use integer 1 for deserializing to this mode.
     ActiveBackup,
-    #[serde(rename = "balance-xor")]
+    #[serde(rename = "balance-xor", alias = "2")]
     /// Deserialize and serialize from/to `balance-xor`.
     /// You can use integer 2 for deserializing to this mode.
     XOR,
-    #[serde(rename = "broadcast")]
+    #[serde(rename = "broadcast", alias = "3")]
     /// Deserialize and serialize from/to `broadcast`.
     /// You can use integer 3 for deserializing to this mode.
     Broadcast,
-    #[serde(rename = "802.3ad")]
+    #[serde(rename = "802.3ad", alias = "4")]
     /// Deserialize and serialize from/to `802.3ad`.
     /// You can use integer 4 for deserializing to this mode.
     LACP,
-    #[serde(rename = "balance-tlb")]
+    #[serde(rename = "balance-tlb", alias = "5")]
     /// Deserialize and serialize from/to `balance-tlb`.
     /// You can use integer 5 for deserializing to this mode.
     TLB,
     /// Deserialize and serialize from/to `balance-alb`.
     /// You can use integer 6 for deserializing to this mode.
-    #[serde(rename = "balance-alb")]
+    #[serde(rename = "balance-alb", alias = "6")]
     ALB,
     #[serde(rename = "unknown")]
     Unknown,
 }
 
-impl TryFrom<NumberAsString> for BondMode {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "balance-rr" => Ok(Self::RoundRobin),
-            "1" | "active-backup" => Ok(Self::ActiveBackup),
-            "2" | "balance-xor" => Ok(Self::XOR),
-            "3" | "broadcast" => Ok(Self::Broadcast),
-            "4" | "802.3ad" => Ok(Self::LACP),
-            "5" | "balance-tlb" => Ok(Self::TLB),
-            "6" | "balance-alb" => Ok(Self::ALB),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!("Invalid bond mode {v}"),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondMode::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
+    }
+}
+
+impl Serialize for BondMode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondMode::serialize(self, serializer)
     }
 }
 
@@ -517,43 +521,39 @@ impl BondConfig {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
-#[serde(rename_all = "kebab-case")]
-#[serde(try_from = "NumberAsString")]
+#[serde(remote = "BondAdSelect", rename_all = "kebab-case")]
 /// Specifies the 802.3ad aggregation selection logic to use.
 pub enum BondAdSelect {
     /// Deserialize and serialize from/to `stable`.
+    #[serde(alias = "0")]
     Stable,
     /// Deserialize and serialize from/to `bandwidth`.
+    #[serde(alias = "1")]
     Bandwidth,
     /// Deserialize and serialize from/to `count`.
+    #[serde(alias = "2")]
     Count,
 }
 
-impl TryFrom<NumberAsString> for BondAdSelect {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "stable" => Ok(Self::Stable),
-            "1" | "bandwidth" => Ok(Self::Bandwidth),
-            "2" | "count" => Ok(Self::Count),
-            s => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid bond ad_select value: {s}, should be \
-                    0, stable, 1, bandwidth, 2, or count"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondAdSelect {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondAdSelect::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
     }
 }
 
-impl From<BondAdSelect> for u8 {
-    fn from(v: BondAdSelect) -> u8 {
-        match v {
-            BondAdSelect::Stable => 0,
-            BondAdSelect::Bandwidth => 1,
-            BondAdSelect::Count => 2,
-        }
+impl Serialize for BondAdSelect {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondAdSelect::serialize(self, serializer)
     }
 }
 
@@ -572,7 +572,7 @@ impl std::fmt::Display for BondAdSelect {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
+#[serde(rename_all = "kebab-case", remote = "BondLacpRate")]
 #[non_exhaustive]
 /// Option specifying the rate in which we'll ask our link partner to transmit
 /// LACPDU packets in 802.3ad mode
@@ -580,27 +580,34 @@ pub enum BondLacpRate {
     /// Request partner to transmit LACPDUs every 30 seconds.
     /// Serialize to `slow`.
     /// Deserialize from 0 or `slow`.
+    #[serde(alias = "0")]
     Slow,
     /// Request partner to transmit LACPDUs every 1 second
     /// Serialize to `fast`.
     /// Deserialize from 1 or `fast`.
+    #[serde(alias = "1")]
     Fast,
 }
 
-impl TryFrom<NumberAsString> for BondLacpRate {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "slow" => Ok(Self::Slow),
-            "1" | "fast" => Ok(Self::Fast),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid bond lacp-rate {v}, should be \
-                    0, slow, 1 or fast"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondLacpRate {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondLacpRate::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
+    }
+}
+
+impl Serialize for BondLacpRate {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondLacpRate::serialize(self, serializer)
     }
 }
 
@@ -618,7 +625,7 @@ impl std::fmt::Display for BondLacpRate {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
+#[serde(rename_all = "kebab-case", remote = "BondAllPortsActive")]
 #[non_exhaustive]
 /// Equal to kernel `all_slaves_active` option.
 /// Specifies that duplicate frames (received on inactive ports) should be
@@ -627,27 +634,34 @@ pub enum BondAllPortsActive {
     /// Drop the duplicate frames
     /// Serialize to `dropped`.
     /// Deserialize from 0 or `dropped`.
+    #[serde(alias = "0")]
     Dropped,
     /// Deliver the duplicate frames
     /// Serialize to `delivered`.
     /// Deserialize from 1 or `delivered`.
+    #[serde(alias = "1")]
     Delivered,
 }
 
-impl TryFrom<NumberAsString> for BondAllPortsActive {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "dropped" => Ok(Self::Dropped),
-            "1" | "delivered" => Ok(Self::Delivered),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid all_slaves_active value: {v}, should be \
-                    0, dropped, 1 or delivered"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondAllPortsActive {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondAllPortsActive::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
+    }
+}
+
+impl Serialize for BondAllPortsActive {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondAllPortsActive::serialize(self, serializer)
     }
 }
 
@@ -674,7 +688,7 @@ impl From<BondAllPortsActive> for u8 {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
+#[serde(rename_all = "kebab-case", remote = "BondArpAllTargets")]
 #[non_exhaustive]
 /// The `arp_all_targets` kernel bond option: Specifies the quantity of
 /// arp_ip_targets that must be reachable in order for the ARP monitor to
@@ -682,26 +696,33 @@ impl From<BondAllPortsActive> for u8 {
 /// for ports with arp_validation enabled.
 pub enum BondArpAllTargets {
     /// consider the port up only when any of the `arp_ip_targets` is reachable
+    #[serde(alias = "0")]
     Any,
     /// consider the port up only when all of the `arp_ip_targets` are
     /// reachable
+    #[serde(alias = "1")]
     All,
 }
 
-impl TryFrom<NumberAsString> for BondArpAllTargets {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "any" => Ok(Self::Any),
-            "1" | "all" => Ok(Self::All),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid arp_all_targets value {v}, should be \
-                    0, any, 1 or all"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondArpAllTargets {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondArpAllTargets::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
+    }
+}
+
+impl Serialize for BondArpAllTargets {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondArpAllTargets::serialize(self, serializer)
     }
 }
 
@@ -719,7 +740,7 @@ impl std::fmt::Display for BondArpAllTargets {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "snake_case", try_from = "NumberAsString")]
+#[serde(rename_all = "snake_case", remote = "BondArpValidate")]
 #[non_exhaustive]
 /// The `arp_validate` kernel bond option: Specifies whether or not ARP probes
 /// and replies should be validated in any mode that supports arp monitoring, or
@@ -729,55 +750,61 @@ pub enum BondArpValidate {
     /// No validation or filtering is performed.
     /// Serialize to `none`.
     /// Deserialize from 0 or `none`.
+    #[serde(alias = "0")]
     None,
     /// Validation is performed only for the active port.
     /// Serialize to `active`.
     /// Deserialize from 1 or `active`.
+    #[serde(alias = "1")]
     Active,
     /// Validation is performed only for backup ports.
     /// Serialize to `backup`.
     /// Deserialize from 2 or `backup`.
+    #[serde(alias = "2")]
     Backup,
     /// Validation is performed for all ports.
     /// Serialize to `all`.
     /// Deserialize from 3 or `all`.
+    #[serde(alias = "3")]
     All,
     /// Filtering is applied to all ports. No validation is performed.
     /// Serialize to `filter`.
     /// Deserialize from 4 or `filter`.
+    #[serde(alias = "4")]
     Filter,
     /// Filtering is applied to all ports, validation is performed only for
     /// the active port.
     /// Serialize to `filter_active`.
     /// Deserialize from 5 or `filter-active`.
+    #[serde(alias = "5")]
     FilterActive,
     /// Filtering is applied to all ports, validation is performed only for
     /// backup port.
     /// Serialize to `filter_backup`.
     /// Deserialize from 6 or `filter_backup`.
+    #[serde(alias = "6")]
     FilterBackup,
 }
 
-impl TryFrom<NumberAsString> for BondArpValidate {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "none" => Ok(Self::None),
-            "1" | "active" => Ok(Self::Active),
-            "2" | "backup" => Ok(Self::Backup),
-            "3" | "all" => Ok(Self::All),
-            "4" | "filter" => Ok(Self::Filter),
-            "5" | "filter_active" => Ok(Self::FilterActive),
-            "6" | "filter_backup" => Ok(Self::FilterBackup),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid arp_validate value {v}, should be \
-                    0, none, 1, active, 2, backup, 3, all, 4, filter, 5, \
-                    filter_active, 6 or filter_backup"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondArpValidate {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondArpValidate::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
+    }
+}
+
+impl Serialize for BondArpValidate {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondArpValidate::serialize(self, serializer)
     }
 }
 
@@ -800,7 +827,7 @@ impl std::fmt::Display for BondArpValidate {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
+#[serde(rename_all = "kebab-case", remote = "BondFailOverMac")]
 #[non_exhaustive]
 /// The `fail_over_mac` kernel bond option: Specifies whether active-backup mode
 /// should set all ports to the same MAC address at port attachment (the
@@ -812,6 +839,7 @@ pub enum BondFailOverMac {
     /// time.
     /// Serialize to `none`.
     /// Deserialize from 0 or `none`.
+    #[serde(alias = "0")]
     None,
     /// The "active" fail_over_mac policy indicates that the MAC address of the
     /// bond should always be the MAC address of the currently active port.
@@ -819,6 +847,7 @@ pub enum BondFailOverMac {
     /// of the bond changes during a failover.
     /// Serialize to `active`.
     /// Deserialize from 1 or `active`.
+    #[serde(alias = "1")]
     Active,
     /// The "follow" fail_over_mac policy causes the MAC address of the bond to
     /// be selected normally (normally the MAC address of the first port added
@@ -828,24 +857,29 @@ pub enum BondFailOverMac {
     /// port receives the newly active port's MAC address).
     /// Serialize to `follow`.
     /// Deserialize from 2 or `follow`.
+    #[serde(alias = "2")]
     Follow,
 }
 
-impl TryFrom<NumberAsString> for BondFailOverMac {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "none" => Ok(Self::None),
-            "1" | "active" => Ok(Self::Active),
-            "2" | "follow" => Ok(Self::Follow),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid fail_over_mac value: {v}, should be \
-                    0, none, 1, active, 2 or follow"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondFailOverMac {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondFailOverMac::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
+    }
+}
+
+impl Serialize for BondFailOverMac {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondFailOverMac::serialize(self, serializer)
     }
 }
 
@@ -864,7 +898,7 @@ impl std::fmt::Display for BondFailOverMac {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
+#[serde(rename_all = "kebab-case", remote = "BondPrimaryReselect")]
 #[non_exhaustive]
 /// The `primary_reselect` kernel bond option: Specifies the reselection policy
 /// for the primary port. This affects how the primary port is chosen to
@@ -875,38 +909,44 @@ pub enum BondPrimaryReselect {
     ///The primary port becomes the active port whenever it comes back up.
     /// Serialize to `always`.
     /// Deserialize from 0 or `always`.
+    #[serde(alias = "0")]
     Always,
     /// The primary port becomes the active port when it comes back up, if the
     /// speed and duplex of the primary port is better than the speed and
     /// duplex of the current active port.
     /// Serialize to `better`.
     /// Deserialize from 1 or `better`.
+    #[serde(alias = "1")]
     Better,
     /// The primary port becomes the active port only if the current active
     /// port fails and the primary port is up.
     /// Serialize to `failure`.
     /// Deserialize from 2 or `failure`.
+    #[serde(alias = "2")]
     Failure,
 }
 
-impl TryFrom<NumberAsString> for BondPrimaryReselect {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "always" => Ok(Self::Always),
-            "1" | "better" => Ok(Self::Better),
-            "2" | "failure" => Ok(Self::Failure),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid primary_reselect vlaue {v}, should be \
-                    0, always, 1, better, 2 or failure"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondPrimaryReselect {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondPrimaryReselect::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
     }
 }
 
+impl Serialize for BondPrimaryReselect {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondPrimaryReselect::serialize(self, serializer)
+    }
+}
 impl std::fmt::Display for BondPrimaryReselect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -921,70 +961,57 @@ impl std::fmt::Display for BondPrimaryReselect {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(try_from = "NumberAsString")]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
+#[serde(remote = "BondXmitHashPolicy")]
 /// The `xmit_hash_policy` kernel bond option: Selects the transmit hash policy
 /// to use for port selection in balance-xor, 802.3ad, and tlb modes.
 pub enum BondXmitHashPolicy {
-    #[serde(rename = "layer2")]
+    #[serde(rename = "layer2", alias = "0")]
     /// Serialize to `layer2`.
     /// Deserialize from 0 or `layer2`.
     Layer2,
-    #[serde(rename = "layer3+4")]
+    #[serde(rename = "layer3+4", alias = "1")]
     /// Serialize to `layer3+4`.
     /// Deserialize from 1 or `layer3+4`.
     Layer34,
-    #[serde(rename = "layer2+3")]
+    #[serde(rename = "layer2+3", alias = "2")]
     /// Serialize to `layer2+3`.
     /// Deserialize from 2 or `layer2+3`.
     Layer23,
-    #[serde(rename = "encap2+3")]
+    #[serde(rename = "encap2+3", alias = "3")]
     /// Serialize to `encap2+3`.
     /// Deserialize from 3 or `encap2+3`.
     Encap23,
-    #[serde(rename = "encap3+4")]
+    #[serde(rename = "encap3+4", alias = "4")]
     /// Serialize to `encap3+4`.
     /// Deserialize from 4 or `encap3+4`.
     Encap34,
-    #[serde(rename = "vlan+srcmac")]
+    #[serde(rename = "vlan+srcmac", alias = "5")]
     /// Serialize to `vlan+srcmac`.
     /// Deserialize from 5 or `vlan+srcmac`.
     VlanSrcMac,
 }
 
-impl TryFrom<NumberAsString> for BondXmitHashPolicy {
-    type Error = NmstateError;
-    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
-        match s.as_str() {
-            "0" | "layer2" => Ok(Self::Layer2),
-            "1" | "layer3+4" => Ok(Self::Layer34),
-            "2" | "layer2+3" => Ok(Self::Layer23),
-            "3" | "encap2+3" => Ok(Self::Encap23),
-            "4" | "encap3+4" => Ok(Self::Encap34),
-            "5" | "vlan+srcmac" => Ok(Self::VlanSrcMac),
-            v => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid xmit_hash_policy value {v}, should be \
-                    0, layer2, 1, layer34, 2, layer23, 3, encap2+3, 4, \
-                    encap3+4, 5, vlan+srcmac"
-                ),
-            )),
-        }
+impl<'de> Deserialize<'de> for BondXmitHashPolicy {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BondXmitHashPolicy::deserialize(
+            NumberAsString::deserialize(deserializer)?
+                .as_str()
+                .into_deserializer(),
+        )
     }
 }
 
-impl BondXmitHashPolicy {
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            Self::Layer2 => 0,
-            Self::Layer34 => 1,
-            Self::Layer23 => 2,
-            Self::Encap23 => 3,
-            Self::Encap34 => 4,
-            Self::VlanSrcMac => 5,
-        }
+impl Serialize for BondXmitHashPolicy {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        BondXmitHashPolicy::serialize(self, serializer)
     }
 }
 
