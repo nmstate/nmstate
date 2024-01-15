@@ -89,7 +89,7 @@ pub(crate) fn iface_to_nm_connections(
 
     let base_iface = iface.base_iface();
     let exist_nm_conn =
-        if base_iface.identifier == InterfaceIdentifier::MacAddress {
+        if base_iface.identifier == Some(InterfaceIdentifier::MacAddress) {
             get_exist_profile_by_profile_name(
                 exist_nm_conns,
                 base_iface
@@ -435,7 +435,8 @@ pub(crate) fn gen_nm_conn_setting(
     };
 
     if iface.iface_type() != InterfaceType::Ipsec
-        && iface.base_iface().identifier == InterfaceIdentifier::Name
+        && iface.base_iface().identifier.unwrap_or_default()
+            == InterfaceIdentifier::Name
     {
         nm_conn_set.iface_name = Some(iface.name().to_string());
     } else {

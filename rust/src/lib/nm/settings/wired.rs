@@ -18,7 +18,7 @@ pub(crate) fn gen_nm_wired_setting(
     let base_iface = iface.base_iface();
 
     if let Some(mac) = &base_iface.mac_address {
-        if base_iface.identifier == InterfaceIdentifier::MacAddress {
+        if base_iface.identifier == Some(InterfaceIdentifier::MacAddress) {
             nm_wired_set.mac_address = Some(mac.to_string());
         } else {
             nm_wired_set.cloned_mac_address = Some(mac.to_string());

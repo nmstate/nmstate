@@ -8,7 +8,10 @@ use crate::{
 impl MergedInterface {
     pub(crate) fn get_features(&self) -> Vec<NmstateFeature> {
         let mut ret: Vec<NmstateFeature> = Vec::new();
-        if self.desired.as_ref().map(|i| i.base_iface().identifier)
+        if self
+            .desired
+            .as_ref()
+            .and_then(|i| i.base_iface().identifier)
             == Some(InterfaceIdentifier::MacAddress)
         {
             ret.push(NmstateFeature::MacBasedIdentifier);

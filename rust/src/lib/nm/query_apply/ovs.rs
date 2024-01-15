@@ -122,9 +122,6 @@ pub(crate) fn merge_ovs_netdev_tun_iface(
                 iface,
             ) {
                 base_iface.iface_type = InterfaceType::OvsInterface;
-                if !base_iface.prop_list.contains(&"iface_type") {
-                    base_iface.prop_list.push("iface_type");
-                }
                 oiface.base = base_iface;
             }
         }
