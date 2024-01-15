@@ -237,7 +237,7 @@ fn delete_ifaces(
         // User might want to delete mac based interface using profile name
         if let Some(cur_iface) = &merged_iface.current {
             if cur_iface.base_iface().identifier
-                == InterfaceIdentifier::MacAddress
+                == Some(InterfaceIdentifier::MacAddress)
                 && cur_iface.base_iface().profile_name.as_deref()
                     == Some(iface.name())
             {
@@ -251,7 +251,7 @@ fn delete_ifaces(
         // User might want to delete mac based interface using interface name
         if let Some(cur_iface) = &merged_iface.current {
             if cur_iface.base_iface().identifier
-                == InterfaceIdentifier::MacAddress
+                == Some(InterfaceIdentifier::MacAddress)
                 && cur_iface.base_iface().name.as_str() == iface.name()
             {
                 if let Some(mac) = cur_iface.base_iface().mac_address.as_ref() {

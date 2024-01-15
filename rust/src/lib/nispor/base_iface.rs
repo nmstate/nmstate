@@ -102,19 +102,6 @@ pub(crate) fn np_iface_to_base_iface(
             Some(false)
         },
         ethtool: np_ethtool_to_nmstate(np_iface),
-        prop_list: vec![
-            "name",
-            "state",
-            "iface_type",
-            "ipv4",
-            "ipv6",
-            "mac_address",
-            "permanent_mac_address",
-            "controller",
-            "mtu",
-            "accept_all_mac_addresses",
-            "ethtool",
-        ],
         ..Default::default()
     };
     if !InterfaceType::SUPPORTED_LIST.contains(&base_iface.iface_type) {

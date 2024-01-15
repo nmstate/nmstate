@@ -11,7 +11,6 @@ use crate::{
 
 const MINIMUM_IPV6_MTU: u64 = 1280;
 
-// TODO: Use prop_list to Serialize like InterfaceIpv4 did
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
@@ -26,19 +25,16 @@ pub struct BaseInterface {
     /// Interface description stored in network backend. Not available for
     /// kernel only mode.
     pub description: Option<String>,
-    #[serde(skip)]
-    /// TODO: internal use only. Hide this.
-    pub prop_list: Vec<&'static str>,
     #[serde(rename = "type", default = "default_iface_type")]
     /// Interface type. Serialize and deserialize to/from `type`
     pub iface_type: InterfaceType,
     #[serde(default = "default_state")]
     /// Interface state. Default to [InterfaceState::Up] when applying.
     pub state: InterfaceState,
-    #[serde(default, skip_serializing_if = "InterfaceIdentifier::is_default")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Define network backend matching method on choosing network interface.
     /// Default to [InterfaceIdentifier::Name].
-    pub identifier: InterfaceIdentifier,
+    pub identifier: Option<InterfaceIdentifier>,
     /// When applying with `[InterfaceIdentifier::MacAddress]`,
     /// nmstate will store original desired interface name as `profile_name`
     /// here and store the real interface name as `name` property.
