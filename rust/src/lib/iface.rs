@@ -81,6 +81,7 @@ pub enum InterfaceType {
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
+    #[serde(untagged)]
     Other(String),
 }
 
