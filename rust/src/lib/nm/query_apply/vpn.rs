@@ -66,6 +66,9 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
         ret.dpdaction = data.get("dpdaction").cloned();
         ret.ipsec_interface = data.get("ipsec-interface").cloned();
         ret.authby = data.get("authby").cloned();
+        ret.leftmodecfgclient =
+            data.get("leftmodecfgclient").map(|s| s == "yes");
+        ret.rightsubnet = data.get("rightsubnet").cloned();
     }
     if let Some(secrets) = nm_set_vpn.secrets.as_ref() {
         ret.psk = secrets.get("pskvalue").cloned();
