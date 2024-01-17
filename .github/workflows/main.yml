@@ -87,7 +87,6 @@ jobs:
       matrix:
         include:
           - os_type: "el9"
-          - os_type: "el8"
     steps:
       - uses: actions/checkout@v3
       - name: build nmstate rpm
@@ -137,11 +136,6 @@ jobs:
       - name: Enable openvswitch kernel module
         run: sudo modprobe openvswitch
 
-      - name: Download compiled EL8 rpm
-        uses: actions/download-artifact@v3
-        with:
-          name: rpms_el8
-          path: rpms/el8
       - name: Download compiled EL9 rpm
         uses: actions/download-artifact@v3
         with:
