@@ -4,7 +4,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use crate::{
-    Interface, InterfaceType, IpsecInterface, LibreswanConfig, NmstateError,
+    Interface, InterfaceType, IpsecInterface, LibreswanAddressFamily,
+    LibreswanConfig, LibreswanConnectionType, NmstateError,
 };
 
 use super::super::{
@@ -69,6 +70,20 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
         ret.leftmodecfgclient =
             data.get("leftmodecfgclient").map(|s| s == "yes");
         ret.rightsubnet = data.get("rightsubnet").cloned();
+        ret.kind = data.get("type").and_then(|s| match s.as_str() {
+            "tunnel" => Some(LibreswanConnectionType::Tunnel),
+            "transport" => Some(LibreswanConnectionType::Transport),
+            _ => {
+                log::warn!("Unknown NetworkManager libreswan type {s}");
+                None
+            }
+        });
+        ret.hostaddrfamily = data
+            .get("hostaddrfamily")
+            .and_then(|s| nm_libreswan_addr_family_to_nmstate(s));
+        ret.clientaddrfamily = data
+            .get("clientaddrfamily")
+            .and_then(|s| nm_libreswan_addr_family_to_nmstate(s));
     }
     if let Some(secrets) = nm_set_vpn.secrets.as_ref() {
         ret.psk = secrets.get("pskvalue").cloned();
@@ -84,4 +99,19 @@ pub(crate) fn get_match_ipsec_nm_conn<'a>(
         .iter()
         .filter(|c| c.iface_type() == Some("vpn") && c.id() == Some(iface_name))
         .collect()
+}
+
+fn nm_libreswan_addr_family_to_nmstate(
+    family: &str,
+) -> Option<LibreswanAddressFamily> {
+    match family {
+        "ipv4" => Some(LibreswanAddressFamily::Ipv4),
+        "ipv6" => Some(LibreswanAddressFamily::Ipv6),
+        _ => {
+            log::warn!(
+                "Unknown address family {family} from libreswan VPN data"
+            );
+            None
+        }
+    }
 }
