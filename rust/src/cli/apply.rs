@@ -42,6 +42,9 @@ where
     let kernel_only = matches.try_contains_id("KERNEL").unwrap_or_default();
     let no_verify = matches.try_contains_id("NO_VERIFY").unwrap_or_default();
     let no_commit = matches.try_contains_id("NO_COMMIT").unwrap_or_default();
+    let allow_overlap = matches
+        .try_contains_id("ALLOW_SRIOV_OVERLAP")
+        .unwrap_or_default();
     let timeout = if matches.try_contains_id("TIMEOUT").unwrap_or_default() {
         match matches.try_get_one::<String>("TIMEOUT") {
             Ok(Some(t)) => match u32::from_str(t) {
@@ -101,6 +104,7 @@ where
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );
+    net_state.set_allow_overlap_ext_sriov(allow_overlap);
 
     net_state.apply()?;
     if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
@@ -161,6 +165,8 @@ pub(crate) fn state_edit(
     desire_state.set_verify_change(!matches.is_present("NO_VERIFY"));
     desire_state.set_commit(!matches.is_present("NO_COMMIT"));
     desire_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
+    desire_state
+        .set_allow_overlap_ext_sriov(matches.is_present("ALLOW_SRIOV_OVERLAP"));
     desire_state.apply()?;
     Ok(serde_yaml::to_string(&desire_state)?)
 }

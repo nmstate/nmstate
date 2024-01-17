@@ -191,6 +191,13 @@ fn main() {
                         .takes_value(false)
                         .help("Do not make the state persistent"),
                 )
+                .arg(
+                    clap::Arg::new("ALLOW_SRIOV_OVERLAP")
+                        .long("allow-sriov-overlap")
+                        .takes_value(false)
+                        .help("Do not fail when found desired state \
+                               overlapping with external SRIOV tool"),
+                )
         )
         .subcommand(
             clap::Command::new(SUB_CMD_GEN_CONF)

@@ -192,6 +192,16 @@ impl NetworkState {
         self
     }
 
+    /// Only available when [NetworkState::apply()].
+    /// When set to false, nmstate will refused to apply desired state if
+    /// non-nmstate tool is controlling the desired SR-IOV PF.
+    /// When set to true, nmstate will only warn user on this overlap.
+    /// Default is false.
+    pub fn set_allow_overlap_ext_sriov(&mut self, value: bool) -> &mut Self {
+        self.apply_options.allow_overlap_ext_sriov = value;
+        self
+    }
+
     /// Create empty [NetworkState]
     pub fn new() -> Self {
         Default::default()
@@ -351,6 +361,7 @@ pub struct NetworkStateApplyOption {
     pub(crate) no_commit: bool,
     pub(crate) timeout: Option<u32>,
     pub(crate) memory_only: bool,
+    pub(crate) allow_overlap_ext_sriov: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

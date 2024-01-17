@@ -91,6 +91,7 @@ def apply_net_state(
     save_to_disk=True,
     commit=True,
     rollback_timeout=60,
+    allow_overlap_ext_sriov=False,
 ):
     c_err_msg = c_char_p()
     c_err_kind = c_char_p()

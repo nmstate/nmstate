@@ -15,6 +15,7 @@ pub enum ErrorKind {
     PolicyError,
     PermissionError,
     SrIovVfNotFound,
+    SrIovOperatorOverlap,
 }
 
 #[cfg(feature = "query_apply")]

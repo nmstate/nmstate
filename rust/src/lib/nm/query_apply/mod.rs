@@ -11,6 +11,7 @@ mod mptcp;
 pub(crate) mod ovs;
 mod profile;
 mod route;
+mod sriov;
 mod user;
 mod veth;
 mod vlan;
@@ -32,6 +33,7 @@ pub(crate) use self::profile::{
     deactivate_nm_profiles, delete_exist_profiles, save_nm_profiles,
 };
 pub(crate) use self::route::is_route_removed;
+pub(crate) use self::sriov::check_sriov_operator_overlap;
 pub(crate) use self::user::get_description;
 pub(crate) use self::veth::is_veth_peer_changed;
 pub(crate) use self::vlan::is_vlan_changed;

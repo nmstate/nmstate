@@ -26,11 +26,12 @@ use super::{
 };
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
-    EthernetInterface, InfiniBandInterface, Interface, InterfaceIdentifier,
-    InterfaceState, InterfaceType, LinuxBridgeInterface, LoopbackInterface,
-    MacSecConfig, MacSecInterface, MacVlanInterface, MacVtapInterface,
-    NetworkState, NmstateError, OvsBridgeInterface, OvsInterface,
-    UnknownInterface, VlanInterface, VrfInterface, VxlanInterface,
+    EthernetInterface, HsrInterface, InfiniBandInterface, Interface,
+    InterfaceIdentifier, InterfaceState, InterfaceType, LinuxBridgeInterface,
+    LoopbackInterface, MacSecConfig, MacSecInterface, MacVlanInterface,
+    MacVtapInterface, NetworkState, NmstateError, OvsBridgeInterface,
+    OvsInterface, UnknownInterface, VlanInterface, VrfInterface,
+    VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(

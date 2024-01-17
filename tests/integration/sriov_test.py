@@ -2,6 +2,7 @@
 
 import copy
 import os
+import shutil
 
 import pytest
 
@@ -48,6 +49,22 @@ VF1_CONF = {
     Ethernet.SRIOV.VFS.MAC_ADDRESS: MAC2,
     Ethernet.SRIOV.VFS.TRUST: False,
 }
+
+OCP_SRIOV_CONF_DIR = "/etc/sriov-operator/pci"
+OCP_SRIOV_TEST_CONF = f"{OCP_SRIOV_CONF_DIR}/0000:16:00.0"
+OCP_SRIOV_CONF_FMT = r"""{
+  "pciAddress": "0000:16:00.0",
+  "numVfs": 2,
+  "name": "{PF_NAME}",
+  "vfGroups": [
+    {
+      "resourceName": "dpdk_nic_1",
+      "deviceType": "vfio-pci",
+      "vfRange": "0-1",
+      "policyName": "dpdk-nic-1"
+    }
+  ]
+}"""
 
 
 def _test_nic_name():
@@ -146,6 +163,20 @@ def sriov_with_62_vfs():
             ]
         }
     )
+
+
+@pytest.fixture
+def ocp_sriov_operator_controled_pf():
+    pf_name = _test_nic_name()
+    try:
+        os.makedirs(OCP_SRIOV_CONF_DIR)
+    except Exception:
+        pass
+
+    with open(OCP_SRIOV_TEST_CONF, "w") as fd:
+        fd.write(OCP_SRIOV_CONF_FMT.format(PF_NAME=pf_name))
+    yield
+    shutil.rmtree(OCP_SRIOV_CONF_DIR)
 
 
 @pytest.mark.skipif(
@@ -526,3 +557,15 @@ class TestSrIov:
         libnmstate.apply(desired_state)
         vf_ifaces = get_sriov_vf_names(pf_name)
         assert len(vf_ifaces) == 62
+
+    def test_ocp_sriov_operator_overlap(ocp_sriov_operator_controled_pf):
+        pf_name = _test_nic_name()
+        iface_info = {
+            Interface.NAME: pf_name,
+            Interface.STATE: InterfaceState.UP,
+            Ethernet.CONFIG_SUBTREE: {
+                Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2},
+            },
+        }
+        desired_state = {Interface.KEY: [iface_info]}
+        libnmstate.apply(desired_state)

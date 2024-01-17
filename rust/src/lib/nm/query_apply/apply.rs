@@ -12,8 +12,9 @@ use super::super::{
     nm_dbus::{NmApi, NmConnection},
     profile::{perpare_nm_conns, PerparedNmConnections},
     query_apply::{
-        activate_nm_profiles, create_index_for_nm_conns_by_name_type,
-        deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
+        activate_nm_profiles, check_sriov_operator_overlap,
+        create_index_for_nm_conns_by_name_type, deactivate_nm_profiles,
+        delete_exist_profiles, delete_orphan_ovs_ports,
         dispatch::apply_dispatch_script,
         dns::{
             is_iface_dns_desired, purge_global_dns_config,
@@ -48,6 +49,8 @@ pub(crate) fn nm_apply(
     if !merged_state.apply_options.memory_only {
         delete_ifaces(&mut nm_api, merged_state)?;
     }
+
+    check_sriov_operator_overlap(merged_state)?;
 
     if let Some(hostname) = merged_state
         .hostname
