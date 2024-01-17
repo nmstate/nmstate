@@ -6,6 +6,7 @@ authors = ["Gris Ge <fge@redhat.com>"]
 license = "Apache-2.0"
 edition = "2021"
 rust-version = "1.58"
+build = "build.rs"
 
 [lib]
 name = "nmstate"
