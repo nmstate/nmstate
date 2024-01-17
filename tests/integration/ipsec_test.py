@@ -608,9 +608,6 @@ def test_ipsec_ipv4_libreswan_fromcert(
     )
 
 
-@pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
-)
 def test_ipsec_ipv4_libreswan_psk_auth_with_ipsec_iface(
     ipsec_hosta_conn_cleanup,
 ):
@@ -641,9 +638,6 @@ def test_ipsec_ipv4_libreswan_psk_auth_with_ipsec_iface(
     )
 
 
-@pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
-)
 def test_ipsec_ipv4_libreswan_psk_auth_with_dpd(
     ipsec_hosta_conn_cleanup,
 ):
@@ -677,9 +671,6 @@ def test_ipsec_ipv4_libreswan_psk_auth_with_dpd(
     )
 
 
-@pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
-)
 def test_ipsec_ipv4_libreswan_authby(
     ipsec_hosta_conn_cleanup,
 ):
