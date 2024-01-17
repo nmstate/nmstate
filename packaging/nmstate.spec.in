@@ -8,13 +8,6 @@
 %global debug_package %{nil}
 %endif
 
-%if 0%{?rhel}
-# RHEL does not have patchelf, hence we need to solve the SONAME problem
-# by ourselves: https://github.com/rust-lang/cargo/issues/5045
-%define _package_note_status 1
-%define _package_note_flags -Wl,-soname=libnmstate.so.2
-%endif
-
 Name:           nmstate
 Version:        @VERSION@
 Release:        @RELEASE@%{?dist}
@@ -26,9 +19,6 @@ Source0:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.g
 Source1:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz.asc
 Source2:        https://nmstate.io/nmstate.gpg
 Source3:        %{url}/releases/download/v%{version}/%{srcname}-vendor-%{version}.tar.xz
-%endif
-%if 0%{?fedora}
-BuildRequires:  patchelf
 %endif
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
@@ -198,11 +188,6 @@ env SKIP_PYTHON_INSTALL=1 \
     LIBDIR=%{_libdir} \
     SYSCONFDIR=%{_sysconfdir} \
     %make_install
-
-%if ! 0%{?rhel}
-patchelf --set-soname libnmstate.so.2 \
-    %{buildroot}/%{_libdir}/libnmstate.so.%{version}
-%endif
 
 pushd rust/src/python
 %py3_install
