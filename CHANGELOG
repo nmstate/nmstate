@@ -1,4 +1,20 @@
 # Changelog
+## [2.2.23] - 2024-01-17
+### Breaking changes
+ - N/A
+
+### New features
+ - ipsec: Support `type`, `hostaddrfamily` and `clientaddrfamily` options. (d7d62db5)
+ - ipsec: Add support of P2P IPSec tunnel. (74681912)
+
+### Bug fixes
+ - clib: Use build.rs to fix SONAME. (a199caf9)
+ - rpm: Fix SONAME in RHEL 9 build. (57b1880b)
+ - ip: Do not skip serializing allow-extra-address: false. (1f532a90)
+ - ovs: Do not skip serializing `allow-extra-patch-ports`. (4023bd25)
+ - base_iface: Do not skip serializing `copy-mac-from`. (f4139ad2)
+ - ovn: Do not skip serializing state: absent. (8a63a7c0)
+
 ## [2.2.22] - 2024-01-05
 ### Breaking changes
  - N/A
