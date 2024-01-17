@@ -45,7 +45,10 @@ pub use hsr::{HsrConfig, HsrInterface, HsrProtocol};
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
 pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;
-pub use ipsec::{IpsecInterface, LibreswanConfig};
+pub use ipsec::{
+    IpsecInterface, LibreswanAddressFamily, LibreswanConfig,
+    LibreswanConnectionType,
+};
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
     LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,
