@@ -66,9 +66,7 @@ SKIP_PYTHON_INSTALL ?=0
 RELEASE ?=0
 
 PYTHON3_SITE_DIR ?=$(shell \
-	python3 -c \
-		"from distutils.sysconfig import get_python_lib; \
-		 print(get_python_lib())")
+	python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")
 
 $(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE):
 	cd rust; cargo build --all --release
