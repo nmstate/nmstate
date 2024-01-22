@@ -42,11 +42,16 @@ fn gen_nm_ipv4_setting(
         .cloned()
         .collect();
 
+    let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
+        let ipv4_routes = gen_nm_ip_routes(routes.unwrap_or_default(), false)?;
         if iface_ip.dhcp == Some(true) {
             NmSettingIpMethod::Auto
-        } else if !nmstate_ip_addrs.is_empty() {
+        } else if !nmstate_ip_addrs.is_empty()
+            || !ipv4_routes.is_empty()
+            || !nm_setting.routes.is_empty()
+        {
             NmSettingIpMethod::Manual
         } else {
             NmSettingIpMethod::Disabled
@@ -57,7 +62,6 @@ fn gen_nm_ipv4_setting(
     for ip_addr in nmstate_ip_addrs {
         addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
     }
-    let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
     if iface_ip.is_auto() {
@@ -146,6 +150,7 @@ fn gen_nm_ipv6_setting(
         .filter(|i| !i.is_auto())
         .cloned()
         .collect();
+    let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
         match (
@@ -161,7 +166,12 @@ fn gen_nm_ipv6_setting(
                 ))
             }
             (false, false) => {
-                if !nmstate_ip_addrs.is_empty() {
+                let ipv6_routes =
+                    gen_nm_ip_routes(routes.unwrap_or_default(), true)?;
+                if !nmstate_ip_addrs.is_empty()
+                    || !ipv6_routes.is_empty()
+                    || !nm_setting.routes.is_empty()
+                {
                     NmSettingIpMethod::Manual
                 } else {
                     NmSettingIpMethod::LinkLocal
@@ -174,7 +184,6 @@ fn gen_nm_ipv6_setting(
     for ip_addr in nmstate_ip_addrs {
         addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
     }
-    let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
     nm_setting.addr_gen_mode =
