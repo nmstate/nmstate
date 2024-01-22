@@ -652,6 +652,46 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
     assert_routes([], cur_state)
 
 
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 46,
+    reason="Assigning static route to device without IP addresses is only "
+    "support on NM 1.46+",
+)
+def test_static_route_with_empty_ip(eth1_up):
+    eth1_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    eth1_state[Interface.IPV4] = {
+        InterfaceIPv4.DHCP: False,
+        InterfaceIPv4.ENABLED: True,
+    }
+    eth1_state[Interface.IPV6] = {
+        InterfaceIPv6.DHCP: False,
+        InterfaceIPv6.ENABLED: True,
+    }
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS1,
+            Route.TABLE_ID: 254,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [eth1_state],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+
+
 @pytest.fixture(scope="function")
 def eth1_static_gateway_dns(eth1_up):
     routes = (

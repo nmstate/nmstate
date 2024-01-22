@@ -878,7 +878,6 @@ def test_remove_all_ip_address(setup_eth1_static_ip):
         ]
     }
     libnmstate.apply(desired_state)
-    # Nmstate should auto convert empty IPv4 address to disabled IPv4.
     desired_state[Interface.KEY][0][Interface.IPV4][
         InterfaceIPv4.ENABLED
     ] = False
