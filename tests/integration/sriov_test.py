@@ -257,7 +257,7 @@ class TestSrIov:
             ] = InterfaceState.ABSENT
             libnmstate.apply(desired_state)
 
-    def test_sriov_vf_vlan_id_and_qos(self):
+    def test_sriov_vf_vlan_id_and_qos_proto(self):
         pf_name = _test_nic_name()
         desired_state = {
             Interface.KEY: [
@@ -271,11 +271,13 @@ class TestSrIov:
                                     Ethernet.SRIOV.VFS.ID: 0,
                                     Ethernet.SRIOV.VFS.VLAN_ID: 100,
                                     Ethernet.SRIOV.VFS.QOS: 5,
+                                    Ethernet.SRIOV.VFS.VLAN_PROTO: "802.1ad",
                                 },
                                 {
                                     Ethernet.SRIOV.VFS.ID: 1,
                                     Ethernet.SRIOV.VFS.VLAN_ID: 102,
                                     Ethernet.SRIOV.VFS.QOS: 6,
+                                    Ethernet.SRIOV.VFS.VLAN_PROTO: "802.1q",
                                 },
                             ],
                         }

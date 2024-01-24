@@ -12,6 +12,7 @@ use super::super::{
     connection::bond::{NmSettingBond, NmSettingBondPort},
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
     connection::ethtool::NmSettingEthtool,
+    connection::hsr::NmSettingHsr,
     connection::ieee8021x::NmSetting8021X,
     connection::infiniband::NmSettingInfiniBand,
     connection::ip::NmSettingIp,
@@ -106,6 +107,7 @@ pub struct NmConnection {
     pub infiniband: Option<NmSettingInfiniBand>,
     pub loopback: Option<NmSettingLoopback>,
     pub macsec: Option<NmSettingMacSec>,
+    pub hsr: Option<NmSettingHsr>,
     pub vpn: Option<NmSettingVpn>,
     #[serde(skip)]
     pub obj_path: String,
@@ -183,6 +185,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
                 NmSettingInfiniBand::try_from
             )?,
             loopback: _from_map!(v, "loopback", NmSettingLoopback::try_from)?,
+            hsr: _from_map!(v, "hsr", NmSettingHsr::try_from)?,
             vpn: _from_map!(v, "vpn", NmSettingVpn::try_from)?,
             _other: v,
             ..Default::default()
@@ -291,6 +294,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.loopback {
             ret.insert("loopback", v.to_value()?);
+        }
+        if let Some(hsr) = &self.hsr {
+            ret.insert("hsr", hsr.to_value()?);
         }
         if let Some(v) = &self.bond_port {
             ret.insert("bond-port", v.to_value()?);

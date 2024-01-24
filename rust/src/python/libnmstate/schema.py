@@ -102,6 +102,7 @@ class InterfaceType:
     BOND = "bond"
     DUMMY = "dummy"
     ETHERNET = "ethernet"
+    HSR = "hsr"
     LINUX_BRIDGE = "linux-bridge"
     MAC_VLAN = "mac-vlan"
     MAC_VTAP = "mac-vtap"
@@ -122,6 +123,7 @@ class InterfaceType:
     VIRT_TYPES = (
         BOND,
         DUMMY,
+        HSR,
         LINUX_BRIDGE,
         MACSEC,
         OVS_BRIDGE,
@@ -294,6 +296,7 @@ class Ethernet:
             MAX_TX_RATE = "max-tx-rate"
             VLAN_ID = "vlan-id"
             QOS = "qos"
+            VLAN_PROTO = "vlan-proto"
 
 
 class Veth:
@@ -466,6 +469,15 @@ class MacSec:
     VALIDATION_CHECK = "check"
     VALIDATION_STRICT = "strict"
     SEND_SCI = "send-sci"
+
+
+class Hsr:
+    CONFIG_SUBTREE = "hsr"
+    PORT1 = "port1"
+    PORT2 = "port2"
+    SUPERVISION_ADDRESS = "supervision-address"
+    MULTICAST_SPEC = "multicast-spec"
+    PROTOCOL = "protocol"
 
 
 class Ieee8021X:

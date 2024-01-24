@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
-    InfiniBandInterface, IpsecInterface, LinuxBridgeInterface,
+    HsrInterface, InfiniBandInterface, IpsecInterface, LinuxBridgeInterface,
     LoopbackInterface, MacSecInterface, MacVlanInterface, MacVtapInterface,
     NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
     VrfInterface, VxlanInterface, XfrmInterface,
@@ -15,8 +14,11 @@ use crate::{
 
 use crate::state::merge_json_value;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 /// Interface type
 pub enum InterfaceType {
     /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
@@ -31,6 +33,9 @@ pub enum InterfaceType {
     /// Ethernet interface.
     /// Deserialize and serialize from/to 'ethernet'.
     Ethernet,
+    /// HSR interface.
+    /// Deserialize and serialize from/to 'hsr'.
+    Hsr,
     /// Loopback interface.
     /// Deserialize and serialize from/to 'loopback'.
     Loopback,
@@ -60,12 +65,14 @@ pub enum InterfaceType {
     Vxlan,
     /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     /// Deserialize and serialize from/to 'infiniband'.
+    #[serde(rename = "infiniband")]
     InfiniBand,
     /// TUN interface. Only used for query, will be ignored when applying.
     /// Deserialize and serialize from/to 'tun'.
     Tun,
     /// MACsec interface.
     /// Deserialize and serialize from/to 'macsec'
+    #[serde(rename = "macsec")]
     MacSec,
     /// Ipsec connection.
     Ipsec,
@@ -74,6 +81,7 @@ pub enum InterfaceType {
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
+    #[serde(untagged)]
     Other(String),
 }
 
@@ -83,33 +91,7 @@ impl Default for InterfaceType {
     }
 }
 
-impl From<&str> for InterfaceType {
-    fn from(s: &str) -> Self {
-        match s {
-            "bond" => InterfaceType::Bond,
-            "linux-bridge" => InterfaceType::LinuxBridge,
-            "dummy" => InterfaceType::Dummy,
-            "ethernet" => InterfaceType::Ethernet,
-            "loopback" => InterfaceType::Loopback,
-            "mac-vlan" => InterfaceType::MacVlan,
-            "mac-vtap" => InterfaceType::MacVtap,
-            "ovs-bridge" => InterfaceType::OvsBridge,
-            "ovs-interface" => InterfaceType::OvsInterface,
-            "veth" => InterfaceType::Veth,
-            "vlan" => InterfaceType::Vlan,
-            "vrf" => InterfaceType::Vrf,
-            "vxlan" => InterfaceType::Vxlan,
-            "infiniband" => InterfaceType::InfiniBand,
-            "tun" => InterfaceType::Tun,
-            "macsec" => InterfaceType::MacSec,
-            "ipsec" => InterfaceType::Ipsec,
-            "unknown" => InterfaceType::Unknown,
-            "xfrm" => InterfaceType::Xfrm,
-            _ => InterfaceType::Other(s.to_string()),
-        }
-    }
-}
-
+//NOTE: Remember to add new interface types also here
 impl std::fmt::Display for InterfaceType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -120,6 +102,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::LinuxBridge => "linux-bridge",
                 InterfaceType::Dummy => "dummy",
                 InterfaceType::Ethernet => "ethernet",
+                InterfaceType::Hsr => "hsr",
                 InterfaceType::Loopback => "loopback",
                 InterfaceType::MacVlan => "mac-vlan",
                 InterfaceType::MacVtap => "mac-vtap",
@@ -138,28 +121,6 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Other(ref s) => s,
             }
         )
-    }
-}
-
-impl Serialize for InterfaceType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(format!("{self}").as_str())
-    }
-}
-
-impl<'de> Deserialize<'de> for InterfaceType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let v = serde_json::Value::deserialize(deserializer)?;
-        match v.as_str() {
-            Some(s) => Ok(InterfaceType::from(s)),
-            None => Ok(InterfaceType::Unknown),
-        }
     }
 }
 
@@ -287,6 +248,8 @@ pub enum Interface {
     Dummy(DummyInterface),
     /// Ethernet interface or virtual ethernet(veth) of linux kernel
     Ethernet(EthernetInterface),
+    /// HSR interface provided by Linux kernel.
+    Hsr(HsrInterface),
     /// Bridge provided by Linux kernel.
     LinuxBridge(LinuxBridgeInterface),
     /// OpenvSwitch bridge.
@@ -406,6 +369,11 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Vrf(inner))
             }
+            Some(InterfaceType::Hsr) => {
+                let inner = HsrInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Hsr(inner))
+            }
             Some(InterfaceType::InfiniBand) => {
                 let inner = InfiniBandInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
@@ -524,6 +492,11 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Vrf(new_iface)
             }
+            Self::Hsr(iface) => {
+                let mut new_iface = HsrInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Hsr(new_iface)
+            }
             Self::InfiniBand(iface) => {
                 let new_iface = InfiniBandInterface {
                     base: iface.base.clone_name_type_only(),
@@ -635,6 +608,7 @@ impl Interface {
             Self::LinuxBridge(iface) => &iface.base,
             Self::Bond(iface) => &iface.base,
             Self::Ethernet(iface) => &iface.base,
+            Self::Hsr(iface) => &iface.base,
             Self::Vlan(iface) => &iface.base,
             Self::Vxlan(iface) => &iface.base,
             Self::Dummy(iface) => &iface.base,
@@ -657,6 +631,7 @@ impl Interface {
             Self::LinuxBridge(iface) => &mut iface.base,
             Self::Bond(iface) => &mut iface.base,
             Self::Ethernet(iface) => &mut iface.base,
+            Self::Hsr(iface) => &mut iface.base,
             Self::Vlan(iface) => &mut iface.base,
             Self::Vxlan(iface) => &mut iface.base,
             Self::Dummy(iface) => &mut iface.base,
@@ -710,6 +685,7 @@ impl Interface {
         self.base_iface_mut().sanitize(is_desired)?;
         match self {
             Interface::Ethernet(iface) => iface.sanitize()?,
+            Interface::Hsr(iface) => iface.sanitize(is_desired)?,
             Interface::LinuxBridge(iface) => iface.sanitize(is_desired)?,
             Interface::OvsInterface(iface) => iface.sanitize(is_desired)?,
             Interface::OvsBridge(iface) => iface.sanitize(is_desired)?,

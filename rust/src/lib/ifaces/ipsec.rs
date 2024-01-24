@@ -112,6 +112,16 @@ pub struct LibreswanConfig {
     pub ipsec_interface: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authby: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rightsubnet: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leftmodecfgclient: Option<bool>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub kind: Option<LibreswanConnectionType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hostaddrfamily: Option<LibreswanAddressFamily>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clientaddrfamily: Option<LibreswanAddressFamily>,
 }
 
 impl LibreswanConfig {
@@ -156,5 +166,53 @@ where
             "Invalid ipsec-interface value, should be \
             unsigned integer, string 'yes' or 'no'",
         )),
+    }
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
+#[non_exhaustive]
+#[serde(rename_all = "lowercase")]
+pub enum LibreswanConnectionType {
+    #[default]
+    Tunnel,
+    Transport,
+}
+
+impl std::fmt::Display for LibreswanConnectionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Tunnel => "tunnel",
+                Self::Transport => "transport",
+            }
+        )
+    }
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
+#[non_exhaustive]
+#[serde(rename_all = "lowercase")]
+pub enum LibreswanAddressFamily {
+    #[default]
+    Ipv4,
+    Ipv6,
+}
+
+impl std::fmt::Display for LibreswanAddressFamily {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Ipv4 => "ipv4",
+                Self::Ipv6 => "ipv6",
+            }
+        )
     }
 }

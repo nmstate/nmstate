@@ -4,6 +4,7 @@ import os
 import glob
 import re
 import shutil
+import time
 
 import pytest
 import yaml
@@ -12,6 +13,7 @@ import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
@@ -29,21 +31,36 @@ HOSTA_NIC = "hosta_nic"
 HOSTA_IPV4_CRT = "192.0.2.251"
 HOSTA_IPV4_PSK = "192.0.2.250"
 HOSTA_IPV4_RSA = "192.0.2.249"
+HOSTA_IPV4_CRT_P2P = "192.0.2.248"
+HOSTA_IPV4_TRANSPORT = "192.0.2.247"
 HOSTA_IPSEC_CONN_NAME = "hosta_conn"
+HOSTA_IPV6_P2P = "2001:db8:f::a"
+HOSTB_IPV6_P2P = "2001:db8:f::b"
+HOSTA_IPV6_CS = "2001:db8:e::a"
+HOSTB_IPV6_CS = "2001:db8:e::b"
 HOSTB_NAME = "hostb.example.org"
 HOSTB_NIC = "hostb_nic"
 HOSTB_IPV4_CRT = "192.0.2.152"
 HOSTB_IPV4_PSK = "192.0.2.153"
 HOSTB_IPV4_RSA = "192.0.2.154"
+HOSTB_IPV4_CRT_P2P = "192.0.2.155"
+HOSTB_IPV4_TRANSPORT = "192.0.2.156"
 HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
 HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
+HOSTB_VPN_SUBNET_PREFIX6 = "2001:db8:9::"
+HOSTB_VPN_SUBNET6 = f"{HOSTB_VPN_SUBNET_PREFIX6}/64"
 HOSTB_EXT_IP = "198.51.100.1"
+HOSTB_EXT_IPV6 = "2001:db8:1::"
 HOSTB_DUMMY_NIC = "dummy0"
 HOSTB_NS = "nmstate_ipsec_test"
 HOSTB_IPSEC_CONF_NAME = "hostb_conn"
 HOSTB_IPSEC_CRT_CONN_NAME = "hostb_conn_crt"
 HOSTB_IPSEC_PSK_CONN_NAME = "hostb_conn_psk"
 HOSTB_IPSEC_RSA_CONN_NAME = "hostb_conn_rsa"
+HOSTB_IPSEC_CRT_P2P_CONN_NAME = "hostb_conn_crt_p2p"
+HOSTB_IPSEC_TRANSPORET_CONN_NAME = "hostb_conn_transport"
+HOSTB_IPSEC_IPV6_P2P_CONN_NAME = "hostb_conn_ipv6_p2p"
+HOSTB_IPSEC_IPV6_CS_CONN_NAME = "hostb_conn_ipv6_cs"
 HOSTB_IPSEC_CONN_CONTENT = """
 config setup
     protostack=netkey
@@ -88,6 +105,68 @@ conn hostb_conn_rsa
     right=192.0.2.249
     rightid=@hosta-rsa.example.org
     authby=rsasig
+
+conn hostb_conn_crt_p2p
+    hostaddrfamily=ipv4
+    left=192.0.2.155
+    leftsubnet=192.0.2.155/32
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=no
+    right=192.0.2.248
+    rightsubnet=192.0.2.248/32
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    rightmodecfgclient=no
+    ikev2=insist
+
+conn hostb_conn_transport
+    type=transport
+    hostaddrfamily=ipv4
+    left=192.0.2.156
+    leftsubnet=192.0.2.156/32
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=no
+    right=192.0.2.247
+    rightsubnet=192.0.2.247/32
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    rightmodecfgclient=no
+    ikev2=insist
+
+conn hostb_conn_ipv6_p2p
+    hostaddrfamily=ipv6
+    clientaddrfamily=ipv6
+    left=2001:db8:f::b
+    leftsourceip=2001:db8:f::b
+    leftsubnet=2001:db8:f::b/128
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=no
+    right=2001:db8:f::a
+    rightsubnet=2001:db8:f::a/128
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    rightmodecfgclient=no
+    ikev2=insist
+
+conn hostb_conn_ipv6_cs
+    hostaddrfamily=ipv6
+    clientaddrfamily=ipv6
+    left=2001:db8:e::b
+    leftsourceip=2001:db8:e::b
+    leftsubnet=::/0
+    rightaddresspool=2001:db8:9::/64
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=yes
+    rightmodecfgclient=yes
+    leftsendcert=always
+    right=2001:db8:e::a
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    ikev2=insist
 """
 HOSTB_IPSEC_NSS_DIR = "/tmp/hostb_ipsec_nss"
 HOSTB_IPSEC_SECRETS_FILE = "/tmp/hostb_ipsec_secrets"
@@ -167,7 +246,17 @@ def setup_hostb_ipsec_conn():
         )
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} "
+            f"ip addr add {HOSTB_EXT_IPV6}/128 dev {HOSTB_DUMMY_NIC}".split(),
+            check=True,
+        )
+        cmdlib.exec_cmd(
+            f"ip netns exec {HOSTB_NS} "
             f"ip route add {HOSTB_VPN_SUBNET} dev {HOSTB_NIC}".split(),
+            check=True,
+        )
+        cmdlib.exec_cmd(
+            f"ip netns exec {HOSTB_NS} "
+            f"ip route add {HOSTB_VPN_SUBNET6} dev {HOSTB_NIC}".split(),
             check=True,
         )
 
@@ -175,12 +264,26 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPV4_CRT,
             HOSTB_IPV4_PSK,
             HOSTB_IPV4_RSA,
+            HOSTB_IPV4_CRT_P2P,
+            HOSTB_IPV4_TRANSPORT,
         ]:
             cmdlib.exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
                 f"ip addr add {ip}/24 dev {HOSTB_NIC}".split(),
                 check=True,
             )
+
+        for ipv6 in [HOSTB_IPV6_P2P, HOSTB_IPV6_CS]:
+            cmdlib.exec_cmd(
+                f"ip netns exec {HOSTB_NS} "
+                f"ip -6 addr add {ipv6}/64 dev {HOSTB_NIC}".split(),
+                check=True,
+            )
+
+        # Need to wait 2 seconds for IPv6 duplicate address detection,
+        # otherwise the `pluto` will not listen on any IPv6 address
+        time.sleep(2)
+
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} ipsec pluto "
             f"--config {HOSTB_IPSEC_CONF_DIR}/ipsec.conf "
@@ -194,6 +297,10 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPSEC_CRT_CONN_NAME,
             HOSTB_IPSEC_RSA_CONN_NAME,
             HOSTB_IPSEC_PSK_CONN_NAME,
+            HOSTB_IPSEC_CRT_P2P_CONN_NAME,
+            HOSTB_IPSEC_TRANSPORET_CONN_NAME,
+            HOSTB_IPSEC_IPV6_P2P_CONN_NAME,
+            HOSTB_IPSEC_IPV6_CS_CONN_NAME,
         ]:
             cmdlib.exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
@@ -327,6 +434,11 @@ def setup_hosta_ip():
                         Route.DESTINATION: "0.0.0.0/0",
                         Route.NEXT_HOP_ADDRESS: HOSTB_IPV4_CRT,
                     },
+                    {
+                        Route.NEXT_HOP_INTERFACE: HOSTA_NIC,
+                        Route.DESTINATION: "::",
+                        Route.NEXT_HOP_ADDRESS: HOSTB_IPV6_P2P,
+                    },
                 ]
             },
             Interface.KEY: [
@@ -349,12 +461,36 @@ def setup_hosta_ip():
                                 InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_RSA,
                                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                             },
+                            {
+                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_CRT_P2P,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            },
+                            {
+                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_TRANSPORT,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            },
+                        ],
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.ADDRESS: [
+                            {
+                                InterfaceIPv6.ADDRESS_IP: HOSTA_IPV6_P2P,
+                                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                            },
+                            {
+                                InterfaceIPv6.ADDRESS_IP: HOSTA_IPV6_CS,
+                                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                            },
                         ],
                     },
                 }
             ],
         }
     )
+    # Need to wait 2 seconds for IPv6 duplicate address detection,
+    # otherwise the `pluto` will not listen on any IPv6 address
+    time.sleep(2)
     yield
     libnmstate.apply(
         {
@@ -383,10 +519,23 @@ def _check_ipsec(left, right):
     return f"src {left} dst {right}" in output
 
 
+def _check_ipsec_policy(left, right):
+    output = cmdlib.exec_cmd("ip xfrm policy".split(), check=True)[1]
+    return (
+        f"src {left} dst {right}" in output
+        and f"src {right} dst {left}" in output
+    )
+
+
 def _check_ipsec_ip(ip_net_prefix, nic):
     try:
         iface_state = show_only([nic])[Interface.KEY][0]
         for ip in iface_state.get(Interface.IPV4, {}).get(
+            InterfaceIP.ADDRESS, []
+        ):
+            if ip.get(InterfaceIP.ADDRESS_IP, "").startswith(ip_net_prefix):
+                return True
+        for ip in iface_state.get(Interface.IPV6, {}).get(
             InterfaceIP.ADDRESS, []
         ):
             if ip.get(InterfaceIP.ADDRESS_IP, "").startswith(ip_net_prefix):
@@ -577,9 +726,6 @@ def test_ipsec_ipv4_libreswan_fromcert(
     )
 
 
-@pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
-)
 def test_ipsec_ipv4_libreswan_psk_auth_with_ipsec_iface(
     ipsec_hosta_conn_cleanup,
 ):
@@ -610,9 +756,6 @@ def test_ipsec_ipv4_libreswan_psk_auth_with_ipsec_iface(
     )
 
 
-@pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
-)
 def test_ipsec_ipv4_libreswan_psk_auth_with_dpd(
     ipsec_hosta_conn_cleanup,
 ):
@@ -646,9 +789,6 @@ def test_ipsec_ipv4_libreswan_psk_auth_with_dpd(
     )
 
 
-@pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
-)
 def test_ipsec_ipv4_libreswan_authby(
     ipsec_hosta_conn_cleanup,
 ):
@@ -677,4 +817,144 @@ def test_ipsec_ipv4_libreswan_authby(
     )
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec77"
+    )
+
+
+@pytest.mark.xfail(
+    reason="NetworkManager-libreswan might be too old",
+)
+def test_ipsec_ipv4_libreswan_p2p_cert_auth_add_and_remove(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          libreswan:
+            left: {HOSTA_IPV4_CRT_P2P}
+            leftid: 'hosta.example.org'
+            leftcert: hosta.example.org
+            leftmodecfgclient: no
+            right: {HOSTB_IPV4_CRT_P2P}
+            rightid: 'hostb.example.org'
+            rightsubnet: {HOSTB_IPV4_CRT_P2P}/32
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_CRT_P2P, HOSTB_IPV4_CRT_P2P
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_policy,
+        f"{HOSTA_IPV4_CRT_P2P}/32",
+        f"{HOSTB_IPV4_CRT_P2P}/32",
+    )
+
+
+@pytest.mark.xfail(
+    reason="NetworkManager-libreswan might be too old",
+)
+def test_ipsec_ipv4_libreswan_transport_mode(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          libreswan:
+            type: transport
+            left: {HOSTA_IPV4_TRANSPORT}
+            leftid: 'hosta.example.org'
+            leftcert: hosta.example.org
+            leftmodecfgclient: no
+            right: {HOSTB_IPV4_TRANSPORT}
+            rightid: 'hostb.example.org'
+            rightsubnet: {HOSTB_IPV4_TRANSPORT}/32
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_TRANSPORT, HOSTB_IPV4_TRANSPORT
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_policy,
+        f"{HOSTA_IPV4_TRANSPORT}/32",
+        f"{HOSTB_IPV4_TRANSPORT}/32",
+    )
+
+
+@pytest.mark.xfail(
+    reason="This is not supported by latest NM-libreswan yet",
+)
+def test_ipsec_ipv6_libreswan_p2p(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          libreswan:
+            hostaddrfamily: ipv6
+            clientaddrfamily: ipv6
+            left: {HOSTA_IPV6_P2P}
+            leftid: '@hosta.example.org'
+            leftcert: hosta.example.org
+            leftmodecfgclient: no
+            right: {HOSTB_IPV6_P2P}
+            rightid: '@hostb.example.org'
+            rightsubnet: {HOSTB_IPV6_P2P}/128
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV6_P2P, HOSTB_IPV6_P2P
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_policy,
+        f"{HOSTA_IPV6_P2P}/128",
+        f"{HOSTB_IPV6_P2P}/128",
+    )
+
+
+@pytest.mark.xfail(
+    reason="This is not supported by latest NM-libreswan yet",
+)
+def test_ipsec_ipv6_libreswan_client_server(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            hostaddrfamily: ipv6
+            clientaddrfamily: ipv6
+            left: {HOSTA_IPV6_CS}
+            leftid: '@hosta.example.org'
+            leftcert: hosta.example.org
+            leftmodecfgclient: no
+            right: {HOSTB_IPV6_CS}
+            rightid: '@hostb.example.org'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV6_CS, HOSTB_IPV6_CS
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX6, HOSTA_NIC
     )

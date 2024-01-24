@@ -921,3 +921,26 @@ fn test_ovs_bridge_deprecated_prop() {
 
     assert_eq!(iface.ports(), Some(vec!["eth1"]));
 }
+
+#[test]
+fn test_ovs_iface_serialize_allow_extra_patch_ports() {
+    let desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"---
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          allow-extra-patch-ports: true
+          port:
+          - name: ovs0
+          - name: eth1
+        "#,
+    )
+    .unwrap();
+
+    let new: OvsBridgeInterface =
+        serde_yaml::from_str(&serde_yaml::to_string(&desired).unwrap())
+            .unwrap();
+
+    assert_eq!(desired, new);
+}

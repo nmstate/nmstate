@@ -185,19 +185,20 @@ clib_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 	cp $(CLIB_SO_DEV_DEBUG) $(TMPDIR)/$(CLIB_SO_FULL)
 	ln -sfv $(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_SO_MAN)
 	ln -sfv $(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_SO_DEV)
+	rust/src/clib/test/check_clib_soname.sh $(TMPDIR)/$(CLIB_SO_DEV)
 	cp $(CLIB_HEADER) $(TMPDIR)/$(shell basename $(CLIB_HEADER))
-	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) -lnmstate \
+	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) \
 		-o $(TMPDIR)/nmstate_json_test \
-		rust/src/clib/test/nmstate_json_test.c
-	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) -lnmstate \
+		rust/src/clib/test/nmstate_json_test.c -lnmstate
+	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) \
 		-o $(TMPDIR)/nmpolicy_json_test \
-		rust/src/clib/test/nmpolicy_json_test.c
-	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) -lnmstate \
+		rust/src/clib/test/nmpolicy_json_test.c -lnmstate
+	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) \
 		-o $(TMPDIR)/nmstate_yaml_test \
-		rust/src/clib/test/nmstate_yaml_test.c
-	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) -lnmstate \
+		rust/src/clib/test/nmstate_yaml_test.c -lnmstate
+	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) \
 		-o $(TMPDIR)/nmpolicy_yaml_test \
-		rust/src/clib/test/nmpolicy_yaml_test.c
+		rust/src/clib/test/nmpolicy_yaml_test.c -lnmstate
 	LD_LIBRARY_PATH=$(TMPDIR) \
 		valgrind --trace-children=yes --leak-check=full \
 		--error-exitcode=1 \

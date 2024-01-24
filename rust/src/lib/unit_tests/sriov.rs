@@ -73,9 +73,11 @@ fn test_ignore_sriov_if_not_desired() {
         spoof-check: true
         vlan-id: 102
         qos: 5
+        vlan-proto: 802.1q
       - id: 1
         vlan-id: 101
         qos: 6
+        vlan-proto: 802.1ad
 ",
     )
     .unwrap();
@@ -838,4 +840,31 @@ fn test_get_sriov_vf_count() {
         MergedInterfaces::new(desired, current, false, false).unwrap();
 
     assert_eq!(merged_ifaces.get_sriov_vf_count(), 32);
+}
+
+#[test]
+fn test_sriov_not_allow_802_1ad_vlan_protocol_for_vlan_0_and_qos_0() {
+    let mut desired = serde_yaml::from_str::<Interface>(
+        r"---
+        name: eth1
+        type: ethernet
+        state: up
+        ethernet:
+          sr-iov:
+            total-vfs: 1
+            vfs:
+            - id: 0
+              vlan-id: 0
+              qos: 0
+              vlan-proto: 802.1ad
+        ",
+    )
+    .unwrap();
+
+    let result = desired.sanitize(true);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
 }

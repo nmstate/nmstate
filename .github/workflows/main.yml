@@ -69,8 +69,16 @@ jobs:
         rustup override set ${{ matrix.rust_version }}
         rustup update ${{ matrix.rust_version }}
 
+    - name: Install tools for tests
+      run: |
+        sudo apt-get update;
+        sudo apt-get -y install valgrind
+
     - name: Unit test
       run: cd rust && cargo test -- --show-output
+
+    - name: C library test
+      run: make clib_check
 
   rpm_build:
     runs-on: ubuntu-22.04
@@ -79,7 +87,6 @@ jobs:
       matrix:
         include:
           - os_type: "el9"
-          - os_type: "el8"
     steps:
       - uses: actions/checkout@v3
       - name: build nmstate rpm
@@ -129,11 +136,6 @@ jobs:
       - name: Enable openvswitch kernel module
         run: sudo modprobe openvswitch
 
-      - name: Download compiled EL8 rpm
-        uses: actions/download-artifact@v3
-        with:
-          name: rpms_el8
-          path: rpms/el8
       - name: Download compiled EL9 rpm
         uses: actions/download-artifact@v3
         with:
@@ -149,7 +151,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
-      
+
       - uses: actions/upload-artifact@v3
         with:
           name: nmstate-test-junit-artifact-${{ matrix.job_type }}

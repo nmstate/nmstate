@@ -9,6 +9,7 @@ use crate::{
         error::np_error_to_nmstate,
         ethernet::np_ethernet_to_nmstate,
         hostname::get_hostname_state,
+        hsr::np_hsr_to_nmstate,
         infiniband::np_ib_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
@@ -84,6 +85,9 @@ pub(crate) fn nispor_retrieve(
             InterfaceType::Ethernet => Interface::Ethernet(
                 np_ethernet_to_nmstate(np_iface, base_iface),
             ),
+            InterfaceType::Hsr => {
+                Interface::Hsr(np_hsr_to_nmstate(np_iface, base_iface))
+            }
             InterfaceType::Veth => {
                 Interface::Ethernet(np_veth_to_nmstate(np_iface, base_iface))
             }

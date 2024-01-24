@@ -355,3 +355,16 @@ fn test_ifaces_iter_mut() {
     assert_eq!(ifaces_vec[0].base_iface().mtu, Some(1280));
     assert_eq!(ifaces_vec[1].base_iface().mtu, Some(1280));
 }
+
+#[test]
+fn test_unknown_iface_type() {
+    assert_eq!(
+        InterfaceType::Other("foo_type".to_string()).to_string(),
+        "foo_type"
+    );
+    assert_eq!(
+        serde_yaml::to_string(&InterfaceType::Other("foo_type".to_string()))
+            .unwrap(),
+        "foo_type\n"
+    );
+}

@@ -60,6 +60,28 @@ pub(crate) fn gen_nm_ipsec_vpn_setting(
         if let Some(v) = conf.authby.as_deref() {
             vpn_data.insert("authby".into(), v.to_string());
         }
+        if let Some(v) = conf.leftmodecfgclient {
+            vpn_data.insert(
+                "leftmodecfgclient".into(),
+                if v {
+                    "yes".to_string()
+                } else {
+                    "no".to_string()
+                },
+            );
+        }
+        if let Some(v) = conf.rightsubnet.as_deref() {
+            vpn_data.insert("rightsubnet".into(), v.to_string());
+        }
+        if let Some(v) = conf.kind {
+            vpn_data.insert("type".into(), v.to_string());
+        }
+        if let Some(v) = conf.clientaddrfamily {
+            vpn_data.insert("clientaddrfamily".into(), v.to_string());
+        }
+        if let Some(v) = conf.hostaddrfamily {
+            vpn_data.insert("hostaddrfamily".into(), v.to_string());
+        }
 
         let mut nm_vpn_set = NmSettingVpn::default();
         nm_vpn_set.data = Some(vpn_data);

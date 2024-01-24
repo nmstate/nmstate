@@ -18,6 +18,7 @@ from libnmstate.schema import DNS
 from libnmstate.schema import HostNameState
 from libnmstate.schema import RouteRule
 
+from .testlib.env import is_el8
 from .testlib.env import is_k8s
 from .testlib.env import nm_minor_version
 
@@ -260,6 +261,20 @@ def test_add_macsec_and_remove_example(eth1_up):
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent("macsec0")
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 45 or is_el8(),
+    reason="HSR is supported only in NetworkManager 1.45+",
+)
+@pytest.mark.tier1
+def test_add_hsr_and_remove_example(eth1_up):
+    with example_state(
+        "hsr0_up.yml", cleanup="hsr0_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("hsr0")
 
 
 @pytest.mark.skipif(

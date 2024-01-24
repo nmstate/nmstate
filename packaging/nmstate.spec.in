@@ -20,9 +20,6 @@ Source1:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.g
 Source2:        https://nmstate.io/nmstate.gpg
 Source3:        %{url}/releases/download/v%{version}/%{srcname}-vendor-%{version}.tar.xz
 %endif
-%if 0%{?fedora}
-BuildRequires:  patchelf
-%endif
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 BuildRequires:  gnupg2
@@ -157,17 +154,6 @@ pushd rust
     %if ! %{is_snapshot}
     # Source3 is vendored dependencies
     %cargo_prep -V 3
-
-    # RHEL does not have patchelf, hence we need to solve the SONAME problem
-    # by ourselves: https://github.com/rust-lang/cargo/issues/5045
-
-    # The cargo_prep will create `.cargo/config` which take precedence over
-    # `.cargo/config.toml` shipped by upstream which fix the SONAME of cdylib.
-    # To workaround that, merge upstream rustflags into cargo_prep created one.
-    _FLAGS=`sed -ne 's/rustflags = "\(.\+\)"/\1/p' .cargo/config.toml`
-    sed -i -e "s/rustflags = \[\(.\+\), \]$/rustflags = [\1, \"$_FLAGS\"]/" \
-        .cargo/config
-    rm -f .cargo/config.toml
     %endif
 %else
     %cargo_prep
@@ -202,11 +188,6 @@ env SKIP_PYTHON_INSTALL=1 \
     LIBDIR=%{_libdir} \
     SYSCONFDIR=%{_sysconfdir} \
     %make_install
-
-%if ! 0%{?rhel}
-patchelf --set-soname libnmstate.so.2 \
-    %{buildroot}/%{_libdir}/libnmstate.so.%{version}
-%endif
 
 pushd rust/src/python
 %py3_install

@@ -200,7 +200,7 @@ impl MergedOvnConfiguration {
 #[non_exhaustive]
 pub struct OvnBridgeMapping {
     pub localnet: String,
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// When set to `state: absent`, will delete the existing
     /// `localnet` mapping.
     pub state: Option<OvnBridgeMappingState>,
