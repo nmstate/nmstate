@@ -220,10 +220,6 @@ def test_add_mac_vtap_and_remove():
     assertlib.assert_absent("macvtap0")
 
 
-@pytest.mark.skipif(
-    nm_minor_version() < 28,
-    reason="Modifying veth is not supported on lower NetworkManager versions.",
-)
 def test_add_veth_and_remove():
     with example_state(
         "veth1_up.yml", cleanup="veth1_absent.yml"
@@ -234,10 +230,6 @@ def test_add_veth_and_remove():
     assertlib.assert_absent("veth1peer")
 
 
-@pytest.mark.skipif(
-    nm_minor_version() <= 30,
-    reason="Generating config is not supported on NetworkManager 1.30-",
-)
 @pytest.mark.tier1
 def test_gen_conf_for_examples():
     example_dir = find_examples_dir()

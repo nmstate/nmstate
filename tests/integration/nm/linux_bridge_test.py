@@ -18,7 +18,6 @@ from ..testlib.bridgelib import linux_bridge
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.env import is_k8s
-from ..testlib.env import nm_minor_version
 from ..testlib.statelib import show_only
 
 
@@ -246,12 +245,6 @@ def bridge_with_unmanaged_port(eth1_up, unmanged_veth0):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    nm_minor_version() < 39,
-    raises=AssertionError,
-    reason="https://bugzilla.redhat.com/2076131",
-    strict=True,
-)
 def test_linux_bridge_does_not_lose_unmanaged_port_on_rollback(
     bridge_with_unmanaged_port,
 ):

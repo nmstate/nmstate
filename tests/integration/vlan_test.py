@@ -177,12 +177,6 @@ def test_add_new_base_iface_with_vlan():
         libnmstate.apply(desired_state, verify_change=False)
 
 
-@pytest.mark.xfail(
-    nm_minor_version() < 31,
-    reason="Ref: https://bugzilla.redhat.com/1902976",
-    raises=NmstateVerificationError,
-    strict=True,
-)
 def test_add_vlan_with_mismatching_name_and_id(eth1_up):
     with vlan_interface(
         VLAN_IFNAME, 200, eth1_up[Interface.KEY][0][Interface.NAME]
@@ -191,12 +185,6 @@ def test_add_vlan_with_mismatching_name_and_id(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    nm_minor_version() < 31,
-    reason="Ref: https://bugzilla.redhat.com/1907960",
-    raises=NmstateVerificationError,
-    strict=True,
-)
 def test_add_vlan_and_modify_vlan_id(eth1_up):
     with vlan_interface(
         VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
@@ -210,10 +198,6 @@ def test_add_vlan_and_modify_vlan_id(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 31,
-    reason="Modifying accept-all-mac-addresses is not supported on NM.",
-)
 def test_vlan_enable_and_disable_accept_all_mac_addresses(eth1_up):
     with vlan_interface(
         VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]

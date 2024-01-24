@@ -14,10 +14,10 @@ use super::{
         create_index_for_nm_conns_by_name_type,
         device::nm_dev_iface_type_to_nmstate, dispatch::get_dispatches,
         dns::nm_global_dns_to_nmstate, get_description, get_lldp,
-        is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
-        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
-        ovs::merge_ovs_netdev_tun_iface, query_nmstate_wait_ip,
-        retrieve_dns_info, vpn::get_supported_vpn_ifaces,
+        is_lldp_enabled, nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
+        nm_ip_setting_to_nmstate6, ovs::merge_ovs_netdev_tun_iface,
+        query_nmstate_wait_ip, retrieve_dns_info,
+        vpn::get_supported_vpn_ifaces,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_OVS_IFACE_SETTING_NAME,
@@ -61,8 +61,6 @@ pub(crate) fn nm_retrieve(
     }
     let nm_acs_name_type_index =
         create_index_for_nm_acs_by_name_type(nm_acs.as_slice());
-
-    let mptcp_supported = is_mptcp_supported(&nm_api);
 
     // Include disconnected interface as state:down
     // This is used for verify on `state: absent`
@@ -152,16 +150,9 @@ pub(crate) fn nm_retrieve(
                 } else {
                     None
                 };
-                if let Some(mut iface) =
+                if let Some(iface) =
                     iface_get(nm_dev, nm_conn, nm_saved_conn, lldp_neighbors)
                 {
-                    // Suppress mptcp only when MPTCP is not supported by
-                    // NetworkManager, so user will not get failure when they
-                    // apply the returned state.
-                    if !mptcp_supported {
-                        iface.base_iface_mut().mptcp = None;
-                    }
-
                     log::debug!(
                         "Found NM interface {}/{}",
                         iface.name(),

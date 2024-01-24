@@ -2,10 +2,7 @@
 
 use crate::nm::nm_dbus::NmConnection;
 
-use crate::{
-    nm::version::nm_supports_accept_all_mac_addresses_mode, Interface,
-    InterfaceIdentifier,
-};
+use crate::{Interface, InterfaceIdentifier};
 
 pub(crate) fn gen_nm_wired_setting(
     iface: &Interface,
@@ -56,11 +53,9 @@ pub(crate) fn gen_nm_wired_setting(
 
     if let Some(accept_all_mac_addresses) = &base_iface.accept_all_mac_addresses
     {
-        if nm_supports_accept_all_mac_addresses_mode().unwrap_or_default() {
-            nm_wired_set.accept_all_mac_addresses =
-                Some(i32::from(*accept_all_mac_addresses));
-            flag_need_wired = true;
-        }
+        nm_wired_set.accept_all_mac_addresses =
+            Some(i32::from(*accept_all_mac_addresses));
+        flag_need_wired = true;
     }
 
     if flag_need_wired {

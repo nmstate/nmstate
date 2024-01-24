@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from contextlib import contextmanager
 import os
@@ -33,7 +16,6 @@ from libnmstate.schema import Veth
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib.env import is_fedora
-from .testlib.env import nm_major_minor_version
 
 MAX_NETDEVSIM_WAIT_TIME = 5
 
@@ -74,13 +56,8 @@ def _ip_iface_rename(src_name, dst_name):
 
 
 @pytest.mark.skipif(
-    nm_major_minor_version() < 1.31
-    or os.environ.get("CI") == "true"
-    or not is_fedora(),
-    reason=(
-        "Ethtool pause test need NetworkManager 1.31+ and netdevsim kernel "
-        "module"
-    ),
+    os.environ.get("CI") == "true" or not is_fedora(),
+    reason=("Ethtool pause test need netdevsim kernel module"),
 )
 def test_ethtool_pause_on_netdevsim():
     desire_iface_state = {
@@ -100,13 +77,8 @@ def test_ethtool_pause_on_netdevsim():
 
 
 @pytest.mark.skipif(
-    nm_major_minor_version() < 1.31
-    or os.environ.get("CI") == "true"
-    or not is_fedora(),
-    reason=(
-        "Ethtool pause test need NetworkManager 1.31+ and netdevsim kernel "
-        "module"
-    ),
+    os.environ.get("CI") == "true" or not is_fedora(),
+    reason=("Ethtool pause test need netdevsim kernel module"),
 )
 def test_ethtool_pause_auto_on_netdevsim():
     desire_iface_state = {
@@ -175,13 +147,8 @@ def test_ethtool_ring_set_rx():
 
 
 @pytest.mark.skipif(
-    nm_major_minor_version() < 1.31
-    or os.environ.get("CI") == "true"
-    or not is_fedora(),
-    reason=(
-        "Ethtool pause test need NetworkManager 1.31+ and netdevsim kernel "
-        "module in Fedora 34+"
-    ),
+    os.environ.get("CI") == "true" or not is_fedora(),
+    reason=("Ethtool pause test need netdevsim kernel module in Fedora 34+"),
 )
 def test_ethtool_coalesce_on_netdevsim():
     desire_iface_state = {

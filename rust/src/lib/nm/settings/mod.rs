@@ -50,5 +50,3 @@ pub(crate) use self::ip::fix_ip_dhcp_timeout;
 pub(crate) use self::bond::get_bond_balance_slb;
 #[cfg(feature = "query_apply")]
 pub(crate) use self::user::NMSTATE_DESCRIPTION;
-
-pub(crate) use self::mptcp::remove_nm_mptcp_set;

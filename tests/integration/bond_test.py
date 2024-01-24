@@ -1115,15 +1115,6 @@ def _check_mac(iface_name, expected_mac):
     return current_state[Interface.KEY][0][Interface.MAC] == expected_mac
 
 
-@pytest.mark.xfail(
-    nm_minor_version() < 30,
-    reason=(
-        "Before 1.30 the bond was keeping the mac"
-        "RHBZ: https://bugzilla.redhat.com/1933292",
-    ),
-    raises=AssertionError,
-    strict=True,
-)
 def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
     desired_state = bond99_with_eth2
     bond_state = desired_state[Interface.KEY][0]
@@ -1141,10 +1132,6 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 31,
-    reason="Modifying accept-all-mac-addresses is not supported on NM.",
-)
 def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
     desired_state = bond88_with_port
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
@@ -1157,10 +1144,6 @@ def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 31,
-    reason="https://bugzilla.redhat.com/1959934",
-)
 def test_bond_flip_tlb_dynamic_lbs(bond99_with_2_port):
     desired_state = bond99_with_2_port
     bond_state = desired_state[Interface.KEY][0]

@@ -25,7 +25,6 @@ from libnmstate.schema import VLAN
 from libnmstate.schema import VXLAN
 from libnmstate.schema import Veth
 from libnmstate.error import NmstateDependencyError
-from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
@@ -35,7 +34,6 @@ from .testlib import statelib
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
-from .testlib.env import nm_major_minor_version
 from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.nmplugin import disable_nm_plugin
@@ -1092,23 +1090,19 @@ def test_create_memory_only_ovs_bridge():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(PORT1)
 
-    if nm_major_minor_version() <= 1.28:
-        with pytest.raises(NmstateNotSupportedError):
-            libnmstate.apply(bridge.state, save_to_disk=False)
-    else:
-        try:
-            libnmstate.apply(bridge.state, save_to_disk=False)
-        finally:
-            libnmstate.apply(
-                {
-                    Interface.KEY: [
-                        {
-                            Interface.NAME: BRIDGE1,
-                            Interface.STATE: InterfaceState.ABSENT,
-                        }
-                    ]
-                }
-            )
+    try:
+        libnmstate.apply(bridge.state, save_to_disk=False)
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BRIDGE1,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )
 
 
 def test_remove_all_ovs_ports(bridge_with_ports):
@@ -2119,10 +2113,6 @@ def test_ovs_replace_internal_iface_to_bridge_with_auto_create_iface(
 
 # OVS netdev datapath will use TUN interface for OVS internal interface
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 38,
-    reason="OVS TUN interface was not supported in NM 1.38-",
-)
 def test_netdev_data_path(eth1_up):
     bridge = Bridge(BRIDGE1)
     bridge.add_system_port("eth1")
