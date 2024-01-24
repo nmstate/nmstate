@@ -5,20 +5,24 @@ use std::convert::TryInto;
 
 use crate::{
     state::get_json_value_difference, ErrorKind, Interface, InterfaceState,
-    InterfaceType, Interfaces, MergedInterfaces, MergedNetworkState,
-    MergedOvsDbGlobalConfig, NetworkState, NmstateError, OvsBridgeBondConfig,
-    OvsBridgeConfig, OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig,
-    OvsInterface,
+    InterfaceType, Interfaces, MergedInterfaces, MergedOvsDbGlobalConfig,
+    NetworkState, NmstateError, OvsBridgeBondConfig, OvsBridgeConfig,
+    OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig, OvsInterface,
 };
 
 impl MergedOvsDbGlobalConfig {
     pub(crate) fn verify(
         &self,
-        current: &OvsDbGlobalConfig,
+        current: OvsDbGlobalConfig,
     ) -> Result<(), NmstateError> {
+        let desired = match self.desired.as_ref() {
+            Some(d) => d,
+            None => {
+                return Ok(());
+            }
+        };
         let empty_map: HashMap<String, Option<String>> = HashMap::new();
-        let external_ids: HashMap<String, Option<String>> = self
-            .desired
+        let external_ids: HashMap<String, Option<String>> = desired
             .external_ids
             .as_ref()
             .unwrap_or(&empty_map)
@@ -31,8 +35,7 @@ impl MergedOvsDbGlobalConfig {
                 }
             })
             .collect();
-        let other_config: HashMap<String, Option<String>> = self
-            .desired
+        let other_config: HashMap<String, Option<String>> = desired
             .other_config
             .as_ref()
             .unwrap_or(&empty_map)
@@ -49,7 +52,6 @@ impl MergedOvsDbGlobalConfig {
         let desired = OvsDbGlobalConfig {
             external_ids: Some(external_ids),
             other_config: Some(other_config),
-            prop_list: vec!["external_ids", "other_config"],
         };
 
         let desired_value = serde_json::to_value(desired)?;
@@ -57,7 +59,6 @@ impl MergedOvsDbGlobalConfig {
             serde_json::to_value(OvsDbGlobalConfig {
                 external_ids: Some(HashMap::new()),
                 other_config: Some(HashMap::new()),
-                prop_list: Vec::new(),
             })?
         } else {
             serde_json::to_value(current)?
@@ -120,20 +121,6 @@ impl OvsInterface {
         }
         if other.dpdk.is_some() {
             self.dpdk = other.dpdk.clone();
-        }
-    }
-}
-
-impl MergedNetworkState {
-    // Sine desire `ovsdb: {}` means remove all, we cannot
-    // differentiate it with `ovsdb` not defined due to `serde(default)`.
-    // Hence we need to check `MergedNetworkState.prop_list`.
-    pub(crate) fn is_global_ovsdb_changed(&self) -> bool {
-        if self.prop_list.contains(&"ovsdb") || self.prop_list.contains(&"ovn")
-        {
-            self.ovsdb.is_changed
-        } else {
-            false
         }
     }
 }
@@ -225,16 +212,13 @@ impl NetworkState {
     pub(crate) fn isolate_ovn(&mut self) -> Result<(), NmstateError> {
         if let Some(ovn_maps_str) = self
             .ovsdb
-            .external_ids
             .as_mut()
+            .and_then(|o| o.external_ids.as_mut())
             .and_then(|eids| {
                 eids.remove(OvsDbGlobalConfig::OVN_BRIDGE_MAPPINGS_KEY)
             })
             .flatten()
         {
-            if !self.prop_list.contains(&"ovn") {
-                self.prop_list.push("ovn");
-            }
             self.ovn = ovn_maps_str.as_str().try_into()?;
         }
         Ok(())
