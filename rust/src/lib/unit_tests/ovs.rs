@@ -944,3 +944,34 @@ fn test_ovs_iface_serialize_allow_extra_patch_ports() {
 
     assert_eq!(desired, new);
 }
+
+#[test]
+fn test_ovs_bond_using_deprecated_prop() {
+    let mut iface: OvsBridgeInterface = serde_yaml::from_str(
+        r#"---
+        name: br1
+        type: ovs-bridge
+        state: up
+        bridge:
+          options:
+            stp: "true"
+            rstp: "false"
+            mcast-snooping-enable: "false"
+          slaves:
+          - name: bond1
+            link-aggregation:
+              mode: balance-slb
+              slaves:
+              - name: eth2
+              - name: eth1"#,
+    )
+    .unwrap();
+
+    iface.post_deserialize_cleanup();
+
+    let br_conf = iface.bridge.unwrap();
+    let port_conf = &br_conf.ports.as_ref().unwrap()[0];
+    let bond_conf = port_conf.bond.as_ref().unwrap();
+    assert_eq!(bond_conf.ports(), vec!["eth2", "eth1"]);
+    assert!(bond_conf.slaves.is_none());
+}
