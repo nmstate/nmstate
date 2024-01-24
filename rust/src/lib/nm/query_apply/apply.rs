@@ -19,9 +19,9 @@ use super::super::{
             is_iface_dns_desired, purge_global_dns_config,
             store_dns_config_via_global_api,
         },
-        is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
-        is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
-        is_vxlan_changed, save_nm_profiles,
+        is_mptcp_flags_changed, is_route_removed, is_veth_peer_changed,
+        is_vlan_changed, is_vrf_table_id_changed, is_vxlan_changed,
+        save_nm_profiles,
         vpn::get_match_ipsec_nm_conn,
     },
     route::store_route_config,
@@ -45,6 +45,9 @@ pub(crate) fn nm_apply(
     timeout: u32,
 ) -> Result<(), NmstateError> {
     let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+
+    check_nm_version(&nm_api);
+
     nm_api.set_checkpoint(checkpoint, timeout);
     nm_api.set_checkpoint_auto_refresh(true);
 
@@ -67,8 +70,6 @@ pub(crate) fn nm_apply(
             nm_api.hostname_set(hostname).map_err(nm_error_to_nmstate)?;
         }
     }
-
-    let mptcp_supported = is_mptcp_supported(&nm_api);
 
     let exist_nm_conns =
         nm_api.connections_get().map_err(nm_error_to_nmstate)?;
@@ -132,7 +133,6 @@ pub(crate) fn nm_apply(
             )?;
         }
     }
-
     let PerparedNmConnections {
         to_store: nm_conns_to_store,
         to_activate: nm_conns_to_activate,
@@ -141,7 +141,6 @@ pub(crate) fn nm_apply(
         &merged_state,
         exist_nm_conns.as_slice(),
         nm_acs.as_slice(),
-        mptcp_supported,
         false,
     )?;
 
@@ -426,4 +425,23 @@ fn gen_nm_conn_need_to_deactivate_first(
         }
     }
     ret
+}
+
+fn check_nm_version(nm_api: &NmApi) {
+    if let Ok(versions) = nm_api.version().map(|ver_str| {
+        ver_str
+            .split('.')
+            .map(|v| v.parse::<i32>().unwrap_or_default())
+            .collect::<Vec<i32>>()
+    }) {
+        if let (Some(major), Some(minor)) = (versions.first(), versions.get(1))
+        {
+            if *major < 1 || *minor < 40 {
+                log::warn!(
+                    "Unsupported NetworkManager version {major}.{minor}, \
+                    expecting >= 1.40"
+                );
+            }
+        }
+    }
 }

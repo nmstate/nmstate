@@ -5,7 +5,6 @@ from contextlib import contextmanager
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bridge
 from libnmstate.schema import Interface
@@ -18,7 +17,6 @@ from libnmstate.schema import VLAN
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.veth import veth_interface
-from .testlib.env import nm_major_minor_version
 
 
 VETH1 = "veth1"
@@ -27,31 +25,6 @@ VETH2PEER = "veth2peer"
 VETH1_VLAN = "veth1.0"
 
 
-@pytest.mark.skipif(
-    nm_major_minor_version() >= 1.28,
-    reason="Modifying veth interfaces is supported on NetworkManager.",
-)
-@pytest.mark.tier1
-def test_add_veth_not_supported(self):
-    desired_state = {
-        Interface.KEY: [
-            {
-                Interface.NAME: VETH1,
-                Interface.TYPE: InterfaceType.VETH,
-                Interface.STATE: InterfaceState.UP,
-                Veth.CONFIG_SUBTREE: {Veth.PEER: VETH1PEER},
-            }
-        ]
-    }
-
-    with pytest.raises(NmstateLibnmError):
-        libnmstate.apply(desired_state)
-
-
-@pytest.mark.skipif(
-    nm_major_minor_version() <= 1.28,
-    reason="Modifying veth interfaces is not supported on NetworkManager.",
-)
 class TestVeth:
     def test_eth_with_veth_conf(self, eth1_up):
         d_state = {

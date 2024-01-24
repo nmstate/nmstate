@@ -23,7 +23,6 @@ mod settings;
 mod show;
 #[cfg(test)]
 mod unit_tests;
-mod version;
 
 #[cfg(feature = "query_apply")]
 pub(crate) use checkpoint::{

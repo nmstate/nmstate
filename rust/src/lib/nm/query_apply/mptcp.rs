@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::super::nm_dbus::{NmApi, NmConnection};
+use super::super::nm_dbus::NmConnection;
 
 pub(crate) fn is_mptcp_flags_changed(
     nm_conn: &NmConnection,
@@ -15,20 +15,5 @@ pub(crate) fn is_mptcp_flags_changed(
     ) {
         (Some(flags), Some(cur_flags)) => flags == cur_flags,
         _ => false,
-    }
-}
-
-pub(crate) fn is_mptcp_supported(nm_api: &NmApi) -> bool {
-    let version_str = nm_api.version().unwrap_or_default();
-    let versions: Vec<&str> = version_str.split('.').collect();
-    if versions.len() < 2 {
-        return false;
-    }
-    if let (Ok(major), Ok(minor)) =
-        (versions[0].parse::<i32>(), versions[1].parse::<i32>())
-    {
-        major >= 1 && minor >= 40
-    } else {
-        false
     }
 }

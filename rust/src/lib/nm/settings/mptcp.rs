@@ -2,7 +2,7 @@
 
 use std::io::Read;
 
-use super::super::nm_dbus::{NmConnection, NmSettingConnection};
+use super::super::nm_dbus::NmSettingConnection;
 
 use crate::{ErrorKind, MptcpAddressFlag, MptcpConfig, NmstateError};
 
@@ -66,11 +66,5 @@ fn is_mptcp_enabled() -> bool {
         }
     } else {
         false
-    }
-}
-
-pub(crate) fn remove_nm_mptcp_set(nm_conn: &mut NmConnection) {
-    if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
-        nm_conn_set.mptcp_flags = None;
     }
 }

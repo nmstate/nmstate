@@ -3,8 +3,7 @@
 use super::nm_dbus::{NmActiveConnection, NmConnection};
 use super::settings::{
     fix_ip_dhcp_timeout, get_exist_profile, iface_to_nm_connections,
-    remove_nm_mptcp_set, use_uuid_for_controller_reference,
-    use_uuid_for_parent_reference,
+    use_uuid_for_controller_reference, use_uuid_for_parent_reference,
 };
 
 use crate::{
@@ -23,7 +22,6 @@ pub(crate) fn perpare_nm_conns(
     merged_state: &MergedNetworkState,
     exist_nm_conns: &[NmConnection],
     nm_acs: &[NmActiveConnection],
-    mptcp_supported: bool,
     gen_conf_mode: bool,
 ) -> Result<PerparedNmConnections, NmstateError> {
     let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
@@ -80,17 +78,6 @@ pub(crate) fn perpare_nm_conns(
             &nm_ac_uuids,
             gen_conf_mode,
         )? {
-            if !mptcp_supported {
-                remove_nm_mptcp_set(&mut nm_conn);
-                if let Some(mptcp_conf) = iface.base_iface().mptcp.as_ref() {
-                    log::warn!(
-                        "MPTCP not supported by NetworkManager, \
-                        Ignoring MPTCP config {:?}",
-                        mptcp_conf
-                    );
-                }
-            }
-
             if iface.is_up()
                 && !can_skip_activation(
                     merged_iface,

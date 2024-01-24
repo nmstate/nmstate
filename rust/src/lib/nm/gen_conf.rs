@@ -38,7 +38,6 @@ pub(crate) fn nm_gen_conf(
         &merged_state,
         &Vec::new(),
         &Vec::new(),
-        true, // MPTCP support enabled
         true, // gen_conf mode
     )?
     .to_store;

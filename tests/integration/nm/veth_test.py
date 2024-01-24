@@ -9,7 +9,6 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Veth
 
-from ..testlib.env import nm_major_minor_version
 from ..testlib import cmdlib
 from ..testlib.veth import veth_interface
 
@@ -19,10 +18,6 @@ VETH1PEER = "veth1peer"
 VETH1PEER2 = "veth1ep"
 
 
-@pytest.mark.skipif(
-    nm_major_minor_version() <= 1.28,
-    reason="Modifying veth interfaces is not supported on NetworkManager.",
-)
 def test_remove_peer_connection():
     with veth_interface(VETH1, VETH1PEER) as desired_state:
         desired_state[Interface.KEY][0][
@@ -64,10 +59,6 @@ def veth1_with_ignored_peer():
     )
 
 
-@pytest.mark.skipif(
-    nm_major_minor_version() <= 1.28,
-    reason="Modifying veth interfaces is not supported on NetworkManager.",
-)
 def test_veth_with_ignored_peer(veth1_with_ignored_peer):
     desired_state = {
         Interface.KEY: [
@@ -90,10 +81,6 @@ def test_veth_with_ignored_peer(veth1_with_ignored_peer):
     )
 
 
-@pytest.mark.skipif(
-    nm_major_minor_version() <= 1.28,
-    reason="Modifying veth interfaces is not supported on NetworkManager.",
-)
 def test_veth_with_ignored_peer_changed_to_new_peer(veth1_with_ignored_peer):
     desired_state = {
         Interface.KEY: [

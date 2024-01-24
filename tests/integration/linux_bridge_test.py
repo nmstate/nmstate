@@ -33,7 +33,6 @@ from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
 from .testlib.env import is_ubuntu_kernel
-from .testlib.env import nm_major_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.retry import retry_till_true_or_timeout
@@ -969,10 +968,6 @@ def test_create_linux_bridge_with_copy_mac_from_permanent_mac(
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_major_minor_version() < 1.31,
-    reason="Modifying accept-all-mac-addresses is not supported on NM.",
-)
 def test_linux_bridge_enable_and_disable_accept_all_mac_addresses(
     bridge0_with_port0,
 ):

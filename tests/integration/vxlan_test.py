@@ -17,7 +17,6 @@ from .testlib.cmdlib import RC_SUCCESS
 from .testlib.cmdlib import exec_cmd
 from .testlib.cmdlib import format_exec_cmd_result
 from .testlib.env import is_k8s
-from .testlib.env import nm_major_minor_version
 from .testlib.vxlan import VxlanState
 from .testlib.vxlan import vxlan_interfaces
 from .testlib.vxlan import vxlans_absent
@@ -176,10 +175,6 @@ def test_add_vxlan_and_modify_vxlan_id(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_major_minor_version() < 1.31,
-    reason="Modifying accept-all-mac-addresses is not supported on NM.",
-)
 def test_vxlan_enable_and_disable_accept_all_mac_addresses(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     with vxlan_interfaces(

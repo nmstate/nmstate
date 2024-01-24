@@ -25,7 +25,7 @@ pub(crate) use self::ip::{
     nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6, query_nmstate_wait_ip,
 };
 pub(crate) use self::lldp::{get_lldp, is_lldp_enabled};
-pub(crate) use self::mptcp::{is_mptcp_flags_changed, is_mptcp_supported};
+pub(crate) use self::mptcp::is_mptcp_flags_changed;
 pub(crate) use self::ovs::delete_orphan_ovs_ports;
 pub(crate) use self::profile::{
     activate_nm_profiles, create_index_for_nm_conns_by_name_type,
