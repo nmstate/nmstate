@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{MergedOvsDbGlobalConfig, OvsDbGlobalConfig};
+use crate::{MergedOvsDbGlobalConfig, NetworkState, OvsDbGlobalConfig};
 
 fn get_current_ovsdb_config() -> OvsDbGlobalConfig {
     serde_yaml::from_str(
@@ -38,9 +38,12 @@ other_config:
 
     let current = get_current_ovsdb_config();
 
-    let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
-            .unwrap();
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(
+        Some(desired),
+        current,
+        &Default::default(),
+    )
+    .unwrap();
 
     let expect: OvsDbGlobalConfig = serde_yaml::from_str(
         r"---
@@ -79,9 +82,12 @@ other_config: {}
     )
     .unwrap();
 
-    let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
-            .unwrap();
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(
+        Some(desired),
+        current,
+        &Default::default(),
+    )
+    .unwrap();
 
     assert_eq!(
         &merged_ovsdb.external_ids,
@@ -115,9 +121,12 @@ other_config:
     )
     .unwrap();
 
-    let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
-            .unwrap();
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(
+        Some(desired),
+        current,
+        &Default::default(),
+    )
+    .unwrap();
 
     assert_eq!(
         &merged_ovsdb.external_ids,
@@ -151,9 +160,12 @@ other_config: {}
     )
     .unwrap();
 
-    let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
-            .unwrap();
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(
+        Some(desired),
+        current,
+        &Default::default(),
+    )
+    .unwrap();
 
     assert_eq!(
         &merged_ovsdb.external_ids,
@@ -172,11 +184,37 @@ fn test_ovsdb_verify_null_current() {
     let current = desired.clone();
 
     let merged_ovsdb = MergedOvsDbGlobalConfig::new(
-        desired,
+        Some(desired),
         pre_apply_current,
         &Default::default(),
     )
     .unwrap();
 
-    merged_ovsdb.verify(&current).unwrap();
+    merged_ovsdb.verify(current).unwrap();
+}
+
+#[test]
+fn test_ovsdb_purge_by_empty_section() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        ovs-db: {}
+        ",
+    )
+    .unwrap();
+
+    assert!(desired.ovsdb.unwrap().is_purge());
+}
+
+#[test]
+fn test_ovsdb_purge_by_empty_hash() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        ovs-db:
+          external_ids: {}
+          other_config: {}
+        ",
+    )
+    .unwrap();
+
+    assert!(desired.ovsdb.unwrap().is_purge());
 }

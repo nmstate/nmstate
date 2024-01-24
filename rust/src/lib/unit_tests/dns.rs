@@ -46,9 +46,9 @@ fn test_dns_verify_uncompressed_srvs() {
     )
     .unwrap();
 
-    let merged = MergedDnsState::new(desired, DnsState::new()).unwrap();
+    let merged = MergedDnsState::new(Some(desired), DnsState::new()).unwrap();
 
-    merged.verify(&current).unwrap();
+    merged.verify(current).unwrap();
 }
 
 #[test]

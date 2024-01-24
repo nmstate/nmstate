@@ -41,18 +41,10 @@ impl NetworkState {
     /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
         let state = nispor_retrieve(self.running_config_only)?;
-        if state.prop_list.contains(&"hostname") {
-            self.hostname = state.hostname;
-        }
-        if state.prop_list.contains(&"interfaces") {
-            self.interfaces = state.interfaces;
-        }
-        if state.prop_list.contains(&"routes") {
-            self.routes = state.routes;
-        }
-        if state.prop_list.contains(&"rules") {
-            self.rules = state.rules;
-        }
+        self.hostname = state.hostname;
+        self.interfaces = state.interfaces;
+        self.routes = state.routes;
+        self.rules = state.rules;
         if ovsdb_is_running() {
             match ovsdb_retrieve() {
                 Ok(mut ovsdb_state) => {
@@ -229,7 +221,7 @@ impl NetworkState {
         with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || {
             nm_checkpoint_timeout_extend(checkpoint, timeout)?;
             nm_apply(merged_state, checkpoint, timeout)?;
-            if merged_state.is_global_ovsdb_changed() && ovsdb_is_running() {
+            if merged_state.ovsdb.is_changed && ovsdb_is_running() {
                 ovsdb_apply(merged_state)?;
             }
             if let Some(running_hostname) =
@@ -290,25 +282,21 @@ impl NetworkState {
     }
 
     pub(crate) fn update_state(&mut self, other: &Self) {
-        if other.prop_list.contains(&"hostname") {
+        if let Some(other_hostname) = other.hostname.as_ref() {
             if let Some(h) = self.hostname.as_mut() {
-                if let Some(other_h) = other.hostname.as_ref() {
-                    h.update(other_h);
-                }
+                h.update(other_hostname);
             } else {
                 self.hostname = other.hostname.clone();
             }
         }
-        if other.prop_list.contains(&"interfaces") {
-            self.interfaces.update(&other.interfaces);
-        }
-        if other.prop_list.contains(&"dns") {
+        self.interfaces.update(&other.interfaces);
+        if other.dns.is_some() {
             self.dns = other.dns.clone();
         }
-        if other.prop_list.contains(&"ovsdb") {
+        if other.ovsdb.is_some() {
             self.ovsdb = other.ovsdb.clone();
         }
-        if other.prop_list.contains(&"ovn") {
+        if !other.ovn.is_none() {
             self.ovn = other.ovn.clone();
         }
     }
@@ -391,8 +379,9 @@ impl MergedNetworkState {
             .verify(&current.routes, ignored_kernel_ifaces.as_slice())?;
         self.rules
             .verify(&current.rules, ignored_kernel_ifaces.as_slice())?;
-        self.dns.verify(&current.dns)?;
-        self.ovsdb.verify(&current.ovsdb)?;
+        self.dns.verify(current.dns.clone().unwrap_or_default())?;
+        self.ovsdb
+            .verify(current.ovsdb.clone().unwrap_or_default())?;
         self.ovn.verify(&current.ovn)?;
         Ok(())
     }

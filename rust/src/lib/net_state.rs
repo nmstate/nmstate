@@ -3,7 +3,7 @@
 #[cfg(not(feature = "gen_conf"))]
 use std::collections::HashMap;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     DnsState, ErrorKind, HostNameState, Interface, Interfaces, MergedDnsState,
@@ -12,8 +12,6 @@ use crate::{
     OvnConfiguration, OvsDbGlobalConfig, RouteRules, Routes,
 };
 
-#[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
-#[non_exhaustive]
 /// The [NetworkState] represents the whole network state including both
 /// kernel status and configurations provides by backends(NetworkManager,
 /// OpenvSwitch databas, and etc).
@@ -76,39 +74,36 @@ use crate::{
 ///     system-id: 176866c7-6dc8-400f-98ac-c658509ec09f
 ///   other_config: {}
 /// ```
+#[derive(Clone, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
 pub struct NetworkState {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Hostname of current host.
     pub hostname: Option<HostNameState>,
-    #[serde(rename = "dns-resolver", default)]
     /// DNS resolver status, deserialize and serialize from/to `dns-resolver`.
-    pub dns: DnsState,
-    #[serde(rename = "route-rules", default)]
+    #[serde(rename = "dns-resolver", skip_serializing_if = "Option::is_none")]
+    pub dns: Option<DnsState>,
     /// Route rule, deserialize and serialize from/to `route-rules`.
-    pub rules: RouteRules,
-    #[serde(default)]
-    /// Route
-    pub routes: Routes,
-    #[serde(default)]
-    /// Network interfaces
-    pub interfaces: Interfaces,
     #[serde(
+        rename = "route-rules",
         default,
-        rename = "ovs-db",
-        skip_serializing_if = "OvsDbGlobalConfig::is_none"
+        skip_serializing_if = "RouteRules::is_empty"
     )]
+    pub rules: RouteRules,
+    /// Route
+    #[serde(default, skip_serializing_if = "Routes::is_empty")]
+    pub routes: Routes,
+    /// Network interfaces
+    #[serde(default)]
+    pub interfaces: Interfaces,
     /// The global configurations of OpenvSwitach daemon
-    pub ovsdb: OvsDbGlobalConfig,
+    #[serde(rename = "ovs-db", skip_serializing_if = "Option::is_none")]
+    pub ovsdb: Option<OvsDbGlobalConfig>,
     #[serde(default, skip_serializing_if = "OvnConfiguration::is_none")]
     /// The OVN configuration in the system
     pub ovn: OvnConfiguration,
     #[serde(skip)]
-    // Contain a list of struct member name which is defined explicitly in
-    // desire state instead of generated.
-    /// Only for internal use. TODO: should changed to pub(crate)
-    pub prop_list: Vec<&'static str>,
-    #[serde(skip)]
-    // TODO: Hide user space only info when serialize
     pub(crate) kernel_only: bool,
     #[serde(skip)]
     pub(crate) no_verify: bool,
@@ -126,80 +121,14 @@ pub struct NetworkState {
     pub(crate) memory_only: bool,
 }
 
-impl<'de> Deserialize<'de> for NetworkState {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let mut net_state = NetworkState::new();
-        let mut v = serde_json::Value::deserialize(deserializer)?;
-        let v = match v.as_object_mut() {
-            Some(v) => v,
-            None => {
-                return Err(serde::de::Error::custom(format!(
-                    "Expecting a HashMap/Object/Dictionary, but got {v}"
-                )));
-            }
-        };
-        if let Some(ifaces_value) = v.remove("interfaces") {
-            net_state.prop_list.push("interfaces");
-            net_state.interfaces = Interfaces::deserialize(ifaces_value)
-                .map_err(serde::de::Error::custom)?;
-        }
-        if let Some(dns_value) = v.remove("dns-resolver") {
-            net_state.prop_list.push("dns");
-            net_state.dns = DnsState::deserialize(dns_value)
-                .map_err(serde::de::Error::custom)?;
-        }
-        if let Some(route_value) = v.remove("routes") {
-            net_state.prop_list.push("routes");
-            net_state.routes = Routes::deserialize(route_value)
-                .map_err(serde::de::Error::custom)?;
-        }
-        if let Some(rule_value) = v.remove("route-rules") {
-            net_state.prop_list.push("rules");
-            net_state.rules = RouteRules::deserialize(rule_value)
-                .map_err(serde::de::Error::custom)?;
-        }
-        if let Some(ovsdb_value) = v.remove("ovs-db") {
-            net_state.prop_list.push("ovsdb");
-            net_state.ovsdb = OvsDbGlobalConfig::deserialize(ovsdb_value)
-                .map_err(serde::de::Error::custom)?;
-        }
-        if let Some(ovn_value) = v.remove("ovn") {
-            net_state.prop_list.push("ovn");
-            net_state.ovn = OvnConfiguration::deserialize(ovn_value)
-                .map_err(serde::de::Error::custom)?;
-            if net_state.ovn.bridge_mappings.as_ref().is_some() {
-                net_state.ovsdb.prop_list.push("mappings");
-            }
-        }
-        if let Some(hostname_value) = v.remove("hostname") {
-            net_state.prop_list.push("hostname");
-            net_state.hostname = Some(
-                HostNameState::deserialize(hostname_value)
-                    .map_err(serde::de::Error::custom)?,
-            );
-        }
-        if !v.is_empty() {
-            Err(serde::de::Error::custom(format!(
-                "Unsupported keys found: {:?}",
-                v.keys().collect::<Vec<&String>>()
-            )))
-        } else {
-            Ok(net_state)
-        }
-    }
-}
-
 impl NetworkState {
     pub fn is_empty(&self) -> bool {
         self.hostname.is_none()
-            && self.dns.is_empty()
+            && self.dns.is_none()
+            && self.ovsdb.is_none()
             && self.rules.is_empty()
             && self.routes.is_empty()
             && self.interfaces.is_empty()
-            && self.ovsdb.is_none()
             && self.ovn.is_none()
     }
 
@@ -363,15 +292,14 @@ impl NetworkState {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct MergedNetworkState {
+    pub(crate) interfaces: MergedInterfaces,
     pub(crate) hostname: MergedHostNameState,
     pub(crate) dns: MergedDnsState,
-    pub(crate) interfaces: MergedInterfaces,
     pub(crate) ovn: MergedOvnConfiguration,
     pub(crate) ovsdb: MergedOvsDbGlobalConfig,
     pub(crate) routes: MergedRoutes,
     pub(crate) rules: MergedRouteRules,
     pub(crate) memory_only: bool,
-    pub(crate) prop_list: Vec<&'static str>,
 }
 
 impl MergedNetworkState {
@@ -401,18 +329,24 @@ impl MergedNetworkState {
 
         let ovn = MergedOvnConfiguration::new(desired.ovn, current.ovn)?;
 
-        let ovsdb =
-            MergedOvsDbGlobalConfig::new(desired.ovsdb, current.ovsdb, &ovn)?;
+        let ovsdb = MergedOvsDbGlobalConfig::new(
+            desired.ovsdb,
+            current.ovsdb.unwrap_or_default(),
+            &ovn,
+        )?;
+
         let ret = Self {
             interfaces,
             routes,
             rules,
-            dns: MergedDnsState::new(desired.dns, current.dns)?,
+            dns: MergedDnsState::new(
+                desired.dns,
+                current.dns.unwrap_or_default(),
+            )?,
             ovn,
             ovsdb,
             hostname,
             memory_only,
-            prop_list: desired.prop_list,
         };
         ret.validate_ipv6_link_local_address_dns_srv()?;
 

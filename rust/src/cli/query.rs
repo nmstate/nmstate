@@ -13,14 +13,14 @@ use crate::error::CliError;
 pub(crate) struct SortedNetworkState {
     #[serde(skip_serializing_if = "Option::is_none")]
     hostname: Option<HostNameState>,
-    #[serde(rename = "dns-resolver", default)]
-    dns: DnsState,
+    #[serde(rename = "dns-resolver", skip_serializing_if = "Option::is_none")]
+    dns: Option<DnsState>,
     #[serde(rename = "route-rules", default)]
     rules: RouteRules,
     routes: Routes,
     interfaces: Vec<Value>,
-    #[serde(rename = "ovs-db")]
-    ovsdb: OvsDbGlobalConfig,
+    #[serde(rename = "ovs-db", skip_serializing_if = "Option::is_none")]
+    ovsdb: Option<OvsDbGlobalConfig>,
     #[serde(rename = "ovn")]
     ovn: OvnConfiguration,
 }

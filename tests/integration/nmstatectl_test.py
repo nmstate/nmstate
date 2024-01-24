@@ -384,8 +384,7 @@ def test_format_command():
             f"nmstatectl format {fd.name}".split(), check=True
         )[1]
         assert (
-            """
-interfaces:
+            """interfaces:
 - name: bond99
   type: bond
   state: up

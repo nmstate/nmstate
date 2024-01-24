@@ -7,7 +7,7 @@ use crate::{
 
 impl MergedOvsDbGlobalConfig {
     pub(crate) fn get_features(&self) -> Vec<NmstateFeature> {
-        if !self.desired.is_none() {
+        if self.desired.is_some() {
             vec![NmstateFeature::OvsDbGlobal]
         } else {
             Vec::new()
