@@ -10,8 +10,8 @@ use super::super::{
     settings::{
         NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
         NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_PORT_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VPN_SETTING_NAME,
+        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
 };
 
@@ -44,6 +44,12 @@ pub(crate) fn delete_exist_profiles(
             if let Some(nm_iface_type) = nm_conn.iface_type() {
                 changed_iface_name_types.push((name, nm_iface_type));
             }
+        } else if nm_conn.iface_type() == Some(NM_SETTING_VPN_SETTING_NAME) {
+            if let Some(name) = nm_conn.id() {
+                // For VPN, the we use connection id
+                changed_iface_name_types
+                    .push((name, NM_SETTING_VPN_SETTING_NAME));
+            }
         }
     }
     for exist_nm_conn in exist_nm_conns {
@@ -54,6 +60,14 @@ pub(crate) fn delete_exist_profiles(
         };
         let iface_name = if let Some(i) = exist_nm_conn.iface_name() {
             i
+        } else if exist_nm_conn.iface_type()
+            == Some(NM_SETTING_VPN_SETTING_NAME)
+        {
+            if let Some(i) = exist_nm_conn.id() {
+                i
+            } else {
+                continue;
+            }
         } else {
             continue;
         };

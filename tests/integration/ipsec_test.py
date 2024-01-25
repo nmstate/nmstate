@@ -958,3 +958,61 @@ def test_ipsec_ipv6_libreswan_client_server(
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX6, HOSTA_NIC
     )
+
+
+def test_ipsec_modify_exist_connection(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          description: TESTING
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            psk: {PSK}
+            left: {HOSTA_IPV4_PSK}
+            leftid: 'hosta-psk.example.org'
+            right: {HOSTB_IPV4_PSK}
+            rightid: 'hostb-psk.example.org'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_PSK, HOSTB_IPV4_PSK
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
+    )
+
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          libreswan:
+            type: tunnel
+            psk: {PSK}
+            left: {HOSTA_IPV4_PSK}
+            leftid: 'hosta-psk.example.org'
+            right: {HOSTB_IPV4_PSK}
+            rightid: 'hostb-psk.example.org'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_PSK, HOSTB_IPV4_PSK
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
+    )
+
+    iface_state = show_only(["hosta_conn"])[Interface.KEY][0]
+
+    assert iface_state[Interface.DESCRIPTION] == "TESTING"
+    assert iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]

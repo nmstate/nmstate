@@ -511,7 +511,17 @@ pub(crate) fn get_exist_profile<'a>(
         } else {
             continue;
         };
-        if exist_nm_conn.iface_name() == Some(iface_name)
+        if nm_iface_type == NM_SETTING_VPN_SETTING_NAME {
+            if exist_nm_conn.id() == Some(iface_name) {
+                if let Some(uuid) = exist_nm_conn.uuid() {
+                    // Prefer activated connection
+                    if nm_ac_uuids.contains(&uuid) {
+                        return Some(exist_nm_conn);
+                    }
+                }
+                found_nm_conns.push(exist_nm_conn);
+            }
+        } else if exist_nm_conn.iface_name() == Some(iface_name)
             && (exist_nm_conn.iface_type() == Some(&nm_iface_type)
                 || (nm_iface_type == NM_SETTING_WIRED_SETTING_NAME
                     && exist_nm_conn.iface_type()
