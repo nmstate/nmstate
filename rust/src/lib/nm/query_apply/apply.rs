@@ -26,7 +26,10 @@ use super::super::{
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
-    settings::{iface_type_to_nm, NM_SETTING_OVS_PORT_SETTING_NAME},
+    settings::{
+        iface_type_to_nm, NM_SETTING_OVS_PORT_SETTING_NAME,
+        NM_SETTING_VPN_SETTING_NAME,
+    },
 };
 
 use crate::{
@@ -392,6 +395,7 @@ fn delete_orphan_ports(
 // * VLAN config changed.
 // * Veth peer changed.
 // * NM cannot reapply changes to MPTCP flags.
+// * All VPN connection
 fn gen_nm_conn_need_to_deactivate_first(
     nm_conns_to_activate: &[NmConnection],
     activated_nm_conns: &[&NmConnection],
@@ -414,6 +418,7 @@ fn gen_nm_conn_need_to_deactivate_first(
                     || is_vxlan_changed(nm_conn, activated_nm_con)
                     || is_veth_peer_changed(nm_conn, activated_nm_con)
                     || is_mptcp_flags_changed(nm_conn, activated_nm_con)
+                    || nm_conn.iface_type() == Some(NM_SETTING_VPN_SETTING_NAME)
                 {
                     ret.push((*activated_nm_con).clone());
                 }
