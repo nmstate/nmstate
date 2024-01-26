@@ -161,6 +161,10 @@ def test_add_static_route_with_route_type(eth1_up):
             Route.DESTINATION: "198.51.100.0/24",
             Route.ROUTETYPE: Route.ROUTETYPE_PROHIBIT,
         },
+        {
+            Route.DESTINATION: "0.0.0.0/8",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+        },
     ]
     libnmstate.apply(
         {
@@ -173,6 +177,7 @@ def test_add_static_route_with_route_type(eth1_up):
     assert IPV4_TEST_NET1 in routes_output4
     assert Route.ROUTETYPE_BLACKHOLE in routes_output4
     assert "198.51.100.0/24" in routes_output4
+    assert "0.0.0.0/8" in routes_output4
     assert Route.ROUTETYPE_PROHIBIT in routes_output4
     assert IPV6_TEST_NET1 in routes_output6
     assert Route.ROUTETYPE_UNREACHABLE in routes_output6
