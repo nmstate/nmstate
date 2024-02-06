@@ -214,7 +214,7 @@ fn main() {
         )
         .subcommand(
             clap::Command::new(SUB_CMD_ROLLBACK)
-                .about("Commit a change")
+                .about("Rollback a change")
                 .arg(
                     clap::Arg::new("CHECKPOINT")
                         .required(false)
