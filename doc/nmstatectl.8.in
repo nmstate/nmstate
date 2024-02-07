@@ -118,8 +118,7 @@ displays nmstate version.
 .RS
 Apply all network state files ending with \fB.yml\fR in specified(
 default: \fB/etc/nmstate\fR) folder.
-The applied network state file will be renamed with postfix \fB.applied\fR
-to prevent repeated applied on next run.
+Please refer to manpage \fBnmstate.service(8)\fR for detail.
 .RE
 
 .PP
