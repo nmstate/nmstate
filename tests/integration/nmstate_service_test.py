@@ -17,6 +17,10 @@ from .testlib.assertlib import assert_absent
 from .testlib.assertlib import assert_state_match
 from .testlib.statelib import show_only
 
+NMSTATE_CONF = """
+[service]
+keep_state_file_after_apply = true
+"""
 
 TEST_YAML1_CONTENT = """
 ---
@@ -65,6 +69,7 @@ desired:
 """
 
 CONFIG_DIR = "/etc/nmstate"
+NMSTATE_CONF_PATH = f"{CONFIG_DIR}/nmstate.conf"
 TEST_CONFIG1_FILE_PATH = f"{CONFIG_DIR}/01-nmstate-test.yml"
 TEST_CONFIG1_APPLIED_FILE_PATH = f"{CONFIG_DIR}/01-nmstate-test.applied"
 TEST_CONFIG2_FILE_PATH = f"{CONFIG_DIR}/02-nmstate-test.yml"
@@ -72,6 +77,16 @@ TEST_CONFIG2_APPLIED_FILE_PATH = f"{CONFIG_DIR}/02-nmstate-test.applied"
 TEST_CONFIG3_FILE_PATH = f"{CONFIG_DIR}/03-nmstate-policy-test.yml"
 TEST_CONFIG3_APPLIED_FILE_PATH = f"{CONFIG_DIR}/03-nmstate-policy-test.applied"
 DUMMY1 = "dummy1"
+
+
+@pytest.fixture
+def conf_do_not_delete_applied():
+    if not os.path.isdir(CONFIG_DIR):
+        os.mkdir(CONFIG_DIR)
+    with open(NMSTATE_CONF_PATH, "w") as fd:
+        fd.write(NMSTATE_CONF)
+    yield
+    os.remove(NMSTATE_CONF_PATH)
 
 
 @pytest.fixture
@@ -102,13 +117,17 @@ def nmstate_etc_config():
             ]
         }
     )
-    os.remove(TEST_CONFIG1_APPLIED_FILE_PATH)
-    os.remove(TEST_CONFIG2_APPLIED_FILE_PATH)
-    os.remove(TEST_CONFIG1_FILE_PATH)
-    os.remove(TEST_CONFIG2_FILE_PATH)
+    for file in (
+        TEST_CONFIG1_APPLIED_FILE_PATH,
+        TEST_CONFIG2_APPLIED_FILE_PATH,
+        TEST_CONFIG1_FILE_PATH,
+        TEST_CONFIG2_FILE_PATH,
+    ):
+        if os.path.isfile(file):
+            os.remove(file)
 
 
-def test_nmstate_service_apply(nmstate_etc_config):
+def test_nmstate_service_apply(nmstate_etc_config, conf_do_not_delete_applied):
     exec_cmd("systemctl restart nmstate".split(), check=True)
 
     desire_state = yaml.load(TEST_YAML2_CONTENT, Loader=yaml.SafeLoader)
@@ -152,7 +171,7 @@ def dummy1_up():
     )
 
 
-def test_nmstate_service_apply_nmpolicy(dummy1_up):
+def test_nmstate_service_apply_nmpolicy(dummy1_up, conf_do_not_delete_applied):
     with open(TEST_CONFIG3_FILE_PATH, "w") as fd:
         fd.write(TEST_YAML3_CONTENT)
 
@@ -177,3 +196,15 @@ def test_nmstate_service_without_etc_folder():
         shutil.rmtree(CONFIG_DIR, ignore_errors=True)
 
     exec_cmd("nmstatectl service".split(), check=True)
+
+
+def test_nmstate_service_remove_applied_file_by_default(nmstate_etc_config):
+    exec_cmd("systemctl restart nmstate".split(), check=True)
+
+    desire_state = yaml.load(TEST_YAML2_CONTENT, Loader=yaml.SafeLoader)
+    assert_state_match(desire_state)
+
+    assert not os.path.isfile(TEST_CONFIG1_FILE_PATH)
+    assert not os.path.isfile(TEST_CONFIG2_FILE_PATH)
+    assert os.path.isfile(TEST_CONFIG1_APPLIED_FILE_PATH)
+    assert os.path.isfile(TEST_CONFIG2_APPLIED_FILE_PATH)
