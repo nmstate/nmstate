@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import hashlib
 from pathlib import Path
 
 import yaml
@@ -75,13 +74,6 @@ TEST_CONFIG3_APPLIED_FILE_PATH = f"{CONFIG_DIR}/03-nmstate-policy-test.applied"
 DUMMY1 = "dummy1"
 
 
-def sha256sum(filename):
-    with open(filename, "rb", buffering=0) as f:
-        digest = hashlib.sha256()
-        digest.update(f.read())
-        return digest.hexdigest()
-
-
 @pytest.fixture
 def nmstate_etc_config():
     if not os.path.isdir(CONFIG_DIR):
@@ -123,12 +115,14 @@ def test_nmstate_service_apply(nmstate_etc_config):
     assert_state_match(desire_state)
 
     assert os.path.isfile(TEST_CONFIG1_FILE_PATH)
-    assert Path(TEST_CONFIG1_APPLIED_FILE_PATH).read_text() == sha256sum(
-        TEST_CONFIG1_FILE_PATH
+    assert (
+        Path(TEST_CONFIG1_APPLIED_FILE_PATH).read_text()
+        == Path(TEST_CONFIG1_FILE_PATH).read_text()
     )
     assert os.path.isfile(TEST_CONFIG2_FILE_PATH)
-    assert Path(TEST_CONFIG2_APPLIED_FILE_PATH).read_text() == sha256sum(
-        TEST_CONFIG2_FILE_PATH
+    assert (
+        Path(TEST_CONFIG2_APPLIED_FILE_PATH).read_text()
+        == Path(TEST_CONFIG2_FILE_PATH).read_text()
     )
 
 
@@ -169,8 +163,9 @@ def test_nmstate_service_apply_nmpolicy(dummy1_up):
         exec_cmd("systemctl restart nmstate".split(), check=True)
         assert_absent(DUMMY1)
         assert os.path.isfile(TEST_CONFIG3_FILE_PATH)
-        assert Path(TEST_CONFIG3_APPLIED_FILE_PATH).read_text() == sha256sum(
-            TEST_CONFIG3_FILE_PATH
+        assert (
+            Path(TEST_CONFIG3_APPLIED_FILE_PATH).read_text()
+            == Path(TEST_CONFIG3_FILE_PATH).read_text()
         )
     finally:
         os.remove(TEST_CONFIG3_APPLIED_FILE_PATH)

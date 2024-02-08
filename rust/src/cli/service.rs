@@ -4,26 +4,22 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
-use std::fs::File;
-use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 
 use crate::{apply::apply, error::CliError};
 
-use ring::digest::{Context, SHA256};
-
 const CONFIG_FILE_EXTENTION: &str = "yml";
-const CHECKSUM_FILE_EXTENTION: &str = "applied";
+const APPLIED_FILE_EXTENTION: &str = "applied";
 
 #[derive(Eq, Hash, PartialEq, Clone, PartialOrd, Ord)]
-struct FileChecksum {
+struct FileContent {
     path: PathBuf,
-    checksum: String,
+    content: String,
 }
 
-impl FileChecksum {
-    fn new(path: PathBuf, checksum: String) -> Self {
-        Self { path, checksum }
+impl FileContent {
+    fn new(path: PathBuf, content: String) -> Self {
+        Self { path, content }
     }
 }
 
@@ -87,10 +83,10 @@ pub(crate) fn ncl_service(
                     config_file.path.display()
                 );
                 if let Err(e) =
-                    write_checksum(&config_file.path, &config_file.checksum)
+                    write_content(&config_file.path, &config_file.content)
                 {
                     log::error!(
-                        "Failed to generate checksum file: {} {}",
+                        "Failed to generate applied file: {} {}",
                         config_file.path.display(),
                         e
                     );
@@ -109,26 +105,25 @@ pub(crate) fn ncl_service(
     Ok("".to_string())
 }
 
-// All file ending with `.yml` that do not have a sha256 checksum stored at
-// a `.applied` file or the checksum stored differs.
-fn get_config_files(folder: &str) -> Result<Vec<FileChecksum>, CliError> {
+// All file ending with `.yml` that do not have a copy stored at
+// a `.applied` file or the copy stored differs.
+fn get_config_files(folder: &str) -> Result<Vec<FileContent>, CliError> {
     let folder = Path::new(folder);
-    let mut yml_files = HashSet::<FileChecksum>::new();
-    let mut applied_files = HashSet::<FileChecksum>::new();
+    let mut yml_files = HashSet::<FileContent>::new();
+    let mut applied_files = HashSet::<FileContent>::new();
     for entry in folder.read_dir()? {
         let file = entry?.path();
         if file.extension() == Some(OsStr::new(CONFIG_FILE_EXTENTION)) {
-            let digest = sha256_digest(&file)?;
-            yml_files.insert(FileChecksum::new(
+            let content = fs::read_to_string(&file)?;
+            yml_files.insert(FileContent::new(
                 folder.join(file).with_extension(""),
-                digest,
+                content,
             ));
-        } else if file.extension() == Some(OsStr::new(CHECKSUM_FILE_EXTENTION))
-        {
-            let digest = fs::read_to_string(&file)?;
-            applied_files.insert(FileChecksum::new(
+        } else if file.extension() == Some(OsStr::new(APPLIED_FILE_EXTENTION)) {
+            let content = fs::read_to_string(&file)?;
+            applied_files.insert(FileContent::new(
                 folder.join(file).with_extension(""),
-                digest,
+                content,
             ));
         }
     }
@@ -136,9 +131,9 @@ fn get_config_files(folder: &str) -> Result<Vec<FileChecksum>, CliError> {
         .difference(&applied_files)
         .cloned()
         .map(|f| {
-            FileChecksum::new(
+            FileContent::new(
                 f.path.with_extension(CONFIG_FILE_EXTENTION),
-                f.checksum,
+                f.content,
             )
         })
         .collect();
@@ -146,35 +141,17 @@ fn get_config_files(folder: &str) -> Result<Vec<FileChecksum>, CliError> {
     Ok(ret)
 }
 
-// Dump state checksum to `.applied` file.
-pub(crate) fn write_checksum(
+// Dump state to `.applied` file.
+pub(crate) fn write_content(
     file_path: &Path,
-    checksum: &str,
+    content: &str,
 ) -> Result<(), CliError> {
-    let checksum_file_path = file_path.with_extension(CHECKSUM_FILE_EXTENTION);
-    fs::write(&checksum_file_path, checksum)?;
+    let applied_file_path = file_path.with_extension(APPLIED_FILE_EXTENTION);
+    fs::write(&applied_file_path, content)?;
     log::info!(
-        "Checksum for config {} stored at {}",
+        "Content for config {} stored at {}",
         file_path.display(),
-        checksum_file_path.display(),
+        applied_file_path.display(),
     );
     Ok(())
-}
-
-fn sha256_digest(file_path: &PathBuf) -> Result<String, CliError> {
-    let mut context = Context::new(&SHA256);
-    let mut buffer = [0; 1024];
-
-    let input = File::open(file_path)?;
-    let mut reader = BufReader::new(input);
-
-    loop {
-        let count = reader.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        context.update(&buffer[..count]);
-    }
-
-    Ok(format!("{}", HexSlice(context.finish().as_ref())))
 }
