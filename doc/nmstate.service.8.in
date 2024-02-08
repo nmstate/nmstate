@@ -9,8 +9,20 @@ nmstate\&.service
 nmstate\&.service invokes \fBnmstatectl service\fR command which
 apply all network state files ending with \fB.yml\fR in
 \fB/etc/nmstate\fR folder.
-The applied network state file will be copied to new file with \fB.applied\fR
-postfix to prevent repeated applied on next service start.
+By default, the network state file will be renamed with the suffix
+\fB.applied\fR after applying it. This is to prevent it being applied again
+when the service runs next.
+
+With \fB/etc/nmstate/nmstate.conf\fR holding below content:
+
+\fB
+[service]
+keep_state_file_after_apply = true
+\fR
+
+The nmstate.service will not remove network state file, just copy applied
+network stata to file with the suffix \fB.applied\fR after applying it.
+
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
 .SH COPYRIGHT

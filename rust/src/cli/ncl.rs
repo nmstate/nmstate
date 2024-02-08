@@ -451,6 +451,8 @@ fn main() {
         log_builder.init();
     }
 
+    log::info!("Nmstate version: {}", clap::crate_version!());
+
     if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_CONF) {
         if let Some(file_path) = matches.value_of("STATE_FILE") {
             print_result_and_exit(gen_conf(file_path));
