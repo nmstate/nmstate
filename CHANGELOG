@@ -1,4 +1,23 @@
 # Changelog
+## [2.2.24] - 2024-02-08
+### Breaking changes
+ - Rust API: base_iface: Remove `prop_list`. (42936b17)
+ - Rust API: ip: Remove the `prop_list` property. (bae6adb3)
+ - Rust API: net_state: Remove `prop_list`. (85dbacc4)
+ - Increase minimum supported NetworkManager version to 1.40. (511e83b4)
+
+### New features
+ - Add support of deprecated `slaves` property in ovs bond. (9565b963)
+ - Support assigning static routes to interface without addresses. (fc4c72e6)
+
+### Bug fixes
+ - cli service: Allow user to opt-in on not deleting applied file. (733deba3)
+ - ncl: Fix description of rollback command. (6698891e)
+ - manpage: Fix incorrect document on `nmstatectl service`. (a6b0ab1d)
+ - nm ipsec: Fix bug on modifying exist ipsec connection. (d64baf98)
+ - route: Allow route destination `0.0.0.0/8` for non-unicast route. (25a73384)
+ - Makefile: fix python install path for Python >= 3.12. (dd0c5aec)
+
 ## [2.2.23] - 2024-01-17
 ### Breaking changes
  - N/A
