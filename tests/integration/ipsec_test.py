@@ -33,6 +33,8 @@ HOSTA_IPV4_PSK = "192.0.2.250"
 HOSTA_IPV4_RSA = "192.0.2.249"
 HOSTA_IPV4_CRT_P2P = "192.0.2.248"
 HOSTA_IPV4_TRANSPORT = "192.0.2.247"
+HOSTA_IPV4_NET2NET = "192.0.2.246"
+HOSTA_IPV4_EXTRA_NET = " 198.51.100.129/25"
 HOSTA_IPSEC_CONN_NAME = "hosta_conn"
 HOSTA_IPV6_P2P = "2001:db8:f::a"
 HOSTB_IPV6_P2P = "2001:db8:f::b"
@@ -45,11 +47,13 @@ HOSTB_IPV4_PSK = "192.0.2.153"
 HOSTB_IPV4_RSA = "192.0.2.154"
 HOSTB_IPV4_CRT_P2P = "192.0.2.155"
 HOSTB_IPV4_TRANSPORT = "192.0.2.156"
+HOSTB_IPV4_NET2NET = "192.0.2.157"
 HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
 HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
 HOSTB_VPN_SUBNET_PREFIX6 = "2001:db8:9::"
 HOSTB_VPN_SUBNET6 = f"{HOSTB_VPN_SUBNET_PREFIX6}/64"
 HOSTB_EXT_IP = "198.51.100.1"
+HOSTB_IPV4_EXTRA_NET = "198.51.100.0/25"
 HOSTB_EXT_IPV6 = "2001:db8:1::"
 HOSTB_DUMMY_NIC = "dummy0"
 HOSTB_NS = "nmstate_ipsec_test"
@@ -61,6 +65,7 @@ HOSTB_IPSEC_CRT_P2P_CONN_NAME = "hostb_conn_crt_p2p"
 HOSTB_IPSEC_TRANSPORET_CONN_NAME = "hostb_conn_transport"
 HOSTB_IPSEC_IPV6_P2P_CONN_NAME = "hostb_conn_ipv6_p2p"
 HOSTB_IPSEC_IPV6_CS_CONN_NAME = "hostb_conn_ipv6_cs"
+HOSTB_IPSEC_IPV4_NET2NET = "hostb_conn_ipv4_net2net"
 HOSTB_IPSEC_CONN_CONTENT = """
 config setup
     protostack=netkey
@@ -133,6 +138,21 @@ conn hostb_conn_transport
     rightid=@hosta.example.org
     rightcert=hosta.example.org
     rightmodecfgclient=no
+    ikev2=insist
+
+conn hostb_conn_ipv4_net2net
+    hostaddrfamily=ipv4
+    left=192.0.2.157
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftsubnet=198.51.100.0/25
+    leftmodecfgserver=yes
+    rightmodecfgclient=yes
+    leftsendcert=always
+    right=192.0.2.246
+    rightsubnet=198.51.100.129/25
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
     ikev2=insist
 
 conn hostb_conn_ipv6_p2p
@@ -241,7 +261,7 @@ def setup_hostb_ipsec_conn():
         )
         cmdlib.exec_cmd(
             f"ip netns exec {HOSTB_NS} "
-            f"ip addr add {HOSTB_EXT_IP}/32 dev {HOSTB_DUMMY_NIC}".split(),
+            f"ip addr add {HOSTB_EXT_IP}/25 dev {HOSTB_DUMMY_NIC}".split(),
             check=True,
         )
         cmdlib.exec_cmd(
@@ -266,6 +286,7 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPV4_RSA,
             HOSTB_IPV4_CRT_P2P,
             HOSTB_IPV4_TRANSPORT,
+            HOSTB_IPV4_NET2NET,
         ]:
             cmdlib.exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
@@ -301,6 +322,7 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPSEC_TRANSPORET_CONN_NAME,
             HOSTB_IPSEC_IPV6_P2P_CONN_NAME,
             HOSTB_IPSEC_IPV6_CS_CONN_NAME,
+            HOSTB_IPSEC_IPV4_NET2NET,
         ]:
             cmdlib.exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
@@ -467,6 +489,10 @@ def setup_hosta_ip():
                             },
                             {
                                 InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_TRANSPORT,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            },
+                            {
+                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_NET2NET,
                                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                             },
                         ],
@@ -1016,3 +1042,36 @@ def test_ipsec_modify_exist_connection(
 
     assert iface_state[Interface.DESCRIPTION] == "TESTING"
     assert iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
+
+
+def test_ipsec_ipv4_net_to_net(ipsec_hosta_conn_cleanup):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          description: TESTING
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            left: {HOSTA_IPV4_NET2NET}
+            leftid: '%fromcert'
+            leftcert: hosta.example.org
+            right: {HOSTB_IPV4_NET2NET}
+            rightid: 'hostb.example.org'
+            rightsubnet: '198.51.100.0/25'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    # time.sleep(10000)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_NET2NET, HOSTB_IPV4_NET2NET
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_policy,
+        HOSTA_IPV4_EXTRA_NET,
+        HOSTB_IPV4_EXTRA_NET,
+    )
