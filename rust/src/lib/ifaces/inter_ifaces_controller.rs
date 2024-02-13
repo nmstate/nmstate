@@ -68,7 +68,7 @@ impl MergedInterfaces {
                         continue;
                     }
                     if let Some(ports) = ctrl_iface.merged.ports() {
-                        if !ports.contains(&des_ctrl_name.as_str()) {
+                        if !ports.contains(&merged_iface.merged.name()) {
                             return Err(NmstateError::new(
                                 ErrorKind::InvalidArgument,
                                 format!(

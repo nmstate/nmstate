@@ -453,6 +453,31 @@ fn test_overbook_swap_port_of_bond() {
 }
 
 #[test]
+fn test_iface_controller_not_conflict_with_bond_ports() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+- name: bond0
+  type: bond
+  state: up
+  link-aggregation:
+    mode: balance-rr
+  controller: br0
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+      - name: bond0
+",
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(des_ifaces, Interfaces::new(), false, false);
+    assert!(result.is_ok());
+}
+
+#[test]
 fn test_iface_controller_conflict_with_bond_ports() {
     let mut ifaces = Interfaces::new();
     ifaces.push(new_eth_iface("eth0"));
