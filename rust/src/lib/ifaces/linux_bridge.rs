@@ -339,12 +339,6 @@ impl LinuxBridgeInterface {
             }
         }
     }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        if let Some(i) = self.bridge.as_mut() {
-            i.post_deserialize_cleanup()
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -359,30 +353,12 @@ pub struct LinuxBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none", alias = "ports")]
     /// Linux bridge ports. When applying, desired port list will __override__
     /// current port list.
-    /// Serialize to 'port'. Deserialize from `port` or `ports`.
     pub port: Option<Vec<LinuxBridgePortConfig>>,
-    // Deprecated, please use `ports`, this is only for backwards compatibility
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "port",
-        alias = "slaves"
-    )]
-    pub(crate) slaves: Option<Vec<LinuxBridgePortConfig>>,
 }
 
 impl LinuxBridgeConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        if self.slaves.as_ref().is_some() {
-            log::warn!(
-                "The `slaves` is deprecated, please replace with `ports`."
-            );
-            self.port = self.slaves.clone();
-            self.slaves = None;
-        }
     }
 }
 

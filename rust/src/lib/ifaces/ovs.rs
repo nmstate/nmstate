@@ -61,12 +61,6 @@ impl Default for OvsBridgeInterface {
 }
 
 impl OvsBridgeInterface {
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        if let Some(i) = self.bridge.as_mut() {
-            i.post_deserialize_cleanup()
-        }
-    }
-
     // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
         if let Some(br_conf) = &self.bridge {
@@ -135,10 +129,17 @@ impl OvsBridgeInterface {
         self.base.ipv6 = None;
         self.sort_ports();
 
-        if let Some(br_conf) = self.bridge.as_mut() {
-            br_conf.sanitize(is_desired)?;
+        if let Some(port_confs) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.ports.as_ref())
+        {
+            for port_conf in port_confs {
+                if let Some(vlan_conf) = port_conf.vlan.as_ref() {
+                    vlan_conf.sanitize(is_desired)?;
+                }
+            }
         }
-
         Ok(())
     }
 
@@ -260,45 +261,13 @@ pub struct OvsBridgeConfig {
         rename = "port",
         alias = "ports"
     )]
-    /// Serialize to 'port'. Deserialize from `port` or `ports` or
-    /// `slaves`(deprecated).
+    /// Serialize to 'port'. Deserialize from `port` or `ports`.
     pub ports: Option<Vec<OvsBridgePortConfig>>,
-    // Deprecated, please use `ports`, this is only for backwards compatibility
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "port",
-        alias = "slaves"
-    )]
-    pub(crate) slaves: Option<Vec<OvsBridgePortConfig>>,
 }
 
 impl OvsBridgeConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        if self.slaves.as_ref().is_some() {
-            log::warn!(
-                "The `slaves` is deprecated, please replace with `ports`."
-            );
-            self.ports = self.slaves.clone();
-            self.slaves = None;
-        }
-    }
-
-    pub(crate) fn sanitize(
-        &mut self,
-        is_desired: bool,
-    ) -> Result<(), NmstateError> {
-        if let Some(port_confs) = self.ports.as_ref() {
-            for port_conf in port_confs {
-                if let Some(vlan_conf) = port_conf.vlan.as_ref() {
-                    vlan_conf.sanitize(is_desired)?;
-                }
-            }
-        }
-        Ok(())
     }
 }
 

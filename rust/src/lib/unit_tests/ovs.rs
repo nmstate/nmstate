@@ -903,26 +903,6 @@ fn test_ovs_stp_option_as_bool() {
 }
 
 #[test]
-fn test_ovs_bridge_deprecated_prop() {
-    let mut iface: OvsBridgeInterface = serde_yaml::from_str(
-        r"---
-        name: br0
-        type: ovs-bridge
-        state: up
-        bridge:
-          slaves:
-          - name: eth1
-          options:
-            stp: true",
-    )
-    .unwrap();
-
-    iface.post_deserialize_cleanup();
-
-    assert_eq!(iface.ports(), Some(vec!["eth1"]));
-}
-
-#[test]
 fn test_ovs_iface_serialize_allow_extra_patch_ports() {
     let desired: OvsBridgeInterface = serde_yaml::from_str(
         r#"---
