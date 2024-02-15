@@ -96,10 +96,6 @@ class Bridge:
     def ports_names(self):
         return [port[OVSBridge.Port.NAME] for port in self._get_ports()]
 
-    @property
-    def bridge_iface(self):
-        return self._bridge_iface
-
     def _add_port(self, name):
         self._bridge_iface[OVSBridge.CONFIG_SUBTREE].setdefault(
             OVSBridge.PORT_SUBTREE, []

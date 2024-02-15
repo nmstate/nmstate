@@ -376,12 +376,6 @@ impl BondInterface {
         }
         ret
     }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        if let Some(i) = self.bond.as_mut() {
-            i.post_deserialize_cleanup()
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
@@ -483,16 +477,9 @@ pub struct BondConfig {
     pub options: Option<BondOptions>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "ports")]
     /// Deserialize and serialize from/to `port`.
-    /// You can also use `ports` or `slaves`(deprecated) for deserializing.
+    /// You can also use `ports` for deserializing.
     /// When applying, if defined, it will override current port list.
     pub port: Option<Vec<String>>,
-    // Deprecated, please use `ports`, this is only for backwards compatibility
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "port",
-        alias = "slaves"
-    )]
-    pub(crate) slaves: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Deserialize and serialize from/to `ports-config`.
     /// When applying, if defined, it will override current ports
@@ -506,16 +493,6 @@ pub struct BondConfig {
 impl BondConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        if self.slaves.as_ref().is_some() {
-            log::warn!(
-                "The `slaves` is deprecated, please replace with `ports`."
-            );
-            self.port = self.slaves.clone();
-            self.slaves = None;
-        }
     }
 }
 

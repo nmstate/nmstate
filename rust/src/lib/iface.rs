@@ -736,15 +736,6 @@ impl Interface {
             iface.change_port_name(org_port_name, new_port_name);
         }
     }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        match self {
-            Interface::OvsBridge(iface) => iface.post_deserialize_cleanup(),
-            Interface::Bond(iface) => iface.post_deserialize_cleanup(),
-            Interface::LinuxBridge(iface) => iface.post_deserialize_cleanup(),
-            _ => (),
-        }
-    }
 }
 
 // The default on enum is experimental, but clippy is suggestion we use
