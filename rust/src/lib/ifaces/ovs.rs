@@ -285,13 +285,6 @@ impl OvsBridgeConfig {
             self.ports = self.slaves.clone();
             self.slaves = None;
         }
-        if let Some(ports) = self.ports.as_mut() {
-            for port in ports {
-                if let Some(bond_conf) = port.bond.as_mut() {
-                    bond_conf.post_deserialize_cleanup();
-                }
-            }
-        }
     }
 
     pub(crate) fn sanitize(
@@ -511,7 +504,6 @@ impl OvsInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 /// The example yaml output of OVS bond:
 /// ```yml
@@ -547,13 +539,6 @@ pub struct OvsBridgeBondConfig {
     )]
     /// Serialize to 'port'. Deserialize from `port` or `ports`.
     pub ports: Option<Vec<OvsBridgeBondPortConfig>>,
-    // Deprecated, please use `ports`, this is only for backwards compatibility
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "port",
-        alias = "slaves"
-    )]
-    pub(crate) slaves: Option<Vec<OvsBridgeBondPortConfig>>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
@@ -582,16 +567,6 @@ pub struct OvsBridgeBondConfig {
 impl OvsBridgeBondConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        if self.slaves.as_ref().is_some() {
-            log::warn!(
-                "The `slaves` is deprecated, please replace with `ports`."
-            );
-            self.ports = self.slaves.clone();
-            self.slaves = None;
-        }
     }
 
     pub(crate) fn ports(&self) -> Vec<&str> {
