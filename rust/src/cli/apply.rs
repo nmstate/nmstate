@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{stdin, stdout, Read, Write};
 use std::process::{Command, Stdio};

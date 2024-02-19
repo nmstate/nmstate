@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::time::SystemTime;
 
