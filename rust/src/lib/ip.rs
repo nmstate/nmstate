@@ -4,7 +4,7 @@ use std::fmt::Write;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
-use serde::{self, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, DnsClientState, ErrorKind, MergedInterface,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashSet;
-use std::convert::TryFrom;
 
 use serde::{de, Deserialize, Deserializer, Serialize};
 

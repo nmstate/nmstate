@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
 use std::net::Ipv6Addr;
 
 use crate::{

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
-use std::iter::FromIterator;
 
 use super::super::nm_dbus::{
     NmConnection, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,

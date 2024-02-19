@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::iter::FromIterator;
 
 use serde::{Deserialize, Serialize};
 

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
 use std::str::FromStr;
 
 use crate::{NetworkPolicy, NetworkState};
