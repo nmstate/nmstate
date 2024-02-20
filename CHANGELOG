@@ -534,6 +534,7 @@ The YAML API changed: The `other_config` under OVS bond should be stored under
  - Support routes created by iproute command. (f39f763)
  - New property `Inetrface.COPY_FROM_MAC` on bridge and bond interfaces. (b089323)
  - Support IEEE 802.1X authentication. (f9a1da3)
+ - Support `gc` command. (627af31)
 
 ### Bug fixes
  - Fix removing OVS `external_ids` settings. (57e2547)
