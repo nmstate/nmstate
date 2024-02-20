@@ -1,13 +1,15 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::convert::TryInto;
 
-use crate::error::CliError;
 use nmstate::{
     BaseInterface, BondConfig, BondInterface, BondMode, BondPortConfig,
     Interface, InterfaceState, InterfaceType, Interfaces, LldpNeighborTlv,
     NetworkState, VlanConfig, VlanInterface,
 };
+
+use crate::error::CliError;
 
 const APP_NAME: &str = "nmstatectl-autoconf";
 const BOND_PREFIX: &str = "bond";

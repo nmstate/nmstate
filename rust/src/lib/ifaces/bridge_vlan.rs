@@ -2,7 +2,6 @@
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 
 use serde::{
     ser::SerializeTuple, Deserialize, Deserializer, Serialize, Serializer,

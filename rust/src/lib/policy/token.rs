@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::iter::FromIterator;
-
 use crate::NmstateError;
 
 const NEXT_TOKEN_START_CHARS: [char; 6] = [' ', '=', '!', '|', '"', ':'];

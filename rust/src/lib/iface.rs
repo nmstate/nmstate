@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashSet;
-use std::iter::FromIterator;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -734,15 +734,6 @@ impl Interface {
             iface.change_port_name(org_port_name, new_port_name);
         } else if let Interface::Bond(iface) = self {
             iface.change_port_name(org_port_name, new_port_name);
-        }
-    }
-
-    pub(crate) fn post_deserialize_cleanup(&mut self) {
-        match self {
-            Interface::OvsBridge(iface) => iface.post_deserialize_cleanup(),
-            Interface::Bond(iface) => iface.post_deserialize_cleanup(),
-            Interface::LinuxBridge(iface) => iface.post_deserialize_cleanup(),
-            _ => (),
         }
     }
 }

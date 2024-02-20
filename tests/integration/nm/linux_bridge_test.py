@@ -18,7 +18,9 @@ from ..testlib.bridgelib import linux_bridge
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.env import is_k8s
+from ..testlib.env import nm_minor_version
 from ..testlib.statelib import show_only
+from ..testlib.yaml import load_yaml
 
 
 BRIDGE0 = "brtest0"
@@ -481,3 +483,91 @@ def test_create_down_linux_bridge(br0_down):
     assertlib.assert_absent(BRIDGE0)
     exec_cmd(f"nmcli c show {BRIDGE0}".split(), check=True)
     exec_cmd("nmcli c show eth1".split(), check=True)
+
+
+@pytest.fixture
+def br0_with_pvid_and_unmanaged_port():
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+              - name: {DUMMY1}
+                type: dummy
+              - name: {BRIDGE0}
+                type: linux-bridge
+                state: up
+                bridge:
+                  port:
+                    - name: {DUMMY1}
+                      vlan:
+                        mode: trunk
+                        trunk-tags:
+                        - id-range:
+                            min: 2
+                            max: 4092
+            """
+        )
+    )
+    exec_cmd(f"ip link add {DUMMY0} type dummy".split(), check=True)
+    exec_cmd(f"nmcli device set {DUMMY0} managed no".split(), check=True)
+    exec_cmd(f"ip link set {DUMMY0} master {BRIDGE0}".split(), check=True)
+    exec_cmd(f"ip link set {DUMMY0} up".split(), check=True)
+    exec_cmd(
+        f"bridge vlan add vid 100 pvid egress untagged dev {DUMMY0}".split(),
+        check=True,
+    )
+    exec_cmd(f"bridge vlan del vid 1 dev {DUMMY0} egress".split(), check=True)
+    yield
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+              - name: {DUMMY1}
+                type: dummy
+                state: absent
+              - name: {DUMMY0}
+                type: dummy
+                state: absent
+              - name: {BRIDGE0}
+                type: linux-bridge
+                state: absent
+            """
+        )
+    )
+
+
+# https://issues.redhat.com/browse/RHEL-21576
+@pytest.mark.tier1
+@pytest.mark.xfail(
+    nm_minor_version() <= 47,
+    raises=AssertionError,
+    reason="https://issues.redhat.com/browse/RHEL-21576",
+)
+def test_reapply_does_not_reset_unmanaged_port_pvid(
+    br0_with_pvid_and_unmanaged_port,
+):
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+              - name: {BRIDGE0}
+                type: linux-bridge
+                state: up
+                mtu: 1508
+            """
+        )
+    )
+    br_state = show_only((BRIDGE0,))[Interface.KEY][0]
+
+    checked = False
+    for port in br_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]:
+        if port[LB.Port.NAME] == DUMMY0:
+            assert (
+                port[LB.Port.VLAN_SUBTREE][LB.Port.Vlan.MODE]
+                == LB.Port.Vlan.Mode.ACCESS
+            )
+            assert port[LB.Port.VLAN_SUBTREE][LB.Port.Vlan.TAG] == 100
+            checked = True
+
+    if not checked:
+        pytest.fail(f"Unmanaged bridge port {DUMMY0} not found: {br_state}")

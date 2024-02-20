@@ -598,23 +598,3 @@ fn test_disable_balance_slb_valid_override_current() {
         MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
     merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
-
-#[test]
-fn test_bond_deprecated_prop() {
-    let mut iface: BondInterface = serde_yaml::from_str(
-        r"---
-        name: bond99
-        type: bond
-        state: up
-        link-aggregation:
-          mode: balance-xor
-          slaves:
-          - eth1
-          - eth2",
-    )
-    .unwrap();
-
-    iface.post_deserialize_cleanup();
-
-    assert_eq!(iface.ports(), Some(vec!["eth1", "eth2"]));
-}

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
-
 use super::super::nm_dbus::NmIpRoute;
 
 use crate::{

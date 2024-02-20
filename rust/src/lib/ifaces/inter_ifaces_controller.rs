@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
 
 use crate::{
     BondMode, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,

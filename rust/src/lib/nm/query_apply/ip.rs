@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
 use std::ops::BitXor;
 
 use super::super::nm_dbus::{
