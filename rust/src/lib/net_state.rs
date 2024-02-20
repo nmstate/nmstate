@@ -192,6 +192,15 @@ impl NetworkState {
         self
     }
 
+    /// Passing backend specific options. Currently only support:
+    ///  * `nm:refer_controller_parent_by_name`:  Instruct NetworkManager to use
+    ///    interface name instead of connection UUID when referring controller
+    ///    or parent.
+    pub fn set_backend_options(&mut self, value: Vec<String>) -> &mut Self {
+        self.apply_options.backend_options = value;
+        self
+    }
+
     /// Create empty [NetworkState]
     pub fn new() -> Self {
         Default::default()
@@ -351,6 +360,7 @@ pub struct NetworkStateApplyOption {
     pub(crate) no_commit: bool,
     pub(crate) timeout: Option<u32>,
     pub(crate) memory_only: bool,
+    pub(crate) backend_options: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

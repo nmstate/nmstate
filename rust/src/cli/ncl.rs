@@ -4,6 +4,8 @@
 mod apply;
 #[cfg(feature = "query_apply")]
 mod autoconf;
+#[allow(dead_code)]
+mod config;
 mod error;
 mod format;
 #[cfg(feature = "gen_conf")]
@@ -191,6 +193,21 @@ fn main() {
                         .takes_value(false)
                         .help("Do not make the state persistent"),
                 )
+                .arg(
+                    clap::Arg::new("BACKEND_OPTIONS")
+                        .long("backend-options")
+                        .takes_value(true)
+                        .help("Specify backend specific option, \
+                               if not defined, read /etc/nmstate/nmstate.conf"),
+                )
+                .arg(
+                    clap::Arg::new("CONFIG")
+                        .long("config")
+                        .takes_value(true)
+                        .help("Load config from specified path instead of \
+                               default /etc/nmstate/nmstate.conf"),
+                )
+
         )
         .subcommand(
             clap::Command::new(SUB_CMD_GEN_CONF)
@@ -200,7 +217,22 @@ fn main() {
                         .required(true)
                         .index(1)
                         .help("Network state file"),
-                ),
+                )
+                .arg(
+                    clap::Arg::new("BACKEND_OPTIONS")
+                        .long("backend-options")
+                        .takes_value(true)
+                        .help("Specify backend specific options(separated \
+                              by comma, if not defined, read \
+                              /etc/nmstate/nmstate.conf"),
+                )
+                .arg(
+                    clap::Arg::new("CONFIG")
+                        .long("config")
+                        .takes_value(true)
+                        .help("Load config from specified path instead of \
+                               default /etc/nmstate/nmstate.conf"),
+                )
         )
         .subcommand(
             clap::Command::new(SUB_CMD_COMMIT)
@@ -454,9 +486,7 @@ fn main() {
     log::info!("Nmstate version: {}", clap::crate_version!());
 
     if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_CONF) {
-        if let Some(file_path) = matches.value_of("STATE_FILE") {
-            print_result_and_exit(gen_conf(file_path));
-        }
+        print_result_and_exit(gen_conf(matches));
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
         print_result_and_exit(show(matches));
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_APPLY) {
@@ -535,7 +565,9 @@ fn main() {
 }
 
 #[cfg(not(feature = "gen_conf"))]
-fn gen_conf(_file_path: &str) -> Result<String, crate::error::CliError> {
+fn gen_conf(
+    _matches: &clap::ArgMatches,
+) -> Result<String, crate::error::CliError> {
     Err("The gc sub-command require `gen_conf` feature been \
         enabled during compiling"
         .into())

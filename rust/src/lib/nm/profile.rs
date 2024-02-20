@@ -23,6 +23,7 @@ pub(crate) fn perpare_nm_conns(
     exist_nm_conns: &[NmConnection],
     nm_acs: &[NmActiveConnection],
     gen_conf_mode: bool,
+    ref_by_name: bool,
 ) -> Result<PerparedNmConnections, NmstateError> {
     let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
@@ -108,19 +109,21 @@ pub(crate) fn perpare_nm_conns(
 
     fix_ip_dhcp_timeout(&mut nm_conns_to_update);
 
-    use_uuid_for_controller_reference(
-        &mut nm_conns_to_update,
-        &merged_state.interfaces,
-        exist_nm_conns,
-        nm_acs,
-    )?;
+    if !ref_by_name {
+        use_uuid_for_controller_reference(
+            &mut nm_conns_to_update,
+            &merged_state.interfaces,
+            exist_nm_conns,
+            nm_acs,
+        )?;
 
-    use_uuid_for_parent_reference(
-        &mut nm_conns_to_update,
-        &merged_state.interfaces,
-        exist_nm_conns,
-        nm_acs,
-    );
+        use_uuid_for_parent_reference(
+            &mut nm_conns_to_update,
+            &merged_state.interfaces,
+            exist_nm_conns,
+            nm_acs,
+        );
+    }
 
     Ok(PerparedNmConnections {
         to_store: nm_conns_to_update,

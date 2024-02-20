@@ -4,28 +4,12 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
-
-use crate::{apply::apply, error::CliError};
+use crate::{apply::apply, config::Config, error::CliError};
 
 const CONFIG_FILE_EXTENTION: &str = "yml";
 const APPLIED_FILE_EXTENTION: &str = "applied";
-const CONFIG_FILE_NAME: &str = "nmstate.conf";
-
-#[derive(Debug, Default, Deserialize)]
-struct Config {
-    #[serde(default)]
-    service: ServiceConfig,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct ServiceConfig {
-    #[serde(default)]
-    keep_state_file_after_apply: bool,
-}
 
 #[derive(Eq, Hash, PartialEq, Clone, PartialOrd, Ord)]
 struct FileContent {
@@ -57,7 +41,10 @@ pub(crate) fn ncl_service(
         .value_of(crate::CONFIG_FOLDER_KEY)
         .unwrap_or(crate::DEFAULT_SERVICE_FOLDER);
 
-    let config = load_config(folder)?;
+    let config = Config::load(&format!(
+        "{folder}/{}",
+        Config::DEFAULT_CONFIG_FILE_NAME
+    ))?;
 
     let state_files = match get_unapplied_state_files(
         folder,
@@ -190,26 +177,6 @@ pub(crate) fn write_content(
         applied_file_path.display(),
     );
     Ok(())
-}
-
-fn load_config(base_cfg_folder: &str) -> Result<Config, CliError> {
-    let path = std::path::Path::new(base_cfg_folder).join(CONFIG_FILE_NAME);
-    if !path.exists() {
-        return Ok(Config::default());
-    }
-    let mut fd = std::fs::File::open(&path)?;
-    let mut content = String::new();
-    fd.read_to_string(&mut content)?;
-    match toml::from_str::<Config>(&content) {
-        Ok(c) => {
-            log::info!("Configuration loaded:\n{content}");
-            Ok(c)
-        }
-        Err(e) => Err(CliError::from(format!(
-            "Failed to read configuration from {}: {e}",
-            path.display()
-        ))),
-    }
 }
 
 fn relocate_file(file_path: &Path) -> Result<(), CliError> {

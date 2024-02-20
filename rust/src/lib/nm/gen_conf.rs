@@ -3,6 +3,7 @@
 use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 use super::{
+    backend_opt::backend_opt_has_ref_by_name,
     dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
     profile::perpare_nm_conns,
     route::store_route_config,
@@ -39,6 +40,9 @@ pub(crate) fn nm_gen_conf(
         &Vec::new(),
         &Vec::new(),
         true, // gen_conf mode
+        backend_opt_has_ref_by_name(
+            merged_state.apply_options.backend_options.as_slice(),
+        ),
     )?
     .to_store;
 

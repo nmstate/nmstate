@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use super::super::{
+    backend_opt::backend_opt_has_ref_by_name,
     device::create_index_for_nm_devs,
     dns::{
         cur_dns_ifaces_still_valid_for_dns, store_dns_config_to_iface,
@@ -142,6 +143,9 @@ pub(crate) fn nm_apply(
         exist_nm_conns.as_slice(),
         nm_acs.as_slice(),
         false,
+        backend_opt_has_ref_by_name(
+            merged_state.apply_options.backend_options.as_slice(),
+        ),
     )?;
 
     let nm_ac_uuids: Vec<&str> =

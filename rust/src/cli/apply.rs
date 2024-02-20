@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use nmstate::{NetworkPolicy, NetworkState};
 
-use crate::error::CliError;
+use crate::{config::Config, error::CliError};
 
 const DEFAULT_TIMEOUT: u32 = 60;
 
@@ -63,6 +63,28 @@ where
     } else {
         DEFAULT_TIMEOUT
     };
+    let backend_opts: Vec<String> = match matches
+        .try_get_one::<String>("BACKEND_OPTIONS")
+    {
+        Ok(Some(t)) => t.split(',').map(|s| s.to_string()).collect(),
+        Ok(None) => {
+            let config_path =
+                if let Ok(Some(p)) = matches.try_get_one::<String>("CONFIG") {
+                    p.as_str()
+                } else {
+                    Config::DEFAULT_CONFIG_PATH
+                };
+            let config = Config::load(config_path)?;
+            config.apply.backend_options
+        }
+        Err(e) => {
+            return Err(CliError {
+                code: crate::error::EX_DATAERR,
+                error_msg: e.to_string(),
+            });
+        }
+    };
+
     let mut content = String::new();
     // Replace non-breaking space '\u{A0}'  to normal space
     reader.read_to_string(&mut content)?;
@@ -100,6 +122,9 @@ where
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );
+    if !backend_opts.is_empty() {
+        net_state.set_backend_options(backend_opts);
+    }
 
     net_state.apply()?;
     if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {

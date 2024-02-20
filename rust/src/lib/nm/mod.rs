@@ -2,6 +2,7 @@
 
 #[cfg(feature = "query_apply")]
 mod active_connection;
+mod backend_opt;
 #[cfg(feature = "query_apply")]
 mod checkpoint;
 #[cfg(feature = "query_apply")]
