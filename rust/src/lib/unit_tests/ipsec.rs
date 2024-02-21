@@ -137,3 +137,29 @@ fn test_parse_ipsec_interface_from_string_bool() {
         Some("no")
     );
 }
+
+#[test]
+fn test_ipsec_treat_dhcp_off_and_empty_ip_as_disabled() {
+    let mut iface = serde_yaml::from_str::<IpsecInterface>(
+        r"---
+          name: hosta_conn
+          type: ipsec
+          state: up
+          ipv4:
+            enabled: true
+            dhcp: false
+          libreswan:
+            ipsec-interface: 'no'
+            right: 192.0.2.253
+            rightid: '@hostb-psk.example.org'
+            left: 192.0.2.250
+            leftid: '@hosta-psk.example.org'
+            ikev2: insist
+            psk: TOP_SECRET",
+    )
+    .unwrap();
+
+    iface.sanitize(false);
+
+    assert!(!iface.base.ipv4.as_ref().unwrap().enabled);
+}
