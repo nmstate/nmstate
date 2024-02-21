@@ -469,6 +469,10 @@ class MacSec:
     VALIDATION_CHECK = "check"
     VALIDATION_STRICT = "strict"
     SEND_SCI = "send-sci"
+    OFFLOAD = "offload"
+    OFFLOAD_OFF = "off"
+    OFFLOAD_PHY = "phy"
+    OFFLOAD_MAC = "mac"
 
 
 class Hsr:

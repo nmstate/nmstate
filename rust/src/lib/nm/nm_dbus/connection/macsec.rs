@@ -17,6 +17,7 @@ pub struct NmSettingMacSec {
     pub port: Option<i32>,
     pub validation: Option<i32>,
     pub send_sci: Option<bool>,
+    pub offload: Option<i32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -32,6 +33,7 @@ impl TryFrom<DbusDictionary> for NmSettingMacSec {
             validation: _from_map!(v, "validation", i32::try_from)?,
             send_sci: _from_map!(v, "send-sci", bool::try_from)?,
             mka_cak: None,
+            offload: _from_map!(v, "offload", i32::try_from)?,
             _other: v,
         })
     }
@@ -66,6 +68,9 @@ impl ToDbusValue for NmSettingMacSec {
         if let Some(v) = &self.send_sci {
             ret.insert("send-sci", zvariant::Value::new(*v));
         }
+        if let Some(v) = self.offload {
+            ret.insert("offload", zvariant::Value::new(v));
+        }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
         }));
@@ -74,6 +79,10 @@ impl ToDbusValue for NmSettingMacSec {
 }
 
 impl NmSettingMacSec {
+    pub const OFFLOAD_OFF: i32 = 0;
+    pub const OFFLOAD_PHY: i32 = 1;
+    pub const OFFLOAD_MAC: i32 = 2;
+
     #[cfg(feature = "query_apply")]
     pub(crate) fn fill_secrets(&mut self, secrets: &DbusDictionary) {
         if let Some(v) = secrets.get("mka-cak") {

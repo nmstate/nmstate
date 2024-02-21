@@ -56,7 +56,9 @@ pub use linux_bridge::{
 pub use loopback::LoopbackInterface;
 pub use mac_vlan::{MacVlanConfig, MacVlanInterface, MacVlanMode};
 pub use mac_vtap::{MacVtapConfig, MacVtapInterface, MacVtapMode};
-pub use macsec::{MacSecConfig, MacSecInterface, MacSecValidate};
+pub use macsec::{
+    MacSecConfig, MacSecInterface, MacSecOffload, MacSecValidate,
+};
 pub use ovs::{
     OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
