@@ -726,9 +726,8 @@ def test_ipsec_ipv4_libreswan_fromcert(
     )
 
 
-def test_ipsec_ipv4_libreswan_psk_auth_with_ipsec_iface(
-    ipsec_hosta_conn_cleanup,
-):
+@pytest.fixture
+def ipsec_psk_with_ipsec_iface(ipsec_hosta_conn_cleanup):
     desired_state = yaml.load(
         f"""---
         interfaces:
@@ -754,6 +753,7 @@ def test_ipsec_ipv4_libreswan_psk_auth_with_ipsec_iface(
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec9"
     )
+    yield
 
 
 def test_ipsec_ipv4_libreswan_psk_auth_with_dpd(
@@ -1016,3 +1016,31 @@ def test_ipsec_modify_exist_connection(
 
     assert iface_state[Interface.DESCRIPTION] == "TESTING"
     assert iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
+
+
+def test_ipsec_ipv4_libreswan_change_ipsec_iface(ipsec_psk_with_ipsec_iface):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            psk: {PSK}
+            left: {HOSTA_IPV4_PSK}
+            leftid: 'hosta-psk.example.org'
+            right: {HOSTB_IPV4_PSK}
+            rightid: 'hostb-psk.example.org'
+            ipsec-interface: 99
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_PSK, HOSTB_IPV4_PSK
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec99"
+    )
