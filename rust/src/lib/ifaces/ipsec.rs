@@ -57,6 +57,27 @@ impl IpsecInterface {
             }
         }
     }
+
+    // * IPv4 `dhcp: false` with empty static address list should be considered
+    //   as IPv4 disabled.
+    pub(crate) fn sanitize(&mut self, is_desired: bool) {
+        if let Some(ipv4_conf) = self.base.ipv4.as_mut() {
+            if ipv4_conf.dhcp == Some(false)
+                && ipv4_conf.enabled
+                && ipv4_conf.enabled_defined
+            {
+                if is_desired {
+                    log::info!(
+                        "Treating IPv4 `dhcp: false` for IPSec interface {} \
+                        as IPv4 disabled",
+                        self.base.name.as_str(),
+                    );
+                }
+                ipv4_conf.enabled = false;
+                ipv4_conf.dhcp = None;
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

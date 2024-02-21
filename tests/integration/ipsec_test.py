@@ -1044,3 +1044,71 @@ def test_ipsec_ipv4_libreswan_change_ipsec_iface(ipsec_psk_with_ipsec_iface):
     assert retry_till_true_or_timeout(
         RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, "ipsec99"
     )
+
+
+# DHCPv4 off with empty IP address means IP disabled for IPSec interface
+def test_ipsec_dhcpv4_off_and_empty_ip_addr(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: false
+          libreswan:
+            leftrsasigkey: {RSA_SIGNATURES["hosta"]}
+            left: {HOSTA_IPV4_RSA}
+            leftid: 'hosta-rsa.example.org'
+            right: {HOSTB_IPV4_RSA}
+            rightrsasigkey: {RSA_SIGNATURES["hostb"]}
+            rightid: 'hostb-rsa.example.org'
+            ipsec-interface: 97
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_RSA, HOSTB_IPV4_RSA
+    )
+
+    iface_state = show_only(["ipsec97"])[Interface.KEY][0]
+    assert not iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
+
+
+@pytest.mark.xfail(
+    reason="This is not supported by latest NM-libreswan yet",
+)
+def test_ipsec_dhcpv6_off(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            hostaddrfamily: ipv6
+            clientaddrfamily: ipv6
+            left: {HOSTA_IPV6_CS}
+            leftid: '@hosta.example.org'
+            leftcert: hosta.example.org
+            leftmodecfgclient: no
+            right: {HOSTB_IPV6_CS}
+            rightid: '@hostb.example.org'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_RSA, HOSTB_IPV4_RSA
+    )
+
+    iface_state = show_only(["ipsec97"])[Interface.KEY][0]
+    assert not iface_state[Interface.IPV6].get(InterfaceIPv6.DHCP)
+    assert not iface_state[Interface.IPV6].get(InterfaceIPv6.AUTOCONF)

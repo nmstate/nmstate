@@ -695,6 +695,7 @@ impl Interface {
             Interface::MacVtap(iface) => iface.sanitize(is_desired)?,
             Interface::Loopback(iface) => iface.sanitize(is_desired)?,
             Interface::MacSec(iface) => iface.sanitize(is_desired)?,
+            Interface::Ipsec(iface) => iface.sanitize(is_desired),
             _ => (),
         }
         Ok(())
