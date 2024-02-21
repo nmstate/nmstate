@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, MacSecConfig, MacSecInterface, MacSecValidate};
+use crate::{
+    BaseInterface, MacSecConfig, MacSecInterface, MacSecOffload, MacSecValidate,
+};
 
 impl From<nispor::MacSecValidate> for MacSecValidate {
     fn from(v: nispor::MacSecValidate) -> Self {
@@ -10,6 +12,20 @@ impl From<nispor::MacSecValidate> for MacSecValidate {
             nispor::MacSecValidate::Strict => Self::Strict,
             _ => {
                 log::warn!("Unknown MACsec validate mode {:?}", v);
+                Self::default()
+            }
+        }
+    }
+}
+
+impl From<nispor::MacSecOffload> for MacSecOffload {
+    fn from(v: nispor::MacSecOffload) -> Self {
+        match v {
+            nispor::MacSecOffload::Off => Self::Off,
+            nispor::MacSecOffload::Phy => Self::Phy,
+            nispor::MacSecOffload::Mac => Self::Mac,
+            _ => {
+                log::warn!("Unknown MACsec offload mode {:?}", v);
                 Self::default()
             }
         }
@@ -29,6 +45,7 @@ pub(crate) fn np_macsec_to_nmstate(
             base_iface: np_macsec_info.base_iface.clone().unwrap_or_default(),
             mka_cak: None,
             mka_ckn: None,
+            offload: Some(np_macsec_info.offload.into()),
         });
 
     MacSecInterface {

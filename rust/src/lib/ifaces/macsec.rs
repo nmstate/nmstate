@@ -123,6 +123,8 @@ pub struct MacSecConfig {
     /// Specifies whether the SCI (Secure Channel Identifier) is included in
     /// every packet.
     pub send_sci: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offload: Option<MacSecOffload>,
 }
 
 impl MacSecConfig {
@@ -171,4 +173,14 @@ impl From<MacSecValidate> for i32 {
             MacSecValidate::Strict => 2,
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub enum MacSecOffload {
+    #[default]
+    Off,
+    Phy,
+    Mac,
 }
