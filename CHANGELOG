@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.25] - 2024-02-22
+### Breaking changes
+ - Removed the support of deprecated `slaves` in linux bridge, ovs bridge and
+   bond. Please use `ports` instead. (2657650c, 51bdb012)
+
+### New features
+ - Support MacSec hardware offload. (1198339e)
+
+### Bug fixes
+ - ipsec: Treat DHCPv4 off with no static address as IPv4 disabled. (4d0f0829)
+ - controller: Fix incorrect ports name matching when validating ports. (6dc9e880)
+
 ## [2.2.24] - 2024-02-08
 ### Breaking changes
  - Rust API: base_iface: Remove `prop_list`. (42936b17)
