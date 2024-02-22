@@ -8,8 +8,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     DnsState, ErrorKind, HostNameState, Interface, Interfaces, MergedDnsState,
     MergedHostNameState, MergedInterfaces, MergedOvnConfiguration,
-    MergedOvsDbGlobalConfig, MergedRouteRules, MergedRoutes, NmstateError,
-    OvnConfiguration, OvsDbGlobalConfig, RouteRules, Routes,
+    MergedOvsDbGlobalConfig, MergedRouteRules, MergedRoutes,
+    MergedUserDefinedData, NmstateError, OvnConfiguration, OvsDbGlobalConfig,
+    RouteRules, Routes, UserDefinedData,
 };
 
 /// The [NetworkState] represents the whole network state including both
@@ -103,7 +104,15 @@ pub struct NetworkState {
     #[serde(default, skip_serializing_if = "OvnConfiguration::is_none")]
     /// The OVN configuration in the system
     pub ovn: OvnConfiguration,
+    /// User defined interface types
+    #[serde(
+        default,
+        rename = "user-defined",
+        skip_serializing_if = "UserDefinedData::is_none"
+    )]
+    pub user_defined: UserDefinedData,
     #[serde(skip)]
+    // TODO: Hide user space only info when serialize
     pub(crate) kernel_only: bool,
     #[serde(skip)]
     pub(crate) no_verify: bool,
@@ -299,16 +308,25 @@ pub(crate) struct MergedNetworkState {
     pub(crate) ovsdb: MergedOvsDbGlobalConfig,
     pub(crate) routes: MergedRoutes,
     pub(crate) rules: MergedRouteRules,
+    pub(crate) user_defined: MergedUserDefinedData,
     pub(crate) memory_only: bool,
 }
 
 impl MergedNetworkState {
     pub(crate) fn new(
-        desired: NetworkState,
+        mut desired: NetworkState,
         current: NetworkState,
         gen_conf_mode: bool,
         memory_only: bool,
     ) -> Result<Self, NmstateError> {
+        let user_defined = MergedUserDefinedData::new(
+            &desired.user_defined,
+            &current.user_defined,
+        )?;
+        desired
+            .interfaces
+            .sanitize_user_defined_iface_type(&user_defined)?;
+
         let interfaces = MergedInterfaces::new(
             desired.interfaces,
             current.interfaces,
@@ -347,6 +365,7 @@ impl MergedNetworkState {
             ovsdb,
             hostname,
             memory_only,
+            user_defined,
         };
         ret.validate_ipv6_link_local_address_dns_srv()?;
 

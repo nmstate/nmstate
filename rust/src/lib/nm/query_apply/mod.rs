@@ -32,7 +32,7 @@ pub(crate) use self::profile::{
     deactivate_nm_profiles, delete_exist_profiles, save_nm_profiles,
 };
 pub(crate) use self::route::is_route_removed;
-pub(crate) use self::user::get_description;
+pub(crate) use self::user::{get_description, get_user_defined_settings};
 pub(crate) use self::veth::is_veth_peer_changed;
 pub(crate) use self::vlan::is_vlan_changed;
 pub(crate) use self::vrf::is_vrf_table_id_changed;

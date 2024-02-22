@@ -28,7 +28,13 @@ fn np_iface_type_to_nmstate(
         nispor::IfaceType::Ipoib => InterfaceType::InfiniBand,
         nispor::IfaceType::Tun => InterfaceType::Tun,
         nispor::IfaceType::Xfrm => InterfaceType::Xfrm,
-        nispor::IfaceType::Other(v) => InterfaceType::Other(v.to_lowercase()),
+        nispor::IfaceType::Other(v) => {
+            if v.to_lowercase() == "xfrm" {
+                InterfaceType::Xfrm
+            } else {
+                InterfaceType::Other(v.to_lowercase())
+            }
+        }
         _ => InterfaceType::Other(format!("{np_iface_type:?}").to_lowercase()),
     }
 }
@@ -104,7 +110,7 @@ pub(crate) fn np_iface_to_base_iface(
         ethtool: np_ethtool_to_nmstate(np_iface),
         ..Default::default()
     };
-    if !InterfaceType::SUPPORTED_LIST.contains(&base_iface.iface_type) {
+    if !base_iface.iface_type.is_supported() {
         log::info!(
             "Got unsupported interface type {}: {}, ignoring",
             &base_iface.iface_type,

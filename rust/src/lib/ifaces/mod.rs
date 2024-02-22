@@ -8,6 +8,7 @@ mod hsr;
 pub(crate) mod inter_ifaces;
 mod ipsec;
 mod loopback;
+mod user_defined;
 mod vrf;
 mod vxlan;
 mod xfrm;
@@ -22,6 +23,7 @@ mod ovs;
 mod sriov;
 mod vlan;
 
+pub use self::user_defined::UserDefinedInterface;
 pub use self::xfrm::XfrmInterface;
 pub use base::*;
 pub use bond::{
@@ -43,7 +45,6 @@ pub use ethtool::{
 };
 pub use hsr::{HsrConfig, HsrInterface, HsrProtocol};
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
-pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;
 pub use ipsec::{
     IpsecInterface, LibreswanAddressFamily, LibreswanConfig,
@@ -70,3 +71,5 @@ pub use vlan::{
 };
 pub use vrf::{VrfConfig, VrfInterface};
 pub use vxlan::{VxlanConfig, VxlanInterface};
+
+pub(crate) use self::inter_ifaces::MergedInterfaces;

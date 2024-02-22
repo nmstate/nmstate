@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(test)]
 mod base;
 #[cfg(test)]
@@ -52,6 +54,8 @@ mod sriov;
 mod statistic;
 #[cfg(test)]
 mod testlib;
+#[cfg(test)]
+mod user_defined;
 #[cfg(test)]
 mod vlan;
 #[cfg(test)]

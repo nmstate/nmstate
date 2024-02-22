@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::os::unix::fs::OpenOptionsExt;
 
-use crate::{DispatchConfig, ErrorKind, MergedInterfaces, NmstateError};
+use crate::{
+    DispatchConfig, ErrorKind, MergedInterfaces, MergedUserDefinedData,
+    NmstateError, UserDefinedData, UserDefinedInterfaceType,
+};
 
 const DEFAULT_DISPATCH_DIR: &str = "/etc/NetworkManager/dispatcher.d";
 
@@ -213,4 +216,113 @@ fn gen_file_path(iface_name: &str, nm_action: NmAction) -> String {
         .unwrap_or(DEFAULT_DISPATCH_DIR.to_string());
 
     format!("{dir}/nmstate-{iface_name}-{nm_action}.sh")
+}
+
+fn gen_generic_file_path(iface_type_name: &str) -> String {
+    let dir = std::env::var("NMSTATE_NM_DISPATCH_DIR")
+        .unwrap_or(DEFAULT_DISPATCH_DIR.to_string());
+
+    let path = format!("{dir}/device");
+
+    if !std::path::Path::new(&path).exists() {
+        // follow up write action will fail with proper error
+        std::fs::create_dir(&path).ok();
+    }
+
+    format!("{dir}/device/{iface_type_name}")
+}
+
+pub(crate) fn get_user_defined_iface_types(
+) -> Result<UserDefinedData, NmstateError> {
+    let mut ret = UserDefinedData::default();
+    let dir = std::env::var("NMSTATE_NM_DISPATCH_DIR")
+        .unwrap_or(DEFAULT_DISPATCH_DIR.to_string());
+    let dir = format!("{dir}/device");
+
+    if std::path::Path::new(&dir).is_dir() {
+        match std::fs::read_dir(&dir) {
+            Ok(fd) => {
+                let mut iface_types = Vec::new();
+                for entry in fd.filter_map(|fd| fd.ok()) {
+                    let file_name =
+                        if let Ok(s) = entry.file_name().into_string() {
+                            s
+                        } else {
+                            continue;
+                        };
+                    let file_path = format!("{dir}/{file_name}");
+                    if let Some(conf) =
+                        get_iface_type_conf(&file_name, &file_path)
+                    {
+                        iface_types.push(conf);
+                    }
+                }
+                if !iface_types.is_empty() {
+                    ret.interface_types = Some(iface_types);
+                }
+            }
+            Err(e) => {
+                log::info!("Failed to read {dir} {e}");
+            }
+        }
+    }
+    Ok(ret)
+}
+
+pub(crate) fn apply_user_defined_iface_type_scripts(
+    user_defined: &MergedUserDefinedData,
+) -> Result<(), NmstateError> {
+    for (name, conf) in user_defined.desired.iter() {
+        let path = gen_generic_file_path(name.as_str());
+        if conf.is_absent() {
+            log::info!("Removing user defined interface type {}", conf.name);
+            let file_path = std::path::Path::new(&path);
+            if file_path.exists() {
+                std::fs::remove_file(&path).map_err(|e| {
+                    NmstateError::new(
+                        ErrorKind::PermissionError,
+                        format!("Failed to remove file {path}: {e}"),
+                    )
+                })?
+            };
+        } else if let Some(content) = conf.handler_script.as_deref() {
+            let mut fd = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .mode(0o744)
+                .open(&path)
+                .map_err(|e| {
+                    NmstateError::new(
+                        ErrorKind::PermissionError,
+                        format!("Failed to write file {path}: {e}"),
+                    )
+                })?;
+            fd.write_all(content.as_bytes()).map_err(|e| {
+                NmstateError::new(
+                    ErrorKind::PermissionError,
+                    format!("Failed to write file {path}: {e}"),
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn get_iface_type_conf(
+    file_name: &str,
+    file_path: &str,
+) -> Option<UserDefinedInterfaceType> {
+    if let Ok(mut fd) = std::fs::File::open(file_path) {
+        let mut content = String::new();
+        fd.read_to_string(&mut content).ok();
+        if !content.is_empty() {
+            return Some(UserDefinedInterfaceType {
+                name: file_name.to_string(),
+                handler_script: Some(content),
+                ..Default::default()
+            });
+        }
+    }
+    None
 }

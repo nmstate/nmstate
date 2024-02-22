@@ -551,3 +551,13 @@ class Mptcp:
     FLAG_SUBFLOW = "subflow"
     FLAG_BACKUP = "backup"
     FLAG_FULLMESH = "fullmesh"
+
+
+class UserDefined:
+    KEY = "user-defined"
+
+
+class UserDefinedInterfaceType:
+    KEY = "interface-types"
+    STATE = "state"
+    STATE_ABSENT = "absent"

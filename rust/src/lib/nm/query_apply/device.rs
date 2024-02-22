@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    nm::nm_dbus::NmDevice,
+    nm::nm_dbus::{NmConnection, NmDevice},
     nm::settings::{
         NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
-        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_HSR_SETTING_NAME,
-        NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_LOOPBACK_SETTING_NAME,
-        NM_SETTING_MACSEC_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
-        NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
-        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_VXLAN_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_GENERIC_SETTING_NAME,
+        NM_SETTING_HSR_SETTING_NAME, NM_SETTING_INFINIBAND_SETTING_NAME,
+        NM_SETTING_LOOPBACK_SETTING_NAME, NM_SETTING_MACSEC_SETTING_NAME,
+        NM_SETTING_MACVLAN_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
+        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_VLAN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
+        NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
     InterfaceType,
 };
 
-pub(crate) fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
+pub(crate) fn nm_dev_iface_type_to_nmstate(
+    nm_dev: &NmDevice,
+    nm_conn: Option<&NmConnection>,
+) -> InterfaceType {
     match nm_dev.iface_type.as_str() {
         NM_SETTING_WIRED_SETTING_NAME => InterfaceType::Ethernet,
         NM_SETTING_VETH_SETTING_NAME => InterfaceType::Ethernet,
@@ -38,6 +41,16 @@ pub(crate) fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
         NM_SETTING_INFINIBAND_SETTING_NAME => InterfaceType::InfiniBand,
         NM_SETTING_MACSEC_SETTING_NAME => InterfaceType::MacSec,
         NM_SETTING_HSR_SETTING_NAME => InterfaceType::Hsr,
+        NM_SETTING_GENERIC_SETTING_NAME => {
+            if let Some(iface_type) = nm_conn
+                .and_then(|c| c.generic.as_ref())
+                .and_then(|g| g.device_handler.as_deref())
+            {
+                InterfaceType::UserDefined(iface_type.to_string())
+            } else {
+                InterfaceType::Other(nm_dev.iface_type.to_string())
+            }
+        }
         _ => InterfaceType::Other(nm_dev.iface_type.to_string()),
     }
 }
