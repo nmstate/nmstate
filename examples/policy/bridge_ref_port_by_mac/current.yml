@@ -1,0 +1,8 @@
+---
+interfaces:
+  - name: eth1
+    mac-address: 52:54:00:F6:80:01
+    state: up
+  - name: eth2
+    mac-address: 52:54:00:F6:80:02
+    state: up
