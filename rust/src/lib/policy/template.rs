@@ -104,7 +104,6 @@ fn resolve_capture_data(
                     }
                     write!(new_value, "{resolved}").ok();
                     if token_end_pos < tokens.len() - 1 {
-                        println!("HAHA {:?}", &tokens);
                         for token in &tokens[token_end_pos + 1..] {
                             if let NetworkTemplateToken::Value(s, _) = token {
                                 write!(new_value, "{}", s.as_str()).ok();
@@ -147,8 +146,16 @@ fn resolve_capture_data(
             value.insert(k, v);
         }
     } else if let Some(items) = value.as_array_mut() {
-        for item in items {
-            resolve_capture_data(item, capture_results)?;
+        let mut pending_changes: Vec<(usize, serde_json::Value)> = Vec::new();
+        for (index, item) in items.iter_mut().enumerate() {
+            if let Some(new_item) = resolve_capture_data(item, capture_results)?
+            {
+                log::debug!("Changing {} to {}", item, new_item);
+                pending_changes.push((index, new_item));
+            }
+        }
+        for (index, item) in pending_changes {
+            items[index] = item;
         }
     }
     Ok(None)
