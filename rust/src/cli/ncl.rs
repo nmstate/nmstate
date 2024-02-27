@@ -355,12 +355,13 @@ fn main() {
    .subcommand(
             clap::Command::new(SUB_CMD_STATISTIC)
                 .alias("st")
-                .about("Generate statistic of specified desire state")
+                .about("Generate statistic of specified desire states")
                 .arg(
                     clap::Arg::new("STATE_FILE")
                         .required(true)
+                        .multiple_occurrences(true)
                         .index(1)
-                        .help("Network state file"),
+                        .help("Network state file (repeatable)"),
                 )
                 .arg(
                     clap::Arg::new("CURRENT_STATE")

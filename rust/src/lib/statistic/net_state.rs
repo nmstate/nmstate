@@ -12,6 +12,13 @@ pub struct NmstateStatistic {
 }
 
 impl NetworkState {
+    /// Only used for statistics by merging multiple desire states
+    /// to generate the final statistics.
+    pub fn merge_desire(&mut self, new_desire: &Self) {
+        self.update_state(new_desire);
+        self.interfaces.merge_desire(&new_desire.interfaces);
+    }
+
     pub fn statistic(
         &self,
         current: &Self,

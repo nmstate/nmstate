@@ -116,7 +116,7 @@ impl Interfaces {
         }
     }
 
-    fn remove_iface(
+    pub fn remove_iface(
         &mut self,
         iface_name: &str,
         iface_type: InterfaceType,

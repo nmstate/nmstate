@@ -21,6 +21,9 @@ nmstatectl \- A nmstate command line tool
 .br
 .B nmstatectl service \fR[\fI-c, --config <CONFIG_FOLDER>\fR]
 .br
+.B nmstatectl statistic \fISTATE_FILE_PATH\fR [\fI-c, --current
+<CURRENT_STATE_FILE>\fR]
+.br
 .B nmstatectl version
 .br
 .SH DESCRIPTION
@@ -119,6 +122,15 @@ displays nmstate version.
 Apply all network state files ending with \fB.yml\fR in specified(
 default: \fB/etc/nmstate\fR) folder.
 Please refer to manpage \fBnmstate.service(8)\fR for detail.
+.RE
+
+.B statistic
+.RS
+Generate statistic for specified network state files.
+Multiple desire states files are supported.
+The \fB--current <CURRENT_STATE_FILE>\fR argument could instruct nmstate to
+read current network state from specified file instead of querying current
+host.
 .RE
 
 .PP
