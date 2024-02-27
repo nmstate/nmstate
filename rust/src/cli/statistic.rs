@@ -9,12 +9,15 @@ use crate::error::CliError;
 pub(crate) fn statistic(
     matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
-    let desired_state = if let Some(file_path) = matches.value_of("STATE_FILE")
-    {
-        state_from_file(file_path)?
+    let mut desired_state = NetworkState::default();
+    if let Some(file_paths) = matches.values_of("STATE_FILE") {
+        let file_paths: Vec<&str> = file_paths.collect();
+        for file_path in file_paths {
+            desired_state.merge_desire(&state_from_file(file_path)?)
+        }
     } else {
-        state_from_file("-")?
-    };
+        desired_state = state_from_file("-")?;
+    }
     let current_state =
         if let Some(cur_state_file) = matches.value_of("CURRENT_STATE") {
             state_from_file(cur_state_file)?

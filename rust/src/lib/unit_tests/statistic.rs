@@ -432,3 +432,85 @@ fn gen_dummy_ifaces(iface_count: usize) -> NetworkState {
     }
     ret
 }
+
+#[test]
+fn test_statistic_multple_states() {
+    let mut desired: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: br0.101
+            type: vlan
+            vlan:
+              base-iface: br0
+              id: 101
+            ipv4:
+              address:
+              - ip: 192.0.2.252
+                prefix-length: 24
+              - ip: 192.0.2.251
+                prefix-length: 24
+              dhcp: false
+              enabled: true
+            ipv6:
+              address:
+                - ip: 2001:db8:2::1
+                  prefix-length: 64
+                - ip: 2001:db8:1::1
+                  prefix-length: 64
+              autoconf: false
+              dhcp: false
+              enabled: true
+          - name: bond1
+            type: bond
+            link-aggregation:
+              mode: 1
+              ports:
+                - eth1
+                - eth2
+          - name: br0
+            type: linux-bridge
+            state: up
+            bridge:
+              port:
+              - name: bond1
+            ipv4:
+              address:
+              - ip: 192.0.2.252
+                prefix-length: 24
+              - ip: 192.0.2.251
+                prefix-length: 24
+              dhcp: false
+              enabled: true
+            ipv6:
+              address:
+                - ip: 2001:db8:2::1
+                  prefix-length: 64
+                - ip: 2001:db8:1::1
+                  prefix-length: 64
+              autoconf: false
+              dhcp: false
+              enabled: true
+          - name: eth2
+            type: ethernet
+            ethernet:
+              sr-iov:
+                total-vfs: 2",
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+
+    let desired2: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+        - name: br0
+          type: linux-bridge
+          state: absent",
+    )
+    .unwrap();
+
+    desired.merge_desire(&desired2);
+    let stat = desired.statistic(&current).unwrap();
+
+    assert_eq!(stat.topology.as_slice(), ["bond -> ethernet"]);
+    assert_eq!(stat.features.as_slice(), [NmstateFeature::Sriov]);
+}
