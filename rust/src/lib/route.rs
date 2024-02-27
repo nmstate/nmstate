@@ -233,6 +233,7 @@ impl RouteEntry {
         matches!(self.state, Some(RouteState::Absent))
     }
 
+    /// Whether the desired route (self) matches with another
     pub(crate) fn is_match(&self, other: &Self) -> bool {
         if self.destination.as_ref().is_some()
             && self.destination.as_deref() != Some("")
