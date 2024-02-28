@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BridgePortVlanConfig, LinuxBridgeConfig, LinuxBridgeInterface};
+use crate::{
+    BridgePortVlanConfig, Interface, LinuxBridgeConfig, LinuxBridgeInterface,
+    MergedInterface,
+};
 
 impl LinuxBridgeInterface {
     pub(crate) const INTEGER_ROUNDED_OPTIONS: [&'static str; 5] = [
@@ -58,5 +61,35 @@ impl LinuxBridgeConfig {
             self.options.clone_from(&other.options);
             self.port.clone_from(&other.port);
         }
+    }
+}
+
+impl MergedInterface {
+    pub(crate) fn is_default_pvid_changed(&self) -> bool {
+        let des_default_pvid = if let Some(Interface::LinuxBridge(des_iface)) =
+            self.for_apply.as_ref()
+        {
+            des_iface
+                .bridge
+                .as_ref()
+                .and_then(|b| b.options.as_ref())
+                .and_then(|o| o.vlan_default_pvid.as_ref())
+        } else {
+            None
+        };
+
+        let cur_default_pvid = if let Some(Interface::LinuxBridge(cur_iface)) =
+            self.current.as_ref()
+        {
+            cur_iface
+                .bridge
+                .as_ref()
+                .and_then(|b| b.options.as_ref())
+                .and_then(|o| o.vlan_default_pvid.as_ref())
+        } else {
+            None
+        };
+
+        des_default_pvid != cur_default_pvid
     }
 }
