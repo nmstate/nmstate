@@ -140,7 +140,7 @@ config:
 
     merged_routes.remove_routes_to_ignored_ifaces(ignored_ifaces.as_slice());
 
-    let config_routes = merged_routes.indexed.get(&"eth2".to_string()).unwrap();
+    let config_routes = merged_routes.indexed.get("eth2").unwrap();
 
     assert_eq!(merged_routes.route_changed_ifaces, vec!["eth2".to_string()]);
     assert_eq!(config_routes.len(), 2);

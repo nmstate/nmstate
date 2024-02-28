@@ -244,7 +244,7 @@ impl Interfaces {
         for changed_iface_name in changed_iface_names {
             if let Some(iface) = self.kernel_ifaces.remove(&changed_iface_name)
             {
-                if self.kernel_ifaces.get(iface.name()).is_some() {
+                if self.kernel_ifaces.contains_key(iface.name()) {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(

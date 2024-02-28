@@ -594,7 +594,7 @@ impl MergedRoutes {
             .collect();
 
         for iface in ignored_ifaces.as_slice() {
-            self.indexed.remove(&iface.to_string());
+            self.indexed.remove(*iface);
         }
         self.route_changed_ifaces
             .retain(|n| !ignored_ifaces.contains(&n.as_str()));
