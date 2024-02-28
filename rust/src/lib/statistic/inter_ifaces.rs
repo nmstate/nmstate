@@ -78,9 +78,7 @@ impl MergedInterfaces {
 
             // TODO: We do not support showing ovs-bond yet.
             for port in ports {
-                if let Some(port_iface) =
-                    self.kernel_ifaces.get(&port.to_string())
-                {
+                if let Some(port_iface) = self.kernel_ifaces.get(port) {
                     if port_iface.merged.iface_type()
                         == InterfaceType::OvsInterface
                     {

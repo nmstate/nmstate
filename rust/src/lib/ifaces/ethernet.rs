@@ -338,7 +338,7 @@ impl Interfaces {
         for iface in self.kernel_ifaces.values().filter(|i| {
             i.is_up()
                 && i.iface_type() == InterfaceType::Veth
-                && current.kernel_ifaces.get(i.name()).is_none()
+                && !current.kernel_ifaces.contains_key(i.name())
         }) {
             if let Interface::Ethernet(eth_iface) = iface {
                 if eth_iface.veth.is_none() {

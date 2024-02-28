@@ -104,7 +104,7 @@ impl Interfaces {
         iface_type: InterfaceType,
     ) -> Option<&'a Interface> {
         if iface_type == InterfaceType::Unknown {
-            self.kernel_ifaces.get(&iface_name.to_string()).or_else(|| {
+            self.kernel_ifaces.get(iface_name).or_else(|| {
                 self.user_ifaces
                     .values()
                     .find(|&iface| iface.name() == iface_name)
@@ -112,7 +112,7 @@ impl Interfaces {
         } else if iface_type.is_userspace() {
             self.user_ifaces.get(&(iface_name.to_string(), iface_type))
         } else {
-            self.kernel_ifaces.get(&iface_name.to_string())
+            self.kernel_ifaces.get(iface_name)
         }
     }
 
@@ -122,25 +122,23 @@ impl Interfaces {
         iface_type: InterfaceType,
     ) -> Option<Interface> {
         if iface_type == InterfaceType::Unknown {
-            self.kernel_ifaces
-                .remove(&iface_name.to_string())
-                .or_else(|| {
-                    if let Some((n, t)) = self
-                        .user_ifaces
-                        .keys()
-                        .find(|&(i, _)| i == iface_name)
-                        .cloned()
-                    {
-                        self.user_ifaces.remove(&(n, t))
-                    } else {
-                        None
-                    }
-                })
+            self.kernel_ifaces.remove(iface_name).or_else(|| {
+                if let Some((n, t)) = self
+                    .user_ifaces
+                    .keys()
+                    .find(|&(i, _)| i == iface_name)
+                    .cloned()
+                {
+                    self.user_ifaces.remove(&(n, t))
+                } else {
+                    None
+                }
+            })
         } else if iface_type.is_userspace() {
             self.user_ifaces
                 .remove(&(iface_name.to_string(), iface_type))
         } else {
-            self.kernel_ifaces.remove(&iface_name.to_string())
+            self.kernel_ifaces.remove(iface_name)
         }
     }
 
@@ -500,7 +498,7 @@ impl Interfaces {
             self.user_ifaces
                 .get_mut(&(iface_name.to_string(), iface_type))
         } else {
-            self.kernel_ifaces.get_mut(&iface_name.to_string())
+            self.kernel_ifaces.get_mut(iface_name)
         }
     }
 
@@ -726,7 +724,7 @@ impl MergedInterfaces {
         iface_type: InterfaceType,
     ) -> Option<&'a MergedInterface> {
         if iface_type == InterfaceType::Unknown {
-            self.kernel_ifaces.get(&iface_name.to_string()).or_else(|| {
+            self.kernel_ifaces.get(iface_name).or_else(|| {
                 self.user_ifaces
                     .values()
                     .find(|&iface| iface.merged.name() == iface_name)
@@ -734,7 +732,7 @@ impl MergedInterfaces {
         } else if iface_type.is_userspace() {
             self.user_ifaces.get(&(iface_name.to_string(), iface_type))
         } else {
-            self.kernel_ifaces.get(&iface_name.to_string())
+            self.kernel_ifaces.get(iface_name)
         }
     }
 
