@@ -8,7 +8,6 @@ mod ethtool;
 mod hsr;
 mod ieee8021x;
 mod infiniband;
-mod inter_connections;
 mod ip;
 mod loopback;
 mod mac_vlan;
@@ -40,9 +39,6 @@ pub(crate) use self::connection::{
     NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
     NM_SETTING_VPN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
     NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
-};
-pub(crate) use self::inter_connections::{
-    use_uuid_for_controller_reference, use_uuid_for_parent_reference,
 };
 pub(crate) use self::ip::fix_ip_dhcp_timeout;
 

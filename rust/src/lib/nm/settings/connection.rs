@@ -16,8 +16,9 @@ use super::{
     macsec::gen_nm_macsec_setting,
     mptcp::apply_mptcp_conf,
     ovs::{
-        create_ovs_port_nm_conn, gen_nm_iface_ovs_db_setting,
-        gen_nm_ovs_br_setting, gen_nm_ovs_iface_setting, get_ovs_port_name,
+        create_ovs_port_nm_conn, fix_ovs_iface_controller_setting,
+        gen_nm_iface_ovs_db_setting, gen_nm_ovs_br_setting,
+        gen_nm_ovs_iface_setting, get_ovs_port_name,
     },
     sriov::gen_nm_sriov_setting,
     user::gen_nm_user_setting,
@@ -49,11 +50,6 @@ pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
 pub(crate) const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
 pub(crate) const NM_SETTING_HSR_SETTING_NAME: &str = "hsr";
 pub(crate) const NM_SETTING_VPN_SETTING_NAME: &str = "vpn";
-
-pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
-    NM_SETTING_OVS_BRIDGE_SETTING_NAME,
-    NM_SETTING_OVS_PORT_SETTING_NAME,
-];
 
 pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 14] = [
     NM_SETTING_WIRED_SETTING_NAME,
@@ -292,6 +288,20 @@ pub(crate) fn iface_to_nm_connections(
                     gen_nm_br_port_setting(br_iface, &mut nm_conn);
                 }
                 Interface::OvsBridge(ovs_br_iface) => {
+                    fix_ovs_iface_controller_setting(
+                        iface,
+                        &mut nm_conn,
+                        &merged_state.interfaces,
+                    );
+                    let ovs_port_name =
+                        match get_ovs_port_name(ovs_br_iface, iface.name()) {
+                            Some(name) => name,
+                            None => {
+                                // We are attaching iface to OVS bridge using
+                                // `controller` property
+                                iface.name().to_string()
+                            }
+                        };
                     // When user attaching change controller property
                     // on OVS system or internal interface, we should
                     // modify it OVS port also.
@@ -304,25 +314,16 @@ pub(crate) fn iface_to_nm_connections(
                                 i.base_iface().controller.as_ref()
                             })
                     {
-                        let exist_nm_ovs_port_conn = if let Some(
-                            ovs_port_name,
-                        ) = get_ovs_port_name(
-                            ovs_br_iface,
-                            base_iface.name.as_str(),
-                        ) {
-                            get_exist_profile(
-                                exist_nm_conns,
-                                &ovs_port_name,
-                                &InterfaceType::Other("ovs-port".to_string()),
-                                nm_ac_uuids,
-                            )
-                        } else {
-                            None
-                        };
+                        let exist_nm_ovs_port_conn = get_exist_profile(
+                            exist_nm_conns,
+                            &ovs_port_name,
+                            &InterfaceType::Other("ovs-port".to_string()),
+                            nm_ac_uuids,
+                        );
                         ret.push(create_ovs_port_nm_conn(
                             ctrl,
                             &OvsBridgePortConfig {
-                                name: iface.name().to_string(),
+                                name: ovs_port_name,
                                 ..Default::default()
                             },
                             exist_nm_ovs_port_conn,

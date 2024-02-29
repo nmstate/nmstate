@@ -9,9 +9,9 @@ use super::super::nm_dbus::{
 use super::super::settings::connection::gen_nm_conn_setting;
 
 use crate::{
-    BaseInterface, BridgePortTrunkTag, Interface, InterfaceType, NmstateError,
-    OvsBridgeBondMode, OvsBridgeInterface, OvsBridgePortConfig,
-    OvsDbIfaceConfig, OvsInterface, UnknownInterface,
+    BaseInterface, BridgePortTrunkTag, Interface, InterfaceType,
+    MergedInterfaces, NmstateError, OvsBridgeBondMode, OvsBridgeInterface,
+    OvsBridgePortConfig, OvsDbIfaceConfig, OvsInterface, UnknownInterface,
 };
 
 pub(crate) fn create_ovs_port_nm_conn(
@@ -210,5 +210,32 @@ pub(crate) fn gen_nm_iface_ovs_db_setting(
         nm_conn.ovs_ext_ids = None;
     } else if let Some(conf) = iface.base_iface().ovsdb.as_ref() {
         apply_iface_ovsdb_conf(conf, nm_conn);
+    }
+}
+
+pub(crate) fn fix_ovs_iface_controller_setting(
+    iface: &Interface,
+    nm_conn: &mut NmConnection,
+    merged_ifaces: &MergedInterfaces,
+) {
+    let ovs_port_name = merged_ifaces
+        .user_ifaces
+        .get(&(
+            iface.base_iface().controller.clone().unwrap_or_default(),
+            InterfaceType::OvsBridge,
+        ))
+        .and_then(|i| {
+            if let Interface::OvsBridge(br_iface) = &i.merged {
+                Some(br_iface)
+            } else {
+                None
+            }
+        })
+        .and_then(|br_iface| get_ovs_port_name(br_iface, iface.name()))
+        .unwrap_or_else(|| iface.name().to_string());
+
+    if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
+        nm_conn_set.controller_type = Some("ovs-port".to_string());
+        nm_conn_set.controller = Some(ovs_port_name);
     }
 }

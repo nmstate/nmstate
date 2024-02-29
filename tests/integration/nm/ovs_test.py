@@ -127,7 +127,7 @@ def test_remove_ovs_internal_iface_got_port_profile_removed(
                 _get_ovs_port_profile_uuid_of_ovs_interface(ovs_iface_name)
             )
         else:
-            ovs_port_profile_uuid = _get_parent_uuid_of_interface(
+            ovs_port_profile_uuid = _get_ovs_port_uuid_of_ovs_iface(
                 ovs_iface_name
             )
         assert ovs_port_profile_uuid
@@ -177,7 +177,7 @@ def test_remove_ovs_bridge_ignored_port_keeps_it(bridge_with_ports):
 
 def _get_nm_active_profiles():
     all_profile_names_output = cmdlib.exec_cmd(
-        "nmcli -g NAME connection show --active".split(" "), check=True
+        "nmcli -g DEVICE connection show --active".split(" "), check=True
     )[1]
     all_profile_uuids_output = cmdlib.exec_cmd(
         "nmcli -g UUID connection show --active".split(" "), check=True
@@ -189,22 +189,22 @@ def _get_nm_active_profiles():
 
 
 def _get_ovs_port_profile_uuid_of_ovs_interface(iface_name):
-    ovs_iface_uuid = _get_uuid_of_ovs_interface(iface_name)
-    ovs_port_uuid = _get_parent_uuid_of_interface(ovs_iface_uuid)
+    ovs_iface_uuid = _get_uuid_of_device(iface_name, "ovs-interface")
+    ovs_port_uuid = _get_ovs_port_uuid_of_ovs_iface(ovs_iface_uuid)
     cmdlib.exec_cmd(
-        f"nmcli -g connection.id connection show {ovs_port_uuid}".split(" "),
+        f"nmcli -g connection.uuid connection show {ovs_port_uuid}".split(" "),
         check=True,
     )
     return ovs_port_uuid
 
 
-def _get_uuid_of_ovs_interface(iface_name):
+def _get_uuid_of_device(iface_name, device_type):
     conns = cmdlib.exec_cmd(
         "nmcli -g name,uuid,type connection show".split(" "),
         check=True,
     )[1].split("\n")
     ovs_iface_conns = [
-        x for x in conns if "ovs-interface" in x and iface_name in x
+        x for x in conns if device_type in x and iface_name in x
     ]
     if len(ovs_iface_conns) == 0:
         return ""
@@ -212,11 +212,12 @@ def _get_uuid_of_ovs_interface(iface_name):
         return ovs_iface_conns[0].split(":")[1]
 
 
-def _get_parent_uuid_of_interface(iface_name):
-    return cmdlib.exec_cmd(
+def _get_ovs_port_uuid_of_ovs_iface(iface_name):
+    ovs_port_iface_name = cmdlib.exec_cmd(
         f"nmcli -g connection.master connection show {iface_name}".split(" "),
         check=True,
     )[1].strip()
+    return _get_uuid_of_device(ovs_port_iface_name, "ovs-port")
 
 
 def _nmcli_ovs_bridge_with_ipv4_dns():
