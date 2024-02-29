@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::path::Path;
+
 use crate::{
     nispor::ethtool::np_ethtool_to_nmstate,
     nispor::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
@@ -102,6 +104,7 @@ pub(crate) fn np_iface_to_base_iface(
             Some(false)
         },
         ethtool: np_ethtool_to_nmstate(np_iface),
+        driver: get_driver(np_iface),
         ..Default::default()
     };
     if !InterfaceType::SUPPORTED_LIST.contains(&base_iface.iface_type) {
@@ -134,4 +137,38 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
     } else {
         Some(iface.permanent_mac_address.clone())
     }
+}
+
+fn get_driver(iface: &nispor::Iface) -> Option<String> {
+    let iface_name = iface.name.clone();
+    let sysdev = format!("/sys/class/net/{iface_name}/device/driver");
+    let path = Path::new(&*sysdev);
+
+    let full_path = match path.canonicalize() {
+        Ok(i) => i,
+        Err(e) => {
+            log::info!("Failed to get driver for iface {iface_name}: {e}");
+            return None;
+        }
+    };
+
+    let driver = match full_path.file_name() {
+        Some(i) => i,
+        None => {
+            log::info!("Failed to get driver for iface {iface_name}");
+            return None;
+        }
+    };
+
+    let res = match driver.to_str() {
+        Some(i) => i,
+        None => {
+            log::error!(
+                "Driver for iface {iface_name} is not a correct UTF-8 name"
+            );
+            return None;
+        }
+    };
+
+    Some(res.to_string())
 }

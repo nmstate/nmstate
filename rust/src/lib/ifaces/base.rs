@@ -135,6 +135,9 @@ pub struct BaseInterface {
     pub(crate) up_priority: u32,
     #[serde(skip)]
     pub(crate) routes: Option<Vec<RouteEntry>>,
+    #[serde(skip_serializing_if = "crate::serializer::is_option_string_empty")]
+    /// The driver of the specified network device.
+    pub driver: Option<String>,
     #[serde(flatten)]
     pub _other: serde_json::Map<String, serde_json::Value>,
 }

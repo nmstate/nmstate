@@ -25,6 +25,7 @@ class Interface:
     IDENTIFIER = "identifier"
     IDENTIFIER_NAME = "name"
     IDENTIFIER_MAC = "mac-address"
+    DRIVER = "driver"
 
 
 class Route:
