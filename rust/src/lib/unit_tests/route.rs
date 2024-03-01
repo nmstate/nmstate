@@ -580,3 +580,35 @@ fn test_route_cwnd_is_match() {
     assert!(!desired_route.is_match(&not_match_route_2));
     assert!(desired_route.is_match(&match_route));
 }
+
+#[test]
+fn test_route_without_options_is_match_with_any() {
+    let desired_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        "#,
+    )
+    .unwrap();
+
+    let not_match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.100"
+        metric: 1
+        table-id: 2
+        cwnd: 3
+        "#,
+    )
+    .unwrap();
+    let match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        metric: 1
+        table-id: 2
+        cwnd: 3
+        "#,
+    )
+    .unwrap();
+
+    assert!(!desired_route.is_match(&not_match_route));
+    assert!(desired_route.is_match(&match_route));
+}
