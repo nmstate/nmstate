@@ -137,6 +137,7 @@ fn np_routetype_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
             log::debug!("Got unsupported route {:?}", np_route);
         }
     }
+    route_entry.cwnd = np_route.cwnd;
     route_entry
 }
 
@@ -188,6 +189,7 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     route_entry.next_hop_addr = next_hop_addr;
     route_entry.metric = np_route.metric.map(i64::from);
     route_entry.table_id = Some(np_route.table);
+    route_entry.cwnd = np_route.cwnd;
 
     route_entry
 }

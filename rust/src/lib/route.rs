@@ -180,6 +180,9 @@ pub struct RouteEntry {
     /// Serialize and deserialize to/from `route-type`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route_type: Option<RouteType>,
+    /// Congestion window clamp
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwnd: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -264,12 +267,15 @@ impl RouteEntry {
         if self.route_type.is_some() && self.route_type != other.route_type {
             return false;
         }
+        if self.cwnd.is_some() && self.cwnd != other.cwnd {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr, weight)
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, u16) {
+    // destination, next_hop_addr, weight, cwnd)
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, u16, u32) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
             !self
@@ -284,6 +290,7 @@ impl RouteEntry {
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
             self.weight.unwrap_or_default(),
+            self.cwnd.unwrap_or_default(),
         )
     }
 
@@ -332,6 +339,14 @@ impl RouteEntry {
                             .to_string(),
                     ));
                 }
+            }
+        }
+        if let Some(cwnd) = self.cwnd {
+            if cwnd == 0 {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "The value of 'cwnd' cannot be 0".to_string(),
+                ));
             }
         }
         Ok(())
@@ -401,6 +416,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.weight {
             props.push(format!("weight: {v}"));
+        }
+        if let Some(v) = self.cwnd {
+            props.push(format!("cwnd: {v}"));
         }
 
         write!(f, "{}", props.join(" "))
