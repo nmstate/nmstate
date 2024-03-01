@@ -539,6 +539,7 @@ impl Interfaces {
         for iface in self
             .kernel_ifaces
             .values()
+            .chain(self.user_ifaces.values())
             .filter(|i| i.is_controller() && i.is_up())
         {
             let cur_iface = current.get_iface(iface.name(), iface.iface_type());

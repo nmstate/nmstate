@@ -17,6 +17,7 @@ from ..testlib import cmdlib
 from ..testlib import statelib
 from ..testlib.ovslib import Bridge
 from ..testlib.retry import retry_till_true_or_timeout
+from ..testlib.dummy import nm_unmanaged_dummy
 
 
 BRIDGE0 = "brtest0"
@@ -29,6 +30,7 @@ OVSDB_EXT_IDS_CONF2_STR = {"bak": "2"}
 OVS_DUP_NAME = "br-ex"
 ETH1 = "eth1"
 VERIFY_RETRY_TMO = 5
+DUMMY1 = "dummy1"
 
 
 @pytest.fixture
@@ -555,3 +557,44 @@ def test_gc_on_ovs_dpdk():
     assert "n-txq-desc=2048" in ovs_iface_conf
     assert "n-rxq=100" in ovs_iface_conf
     assert "devargs=0000:af:00.1" in ovs_iface_conf
+
+
+@pytest.fixture
+def unmaaged_dummy1():
+    with nm_unmanaged_dummy(DUMMY1):
+        yield
+
+
+def test_ovs_bond_auto_managed_ignored_port(unmaaged_dummy1, eth1_up):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: bond1
+              link-aggregation:
+                mode: balance-slb
+                port:
+                  - name: {DUMMY1}
+                  - name: eth1
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    try:
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+    finally:
+        libnmstate.apply(
+            yaml.load(
+                """---
+                interfaces:
+                - name: br0
+                  type: ovs-bridge
+                  state: absent
+                """,
+                Loader=yaml.SafeLoader,
+            )
+        )

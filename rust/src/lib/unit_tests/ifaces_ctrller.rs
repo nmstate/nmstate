@@ -668,6 +668,64 @@ fn test_auto_manage_ports() {
 }
 
 #[test]
+fn test_auto_manage_ovs_bond_ports() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: bond1
+              link-aggregation:
+                mode: balance-slb
+                port:
+                  - name: eth1
+                  - name: eth2",
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: ignore
+        - name: eth2
+          type: ethernet
+          state: ignore",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let br_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    let eth1_iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    let eth2_iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(br_iface.ports(), Some(vec!["eth1", "eth2"]));
+    assert!(eth1_iface.is_up());
+    assert_eq!(eth1_iface.base_iface().controller.as_deref(), Some("br0"));
+    assert_eq!(eth2_iface.base_iface().controller.as_deref(), Some("br0"));
+}
+
+#[test]
 fn test_do_not_auto_manage_ports_if_current_has_ignore() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
         r"---
