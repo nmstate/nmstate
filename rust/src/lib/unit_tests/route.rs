@@ -8,8 +8,8 @@ use crate::{
         TEST_IPV4_NET1, TEST_IPV6_ADDR1, TEST_IPV6_ADDR2, TEST_IPV6_NET1,
         TEST_IPV6_NET2, TEST_NIC, TEST_ROUTE_METRIC,
     },
-    ErrorKind, InterfaceType, Interfaces, MergedRoutes, RouteEntry, RouteState,
-    Routes,
+    ErrorKind, InterfaceType, Interfaces, MergedRoutes, NmstateError,
+    RouteEntry, RouteState, Routes,
 };
 
 #[test]
@@ -517,4 +517,66 @@ fn test_routes_not_delayed_by_nm() {
 
     assert!(!is_route_delayed_by_nm(&route4, &current_ifaces));
     assert!(!is_route_delayed_by_nm(&route6, &current_ifaces));
+}
+
+#[test]
+fn test_route_cwnd_zero_invalid() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r"
+        cwnd: 0
+        ",
+    );
+
+    let result = route.expect("Deserialization failed").sanitize();
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
+fn test_route_cwnd_invalid_type() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r"
+        cwnd: -20
+        ",
+    );
+
+    assert!(route.is_err());
+    let err_msg = route.unwrap_err().to_string();
+    assert!(err_msg.contains("cwnd: invalid type"));
+}
+
+#[test]
+fn test_route_cwnd_is_match() {
+    let desired_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        cwnd: 20
+        "#,
+    )
+    .unwrap();
+
+    let not_match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        "#,
+    )
+    .unwrap();
+    let not_match_route_2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        cwnd: 15
+        "#,
+    )
+    .unwrap();
+    let match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        cwnd: 20
+        "#,
+    )
+    .unwrap();
+
+    assert!(!desired_route.is_match(&not_match_route));
+    assert!(!desired_route.is_match(&not_match_route_2));
+    assert!(desired_route.is_match(&match_route));
 }
