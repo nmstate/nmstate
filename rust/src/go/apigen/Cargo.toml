@@ -1,0 +1,16 @@
+[package]
+name = "nmstate-go-apigen"
+edition = "2018"
+rust-version = "1.58"
+version = "0.0.1"
+
+[[bin]]
+name = "nmstate-go-apigen"
+path = "go-apigen.rs"
+
+[dependencies]
+regex = "1.10.2"
+clap = { version = "3.1", features = ["cargo", "derive"] }
+syn = {version = "2.0.39", features = ["visit", "extra-traits", "full"]}
+convert_case = "0.6.0"
+proc-macro2 = "1.0.56"

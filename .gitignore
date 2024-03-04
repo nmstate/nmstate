@@ -42,3 +42,9 @@ doc/nmstate-autoconf.8
 nmstate-*.tar.gz
 nmstate-*.tar.gz.asc
 /tags
+.states
+.k8s
+
+api.test
+crd.test
+rust/src/go/nmstate/v2/file.txt

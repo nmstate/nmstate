@@ -1,0 +1,1 @@
+../../api/v2/controller-gen.sh

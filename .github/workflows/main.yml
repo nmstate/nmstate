@@ -153,6 +153,7 @@ jobs:
         run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
 
       - uses: actions/upload-artifact@v3
+        if: success() || failure()
         with:
           name: nmstate-test-junit-artifact-${{ matrix.job_type }}
           path: junit.*xml
