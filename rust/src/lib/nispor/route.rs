@@ -23,6 +23,9 @@ const IPV6_DEFAULT_GATEWAY: &str = "::/0";
 const IPV4_EMPTY_NEXT_HOP_ADDRESS: &str = "0.0.0.0";
 const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 
+// kernel values
+const RTAX_CWND: u32 = 7;
+
 pub(crate) fn get_routes(running_config_only: bool) -> Routes {
     let mut ret = Routes::new();
     let mut np_routes: Vec<nispor::Route> = Vec::new();
@@ -137,7 +140,11 @@ fn np_routetype_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
             log::debug!("Got unsupported route {:?}", np_route);
         }
     }
-    route_entry.cwnd = np_route.cwnd;
+    // according to `man ip-route`, cwnd is useless without the lock flag, so
+    // we require both cwnd and its lock flag to consider cwnd as set.
+    let cwnd_lock = np_route.lock.unwrap_or(0) & (1 << RTAX_CWND) != 0;
+    route_entry.cwnd = if cwnd_lock { np_route.cwnd } else { None };
+
     route_entry
 }
 
@@ -189,7 +196,10 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     route_entry.next_hop_addr = next_hop_addr;
     route_entry.metric = np_route.metric.map(i64::from);
     route_entry.table_id = Some(np_route.table);
-    route_entry.cwnd = np_route.cwnd;
+    // according to `man ip-route`, cwnd is useless without the lock flag, so
+    // we require both cwnd and its lock flag to consider cwnd as set.
+    let cwnd_lock = np_route.lock.unwrap_or(0) & (1 << RTAX_CWND) != 0;
+    route_entry.cwnd = if cwnd_lock { np_route.cwnd } else { None };
 
     route_entry
 }

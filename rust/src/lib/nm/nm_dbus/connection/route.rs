@@ -18,6 +18,7 @@ pub struct NmIpRoute {
     pub weight: Option<u32>,
     pub route_type: Option<String>,
     pub cwnd: Option<u32>,
+    pub lock_cwnd: Option<bool>,
     _other: DbusDictionary,
 }
 
@@ -39,6 +40,7 @@ impl TryFrom<DbusDictionary> for NmIpRoute {
             weight,
             route_type: _from_map!(v, "type", String::try_from)?,
             cwnd: _from_map!(v, "cwnd", u32::try_from)?,
+            lock_cwnd: _from_map!(v, "lock-cwnd", bool::try_from)?,
             _other: v,
         })
     }
@@ -95,6 +97,12 @@ impl NmIpRoute {
         if let Some(v) = &self.cwnd {
             ret.append(
                 zvariant::Value::new("cwnd"),
+                zvariant::Value::new(zvariant::Value::new(v)),
+            )?;
+        }
+        if let Some(v) = &self.lock_cwnd {
+            ret.append(
+                zvariant::Value::new("lock-cwnd"),
                 zvariant::Value::new(zvariant::Value::new(v)),
             )?;
         }
