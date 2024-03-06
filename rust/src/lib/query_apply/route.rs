@@ -56,7 +56,7 @@ impl MergedRoutes {
         cur_routes.dedup();
         let routes_for_verify = self.routes_for_verify();
 
-        for rt in routes_for_verify.as_slice() {
+        for mut rt in routes_for_verify.as_slice() {
             if rt.is_absent() {
                 // We do not valid absent route if desire has a match there.
                 // For example, user is changing a gateway.
@@ -80,33 +80,23 @@ impl MergedRoutes {
                         ),
                     ));
                 }
-            } else if rt.route_type.is_some() {
-                // In nispor, the IPv4 route with route type `Blackhole`,
-                // `Unreachable`, `Prohibit` does not have the route oif
-                // setting.
-                let mut route_type_rt = rt.clone();
-                if !route_type_rt.is_ipv6() {
-                    route_type_rt.next_hop_iface = None;
+            } else {
+                let mut rt2;
+                if rt.route_type.is_some() && !rt.is_ipv6() {
+                    // In nispor, the IPv4 route with route type `Blackhole`,
+                    // `Unreachable`, `Prohibit` does not have the route oif
+                    // setting.
+                    rt2 = rt.clone();
+                    rt2.next_hop_iface = None;
+                    rt = &rt2
                 }
-                if !cur_routes
-                    .as_slice()
-                    .iter()
-                    .any(|cur_rt| route_type_rt.is_match(cur_rt))
-                {
+
+                if !cur_routes.iter().any(|cur_rt| rt.is_match(cur_rt)) {
                     return Err(NmstateError::new(
                         ErrorKind::VerificationError,
                         format!("Desired route {rt} not found after apply"),
                     ));
                 }
-            } else if !cur_routes
-                .as_slice()
-                .iter()
-                .any(|cur_rt| rt.is_match(cur_rt))
-            {
-                return Err(NmstateError::new(
-                    ErrorKind::VerificationError,
-                    format!("Desired route {rt} not found after apply"),
-                ));
             }
         }
 
