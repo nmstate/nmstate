@@ -1884,3 +1884,44 @@ def test_route_rule_suppress_prefix_length(route_rule_test_env):
     }
     libnmstate.apply(desired_state)
     _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+
+
+def test_append_route_rule(route_rule_test_env):
+    desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.IP_FROM: "2001:db8:f::/64",
+                    RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+                },
+                {
+                    RouteRule.IP_FROM: "192.0.2.1/32",
+                    RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+                },
+            ]
+        }
+    }
+    libnmstate.apply(desired_state)
+    _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+
+    new_desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.IP_FROM: "2001:db8:e::/64",
+                    RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+                },
+                {
+                    RouteRule.IP_FROM: "192.0.2.2/32",
+                    RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+                },
+            ]
+        },
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+    }
+
+    libnmstate.apply(new_desired_state)
+    _check_ip_rules(
+        desired_state[RouteRule.KEY][RouteRule.CONFIG]
+        + new_desired_state[RouteRule.KEY][RouteRule.CONFIG]
+    )
