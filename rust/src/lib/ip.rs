@@ -258,6 +258,10 @@ impl InterfaceIpv4 {
         {
             self.addresses.clone_from(&current.addresses);
         }
+
+        // The rules is `pub(crate)`, it will not merged by `merge_json_value()`
+        self.rules = current.rules.clone();
+
         self.sanitize(false).ok();
     }
 
@@ -740,6 +744,10 @@ impl InterfaceIpv6 {
         {
             self.addresses.clone_from(&current.addresses);
         }
+
+        // The rules is `pub(crate)`, it will not merged by `merge_json_value()`
+        self.rules = current.rules.clone();
+
         self.sanitize(false).ok();
     }
 
