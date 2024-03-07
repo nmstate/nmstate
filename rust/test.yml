@@ -1,0 +1,6 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: unknown
+    mtu: 9000
