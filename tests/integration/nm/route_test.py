@@ -6,7 +6,10 @@ import pytest
 import yaml
 
 from ..testlib.cmdlib import exec_cmd
+from ..testlib.env import nm_minor_version
 from ..testlib.route import assert_routes
+
+from libnmstate.error import NmstateVerificationError
 
 TEST_GATEAY4 = "192.0.2.1"
 TEST_GATEAY6 = "2001:db8:2::"
@@ -77,3 +80,30 @@ def test_preserve_old_gateway(eth1_with_old_gateway_format):
         ],
         cur_state,
     )
+
+
+@pytest.mark.skipif(
+    nm_minor_version() <= 42,
+    reason="NM does not wait DHCP to assign static route",
+)
+@pytest.mark.tier1
+def test_route_delayed_by_nm_fails(eth1_up):
+    with pytest.raises(NmstateVerificationError):
+        libnmstate.apply(
+            yaml.load(
+                """---
+                routes:
+                  config:
+                  - destination: 203.0.113.0/24
+                    next-hop-address: 192.0.2.251
+                    next-hop-interface: eth1
+                interfaces:
+                - name: eth1
+                  state: up
+                  ipv4:
+                    dhcp: true
+                    enabled: true
+                """,
+                Loader=yaml.SafeLoader,
+            )
+        )
