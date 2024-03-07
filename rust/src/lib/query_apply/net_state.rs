@@ -375,8 +375,11 @@ impl MergedNetworkState {
             .filter(|(_, t)| !t.is_userspace())
             .map(|(n, _)| n.as_str())
             .collect();
-        self.routes
-            .verify(&current.routes, ignored_kernel_ifaces.as_slice())?;
+        self.routes.verify(
+            &current.routes,
+            ignored_kernel_ifaces.as_slice(),
+            &current.interfaces,
+        )?;
         self.rules
             .verify(&current.rules, ignored_kernel_ifaces.as_slice())?;
         self.dns.verify(current.dns.clone().unwrap_or_default())?;
