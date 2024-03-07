@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ErrorKind, MergedRoutes, NmstateError, RouteEntry, Routes};
+use crate::{
+    ErrorKind, InterfaceType, Interfaces, MergedRoutes, NmstateError,
+    RouteEntry, Routes,
+};
 
 impl MergedRoutes {
     fn routes_for_verify(&self) -> Vec<RouteEntry> {
@@ -39,6 +42,7 @@ impl MergedRoutes {
         &self,
         current: &Routes,
         ignored_ifaces: &[&str],
+        current_ifaces: &Interfaces,
     ) -> Result<(), NmstateError> {
         let mut cur_routes: Vec<&RouteEntry> = Vec::new();
         if let Some(cur_rts) = current.config.as_ref() {
@@ -92,6 +96,10 @@ impl MergedRoutes {
                 }
 
                 if !cur_routes.iter().any(|cur_rt| rt.is_match(cur_rt)) {
+                    if is_route_delayed_by_nm(rt, current_ifaces) {
+                        log::warn!("Route {rt} still missing due to NetworkManager waiting to receive an IP address");
+                    }
+
                     return Err(NmstateError::new(
                         ErrorKind::VerificationError,
                         format!("Desired route {rt} not found after apply"),
@@ -102,4 +110,58 @@ impl MergedRoutes {
 
         Ok(())
     }
+}
+
+/// NetworkManager doesn't add routes with ipvx.method auto or dhcp until the
+/// interface has at least an IP.
+/// This function checks if that's the case. Note that it doesn't check if the
+/// route is missing, call this function when you have already checked that.
+pub(crate) fn is_route_delayed_by_nm(
+    rt: &RouteEntry,
+    current_ifaces: &Interfaces,
+) -> bool {
+    let current_iface = rt.next_hop_iface.as_ref().and_then(|name| {
+        current_ifaces.get_iface(name, InterfaceType::Unknown)
+    });
+
+    let current_iface_base = match current_iface {
+        Some(curr_iface) => curr_iface.base_iface(),
+        None => return false,
+    };
+
+    let is_auto = if rt.is_ipv6() {
+        current_iface_base
+            .ipv6
+            .as_ref()
+            .map(|ipv6| ipv6.is_auto())
+            .unwrap_or(false)
+    } else {
+        current_iface_base
+            .ipv4
+            .as_ref()
+            .map(|ipv4| ipv4.is_auto())
+            .unwrap_or(false)
+    };
+
+    if !is_auto {
+        return false;
+    }
+
+    let has_address = if rt.is_ipv6() {
+        current_iface_base
+            .ipv6
+            .as_ref()
+            .and_then(|ipv6| ipv6.addresses.as_ref())
+            .map(|addrs| !addrs.is_empty())
+            .unwrap_or(false)
+    } else {
+        current_iface_base
+            .ipv4
+            .as_ref()
+            .and_then(|ipv4| ipv4.addresses.as_ref())
+            .map(|addrs| !addrs.is_empty())
+            .unwrap_or(false)
+    };
+
+    !has_address
 }
