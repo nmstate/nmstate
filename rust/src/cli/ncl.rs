@@ -93,6 +93,10 @@ fn main() {
                 .help("Disable logging")
                 .global(true),
         )
+        //setting alias a=> apply, s => show
+        .subcommand(clap::SubCommand::with_name("a").alias("apply"))
+        .subcommand(clap::SubCommand::with_name("s").alias("show"));
+        
         .subcommand(
             clap::Command::new(SUB_CMD_AUTOCONF)
                 .about(

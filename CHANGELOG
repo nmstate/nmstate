@@ -748,7 +748,7 @@ The YAML API changed: The `other_config` under OVS bond should be stored under
 ### Breaking changes
  - Deprecate specifying keyword arguments as positional arguments in the public methods.
    This will become a hard failure in Nmstate-0.3.0 and later and it affects the following functions:
-   - "libnmstate.apply()"
+   - "libnmstate.()"
    - "libnmstate.commit()"
    - "libnmstate.rollback()"
    - "libmstate.show()"
