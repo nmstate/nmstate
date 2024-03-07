@@ -188,7 +188,7 @@ impl From<&str> for InterfaceState {
             "up" => Self::Up,
             "down" => Self::Down,
             "absent" => Self::Absent,
-            "ignore" => Self::Ignore,
+            "unknown" => Self::Ignore,
             _ => Self::Unknown,
         }
     }
@@ -548,9 +548,10 @@ impl Interface {
     }
 
     /// Whether interface is marked as ignore.
-    pub fn is_ignore(&self) -> bool {
+    pub fn is_unknown(&self) -> bool {
         self.base_iface().state == InterfaceState::Ignore
     }
+
 
     // Whether desire state only has `name, type, state`.
     pub(crate) fn is_up_exist_config(&self) -> bool {
