@@ -72,6 +72,8 @@ interfaces:
 
 *Nmstate* [GitHub Issues pages][github_issue_url] for discussion.
 
+Matrix room: [`#nmstate:fedora.im`][matrix_room_url]
+
 ## Contributing
 
 Yay! We are happy to accept new contributors to the Nmstate project. Please
@@ -99,3 +101,4 @@ Please refer to [CHANGELOG](CHANGELOG)
 [github_issue_url]: https://github.com/nmstate/nmstate/issues
 [apache_2_0_license_url]: https://www.apache.org/licenses/LICENSE-2.0
 [lgpl_2_1_license_url]: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+[matrix_room_url]: https://matrix.to/#/#nmstate:fedora.im
