@@ -1,6 +1,5 @@
-use log::warn;
-
 use crate::{RouteEntry, RouteType, Routes};
+use log::warn;
 
 const SUPPORTED_ROUTE_SCOPE: [nispor::RouteScope; 2] =
     [nispor::RouteScope::Universe, nispor::RouteScope::Link];
@@ -25,7 +24,7 @@ const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 
 pub(crate) fn get_routes(running_config_only: bool) -> Routes {
     let mut ret = Routes::new();
-    let mut np_routes: Vec<nispor::Route> = Vec::new();
+    let np_routes: Vec<nispor::Route> = Vec::new();
     let route_type = [
         nispor::RouteType::BlackHole,
         nispor::RouteType::Unreachable,
@@ -37,25 +36,29 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
         SUPPORTED_ROUTE_PROTOCOL.as_slice()
     };
 
+    let mut futures = vec![];
+
     for protocol in protocols {
         let mut rt_filter = nispor::NetStateRouteFilter::default();
         rt_filter.protocol = Some(*protocol);
         let mut filter = nispor::NetStateFilter::minimum();
         filter.route = Some(rt_filter);
-        match nispor::NetState::retrieve_with_filter(&filter) {
-            Ok(np_state) => {
-                for np_rt in np_state.routes {
-                    np_routes.push(np_rt);
+
+        let cloned_protocol = *protocol;
+
+        let future = async move {
+            match nispor::NetState::retrieve_with_filter_async(&filter).await {
+                Ok(np_state) => Ok(np_state.routes),
+                Err(e) => {
+                    warn!(
+                        "Failed to retrieve {:?} route via nispor: {}",
+                        cloned_protocol, e
+                    );
+                    Err(e)
                 }
             }
-            Err(e) => {
-                log::warn!(
-                    "Failed to retrieve {:?} route via nispor: {}",
-                    protocol,
-                    e
-                );
-            }
-        }
+        };
+        futures.push(future);
     }
 
     if !running_config_only {
