@@ -279,12 +279,17 @@ fn new_test_nic2_with_static_ip() -> Interface {
     .unwrap()
 }
 
-pub(crate) fn gen_merged_ifaces_for_route_test() -> MergedInterfaces {
+pub(crate) fn gen_merged_ifaces_for_route_test(
+) -> (MergedInterfaces, Interfaces) {
     let mut ifaces = Interfaces::new();
     ifaces.push(new_test_nic_with_static_ip());
     ifaces.push(new_test_nic2_with_static_ip());
     let mut current = Interfaces::new();
     current.push(new_eth_iface("eth1"));
     current.push(new_eth_iface("eth2"));
-    MergedInterfaces::new(ifaces, current, false, false).unwrap()
+
+    let merged =
+        MergedInterfaces::new(ifaces, current.clone(), false, false).unwrap();
+
+    (merged, current)
 }

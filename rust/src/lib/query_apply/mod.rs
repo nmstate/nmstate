@@ -26,3 +26,6 @@ mod sriov;
 mod vlan;
 mod vrf;
 mod vxlan;
+
+#[cfg(test)]
+pub(crate) use route::is_route_delayed_by_nm;
