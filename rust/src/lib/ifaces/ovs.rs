@@ -110,7 +110,7 @@ impl OvsBridgeInterface {
         }
     }
 
-    // * OVS Bridge cannot have MTU, IP
+    // * OVS Bridge cannot have MTU, IP or MAC address
     pub(crate) fn sanitize(
         &mut self,
         is_desired: bool,
@@ -122,6 +122,19 @@ impl OvsBridgeInterface {
                     as it only exists in OVS database, ignoring",
                     self.base.name.as_str()
                 );
+            }
+        }
+        if let Some(mac) = self.base.mac_address.as_ref() {
+            if !mac.is_empty() && is_desired {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "OVS Bridge {} can not hold MAC address, \
+                        please set MAC address on OVS internal interface \
+                        instead",
+                        self.base.name.as_str()
+                    ),
+                ));
             }
         }
         self.base.mtu = None;
