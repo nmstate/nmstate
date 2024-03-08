@@ -8,7 +8,7 @@ impl VlanInterface {
         if let Some(vlan_conf) = &mut self.vlan {
             vlan_conf.update(other.vlan.as_ref());
         } else {
-            self.vlan = other.vlan.clone();
+            self.vlan.clone_from(&other.vlan);
         }
     }
 }
@@ -16,7 +16,7 @@ impl VlanInterface {
 impl VlanConfig {
     fn update(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            self.base_iface = other.base_iface.clone();
+            self.base_iface.clone_from(&other.base_iface);
             self.id = other.id;
             self.protocol = other.protocol;
         }

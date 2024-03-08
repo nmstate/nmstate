@@ -239,7 +239,7 @@ impl OvsBridgeInterface {
                         if cur_port_conf.name.as_str()
                             == des_port_conf.name.as_str()
                         {
-                            new_port.vlan = cur_port_conf.vlan.clone();
+                            new_port.vlan.clone_from(&cur_port_conf.vlan);
                             break;
                         }
                     }

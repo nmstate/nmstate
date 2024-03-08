@@ -7,7 +7,7 @@ impl HsrInterface {
         if let Some(hsr_conf) = &mut self.hsr {
             hsr_conf.update(other.hsr.as_ref());
         } else {
-            self.hsr = other.hsr.clone();
+            self.hsr.clone_from(&other.hsr);
         }
     }
 
@@ -21,9 +21,10 @@ impl HsrInterface {
 impl HsrConfig {
     fn update(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            self.port1 = other.port1.clone();
-            self.port2 = other.port2.clone();
-            self.supervision_address = other.supervision_address.clone();
+            self.port1.clone_from(&other.port1);
+            self.port2.clone_from(&other.port2);
+            self.supervision_address
+                .clone_from(&other.supervision_address);
             self.multicast_spec = other.multicast_spec;
             self.protocol = other.protocol;
         }

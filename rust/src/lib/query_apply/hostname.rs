@@ -5,10 +5,10 @@ use crate::{ErrorKind, HostNameState, MergedHostNameState, NmstateError};
 impl HostNameState {
     pub(crate) fn update(&mut self, other: &Self) {
         if other.running.is_some() {
-            self.running = other.running.clone();
+            self.running.clone_from(&other.running);
         }
         if other.config.is_some() {
-            self.config = other.config.clone();
+            self.config.clone_from(&other.config);
         }
     }
 }

@@ -228,8 +228,8 @@ impl MergedOvsDbGlobalConfig {
                 );
             }
         } else {
-            external_ids = cur_external_ids.clone();
-            other_config = cur_other_config.clone();
+            external_ids.clone_from(&cur_external_ids);
+            other_config.clone_from(&cur_other_config);
         }
 
         if let Some(v) = merged_ovn.to_ovsdb_external_id_value() {

@@ -7,7 +7,7 @@ impl InfiniBandInterface {
         if let Some(ib_conf) = &mut self.ib {
             ib_conf.update(other.ib.as_ref());
         } else {
-            self.ib = other.ib.clone();
+            self.ib.clone_from(&other.ib);
         }
     }
 }
@@ -17,7 +17,7 @@ impl InfiniBandConfig {
         if let Some(other) = other {
             self.mode = other.mode;
             self.pkey = other.pkey;
-            self.base_iface = other.base_iface.clone();
+            self.base_iface.clone_from(&other.base_iface);
         }
     }
 }

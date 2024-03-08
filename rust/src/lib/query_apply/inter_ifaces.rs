@@ -31,10 +31,13 @@ impl Interfaces {
                             new_iface.base.state = other_ovs_iface.base.state;
                             new_iface.base.iface_type =
                                 InterfaceType::OvsInterface;
-                            new_iface.base.controller =
-                                other_ovs_iface.base.controller.clone();
-                            new_iface.base.controller_type =
-                                other_ovs_iface.base.controller_type.clone();
+                            new_iface
+                                .base
+                                .controller
+                                .clone_from(&other_ovs_iface.base.controller);
+                            new_iface.base.controller_type.clone_from(
+                                &other_ovs_iface.base.controller_type,
+                            );
                             let mut new_iface =
                                 Interface::OvsInterface(new_iface);
                             new_iface.update(other_iface);

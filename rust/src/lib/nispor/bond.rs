@@ -79,7 +79,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
     let mut options = BondOptions::default();
     if let Some(ref np_bond) = &np_iface.bond {
         options.ad_actor_sys_prio = np_bond.ad_actor_sys_prio;
-        options.ad_actor_system = np_bond.ad_actor_system.clone();
+        options.ad_actor_system.clone_from(&np_bond.ad_actor_system);
         options.ad_select = np_bond.ad_select.as_ref().and_then(|r| match r {
             nispor::BondAdSelect::Stable => Some(BondAdSelect::Stable),
             nispor::BondAdSelect::Bandwidth => Some(BondAdSelect::Bandwidth),
@@ -119,7 +119,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                 }
             });
         options.arp_interval = np_bond.arp_interval;
-        options.arp_ip_target = np_bond.arp_ip_target.clone();
+        options.arp_ip_target.clone_from(&np_bond.arp_ip_target);
         options.arp_validate =
             np_bond.arp_validate.as_ref().and_then(|r| match r {
                 nispor::BondArpValidate::None => Some(BondArpValidate::None),
@@ -170,7 +170,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
         options.num_grat_arp = np_bond.num_grat_arp;
         options.num_unsol_na = np_bond.num_unsol_na;
         options.packets_per_slave = np_bond.packets_per_subordinate;
-        options.primary = np_bond.primary.clone();
+        options.primary.clone_from(&np_bond.primary);
         options.primary_reselect =
             np_bond.primary_reselect.as_ref().and_then(|r| match r {
                 nispor::BondPrimaryReselect::Always => {

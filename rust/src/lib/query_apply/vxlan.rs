@@ -8,7 +8,7 @@ impl VxlanInterface {
         if let Some(vxlan_conf) = &mut self.vxlan {
             vxlan_conf.update(other.vxlan.as_ref());
         } else {
-            self.vxlan = other.vxlan.clone();
+            self.vxlan.clone_from(&other.vxlan);
         }
     }
 }
@@ -16,7 +16,7 @@ impl VxlanInterface {
 impl VxlanConfig {
     fn update(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            self.base_iface = other.base_iface.clone();
+            self.base_iface.clone_from(&other.base_iface);
             self.id = other.id;
             self.learning = other.learning;
             self.local = other.local;
