@@ -22,6 +22,7 @@ from collections.abc import Sequence
 from copy import deepcopy
 import difflib
 import json
+import warnings
 
 import yaml
 
@@ -72,6 +73,11 @@ def format_desired_current_state_diff(desired_state, current_state):
 class PrettyState:
     def __init__(self, state):
         yaml.add_representer(dict, represent_dict)
+        warnings.warn(
+            "PrettyState class is deprecated;to be removed in future release."
+            "The output of libnmstate.show() is already sorted.",
+            DeprecationWarning,
+        )
         self.state = _sort_with_priority(state)
 
     @property
