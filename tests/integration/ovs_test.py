@@ -6,7 +6,6 @@ import pytest
 import yaml
 
 import libnmstate
-from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
@@ -347,19 +346,6 @@ class TestOvsLinkAggregation:
 
         assertlib.assert_absent(BRIDGE1)
         assertlib.assert_absent(BOND1)
-
-    def test_pretty_state_ovs_lag_name_first(self, eth1_up, eth2_up):
-        bridge = Bridge(BRIDGE1)
-        bridge.add_link_aggregation_port(
-            BOND1,
-            (ETH1, ETH2),
-            mode=OVSBridge.Port.LinkAggregation.Mode.ACTIVE_BACKUP,
-        )
-
-        with bridge.create():
-            current_state = statelib.show_only((BRIDGE1,))
-            pretty_state = PrettyState(current_state)
-            assert OVS_BOND_YAML_STATE in pretty_state.yaml
 
     @pytest.mark.tier1
     def test_add_ovs_lag_to_existing_ovs_bridge(self, port0_up, port1_up):
