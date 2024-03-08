@@ -13,8 +13,8 @@ pub(crate) fn gen_nm_macsec_setting(
     if let Some(macsec_conf) = iface.macsec.as_ref() {
         nm_macsec_set.parent = Some(macsec_conf.base_iface.clone());
         nm_macsec_set.encrypt = Some(macsec_conf.encrypt);
-        nm_macsec_set.mka_cak = macsec_conf.mka_cak.clone();
-        nm_macsec_set.mka_ckn = macsec_conf.mka_ckn.clone();
+        nm_macsec_set.mka_cak.clone_from(&macsec_conf.mka_cak);
+        nm_macsec_set.mka_ckn.clone_from(&macsec_conf.mka_ckn);
         nm_macsec_set.port = Some(macsec_conf.port as i32);
         nm_macsec_set.validation = Some(macsec_conf.validation.into());
         nm_macsec_set.send_sci = Some(macsec_conf.send_sci);

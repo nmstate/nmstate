@@ -28,7 +28,7 @@ impl EthernetInterface {
         if let Some(eth_conf) = &mut self.ethernet {
             eth_conf.update(other.ethernet.as_ref())
         } else {
-            self.ethernet = other.ethernet.clone()
+            self.ethernet.clone_from(&other.ethernet)
         }
     }
 
@@ -36,7 +36,7 @@ impl EthernetInterface {
         if let Some(veth_conf) = &mut self.veth {
             veth_conf.update(other.veth.as_ref());
         } else {
-            self.veth = other.veth.clone();
+            self.veth.clone_from(&other.veth);
         }
     }
 
@@ -59,7 +59,7 @@ impl EthernetConfig {
             if let Some(sr_iov_conf) = &mut self.sr_iov {
                 sr_iov_conf.update(other.sr_iov.as_ref())
             } else {
-                self.sr_iov = other.sr_iov.clone()
+                self.sr_iov.clone_from(&other.sr_iov)
             }
         }
     }
@@ -68,7 +68,7 @@ impl EthernetConfig {
 impl VethConfig {
     fn update(&mut self, other: Option<&VethConfig>) {
         if let Some(other) = other {
-            self.peer = other.peer.clone();
+            self.peer.clone_from(&other.peer);
         }
     }
 }

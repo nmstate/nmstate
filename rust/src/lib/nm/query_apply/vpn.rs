@@ -48,7 +48,7 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
     let mut ret = LibreswanConfig::new();
     if let Some(data) = nm_set_vpn.data.as_ref() {
         if let Some(v) = data.get("right") {
-            ret.right = v.clone();
+            ret.right.clone_from(v);
         }
         ret.rightid = data.get("rightid").cloned();
         ret.rightrsasigkey = data.get("rightrsasigkey").cloned();
