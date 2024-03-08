@@ -1061,7 +1061,10 @@ impl MergedInterface {
             }
         } else {
             apply_iface.base_iface_mut().controller = Some(ctrl_name.clone());
-            apply_iface.base_iface_mut().controller_type = ctrl_type.clone();
+            apply_iface
+                .base_iface_mut()
+                .controller_type
+                .clone_from(&ctrl_type);
             self.merged.base_iface_mut().controller = Some(ctrl_name);
             self.merged.base_iface_mut().controller_type = ctrl_type;
             if !self.merged.base_iface().can_have_ip() {
@@ -1077,10 +1080,16 @@ impl MergedInterface {
             if apply_iface.base_iface().controller.is_none() {
                 if let Some(cur_iface) = self.current.as_ref() {
                     if cur_iface.base_iface().controller.as_ref().is_some() {
-                        apply_iface.base_iface_mut().controller =
-                            cur_iface.base_iface().controller.clone();
-                        apply_iface.base_iface_mut().controller_type =
-                            cur_iface.base_iface().controller_type.clone();
+                        apply_iface
+                            .base_iface_mut()
+                            .controller
+                            .clone_from(&cur_iface.base_iface().controller);
+                        apply_iface
+                            .base_iface_mut()
+                            .controller_type
+                            .clone_from(
+                                &cur_iface.base_iface().controller_type,
+                            );
                     }
                 }
             }

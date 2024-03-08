@@ -7,7 +7,7 @@ impl MacSecInterface {
         if let Some(macsec_conf) = &mut self.macsec {
             macsec_conf.update(other.macsec.as_ref());
         } else {
-            self.macsec = other.macsec.clone();
+            self.macsec.clone_from(&other.macsec);
         }
     }
 }
@@ -17,8 +17,8 @@ impl MacSecConfig {
     // provided by nispor netlink code.
     fn update(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            self.mka_cak = other.mka_cak.clone();
-            self.mka_ckn = other.mka_ckn.clone();
+            self.mka_cak.clone_from(&other.mka_cak);
+            self.mka_ckn.clone_from(&other.mka_ckn);
         }
     }
 }

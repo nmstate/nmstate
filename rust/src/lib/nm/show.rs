@@ -349,13 +349,14 @@ fn iface_get(
 
                 if let Some(macsec_set) = nm_conn.macsec.as_ref() {
                     let mut macsec_config = MacSecConfig::new();
-                    macsec_config.mka_ckn = macsec_set.mka_ckn.clone();
+                    macsec_config.mka_ckn.clone_from(&macsec_set.mka_ckn);
                     if let Some(saved_conn) = nm_saved_conn.as_ref() {
                         if let Some(macsec_saved_set) =
                             saved_conn.macsec.as_ref()
                         {
-                            macsec_config.mka_cak =
-                                macsec_saved_set.mka_cak.clone();
+                            macsec_config
+                                .mka_cak
+                                .clone_from(&macsec_saved_set.mka_cak);
                         }
                     }
                     iface.macsec = Some(macsec_config);
@@ -429,7 +430,7 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
     if nm_dev.name.is_empty() {
         return None;
     } else {
-        base_iface.name = nm_dev.name.clone();
+        base_iface.name.clone_from(&nm_dev.name);
     }
     match nm_dev.state {
         NmDeviceState::Unmanaged => {

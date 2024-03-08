@@ -84,7 +84,7 @@ impl MergedOvsDbGlobalConfig {
 impl OvsBridgeConfig {
     pub(crate) fn update(&mut self, other: Option<&OvsBridgeConfig>) {
         if let Some(other) = other {
-            self.ports = other.ports.clone();
+            self.ports.clone_from(&other.ports);
         }
     }
 }
@@ -108,7 +108,7 @@ impl OvsBridgeInterface {
         if let Some(br_conf) = &mut self.bridge {
             br_conf.update(other.bridge.as_ref());
         } else {
-            self.bridge = other.bridge.clone();
+            self.bridge.clone_from(&other.bridge);
         }
     }
 }
@@ -116,10 +116,10 @@ impl OvsBridgeInterface {
 impl OvsInterface {
     pub(crate) fn update_ovs_iface(&mut self, other: &Self) {
         if other.patch.is_some() {
-            self.patch = other.patch.clone();
+            self.patch.clone_from(&other.patch);
         }
         if other.dpdk.is_some() {
-            self.dpdk = other.dpdk.clone();
+            self.dpdk.clone_from(&other.dpdk);
         }
     }
 }

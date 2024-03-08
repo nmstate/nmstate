@@ -81,12 +81,16 @@ fn apply_absent_rule(
 
         if let Some(apply_iface) = iface.for_apply.as_mut() {
             if apply_iface.base_iface_mut().ipv4.is_none() {
-                apply_iface.base_iface_mut().ipv4 =
-                    cur_iface.base_iface().ipv4.clone();
+                apply_iface
+                    .base_iface_mut()
+                    .ipv4
+                    .clone_from(&cur_iface.base_iface().ipv4);
             }
             if apply_iface.base_iface_mut().ipv6.is_none() {
-                apply_iface.base_iface_mut().ipv6 =
-                    cur_iface.base_iface().ipv6.clone();
+                apply_iface
+                    .base_iface_mut()
+                    .ipv6
+                    .clone_from(&cur_iface.base_iface().ipv6);
             }
         }
 
@@ -168,8 +172,10 @@ fn append_route_rule(
         if let Some(apply_iface) = iface.for_apply.as_mut() {
             if rule.is_ipv6() {
                 if apply_iface.base_iface().ipv6.is_none() {
-                    apply_iface.base_iface_mut().ipv6 =
-                        iface.merged.base_iface_mut().ipv6.clone();
+                    apply_iface
+                        .base_iface_mut()
+                        .ipv6
+                        .clone_from(&iface.merged.base_iface_mut().ipv6);
                 }
                 if let Some(ip_conf) =
                     apply_iface.base_iface_mut().ipv6.as_mut()
@@ -182,8 +188,10 @@ fn append_route_rule(
                 }
             } else {
                 if apply_iface.base_iface().ipv4.is_none() {
-                    apply_iface.base_iface_mut().ipv4 =
-                        iface.merged.base_iface_mut().ipv4.clone();
+                    apply_iface
+                        .base_iface_mut()
+                        .ipv4
+                        .clone_from(&iface.merged.base_iface_mut().ipv4);
                 }
                 if let Some(ip_conf) =
                     apply_iface.base_iface_mut().ipv4.as_mut()
