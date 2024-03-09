@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{InterfaceType, MergedInterface, MergedInterfaces};
+use crate::{InterfaceType, Interfaces, MergedInterface, MergedInterfaces};
 
 impl MergedInterfaces {
     pub(crate) fn gen_topoligies(&self) -> Vec<String> {
@@ -96,5 +96,38 @@ impl MergedInterfaces {
             ret.append(&mut most_complex_top);
         }
         ret
+    }
+}
+
+impl Interfaces {
+    pub(crate) fn merge_desire(&mut self, new_desire: &Self) {
+        let mut absent_ifaces: Vec<(String, InterfaceType)> = Vec::new();
+        for iface in new_desire.iter().filter(|i| i.is_absent()) {
+            absent_ifaces.push((iface.name().to_string(), iface.iface_type()));
+            if let Some(port_names) = iface.ports() {
+                for port_name in port_names {
+                    if let Some(port_iface) = self.kernel_ifaces.get(port_name)
+                    {
+                        absent_ifaces.push((
+                            port_iface.name().to_string(),
+                            port_iface.iface_type(),
+                        ));
+                    }
+                }
+            }
+            if !iface.is_userspace() {
+                for child_iface in
+                    self.iter().filter(|i| i.parent() == Some(iface.name()))
+                {
+                    absent_ifaces.push((
+                        child_iface.name().to_string(),
+                        child_iface.iface_type(),
+                    ));
+                }
+            }
+        }
+        for (iface_name, iface_type) in absent_ifaces {
+            self.remove_iface(iface_name.as_str(), iface_type);
+        }
     }
 }

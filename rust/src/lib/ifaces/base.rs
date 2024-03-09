@@ -160,9 +160,10 @@ impl BaseInterface {
             }
         }
         if self.permanent_mac_address.is_none() {
-            self.permanent_mac_address = current.permanent_mac_address.clone();
+            self.permanent_mac_address
+                .clone_from(&current.permanent_mac_address);
         }
-        self.copy_mac_from = desired.copy_mac_from.clone();
+        self.copy_mac_from.clone_from(&desired.copy_mac_from);
     }
 
     fn has_controller(&self) -> bool {

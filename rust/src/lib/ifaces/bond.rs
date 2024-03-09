@@ -80,7 +80,7 @@ impl BondInterface {
                 (desired.bond.as_ref(), current.bond.as_ref())
             {
                 if des_bond_conf.mode != cur_bond_conf.mode {
-                    bond_conf.options = des_bond_conf.options.clone();
+                    bond_conf.options.clone_from(&des_bond_conf.options);
                 }
             }
         }

@@ -8,7 +8,7 @@ impl MacVtapInterface {
         if let Some(conf) = &mut self.mac_vtap {
             conf.update(other.mac_vtap.as_ref());
         } else {
-            self.mac_vtap = other.mac_vtap.clone();
+            self.mac_vtap.clone_from(&other.mac_vtap);
         }
     }
 }
@@ -16,7 +16,7 @@ impl MacVtapInterface {
 impl MacVtapConfig {
     fn update(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            self.base_iface = other.base_iface.clone();
+            self.base_iface.clone_from(&other.base_iface);
             self.mode = other.mode;
             self.accept_all_mac = other.accept_all_mac;
         }

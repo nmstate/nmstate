@@ -116,7 +116,7 @@ impl Interfaces {
         }
     }
 
-    fn remove_iface(
+    pub fn remove_iface(
         &mut self,
         iface_name: &str,
         iface_type: InterfaceType,
@@ -468,8 +468,10 @@ impl Interfaces {
 
                     new_iface.base_iface_mut().identifier =
                         Some(InterfaceIdentifier::MacAddress);
-                    new_iface.base_iface_mut().mac_address =
-                        cur_iface.base_iface().mac_address.clone();
+                    new_iface
+                        .base_iface_mut()
+                        .mac_address
+                        .clone_from(&cur_iface.base_iface().mac_address);
                     new_iface.base_iface_mut().name =
                         cur_iface.name().to_string();
                     new_iface.base_iface_mut().profile_name =
@@ -517,7 +519,7 @@ impl Interfaces {
         }
         for iface_name in iface_names_to_add {
             let mut iface = EthernetInterface::default();
-            iface.base.name = iface_name.clone();
+            iface.base.name.clone_from(&iface_name);
             log::warn!("Assuming undefined port {} as ethernet", iface_name);
             self.kernel_ifaces
                 .insert(iface_name, Interface::Ethernet(iface));

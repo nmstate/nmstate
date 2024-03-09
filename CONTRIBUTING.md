@@ -47,7 +47,7 @@ querying network status and applying network states.
 
 Before starting to contribute, make sure you have the basic git configuration: 
 Your name and email. This will be useful when signing your contributions. The 
-following commands will set your global name and email, althought you can 
+following commands will set your global name and email, although you can 
 change it later for every repo:
 
 ```

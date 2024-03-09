@@ -22,7 +22,7 @@ pub(crate) fn create_ovs_port_nm_conn(
 ) -> Result<NmConnection, NmstateError> {
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
     let mut base_iface = BaseInterface::new();
-    base_iface.name = port_conf.name.clone();
+    base_iface.name.clone_from(&port_conf.name);
     base_iface.iface_type = InterfaceType::Other("ovs-port".to_string());
     base_iface.controller = Some(br_name.to_string());
     base_iface.controller_type = Some(InterfaceType::OvsBridge);

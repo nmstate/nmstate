@@ -924,3 +924,27 @@ fn test_ovs_iface_serialize_allow_extra_patch_ports() {
 
     assert_eq!(desired, new);
 }
+
+#[test]
+fn test_ovs_bridge_with_mac() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r"
+        name: br0
+        type: ovs-bridge
+        state: up
+        mac-address: 05:04:03:02:01:00
+        bridge:
+          port:
+            - name: eth1
+            - name: ovs1
+        ",
+    )
+    .unwrap();
+
+    let result = desired.sanitize(true);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
