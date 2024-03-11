@@ -28,7 +28,6 @@ BuildRequires:  systemd-rpm-macros
 BuildRequires:  rust-toolset
 %else
 BuildRequires:  rust-packaging
-%if ! %{is_snapshot}
 BuildRequires:  (crate(clap/cargo) >= 3.1 with crate(clap/cargo) < 4.0)
 BuildRequires:  (crate(clap/default) >= 3.1 with crate(clap/default) < 4.0)
 BuildRequires:  (crate(chrono/default) >= 0.4 with crate(chrono/default) < 0.5)
@@ -46,7 +45,7 @@ BuildRequires:  (crate(uuid/v5) >= 1.1 with crate(uuid/v5) < 2.0)
 BuildRequires:  (crate(zbus/default) >= 1.9 with crate(zbus/default) < 2.0)
 BuildRequires:  (crate(zvariant/default) >= 2.10 with crate(zvariant/default) < 3.0)
 BuildRequires:  (crate(nix/default) >= 0.26 with crate(nix/default) < 0.27)
-%endif
+BuildRequires:  (crate(toml/default) >= 0.8 with crate(toml/default) < 0.9)
 %endif
 
 %description
@@ -150,19 +149,11 @@ gpgv2 --keyring ./gpgkey-mantainers.gpg %{SOURCE1} %{SOURCE0}
 
 pushd rust
 
-%if 0%{?rhel}
-    %if ! %{is_snapshot}
+%if 0%{?rhel} && ! %{is_snapshot}
     # Source3 is vendored dependencies
     %cargo_prep -V 3
-    %endif
 %else
     %cargo_prep
-    rm -f .cargo/config.toml
-    %if %{is_snapshot}
-    # Remove local `source.crates-io` to use internet for snaptshot build
-    sed -ne '/\[source.crates-io\]/q;p' .cargo/config > .cargo/config.new
-    mv .cargo/config.new .cargo/config
-    %endif
 %endif
 
 popd
