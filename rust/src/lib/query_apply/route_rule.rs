@@ -1,10 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     ErrorKind, MergedRouteRules, NmstateError, RouteRuleEntry, RouteRules,
 };
 
 impl MergedRouteRules {
+    pub(crate) fn gen_diff(&self) -> RouteRules {
+        if self.desired == self.current {
+            return RouteRules::default();
+        }
+
+        let mut changed_rules: Vec<RouteRuleEntry> = Vec::new();
+        let mut cur_rules: HashSet<&RouteRuleEntry> = HashSet::new();
+
+        if let Some(rules) = self.current.config.as_ref() {
+            for rule in rules {
+                cur_rules.insert(rule);
+            }
+        }
+
+        for rule in self.for_apply.as_slice() {
+            if rule.is_absent() || !cur_rules.contains(rule) {
+                changed_rules.push(rule.clone());
+            }
+        }
+
+        RouteRules {
+            config: if changed_rules.is_empty() {
+                None
+            } else {
+                Some(changed_rules)
+            },
+        }
+    }
+
     pub(crate) fn verify(
         &self,
         current: &RouteRules,

@@ -10,6 +10,9 @@ interfaces:
     ipv4:
       dhcp: true
       enabled: true
+      auto-dns: true
+      auto-gateway: true
+      auto-routes: true
     bridge:
       options:
         stp:

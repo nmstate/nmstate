@@ -22,10 +22,4 @@ interfaces:
     type: ethernet
     state: up
     ipv4:
-      address:
-        - ip: 10.244.0.1
-          prefix-length: 24
-        - ip: 169.254.1.0
-          prefix-length: 16
       dhcp: false
-      enabled: true

@@ -3,5 +3,5 @@ interfaces:
   - name: eth1
     type: ethernet
     state: up
-    lldp:
-      enabled: true
+    ipv6:
+      enabled: false

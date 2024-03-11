@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
@@ -367,6 +368,12 @@ impl Eq for RouteEntry {}
 impl PartialOrd for RouteEntry {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Hash for RouteEntry {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.sort_key().hash(state);
     }
 }
 
