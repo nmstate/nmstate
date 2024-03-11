@@ -62,6 +62,10 @@ function install_nmstate {
         if [ -n "$COMPILED_RPMS_DIR" ];then
             exec_cmd "rpm -ivh ${COMPILED_RPMS_DIR}/*.rpm || exit 1"
         else
+            exec_cmd "make srpm"
+            exec_cmd "dnf install -y 'dnf-command(builddep)'"
+            exec_cmd "dnf builddep -y *.src.rpm"
+            exec_cmd "rm -f *.src.rpm"
             exec_cmd "make rpm"
             exec_cmd "rpm -ivh *.rpm"
         fi
