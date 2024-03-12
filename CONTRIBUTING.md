@@ -67,6 +67,28 @@ settings Git can find.
 
 You can refer to [Pro Git](https://git-scm.com/book/en/v2) for further information.
 
+## Compilation and Installation:
+
+* Fork and git clone (https://github.com/nmstate/nmstate.git)
+`cd nmstate`
+
+* For Fedora 29+
+`sudo dnf install nmstate`
+
+* RHEL 8 using copr repo
+`sudo dnf copr enable nmstate/nmstate-stable`
+`sudo dnf install nmstate`
+
+* For Stables releases
+`python setup.py build`
+`python setup.py install`
+
+* For installation of nmstatectl
+`cargo install nmstatectl`
+
+* To see networking state in yaml format
+`nmstatectl show`
+
 
 ## How to Contribute
 
