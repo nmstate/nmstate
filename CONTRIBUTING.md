@@ -24,21 +24,6 @@ serving the tests of Nmstate.
 
 - `./examples/` - Contains YAML examples for different configurations.
 
-- `./libnmstate/ifaces/` Contains the classes including the attributes of the 
-interfaces.
- 
-- `./libnmstate/nispor/` Contains the nmstate nispor plugin, currently for 
-querying kernel network status. 
-
-- `./libnmstate/nm/` Contains the nmstate NetworkManager plugin, currently for 
-querying network status and applying network states. 
-
-- `./libnmstate/plugins/` Contains the plugins supported by default (e.g. ovsdb). 
-
-- `./libnmstate/schemas/` Contains the API schema file.
-
-- `./nmstatectl/` - Contains command lines tools.
-
 - `./packaging/` - Contains packaging utilities.
 
 - `./tests/` - Contains tests for unit and integration tests.
