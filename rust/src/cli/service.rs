@@ -2,7 +2,6 @@
 
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::fmt;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -36,17 +35,6 @@ struct FileContent {
 impl FileContent {
     fn new(path: PathBuf, content: String) -> Self {
         Self { path, content }
-    }
-}
-
-struct HexSlice<'a>(&'a [u8]);
-
-impl<'a> fmt::Display for HexSlice<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for &byte in self.0 {
-            write!(f, "{:0>2x}", byte)?;
-        }
-        Ok(())
     }
 }
 
