@@ -24,6 +24,29 @@ serving the tests of Nmstate.
 
 - `./examples/` - Contains YAML examples for different configurations.
 
+- `./logo` Logos used for publication.
+
+- `./k8s` k8s folder holds the scripts for kubernetes-nmstate CI
+
+- `./rust/src/clib` C binding of nmstate written in rust
+
+- `./rust/src/go/nmstate` Contains the classes including the attributes of the 
+interfaces.
+ 
+- `./rust/src/python/libnmstate`, `./rust/src/python` Python library of nmstate written in python wrapping the C binding of nmstate
+
+ - `./rust/src/lib/ifaces/` Contains the classes including the attributes of the 
+interfaces.
+ 
+- `./rust/src/lib/nispor/` Contains the nmstate nispor plugin, currently for 
+querying kernel network status. 
+
+- `./rust/src/lib/nm/` Contains the code related to applying the settings via NetworkManager backend.
+
+- `./rust/src/lib/ovsdb/` Contains the code related to ovsdb communication and structures. 
+
+- `./rust/src/cli/` - Contains command lines tools.
+
 - `./packaging/` - Contains packaging utilities.
 
 - `./tests/` - Contains tests for unit and integration tests.
@@ -164,3 +187,39 @@ Do your best to follow the clean code guidelines.
 - Don’t return an error code, throw an exception instead.
 
 Ref: Book: Clean Code by Robert C. Martin (Uncle Bob)
+
+## Compilation and Installation
+This guide is helpful to compile and install Nmstate from source, for installing stable release or other installation methods, pleaser refer to [Nmstate installation guide](https://nmstate.io/user/install.md)
+
+### Dependencies
+Nmstate requires NetworkManager 1.26 or later version installed and started.
+
+In order to support specific capabilities, additional packages are required:
+
+OpenVSwitch support through the NM provider requires NetworkManager-ovs.
+
+Extended ovsdb support requires openvswitch-2.11 and python3-openvswitch2.11 or greater.
+
+Team interface support through the NM provider requires NetworkManager-team
+
+### Clone the source
+```
+git clone https://github.com/nmstate/nmstate.git
+cd nmstate
+```
+
+### Compilation 
+```
+#Check that the system installed the official compiler for the rust programming language
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+make
+```
+
+### Installation
+```
+python rust/src/python/setup.py install
+```
+
+__Note__: In order to report current state, installing Nmstate as a non-root user should be enough. For change support, install the package as root.
