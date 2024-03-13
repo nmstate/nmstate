@@ -1,4 +1,18 @@
 # Changelog
+## [2.2.26] - 2024-03-13
+### Breaking changes
+ - Deprecate PrettyState class in Python API. (6b410dcf)
+
+### New features
+ - Allowing input multiple desire states for statistics. (9b808821)
+
+### Bug fixes
+ - packaging: Fix rpm build on Fedora. (c40f3ff0)
+ - route: warn if the route is missing due to NM delay. (71dedc65)
+ - Raise invalid argument error when desired OVS bridge with MAC. (a71eed31)
+ - Auto managed ignored OVS port. (c7fd32e8)
+ - Fix resolving token in array items for nmpolicy. (58a2fd6d)
+
 ## [2.2.25] - 2024-02-22
 ### Breaking changes
  - Removed the support of deprecated `slaves` in linux bridge, ovs bridge and
