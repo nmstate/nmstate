@@ -70,6 +70,11 @@ def format_desired_current_state_diff(desired_state, current_state):
     )
 
 
+# pylint: disable=E1101
+@warnings.deprecated(
+    message="PrettyState class is deprecated; libnmstate.show() is sorted.",
+    category=DeprecationWarning,
+)
 class PrettyState:
     def __init__(self, state):
         yaml.add_representer(dict, represent_dict)
