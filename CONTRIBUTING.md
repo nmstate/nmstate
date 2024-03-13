@@ -43,6 +43,19 @@ querying network status and applying network states.
 
 - `./tests/` - Contains tests for unit and integration tests.
 
+## Installation and Compilation:
+
+- [Fork](https://github.com/nmstate/nmstate.git) and git clone to local
+-[Install rust and Cargo for the development of nmstate](https://doc.rust-lang.org/cargo/getting-started/installation.html) or `apt-get install cargo`
+- Change your current directory to the nmstate directory `cd nmstate`
+- Install nmstate `cargo install nmstatectl`
+This will download the necessary dependencies and build the nmstate library and command-line tool
+- Build and compile the packages using `cargo build`
+This will compile the source code and generate the executable files
+- Run unit test to ensure functionality of the  nmstate library and tools `cargo test`
+- View networking state in yaml format `nmstatectl show`
+- Check version `nmstatectl --version`
+
 ## Configuring Git
 
 Before starting to contribute, make sure you have the basic git configuration: 
@@ -66,29 +79,6 @@ If you want to check your settings, use `git config --list` to see all the
 settings Git can find. 
 
 You can refer to [Pro Git](https://git-scm.com/book/en/v2) for further information.
-
-## Compilation and Installation:
-
-* Fork and git clone (https://github.com/nmstate/nmstate.git)
-`cd nmstate`
-
-* For Fedora 29+
-`sudo dnf install nmstate`
-
-* RHEL 8 using copr repo
-`sudo dnf copr enable nmstate/nmstate-stable`
-`sudo dnf install nmstate`
-
-* For Stables releases
-`python setup.py build`
-`python setup.py install`
-
-* For installation of nmstatectl
-`cargo install nmstatectl`
-
-* To see networking state in yaml format
-`nmstatectl show`
-
 
 ## How to Contribute
 
