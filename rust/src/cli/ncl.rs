@@ -386,7 +386,7 @@ fn main() {
         )
         .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
-            .alias("h")
+            .alias("v")
             .about("Show version")
        );
     if cfg!(feature = "query_apply") {

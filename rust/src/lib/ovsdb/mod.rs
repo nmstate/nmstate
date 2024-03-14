@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod apply;
 mod db;
 mod global_conf;
