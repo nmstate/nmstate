@@ -95,6 +95,7 @@ fn main() {
         )
         .subcommand(
             clap::Command::new(SUB_CMD_AUTOCONF)
+                .alias("ac")
                 .about(
                     "Automatically configure network based on LLDP \
                     information (experimental)")
@@ -102,6 +103,7 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_SHOW)
                 .about("Show network state")
+                .alias("s")
                 .arg(
                     clap::Arg::new("IFNAME")
                         .index(1)
@@ -139,6 +141,7 @@ fn main() {
             clap::Command::new(SUB_CMD_APPLY)
                 .about("Apply network state or network policy")
                 .alias("set")
+                .alias("a")
                 .arg(
                     clap::Arg::new("STATE_FILE")
                         .required(false)
@@ -205,6 +208,7 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_COMMIT)
                 .about("Commit a change")
+                .alias("c")
                 .arg(
                     clap::Arg::new("CHECKPOINT")
                         .required(false)
@@ -215,6 +219,7 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_ROLLBACK)
                 .about("Rollback a change")
+                .alias("r")
                 .arg(
                     clap::Arg::new("CHECKPOINT")
                         .required(false)
@@ -225,6 +230,7 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_EDIT)
                 .about("Edit network state in EDITOR")
+                .alias("e")
                 .arg(
                     clap::Arg::new("IFNAME")
                         .required(false)
@@ -265,6 +271,7 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_SERVICE)
                 .about("Service mode: apply files from service folder")
+                .alias("S")
                 .arg(
                     clap::Arg::new(CONFIG_FOLDER_KEY)
                         .long("config")
@@ -379,6 +386,7 @@ fn main() {
         )
         .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
+            .alias("h")
             .about("Show version")
        );
     if cfg!(feature = "query_apply") {
