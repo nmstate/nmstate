@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
 
 use std::fs::File;
 use std::io::{stdin, stdout, Read, Write};
