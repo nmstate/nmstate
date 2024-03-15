@@ -41,8 +41,8 @@ header:
 
   comment: on-failure
 
-  language:
-    Rust:
-      extensions:
-        - ".rs"
-      comment_style_id: DoubleSlash
+#  language:
+#    Rust:
+#      extensions:
+#        - ".rs"
+#      comment_style_id: DoubleSlash
