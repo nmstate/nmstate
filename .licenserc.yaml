@@ -16,17 +16,16 @@
 # under the License.
 
 header:
-  #license:
-  #  spdx-id: Apache-2.0
+  license:
+    spdx-id: Apache-2.0
 
   pattern: |
-    ^(?:\s*//|\/\*) SPDX-License-Identifier: Apache-2.0
+    ^(?:\s*//|\/\*) Apache-2.0
 
   paths:
     - 'rust/src'
 
   paths-ignore:
-    - '**/*.md'
     - '**/*.json'
     - '**/*.txt'
     - '.gitignore'
