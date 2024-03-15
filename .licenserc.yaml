@@ -20,8 +20,9 @@ header:
     spdx-id: Apache-2.0
     copyright-owner: Apache Software Foundation
 
-  path: "rust/src"
-  
+  paths:
+    - 'rust/src/*'
+
   paths-ignore:
     - '**/*.md'
     - '**/*.json'
@@ -38,6 +39,10 @@ header:
     - '**/*.toml'
     - '**/*.yml'
 
-  extension: ".rs"
-
   comment: on-failure
+
+  language:
+    Rust:
+      extensions:
+        - ".rs"
+      comment_style_id: DoubleSlash
