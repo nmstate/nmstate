@@ -1,5 +1,5 @@
 header:
-  - path: "rust/src"
+  - path: "rust/src/**"
     license:
       spdx-id: Apache-2.0
     paths-ignore:
