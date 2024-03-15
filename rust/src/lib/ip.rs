@@ -260,7 +260,7 @@ impl InterfaceIpv4 {
         }
 
         // The rules is `pub(crate)`, it will not merged by `merge_json_value()`
-        self.rules = current.rules.clone();
+        self.rules.clone_from(&current.rules);
 
         self.sanitize(false).ok();
     }
@@ -746,7 +746,7 @@ impl InterfaceIpv6 {
         }
 
         // The rules is `pub(crate)`, it will not merged by `merge_json_value()`
-        self.rules = current.rules.clone();
+        self.rules.clone_from(&current.rules);
 
         self.sanitize(false).ok();
     }
