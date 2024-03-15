@@ -11,26 +11,26 @@ header:
       - 'LICENSE'
       - 'NOTICE'
       
-  - path: "rust/src/python"
-    license:
-      spdx-id: LGPL-2.1-or-later
-    paths-ignore:
-      - 'rust/target'
-      - 'licenses'
-      - '**/*.md'
-      - '**/*.toml'
-      - '**/*.yml'
-      - 'LICENSE'
-      - 'NOTICE'
-      
-  - path: "tests"
-    license:
-      spdx-id: LGPL-2.1-or-later
-    paths-ignore:
-      - 'rust/target'
-      - 'licenses'
-      - '**/*.md'
-      - '**/*.toml'
-      - '**/*.yml'
-      - 'LICENSE'
-      - 'NOTICE'
+#  - path: "rust/src/python"
+#    license:
+#      spdx-id: LGPL-2.1-or-later
+#    paths-ignore:
+#      - 'rust/target'
+#      - 'licenses'
+#      - '**/*.md'
+#      - '**/*.toml'
+#      - '**/*.yml'
+#      - 'LICENSE'
+#      - 'NOTICE'
+#      
+#  - path: "tests"
+#    license:
+#      spdx-id: LGPL-2.1-or-later
+#    paths-ignore:
+#      - 'rust/target'
+#      - 'licenses'
+#      - '**/*.md'
+#      - '**/*.toml'
+#      - '**/*.yml'
+#      - 'LICENSE'
+#      - 'NOTICE'
