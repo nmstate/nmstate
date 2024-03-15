@@ -19,6 +19,9 @@ header:
   license:
     spdx-id: Apache-2.0
 
+  #pattern: |
+  #  SPDX-License-Identifier: Apache-2.0
+
   paths:
     - 'rust/src'
 
@@ -41,7 +44,7 @@ header:
   comment: on-failure
 
   language:
-    Rust:
+    Python:
       extensions:
-        - ".rs"
+        - ".py"
       comment_style_id: DoubleSlash
