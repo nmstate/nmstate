@@ -20,7 +20,7 @@ header:
     spdx-id: Apache-2.0
 
   pattern: |
-    ^(?:\s*//|\/\*) Apache-2.0
+    ^(?:\s*//|\/\*) SPDX-License-Identifier: Apache-2.0
 
   paths:
     - 'rust/src'
