@@ -9,8 +9,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
-    - uses: apache/skywalking-eyes/dependency@main
+
+    - uses: apache/skywalking-eyes@main
 
 #  macos-x64:
 #    runs-on: macos-latest
