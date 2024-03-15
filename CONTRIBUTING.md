@@ -179,3 +179,57 @@ Do your best to follow the clean code guidelines.
 - Don’t return an error code, throw an exception instead.
 
 Ref: Book: Clean Code by Robert C. Martin (Uncle Bob)
+
+## Compilation and Installation
+
+This guide is helpful to compile and install Nmstate from source, for installing stable release or other installation methods, pleaser refer to [Nmstate installation guide](https://nmstate.io/user/install.md)
+
+### Dependencies
+
+Nmstate requires NetworkManager 1.26 or later version installed and started.
+
+In order to support specific capabilities, additional packages are required:
+
+OpenVSwitch support through the NM provider requires NetworkManager-ovs.
+
+Extended ovsdb support requires openvswitch-2.11 and python3-openvswitch2.11 or greater.
+
+Team interface support through the NM provider requires NetworkManager-team
+
+### Clone the source
+```
+git clone https://github.com/nmstate/nmstate.git
+cd nmstate
+```
+
+#### Install build tool
+```
+sudo dnf install cargo # Fedora
+sudo yum install cargo # RHEL
+cargo --version
+```
+
+### Compilation 
+```
+cd rust
+cargo build --all # Debug version
+cargo build --all --release # Release version
+```
+
+___Note:___ Installing from source is optional. After compilation, the executable can be run directly.
+```
+target/release/nmstatectl show # Debug compilation
+target/debug/nmstatectl show # Release compilation
+```
+
+### Installation (Optional)
+```
+# From the root dir
+sudo dnf install cargo make python3 python3-toolz #Fedora
+sudo yum install cargo make python3 python3-toolz #RHEL
+sudo make install
+#Run command
+nmstatectl show
+```
+
+__Note__: In order to report current state, running nmstatectl as a non-root user should be enough. For apply support, run nmstatectl as root.
