@@ -1,0 +1,29 @@
+name: Check Dependencies' License
+
+on:
+  push:
+
+jobs:
+  linux-x64:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - uses: apache/skywalking-eyes/dependency@main
+
+  macos-x64:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - uses: apache/skywalking-eyes/dependency@main
+    
+  macos-aarch64:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - uses: apache/skywalking-eyes/dependency@main
