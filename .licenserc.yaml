@@ -1,15 +1,7 @@
 header:
-  - path: "rust/src/**"
+  - path: "rust/src/*"
     license:
       spdx-id: Apache-2.0
-    paths-ignore:
-      - 'rust/target'
-      - 'licenses'
-      - '**/*.md'
-      - '**/*.toml'
-      - '**/*.yml'
-      - 'LICENSE'
-      - 'NOTICE'
       
 #  - path: "rust/src/python"
 #    license:
