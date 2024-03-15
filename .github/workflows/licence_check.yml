@@ -9,21 +9,30 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
+    - name: Install License Eye
+        run: |
+          curl -sfL https://raw.githubusercontent.com/apache/skywalking-eyes/v2.8.1/install.sh | sh -s -- -b /usr/local/bin
+
     - uses: apache/skywalking-eyes/dependency@main
 
-  macos-x64:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    
-    - uses: apache/skywalking-eyes/dependency@main
-    
-  macos-aarch64:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    
-    - uses: apache/skywalking-eyes/dependency@main
+#  macos-x64:
+#    runs-on: macos-latest
+#
+#    steps:
+#    - uses: actions/checkout@v3
+#    - name: Install License Eye
+#        run: |
+#          curl -sfL https://raw.githubusercontent.com/apache/skywalking-eyes/v2.8.1/install.sh | sh -s -- -b /usr/local/bin
+#
+#    - uses: apache/skywalking-eyes/dependency@main
+#    
+#  macos-aarch64:
+#    runs-on: macos-latest
+#
+#    steps:
+#    - uses: actions/checkout@v3
+#    - name: Install License Eye
+#        run: |
+#          curl -sfL https://raw.githubusercontent.com/apache/skywalking-eyes/v2.8.1/install.sh | sh -s -- -b /usr/local/bin
+#
+#    - uses: apache/skywalking-eyes/dependency@main

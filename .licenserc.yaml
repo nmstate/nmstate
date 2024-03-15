@@ -1,31 +1,16 @@
 header:
-  license:
-    spdx-id: Apache-2.0
-  path: "rust/src/*"
-  paths-ignore:
-    - 'rust/target'
-    - 'licenses'
-    - '**/*.md'
-    - '**/*.toml'
-    - '**/*.yml'
-    - 'LICENSE'
-    - 'NOTICE'
-    
-  license:
-    spdx-id: LGPL-2.1-or-later
-  path: "rust/src/python/*"
-  paths-ignore:
-    - 'rust/target'
-    - 'licenses'
-    - '**/*.md'
-    - '**/*.toml'
-    - '**/*.yml'
-    - 'LICENSE'
-    - 'NOTICE'
-    
-  license:
-    spdx-id: LGPL-2.1-or-later
-  path: "tests/*"
+  - path: "rust/src"
+    license:
+      spdx-id: Apache-2.0
+
+  - path: "rust/src/python"
+    license:
+      spdx-id: LGPL-2.1-or-later
+
+  - path: "tests"
+    license:
+      spdx-id: LGPL-2.1-or-later
+
   paths-ignore:
     - 'rust/target'
     - 'licenses'
