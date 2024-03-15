@@ -23,21 +23,21 @@ header:
   paths:
     - 'rust/src/*'
 
-  paths-ignore:
-    - '**/*.md'
-    - '**/*.json'
-    - '**/*.txt'
-    - '.gitignore'
-    - '.gitmodules'
-    - 'LICENSE'
-    - 'NOTICE'
-    - 'go.mod'
-    - 'go.sum'
-    - 'rust/target'
-    - 'licenses'
-    - '**/*.md'
-    - '**/*.toml'
-    - '**/*.yml'
+#  paths-ignore:
+#    - '**/*.md'
+#    - '**/*.json'
+#    - '**/*.txt'
+#    - '.gitignore'
+#    - '.gitmodules'
+#    - 'LICENSE'
+#    - 'NOTICE'
+#    - 'go.mod'
+#    - 'go.sum'
+#    - 'rust/target'
+#    - 'licenses'
+#    - '**/*.md'
+#    - '**/*.toml'
+#    - '**/*.yml'
 
   comment: on-failure
 
