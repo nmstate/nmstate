@@ -18,10 +18,9 @@
 header:
   license:
     spdx-id: Apache-2.0
-    copyright-owner: Apache Software Foundation
 
   paths:
-    - 'rust/src/*'
+    - 'rust/src'
 
 #  paths-ignore:
 #    - '**/*.md'
