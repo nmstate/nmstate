@@ -23,8 +23,7 @@ from copy import deepcopy
 import difflib
 import json
 import warnings
-
-import yaml
+import yaml  # type: ignore
 
 from .schema import DNS
 from .schema import Route
@@ -41,6 +40,24 @@ PRIORITY_LIST = (
     Route.KEY,
     Interface.KEY,
 )
+
+try:
+    from warnings import deprecated
+except ImportError:
+
+    class deprecated:
+        def __init__(self, message=None):
+            default_message = (
+                "PrettyState class is deprecated; "
+                "to be removed in future release. "
+                "The output of libnmstate.show() "
+                "is already sorted."
+            )
+            self.message = message or default_message
+
+        def __call__(self, cls):
+            warnings.warn(self.message, DeprecationWarning)
+            return cls
 
 
 def format_desired_current_state_diff(desired_state, current_state):
@@ -70,14 +87,10 @@ def format_desired_current_state_diff(desired_state, current_state):
     )
 
 
+@deprecated("Output of libnmstate.show() is already sorted.")
 class PrettyState:
     def __init__(self, state):
         yaml.add_representer(dict, represent_dict)
-        warnings.warn(
-            "PrettyState class is deprecated;to be removed in future release."
-            "The output of libnmstate.show() is already sorted.",
-            DeprecationWarning,
-        )
         self.state = _sort_with_priority(state)
 
     @property
