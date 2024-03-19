@@ -60,7 +60,7 @@ impl MacSecInterface {
                 if conf.mka_cak.is_none() ^ conf.mka_ckn.is_none() {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        "The mka_cak and mka_cnk must be all missing or present.".to_string(),
+                        "The mka_cak and mka_cnk must be all missing or present.".to_string()
                     );
                     log::error!("{}", e);
                     return Err(e);
@@ -81,8 +81,10 @@ impl MacSecInterface {
                         || mka_ckn.len() < 2
                         || mka_ckn.len() % 2 == 1
                     {
-                        let e = NmstateError::new(ErrorKind::InvalidArgument,
-                        "The mka_ckn must be a string of even size between 2 and 64 characters".to_string());
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            "The mka_ckn must be a string of even size between 2 and 64 characters".to_string()
+                        );
                         log::error!("{}", e);
                         return Err(e);
                     }
@@ -97,7 +99,7 @@ impl MacSecInterface {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 #[derive(Default)]
@@ -137,6 +139,24 @@ impl MacSecConfig {
             self.mka_cak =
                 Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
         }
+    }
+}
+
+impl std::fmt::Debug for MacSecConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MacSecConfig")
+            .field("encrypt", &self.encrypt)
+            .field("base_iface", &self.base_iface)
+            .field(
+                "mka_cak",
+                &Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string()),
+            )
+            .field("mka_ckn", &self.mka_ckn)
+            .field("port", &self.port)
+            .field("validation", &self.validation)
+            .field("send_sci", &self.send_sci)
+            .field("offload", &self.offload)
+            .finish()
     }
 }
 
