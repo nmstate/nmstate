@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::NetworkState;
-use crate::Interfaces;
-use crate::Routes;
-use crate::RouteRules;
 use crate::HostNameState;
+use crate::Interfaces;
+use crate::NetworkState;
 use crate::OvnConfiguration;
+use crate::RouteRules;
+use crate::Routes;
+
 #[test]
 fn test_invalid_top_key() {
     let result = serde_yaml::from_str::<NetworkState>(
@@ -28,17 +29,16 @@ fn test_invalid_top_type() {
     assert!(result.is_err());
 }
 
-
 #[test]
 fn test_network_state_debug() {
     let mut network_state = NetworkState {
-        hostname: Some(HostNameState::default()), // Use Option<HostNameState>
-        dns: None,                                 // Use Option<DnsState>
+        hostname: Some(HostNameState::default()),
+        dns: None,
         rules: RouteRules::default(),
         routes: Routes::default(),
         interfaces: Interfaces::default(),
         ovsdb: None,
-        timeout: Some(60),                          
+        timeout: Some(60),
         no_verify: true,
         no_commit: false,
         ovn: OvnConfiguration::default(),
@@ -51,10 +51,8 @@ fn test_network_state_debug() {
 
     network_state.hide_secrets();
 
-
-
     let debug_output = format!("{:?}", network_state);
-     
+
     // Assert that the debug output contains the expected fields
     assert!(debug_output.contains("hostname"));
     assert!(debug_output.contains("dns"));
