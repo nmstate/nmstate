@@ -2,9 +2,12 @@
 
 #[cfg(not(feature = "gen_conf"))]
 use std::collections::HashMap;
+use std::fmt;
 
 use serde::{Deserialize, Serialize};
-
+// use core::fmt::Debug;
+// use serde::__private::fmt::Debug;
+// // use std::fmt::Debug;
 use crate::{
     DnsState, ErrorKind, HostNameState, Interface, Interfaces, MergedDnsState,
     MergedHostNameState, MergedInterfaces, MergedOvnConfiguration,
@@ -74,7 +77,9 @@ use crate::{
 ///     system-id: 176866c7-6dc8-400f-98ac-c658509ec09f
 ///   other_config: {}
 /// ```
-#[derive(Clone, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
+
+
+#[derive(Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
@@ -121,6 +126,40 @@ pub struct NetworkState {
     pub(crate) memory_only: bool,
 }
 
+impl fmt::Debug for NetworkState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("NetworkState");
+        debug_struct.field("hostname", &self.hostname);
+        debug_struct.field("dns", &self.dns);
+        debug_struct.field("rules", &self.rules);
+        debug_struct.field("routes", &self.routes);
+        debug_struct.field("interfaces", &self.interfaces);
+        debug_struct.field("ovsdb", &self.ovsdb);
+        debug_struct.field("ovn", &self.ovn);
+        debug_struct.field("kernel_only", &self.kernel_only);
+    
+        if !self.include_secrets {
+            debug_struct.field("timeout", &self.timeout)
+                .field("no_verify", &self.no_verify)
+                .field("no_commit", &self.no_commit)
+                .field("include_secrets", &self.include_secrets)
+                .field("include_status_data", &self.include_status_data)
+                .field("running_config_only", &self.running_config_only)
+                .field("memory_only", &self.memory_only);
+        } else {
+            debug_struct.field("timeout", &"<_password_hid_by_nmstate>")
+                .field("no_verify", &"<_password_hid_by_nmstate>")
+                .field("no_commit", &"<_password_hid_by_nmstate>")
+                .field("include_secrets", &self.include_secrets)
+                .field("include_status_data", &self.include_status_data)
+                .field("running_config_only", &self.running_config_only)
+                .field("memory_only", &self.memory_only);
+        }
+    
+        debug_struct.finish()
+    }
+}
+
 impl NetworkState {
     pub fn is_empty(&self) -> bool {
         self.hostname.is_none()
@@ -132,6 +171,7 @@ impl NetworkState {
             && self.ovn.is_none()
     }
 
+    
     pub(crate) const PASSWORD_HID_BY_NMSTATE: &'static str =
         "<_password_hid_by_nmstate>";
 
