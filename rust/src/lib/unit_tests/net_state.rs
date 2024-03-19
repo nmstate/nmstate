@@ -3,12 +3,13 @@
 use crate::NetworkState;
 use crate::Interfaces;
 use crate::Routes;
-<<<<<<< HEAD
-=======
 use crate::RouteRules;
 use crate::HostNameState;
 use crate::OvnConfiguration;
->>>>>>> parent of b850a55a (Add test for hide secrets in Debug trait of NetworkState)
+use crate::RouteRules;
+use crate::HostNameState;
+use crate::OvnConfiguration;
+
 #[test]
 fn test_invalid_top_key() {
     let result = serde_yaml::from_str::<NetworkState>(
@@ -36,11 +37,10 @@ fn test_invalid_top_type() {
 fn test_network_state_debug() {
     let mut network_state = NetworkState {
         hostname: Some(HostNameState::default()), // Use Option<HostNameState>
-<<<<<<< HEAD
-        dns: None,                                // Use Option<DnsState>
-=======
-        dns: None,                                 // Use Option<DnsState>
->>>>>>> parent of b850a55a (Add test for hide secrets in Debug trait of NetworkState)
+
+        dns: None,                                
+        dns: None,                               
+        dns: None,                                 
         rules: RouteRules::default(),
         routes: Routes::default(),
         interfaces: Interfaces::default(),
