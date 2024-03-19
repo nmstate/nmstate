@@ -135,27 +135,13 @@ impl fmt::Debug for NetworkState {
         debug_struct.field("routes", &self.routes);
         debug_struct.field("interfaces", &self.interfaces);
         debug_struct.field("ovsdb", &self.ovsdb);
-        debug_struct.field("ovn", &self.ovn);
-        debug_struct.field("kernel_only", &self.kernel_only);
-    
-        if !self.include_secrets {
-            debug_struct.field("timeout", &self.timeout)
-                .field("no_verify", &self.no_verify)
-                .field("no_commit", &self.no_commit)
-                .field("include_secrets", &self.include_secrets)
-                .field("include_status_data", &self.include_status_data)
-                .field("running_config_only", &self.running_config_only)
-                .field("memory_only", &self.memory_only);
-        } else {
-            debug_struct.field("timeout", &"<_password_hid_by_nmstate>")
-                .field("no_verify", &"<_password_hid_by_nmstate>")
-                .field("no_commit", &"<_password_hid_by_nmstate>")
-                .field("include_secrets", &self.include_secrets)
-                .field("include_status_data", &self.include_status_data)
-                .field("running_config_only", &self.running_config_only)
-                .field("memory_only", &self.memory_only);
-        }
-    
+        debug_struct.field("timeout", &"<_password_hid_by_nmstate>");
+        debug_struct.field("no_verify", &"<_password_hid_by_nmstate>");
+        debug_struct.field("no_commit", &"<_password_hid_by_nmstate>");
+        debug_struct.field("include_secrets", &self.include_secrets);
+        debug_struct.field("include_status_data", &self.include_status_data);
+        debug_struct.field("running_config_only", &self.running_config_only);
+        debug_struct.field("memory_only", &self.memory_only);
         debug_struct.finish()
     }
 }
