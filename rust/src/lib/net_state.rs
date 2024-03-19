@@ -2,7 +2,6 @@
 
 #[cfg(not(feature = "gen_conf"))]
 use std::collections::HashMap;
-use std::fmt;
 
 use serde::{Deserialize, Serialize};
 // use core::fmt::Debug;
@@ -78,7 +77,6 @@ use crate::{
 ///   other_config: {}
 /// ```
 
-
 #[derive(Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
@@ -126,7 +124,7 @@ pub struct NetworkState {
     pub(crate) memory_only: bool,
 }
 
-impl fmt::Debug for NetworkState {
+impl std::fmt::Debug for NetworkState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut debug_struct = f.debug_struct("NetworkState");
         debug_struct.field("hostname", &self.hostname);
@@ -157,7 +155,6 @@ impl NetworkState {
             && self.ovn.is_none()
     }
 
-    
     pub(crate) const PASSWORD_HID_BY_NMSTATE: &'static str =
         "<_password_hid_by_nmstate>";
 
