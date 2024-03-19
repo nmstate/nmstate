@@ -172,6 +172,7 @@ pub(crate) use crate::ovn::MergedOvnConfiguration;
 pub use crate::ovn::{
     OvnBridgeMapping, OvnBridgeMappingState, OvnConfiguration,
 };
+
 pub(crate) use crate::ovs::MergedOvsDbGlobalConfig;
 pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
 #[cfg(feature = "query_apply")]
