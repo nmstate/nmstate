@@ -1,4 +1,6 @@
-use serde::{ Deserialize, Serialize };
+// SPDX-License-Identifier: Apache-2.0
+
+use serde::{Deserialize, Serialize};
 
 use crate::NetworkState;
 
@@ -46,34 +48,24 @@ pub struct Ieee8021XConfig {
 impl Ieee8021XConfig {
     pub(crate) fn hide_secrets(&mut self) {
         if self.private_key_password.is_some() {
-            self.private_key_password = Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
+            self.private_key_password =
+                Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
         }
     }
 }
 
 impl std::fmt::Debug for Ieee8021XConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut cloned = self.clone();
-        cloned.hide_secrets();
-        let debug_tr = format!(
-            "
-                Ieee8021XConfig {{
-                    identity: {:?},
-                    eap: {:?},
-                    private_key: {:?},
-                    client_cert: {:?},
-                    ca_cert: {:?},
-                    private_key_password: {:?}
-                }}
-            ",
-            cloned.identity,
-            cloned.eap,
-            cloned.private_key,
-            cloned.client_cert,
-            cloned.ca_cert,
-            cloned.private_key_password
-        );
-
-        write!(f, "{}", debug_tr)
+        f.debug_struct("Ieee8021XConfig")
+            .field("identity", &self.identity)
+            .field("eap", &self.eap)
+            .field("private_key", &self.private_key)
+            .field("client_cert", &self.client_cert)
+            .field("ca_cert", &self.ca_cert)
+            .field(
+                "private_key_password",
+                &Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string()),
+            )
+            .finish()
     }
 }
