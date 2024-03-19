@@ -17,7 +17,6 @@ path = "lib.rs"
 
 [dependencies]
 serde_yaml = "0.9"
-hostname = "0.3"
 
 [dependencies.nispor]
 version = "1.2.16"

@@ -2,9 +2,12 @@
 
 #[cfg(not(feature = "gen_conf"))]
 use std::collections::HashMap;
+use std::fmt;
 
 use serde::{Deserialize, Serialize};
-
+// use core::fmt::Debug;
+// use serde::__private::fmt::Debug;
+// // use std::fmt::Debug;
 use crate::{
     DnsState, ErrorKind, HostNameState, Interface, Interfaces, MergedDnsState,
     MergedHostNameState, MergedInterfaces, MergedOvnConfiguration,
@@ -123,7 +126,7 @@ pub struct NetworkState {
     pub(crate) memory_only: bool,
 }
 
-impl std::fmt::Debug for NetworkState {
+impl fmt::Debug for NetworkState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut debug_struct = f.debug_struct("NetworkState");
         debug_struct.field("hostname", &self.hostname);
