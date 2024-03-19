@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 
 use crate::NetworkState;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The IEEE 802.1X authentication configuration. The example yaml output of
@@ -46,8 +46,34 @@ pub struct Ieee8021XConfig {
 impl Ieee8021XConfig {
     pub(crate) fn hide_secrets(&mut self) {
         if self.private_key_password.is_some() {
-            self.private_key_password =
-                Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
+            self.private_key_password = Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
         }
+    }
+}
+
+impl std::fmt::Debug for Ieee8021XConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut cloned = self.clone();
+        cloned.hide_secrets();
+        let debug_tr = format!(
+            "
+                Ieee8021XConfig {{
+                    identity: {:?},
+                    eap: {:?},
+                    private_key: {:?},
+                    client_cert: {:?},
+                    ca_cert: {:?},
+                    private_key_password: {:?}
+                }}
+            ",
+            cloned.identity,
+            cloned.eap,
+            cloned.private_key,
+            cloned.client_cert,
+            cloned.ca_cert,
+            cloned.private_key_password
+        );
+
+        write!(f, "{}", debug_tr)
     }
 }
