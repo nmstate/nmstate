@@ -15,6 +15,7 @@ use super::{
 
 const NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS: u32 = 0x02;
 const NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES: u32 = 0x04;
+const NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS: u32 = 0x20;
 
 const OBJ_PATH_NULL_STR: &str = "/";
 
@@ -63,16 +64,12 @@ impl<'a> NmDbus<'a> {
         Ok(self.proxy.version()?)
     }
 
-    pub(crate) fn checkpoint_create(
+    fn _checkpoint_create(
         &self,
         timeout: u32,
+        flags: u32,
     ) -> Result<String, NmError> {
-        match self.proxy.checkpoint_create(
-            &[],
-            timeout,
-            NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
-                | NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES,
-        ) {
+        match self.proxy.checkpoint_create(&[], timeout, flags) {
             Ok(cp) => Ok(obj_path_to_string(cp)),
             Err(e) => {
                 Err(if let zbus::Error::MethodError(ref error_type, ..) = e {
@@ -91,6 +88,28 @@ impl<'a> NmDbus<'a> {
                 } else {
                     e.into()
                 })
+            }
+        }
+    }
+
+    pub(crate) fn checkpoint_create(
+        &self,
+        timeout: u32,
+    ) -> Result<String, NmError> {
+        let default_flags = NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
+            | NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES;
+        match self._checkpoint_create(
+            timeout,
+            default_flags | NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS,
+        ) {
+            Ok(s) => Ok(s),
+            Err(_) => {
+                // The NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS is
+                // supported by NM 1.47+ and might be backported to other
+                // versions. There is no way to know whether it is supported or
+                // not by checking the NM version. Hence we try to create
+                // the checkpoint without this flag on second try.
+                self._checkpoint_create(timeout, default_flags)
             }
         }
     }

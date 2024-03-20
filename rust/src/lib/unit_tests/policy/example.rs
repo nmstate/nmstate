@@ -22,10 +22,18 @@ fn test_policy_examples() {
         println!("Testing {path:?}");
         let current_state = load_state(&path.join(CURRENT_YAML_FILENAME));
         let mut policy = load_policy(&path.join(POLICY_YAML_FILENAME));
-        let expected_state = load_state(&path.join(EXPECTED_YAML_FILENAME));
+        let expected_state = serde_yaml::to_string(&load_state(
+            &path.join(EXPECTED_YAML_FILENAME),
+        ))
+        .unwrap();
 
         policy.current = Some(current_state);
-        let state = NetworkState::try_from(policy).unwrap();
+        println!("HAHA {:?}", policy.current);
+        let state =
+            serde_yaml::to_string(&NetworkState::try_from(policy).unwrap())
+                .unwrap();
+        println!("Got:\n{}", state);
+        println!("Expected:\n{}", expected_state);
         assert_eq!(state, expected_state);
         println!("Pass    {path:?}");
     }

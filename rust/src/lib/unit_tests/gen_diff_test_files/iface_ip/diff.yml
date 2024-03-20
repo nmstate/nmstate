@@ -1,0 +1,7 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv6:
+      enabled: false

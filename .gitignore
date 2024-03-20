@@ -44,3 +44,6 @@ nmstate-*.tar.gz.asc
 /tags
 
 /.vscode
+
+rust/src/clib/nmstate.pc
+rust/src/python/build

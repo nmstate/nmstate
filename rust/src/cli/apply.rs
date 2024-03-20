@@ -100,12 +100,19 @@ where
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );
+    let mut cur_state = NetworkState::new();
+    if matches.is_present("KERNEL") {
+        cur_state.set_kernel_only(true);
+    }
+    cur_state.set_running_config_only(true);
+    cur_state.retrieve()?;
 
     net_state.apply()?;
     if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
         net_state.hide_secrets();
     }
-    let sorted_net_state = crate::query::sort_netstate(net_state)?;
+    let diff_state = net_state.gen_diff(&cur_state)?;
+    let sorted_net_state = crate::query::sort_netstate(diff_state)?;
     Ok(serde_yaml::to_string(&sorted_net_state)?)
 }
 
@@ -150,7 +157,7 @@ pub(crate) fn state_edit(
         }
         net_state
     } else {
-        cur_state
+        cur_state.clone()
     };
     let tmp_file_path = gen_tmp_file_path();
     write_state_to_file(&tmp_file_path, &net_state)?;
@@ -161,7 +168,9 @@ pub(crate) fn state_edit(
     desire_state.set_commit(!matches.is_present("NO_COMMIT"));
     desire_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
     desire_state.apply()?;
-    Ok(serde_yaml::to_string(&desire_state)?)
+    let diff_state = desire_state.gen_diff(&cur_state)?;
+    let sorted_net_state = crate::query::sort_netstate(diff_state)?;
+    Ok(serde_yaml::to_string(&sorted_net_state)?)
 }
 
 fn gen_tmp_file_path() -> String {

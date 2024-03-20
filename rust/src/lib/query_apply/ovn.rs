@@ -6,6 +6,11 @@ use crate::{
 };
 
 impl MergedOvnConfiguration {
+    pub(crate) fn is_changed(&self) -> bool {
+        self.to_ovsdb_external_id_value()
+            != self.current.to_ovsdb_external_id_value()
+    }
+
     pub(crate) fn verify(
         &self,
         current: &OvnConfiguration,

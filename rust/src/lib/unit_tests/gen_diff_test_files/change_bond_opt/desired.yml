@@ -1,0 +1,12 @@
+---
+interfaces:
+- name: bond99
+  type: bond
+  state: up
+  link-aggregation:
+    mode: balance-rr
+    options:
+      miimon: 141
+    ports:
+    - eth2
+    - eth1
