@@ -1,4 +1,18 @@
 # Changelog
+## [2.2.27] - 2024-03-20
+### Breaking changes
+ - N/A
+
+### New features
+ - Support TCP congestion window(cwnd) in route. (59f99632)
+ - Support query interface driver. (67817c23)
+ - New API to generate changed state. (fe5327a2)
+
+### Bug fixes
+ - Include driver information for `persist-nic-names` subcommand. (1129e46b)
+ - nm: Protect global DNS config in checkpoint. (881373ba)
+ - route rule: Append rule instead of overriding when iface defined. (88d3d3ef)
+
 ## [2.2.26] - 2024-03-13
 ### Breaking changes
  - Deprecate PrettyState class in Python API. (6b410dcf)
