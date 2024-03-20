@@ -299,6 +299,7 @@ impl NetworkState {
         if !other.ovn.is_none() {
             self.ovn = other.ovn.clone();
         }
+        self.user_defined = other.user_defined.clone();
     }
 
     /// Generate new NetworkState contains only changed properties

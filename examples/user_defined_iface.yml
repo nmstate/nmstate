@@ -1,0 +1,43 @@
+---
+user-defined:
+    interface-types:
+        - name: vxcan
+          handler-script: |
+            #!/bin/bash
+            ifname=$1
+            action=$2
+
+            if [ "$action" = "device-add" ]; then
+                peer=$CONNECTION_USER_VXCAN__PEER
+
+                if [ -z "$peer" ]; then
+                    echo "ERROR=Missing peer name"
+                    exit 1
+                fi
+
+                if ! err=$(ip link add "$ifname" type vxcan peer "$peer" 2>&1);
+                then
+                    echo "ERROR=Failed creating the interface: $err"
+                    exit 2
+                fi
+                ip link set $peer up
+
+                echo IFINDEX="$(cat /sys/class/net/"$ifname"/ifindex)"
+                exit 0
+            elif [ "$action" = "device-delete" ]; then
+                # Delete the interface created by "device-add" here.
+                ip link del "$ifname"
+                exit 0
+            fi
+
+interfaces:
+    - name: vxcan1
+      type: vxcan
+      description: "user defined vxcan interface"
+      user-defined:
+          peer: "vxcan1-ep"
+      ipv4:
+          enabled: true
+          address:
+              - ip: 192.0.2.1
+                prefix-length: 24

@@ -2,7 +2,7 @@
 
 use nmstate::{
     DnsState, HostNameState, NetworkState, OvnConfiguration, OvsDbGlobalConfig,
-    RouteRules, Routes,
+    RouteRules, Routes, UserDefinedData,
 };
 use serde::Serialize;
 use serde_yaml::Value;
@@ -23,6 +23,8 @@ pub(crate) struct SortedNetworkState {
     ovsdb: Option<OvsDbGlobalConfig>,
     #[serde(rename = "ovn")]
     ovn: OvnConfiguration,
+    #[serde(rename = "user-defined")]
+    user_defined: UserDefinedData,
 }
 
 const IFACE_TOP_PRIORTIES: [&str; 2] = ["name", "type"];
@@ -94,6 +96,7 @@ pub(crate) fn sort_netstate(
             dns: net_state.dns,
             ovsdb: net_state.ovsdb,
             ovn: net_state.ovn,
+            user_defined: net_state.user_defined,
         });
     }
 
@@ -105,6 +108,7 @@ pub(crate) fn sort_netstate(
         dns: net_state.dns,
         ovsdb: net_state.ovsdb,
         ovn: net_state.ovn,
+        user_defined: net_state.user_defined,
     })
 }
 

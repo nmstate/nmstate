@@ -270,4 +270,8 @@ impl InterfaceType {
         InterfaceType::Ipsec,
         InterfaceType::Xfrm,
     ];
+
+    pub(crate) fn is_supported(&self) -> bool {
+        self.is_user_defined() || Self::SUPPORTED_LIST.contains(self)
+    }
 }

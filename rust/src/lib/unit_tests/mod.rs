@@ -57,6 +57,8 @@ mod statistic;
 #[cfg(test)]
 mod testlib;
 #[cfg(test)]
+mod user_defined;
+#[cfg(test)]
 mod vlan;
 #[cfg(test)]
 mod vrf;

@@ -12,10 +12,13 @@ use super::{
     error::nm_error_to_nmstate,
     query_apply::{
         create_index_for_nm_conns_by_name_type,
-        device::nm_dev_iface_type_to_nmstate, dispatch::get_dispatches,
-        dns::nm_global_dns_to_nmstate, get_description, get_lldp,
-        is_lldp_enabled, nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
-        nm_ip_setting_to_nmstate6, ovs::merge_ovs_netdev_tun_iface,
+        device::nm_dev_iface_type_to_nmstate,
+        dispatch::{get_dispatches, get_user_defined_iface_types},
+        dns::nm_global_dns_to_nmstate,
+        get_description, get_lldp, get_user_defined_settings, is_lldp_enabled,
+        nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
+        nm_ip_setting_to_nmstate6,
+        ovs::merge_ovs_netdev_tun_iface,
         query_nmstate_wait_ip, retrieve_dns_info,
         vpn::get_supported_vpn_ifaces,
     },
@@ -30,8 +33,8 @@ use crate::{
     InterfaceIdentifier, InterfaceState, InterfaceType, LinuxBridgeInterface,
     LoopbackInterface, MacSecConfig, MacSecInterface, MacVlanInterface,
     MacVtapInterface, NetworkState, NmstateError, OvsBridgeInterface,
-    OvsInterface, UnknownInterface, VlanInterface, VrfInterface,
-    VxlanInterface,
+    OvsInterface, UnknownInterface, UserDefinedInterface, VlanInterface,
+    VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -174,7 +177,7 @@ pub(crate) fn nm_retrieve(
         .chain(net_state.interfaces.user_ifaces.values_mut())
     {
         // Do not touch interfaces nmstate does not support yet
-        if !InterfaceType::SUPPORTED_LIST.contains(&iface.iface_type()) {
+        if !iface.iface_type().is_supported() {
             iface.base_iface_mut().state = InterfaceState::Ignore;
         }
     }
@@ -206,6 +209,8 @@ pub(crate) fn nm_retrieve(
 
     merge_ovs_netdev_tun_iface(&mut net_state, &nm_devs, &nm_conns);
 
+    net_state.user_defined = get_user_defined_iface_types()?;
+
     Ok(net_state)
 }
 
@@ -233,7 +238,7 @@ pub(crate) fn nm_conn_to_base_iface(
         base_iface.name = iface_name.to_string();
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = if let Some(nm_dev) = nm_dev {
-            nm_dev_iface_type_to_nmstate(nm_dev)
+            nm_dev_iface_type_to_nmstate(nm_dev, Some(nm_conn))
         } else {
             InterfaceType::Unknown
         };
@@ -247,7 +252,6 @@ pub(crate) fn nm_conn_to_base_iface(
         if base_iface.profile_name.as_ref() == Some(&base_iface.name) {
             base_iface.profile_name = None;
         }
-
         base_iface.lldp =
             Some(lldp_neighbors.map(get_lldp).unwrap_or_default());
         if let Some(nm_saved_conn) = nm_saved_conn {
@@ -368,6 +372,13 @@ fn iface_get(
                 iface.base = base_iface;
                 iface
             }),
+            InterfaceType::UserDefined(t) => {
+                let user_defined = get_user_defined_settings(nm_conn, t);
+                Interface::UserDefined(UserDefinedInterface {
+                    base: base_iface,
+                    user_defined,
+                })
+            }
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);
                 return None;
@@ -443,7 +454,7 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
         NmDeviceState::Disconnected => base_iface.state = InterfaceState::Down,
         _ => base_iface.state = InterfaceState::Up,
     }
-    base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
+    base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev, None);
     let iface = match &base_iface.iface_type {
         InterfaceType::Ethernet => Interface::Ethernet({
             let mut iface = EthernetInterface::new();

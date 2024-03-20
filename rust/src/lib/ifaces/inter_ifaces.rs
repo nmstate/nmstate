@@ -147,8 +147,21 @@ impl Interfaces {
         self.insert_order
             .push((iface.name().to_string(), iface.iface_type()));
         if iface.is_userspace() {
-            self.user_ifaces
-                .insert((iface.name().to_string(), iface.iface_type()), iface);
+            if let InterfaceType::UserDefined(t) = iface.iface_type() {
+                self.user_ifaces.remove(&(
+                    iface.name().to_string(),
+                    InterfaceType::Other(t),
+                ));
+                self.user_ifaces.insert(
+                    (iface.name().to_string(), iface.iface_type()),
+                    iface,
+                );
+            } else {
+                self.user_ifaces.insert(
+                    (iface.name().to_string(), iface.iface_type()),
+                    iface,
+                );
+            }
         } else {
             self.kernel_ifaces.insert(iface.name().to_string(), iface);
         }

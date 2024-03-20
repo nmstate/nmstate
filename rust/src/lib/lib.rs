@@ -118,6 +118,7 @@ mod state;
 #[cfg(feature = "query_apply")]
 mod statistic;
 mod unit_tests;
+mod user_defined;
 
 pub use crate::dispatch::DispatchConfig;
 pub(crate) use crate::dns::MergedDnsState;
@@ -150,9 +151,10 @@ pub use crate::ifaces::{
     MacVtapInterface, MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
     OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
     OvsBridgeOptions, OvsBridgePortConfig, OvsBridgeStpOptions, OvsDpdkConfig,
-    OvsInterface, OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig,
-    VlanConfig, VlanInterface, VlanProtocol, VlanRegistrationProtocol,
-    VrfConfig, VrfInterface, VxlanConfig, VxlanInterface, XfrmInterface,
+    OvsInterface, OvsPatchConfig, SrIovConfig, SrIovVfConfig,
+    UserDefinedInterface, VethConfig, VlanConfig, VlanInterface, VlanProtocol,
+    VlanRegistrationProtocol, VrfConfig, VrfInterface, VxlanConfig,
+    VxlanInterface, XfrmInterface,
 };
 pub use crate::ip::{
     AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4,
@@ -186,3 +188,6 @@ pub use crate::route_rule::{
 };
 #[cfg(feature = "query_apply")]
 pub use crate::statistic::{NmstateFeature, NmstateStatistic};
+pub use crate::user_defined::{UserDefinedData, UserDefinedInterfaceType};
+
+pub(crate) use crate::user_defined::MergedUserDefinedData;

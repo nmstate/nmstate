@@ -12,7 +12,20 @@ impl Interfaces {
         let other_ifaces = other.to_vec();
         for other_iface in other_ifaces {
             let self_iface = if other_iface.is_userspace() {
-                self.get_iface_mut(other_iface.name(), other_iface.iface_type())
+                if let InterfaceType::UserDefined(t) = other_iface.iface_type()
+                {
+                    // For user defined interface, we try to search kernel
+                    // interface
+                    self.user_ifaces.get_mut(&(
+                        other_iface.name().to_string(),
+                        InterfaceType::Other(t),
+                    ))
+                } else {
+                    self.get_iface_mut(
+                        other_iface.name(),
+                        other_iface.iface_type(),
+                    )
+                }
             } else {
                 self.kernel_ifaces.get_mut(other_iface.name())
             };
@@ -43,6 +56,32 @@ impl Interfaces {
                                 Interface::OvsInterface(new_iface);
                             new_iface.update(other_iface);
                             new_ifaces.push(new_iface);
+                        }
+                    } else if other_iface.iface_type().is_user_defined()
+                        && self_iface.iface_type().is_other()
+                    {
+                        if let Interface::UserDefined(iface) = other_iface {
+                            // We should remove old UnknownInterface and
+                            // reinstall
+                            // UserDefinedInterface
+                            let mut new_iface = iface.clone();
+                            new_iface.base = self_iface.base_iface().clone();
+                            new_iface.base.state = iface.base.state;
+                            new_iface.base.iface_type =
+                                iface.base.iface_type.clone();
+                            new_iface.base.controller =
+                                iface.base.controller.clone();
+                            new_iface.base.controller_type =
+                                iface.base.controller_type.clone();
+                            let mut new_iface =
+                                Interface::UserDefined(new_iface);
+                            new_iface.update(other_iface);
+                            new_ifaces.push(new_iface);
+                        } else {
+                            log::info!(
+                                "Ignoring unexpected other interface {:?}",
+                                other_iface
+                            );
                         }
                     } else {
                         self_iface.update(other_iface);
@@ -121,7 +160,7 @@ fn verify_desire_absent_but_found_in_current(
         let e = NmstateError::new(
             ErrorKind::VerificationError,
             format!(
-                "Absent/Down interface {}/{} still found as {:?}",
+                "Absent/Down interface {}/{} still found as {}",
                 des_iface.name(),
                 des_iface.iface_type(),
                 cur_iface

@@ -2,21 +2,19 @@
 
 use std::collections::HashSet;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
     HsrInterface, InfiniBandInterface, IpsecInterface, LinuxBridgeInterface,
     LoopbackInterface, MacSecInterface, MacVlanInterface, MacVtapInterface,
-    NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
-    VrfInterface, VxlanInterface, XfrmInterface,
+    NmstateError, OvsBridgeInterface, OvsInterface, UserDefinedInterface,
+    VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
 };
 
 use crate::state::merge_json_value;
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 /// Interface type
@@ -81,6 +79,9 @@ pub enum InterfaceType {
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
+    /// User defined interface type for [crate::UserDefinedInterfaceType]
+    UserDefined(String),
+    /// Reserved for internal use.
     #[serde(untagged)]
     Other(String),
 }
@@ -118,9 +119,19 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::MacSec => "macsec",
                 InterfaceType::Ipsec => "ipsec",
                 InterfaceType::Xfrm => "xfrm",
-                InterfaceType::Other(ref s) => s,
+                InterfaceType::UserDefined(t) => t.as_str(),
+                InterfaceType::Other(s) => s.as_str(),
             }
         )
+    }
+}
+
+impl Serialize for InterfaceType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(format!("{self}").as_str())
     }
 }
 
@@ -129,13 +140,19 @@ impl InterfaceType {
     const CONTROLLER_IFACES_TYPES: [Self; 4] =
         [Self::Bond, Self::LinuxBridge, Self::OvsBridge, Self::Vrf];
 
-    // other interfaces are also considered as userspace
+    // other and user defined interfaces are also considered as userspace
     pub(crate) fn is_userspace(&self) -> bool {
-        self.is_other() || Self::USERSPACE_IFACE_TYPES.contains(self)
+        self.is_other()
+            || self.is_user_defined()
+            || Self::USERSPACE_IFACE_TYPES.contains(self)
     }
 
     pub(crate) fn is_other(&self) -> bool {
         matches!(self, Self::Other(_))
+    }
+
+    pub(crate) fn is_user_defined(&self) -> bool {
+        matches!(self, Self::UserDefined(_))
     }
 
     pub(crate) fn is_controller(&self) -> bool {
@@ -191,6 +208,22 @@ impl From<&str> for InterfaceState {
             "ignore" => Self::Ignore,
             _ => Self::Unknown,
         }
+    }
+}
+
+impl std::fmt::Display for InterfaceState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Up => "up",
+                Self::Down => "down",
+                Self::Absent => "absent",
+                Self::Ignore => "ignore",
+                Self::Unknown => "unknown",
+            }
+        )
     }
 }
 
@@ -278,6 +311,7 @@ pub enum Interface {
     Ipsec(IpsecInterface),
     /// Linux xfrm interface
     Xfrm(XfrmInterface),
+    UserDefined(UserDefinedInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -399,11 +433,10 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Xfrm(inner))
             }
-            Some(iface_type) => {
-                log::warn!("Unsupported interface type {}", iface_type);
-                let inner = UnknownInterface::deserialize(v)
+            Some(_) => {
+                let inner = UserDefinedInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Unknown(inner))
+                Ok(Interface::UserDefined(inner))
             }
             None => {
                 let inner = UnknownInterface::deserialize(v)
@@ -411,6 +444,18 @@ impl<'de> Deserialize<'de> for Interface {
                 Ok(Interface::Unknown(inner))
             }
         }
+    }
+}
+
+impl std::fmt::Display for Interface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}/{} state:{}",
+            self.iface_type(),
+            self.name(),
+            self.base_iface().state
+        )
     }
 }
 
@@ -524,6 +569,13 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Xfrm(new_iface)
             }
+            Self::UserDefined(iface) => {
+                let new_iface = UserDefinedInterface {
+                    base: iface.base.clone_name_type_only(),
+                    ..Default::default()
+                };
+                Self::UserDefined(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -622,6 +674,7 @@ impl Interface {
             Self::MacSec(iface) => &iface.base,
             Self::Ipsec(iface) => &iface.base,
             Self::Xfrm(iface) => &iface.base,
+            Self::UserDefined(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -645,6 +698,7 @@ impl Interface {
             Self::MacSec(iface) => &mut iface.base,
             Self::Ipsec(iface) => &mut iface.base,
             Self::Xfrm(iface) => &mut iface.base,
+            Self::UserDefined(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -801,6 +855,13 @@ impl MergedInterface {
             self.special_merge();
             self.create_ovs_iface_for_empty_ports();
         }
+        if self.merged.iface_type().is_other() {
+            if let Some(iface_type) =
+                self.desired.as_ref().map(|i| i.iface_type())
+            {
+                self.merged.base_iface_mut().iface_type = iface_type;
+            }
+        }
     }
 
     // This function is designed to hold smart changes or validations
@@ -821,8 +882,7 @@ impl MergedInterface {
         Ok(())
     }
 
-    // After HashMap based merging, extra task required for special use case
-    // like.
+    // After HashMap based merging, extra task required for special use cases
     fn special_merge(&mut self) {
         if let (Some(desired), Some(current)) =
             (self.desired.as_ref(), self.current.as_ref())
