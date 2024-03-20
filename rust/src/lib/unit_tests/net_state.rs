@@ -63,10 +63,10 @@ fn test_network_state_debug() {
     assert!(debug_output.contains("timeout"));
     assert!(debug_output.contains("no_verify"));
     assert!(debug_output.contains("no_commit"));
-    // assert!(debug_output.contains("include_secrets"));
-    // assert!(debug_output.contains("include_status_data"));
-    // assert!(debug_output.contains("running_config_only"));
-    // assert!(debug_output.contains("memory_only"));
+    assert!(debug_output.contains("include_secrets"));
+    assert!(debug_output.contains("include_status_data"));
+    assert!(debug_output.contains("running_config_only"));
+    assert!(debug_output.contains("memory_only"));
 
     // Assert that the debug output contains the hidden password
     assert!(debug_output.contains("<_password_hid_by_nmstate>"));
