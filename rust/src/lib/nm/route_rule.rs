@@ -180,6 +180,16 @@ fn append_route_rule(
                 if let Some(ip_conf) =
                     apply_iface.base_iface_mut().ipv6.as_mut()
                 {
+                    // When desired state has no rules defined, we should
+                    // copy current rules first, then append.
+                    if ip_conf.rules.is_none() {
+                        ip_conf.rules = iface
+                            .merged
+                            .base_iface()
+                            .ipv6
+                            .as_ref()
+                            .and_then(|i| i.rules.clone());
+                    }
                     if let Some(rules) = ip_conf.rules.as_mut() {
                         rules.push(rule.clone());
                     } else {
@@ -196,6 +206,16 @@ fn append_route_rule(
                 if let Some(ip_conf) =
                     apply_iface.base_iface_mut().ipv4.as_mut()
                 {
+                    // When desired state has no rules defined, we should
+                    // copy current rules first, then append.
+                    if ip_conf.rules.is_none() {
+                        ip_conf.rules = iface
+                            .merged
+                            .base_iface()
+                            .ipv4
+                            .as_ref()
+                            .and_then(|i| i.rules.clone());
+                    }
                     if let Some(rules) = ip_conf.rules.as_mut() {
                         rules.push(rule.clone());
                     } else {
