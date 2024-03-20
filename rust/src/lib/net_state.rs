@@ -140,7 +140,6 @@ impl std::fmt::Debug for NetworkState {
         debug_struct.finish()
     }
 }
-
 impl NetworkState {
     pub fn is_empty(&self) -> bool {
         self.hostname.is_none()
