@@ -5,8 +5,11 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  pull_request:
+  pull_request_target:
    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
 
 jobs:
   rust_lint:
@@ -33,6 +36,7 @@ jobs:
       run: cd rust && cargo fmt -- --check
 
     - name: Check clippy
+      id: cargo_clippy
       if: matrix.rust_version == 'nightly'
       run: cd rust && cargo clippy -- -D warnings
 
@@ -49,6 +53,15 @@ jobs:
         cd rust && cargo clippy \
           --no-default-features --features query_apply \
           -- -D warnings
+
+    - name: Robot works
+      if: ${{ failure() }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        .github/nmstate_github_bot \
+          cargo_clippy
+          ${{ steps.cargo_clippy.conclusion }}
 
   rust_unit:
     strategy:
@@ -163,7 +176,6 @@ jobs:
         run: sudo chmod 777 test_artifacts/*
 
       - uses: actions/upload-artifact@v3
-        if: ${{ failure() }}
         with:
           name: nmstate-test-artifact-${{ matrix.job_type }}
           path: test_artifacts/

@@ -186,3 +186,5 @@ pub use crate::route_rule::{
 };
 #[cfg(feature = "query_apply")]
 pub use crate::statistic::{NmstateFeature, NmstateStatistic};
+
+const abc: bool = true;

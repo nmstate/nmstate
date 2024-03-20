@@ -1,0 +1,16 @@
+#!/bin/bash -x
+
+JOB_TYPE="$1"
+CONCLUSION="$2"
+PR_NUMBER="$(echo ${GITHUB_REF_NAME} | awk -F'/' '{print $1}')"
+
+if [ "CHK${PR_NUMBER}" == "CHK" ];then
+    echo "Failed to get PR number from GITHUB_REF_NAME: '${GITHUB_REF_NAME}'"
+    exit 1
+fi
+
+gh pr comment $PR_NUMBER --body "*From Nmstate Github Robot*
+
+Test ${JOB_TYPE} has ${CONCLUSION}
+
+"
