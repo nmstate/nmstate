@@ -546,10 +546,8 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
         }
     )
 
-    expected_routes = []
-
     cur_state = libnmstate.show()
-    assert_routes(expected_routes, cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
@@ -580,18 +578,17 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
         }
     )
 
-    expected_routes = []
-
     cur_state = libnmstate.show()
-    assert_routes(expected_routes, cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 # TODO: Once we can disable IPv6, we should add an IPv6 test case here
 def test_disable_ipv4_with_routes_in_current(eth1_up):
+    routes = _get_ipv4_test_routes()
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: _get_ipv4_test_routes()},
+            Route.KEY: {Route.CONFIG: routes},
         }
     )
 
@@ -601,15 +598,16 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
     libnmstate.apply({Interface.KEY: [eth1_state]})
 
     cur_state = libnmstate.show()
-    assert_routes([], cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
 def test_disable_ipv4_and_remove_wildcard_route(eth1_up):
+    routes = _get_ipv4_test_routes()
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: _get_ipv4_test_routes()},
+            Route.KEY: {Route.CONFIG: routes},
         }
     )
 
@@ -629,16 +627,17 @@ def test_disable_ipv4_and_remove_wildcard_route(eth1_up):
     )
 
     cur_state = libnmstate.show()
-    assert_routes([], cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
 @parametrize_ip_ver_routes
 def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
+    routes = get_routes_func()
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: get_routes_func()},
+            Route.KEY: {Route.CONFIG: routes},
         }
     )
 
@@ -655,7 +654,7 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
     )
 
     cur_state = libnmstate.show()
-    assert_routes([], cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
