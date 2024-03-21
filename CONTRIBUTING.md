@@ -45,16 +45,14 @@ querying network status and applying network states.
 
 ## Installation and Compilation:
 
-- [Fork](https://github.com/nmstate/nmstate.git) and git clone to local
--[Install rust and Cargo for the development of nmstate](https://doc.rust-lang.org/cargo/getting-started/installation.html) or `apt-get install cargo`
-- Change your current directory to the nmstate directory `cd nmstate`
-- Install nmstate `cargo install nmstatectl`
-This will download the necessary dependencies and build the nmstate library and command-line tool
-- Build and compile the packages using `cargo build`
-This will compile the source code and generate the executable files
-- Run unit test to ensure functionality of the  nmstate library and tools `cargo test`
-- View networking state in yaml format `nmstatectl show`
-- Check version `nmstatectl --version`
+- [Install Rust and Cargo for the development of nmstate](https://doc.rust-lang.org/cargo/getting-started/installation.html) or install the development tools from your distribution's repositories
+- [Fork](https://github.com/nmstate/nmstate.git) and git clone to local machine
+- Change your current directory to the nmstate directory then into rust   `cd nmstate/rust`
+- Build and compile the packages using Cargo. Run the command cargo build in the terminal.  `cargo build`  
+  This will download the necessary dependencies and build the nmstate library and command-line tool and will compile the source code then generate binary.
+- The compiled files will be placed in the target/debug directory
+- To view the networking state in YAML format, you can use  `target/debug/nmstate show`
+
 
 ## Configuring Git
 
