@@ -28,6 +28,7 @@ fn test_invalid_top_type() {
 
     assert!(result.is_err());
 }
+<<<<<<< HEAD
 
 #[test]
 fn test_network_state_debug() {
@@ -64,3 +65,5 @@ fn test_network_state_debug() {
     // Assert that the debug output contains the hidden password
     assert!(debug_output.contains("<_password_hid_by_nmstate>"));
 }
+=======
+>>>>>>> 7ec45a40 (Revert 'Implement std::fmt::Debug for NetworkState and its subtypes')
