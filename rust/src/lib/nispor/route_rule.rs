@@ -24,7 +24,7 @@ const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 8] = [
     nispor::RouteProtocol::Unspec,
 ];
 
-pub(crate) fn get_route_rules(
+pub(crate) async fn get_route_rules_async(
     np_rules: &[nispor::RouteRule],
     running_config_only: bool,
 ) -> RouteRules {
