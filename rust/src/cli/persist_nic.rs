@@ -444,7 +444,7 @@ fn has_any_kargs(kargs: &[&str]) -> bool {
 // Preference order on MAC address of bond port:
 // 1. Permanent MAC address
 // 2. MAC address stored in `IFLA_BOND_PORT_PERM_HWADDR`
-fn get_bond_port_mac(iface: &Interface) -> Option<String> {
+async fn get_bond_port_mac(iface: &Interface) -> Option<String> {
     if let Some(mac) = iface.base_iface().permanent_mac_address.as_deref() {
         return Some(mac.to_string());
     }
@@ -453,7 +453,8 @@ fn get_bond_port_mac(iface: &Interface) -> Option<String> {
     let mut iface_filter = nispor::NetStateIfaceFilter::minimum();
     iface_filter.iface_name = Some(iface.name().to_string());
     filter.iface = Some(iface_filter);
-    match nispor::NetState::retrieve_with_filter(&filter) {
+    
+    match nispor::NetState::retrieve_with_filter_async(&filter).await {
         Ok(np_state) => {
             if let Some(mac) = np_state
                 .ifaces

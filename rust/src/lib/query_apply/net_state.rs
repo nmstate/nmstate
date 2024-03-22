@@ -11,6 +11,8 @@ use crate::{
     NmstateError,
 };
 
+use tokio::runtime::Builder;
+
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT_DEFAULT: usize = 5;
@@ -40,7 +42,13 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
-        let state = nispor_retrieve(self.running_config_only)?;
+        let  runtime = Builder::new_current_thread()
+            .enable_all() 
+            .build()
+            .unwrap();
+        let state = runtime.block_on(async {
+            nispor_retrieve(self.running_config_only).await
+        })?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;

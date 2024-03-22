@@ -15,7 +15,7 @@ use crate::{
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
         macsec::np_macsec_to_nmstate,
         route::get_routes,
-        route_rule::get_route_rules,
+        route_rule::get_route_rules_async,
         veth::np_veth_to_nmstate,
         vlan::np_vlan_to_nmstate,
         vrf::np_vrf_to_nmstate,
@@ -25,18 +25,19 @@ use crate::{
     NetworkState, NmstateError, OvsInterface, UnknownInterface, XfrmInterface,
 };
 
-pub(crate) fn nispor_retrieve(
-    running_config_only: bool,
-) -> Result<NetworkState, NmstateError> {
+pub(crate) async fn nispor_retrieve(running_config_only: bool) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState {
         hostname: get_hostname_state(),
         ..Default::default()
     };
+
     let mut filter = nispor::NetStateFilter::default();
     // Do not query routes in order to prevent BGP routes consuming too much CPU
     // time, we let `get_routes()` do the query by itself.
     filter.route = None;
-    let np_state = nispor::NetState::retrieve_with_filter(&filter)
+
+    let np_state = nispor::NetState::retrieve_with_filter_async(&filter)
+        .await
         .map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {
@@ -153,9 +154,10 @@ pub(crate) fn nispor_retrieve(
         };
         net_state.append_interface_data(iface);
     }
+
     set_controller_type(&mut net_state.interfaces);
-    net_state.routes = get_routes(running_config_only);
-    net_state.rules = get_route_rules(&np_state.rules, running_config_only);
+    net_state.routes = get_routes(running_config_only).await;
+    net_state.rules = get_route_rules_async(&np_state.rules, running_config_only).await;
 
     Ok(net_state)
 }
