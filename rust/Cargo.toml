@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "src/cli",
     "src/clib",
-    "src/lib",
+    "src/lib", "src/nlp",
 ]
 
 [workspace.metadata.vendor-filter]
