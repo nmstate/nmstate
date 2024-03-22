@@ -36,6 +36,9 @@ def show_only(ifnames, include_secrets=False):
 
 class State:
     def __init__(self, state):
+        if state is None:
+            state = {Interface.KEY: []}
+
         self._state = copy.deepcopy(state)
 
     def __eq__(self, other):

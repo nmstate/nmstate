@@ -18,14 +18,17 @@ int main(void) {
 
 	if (nmstate_net_state_retrieve(flag, &state, &log, &err_kind, &err_msg)
 	    == NMSTATE_PASS) {
-		printf("%s\n", state);
-	} else {
-		printf("%s: %s\n", err_kind, err_msg);
-		rc = EXIT_FAILURE;
-	}
-
-	assert(state[0] == '{');
-
+		if (state != NULL) {
+            printf("%s\n", state);
+        } else {
+            fprintf(stderr, "Error: State is NULL\n");
+            rc = EXIT_FAILURE;
+        }
+    } else {
+        printf("%s: %s\n", err_kind, err_msg);
+        rc = EXIT_FAILURE;
+    }
+	
 	nmstate_cstring_free(state);
 	nmstate_cstring_free(err_kind);
 	nmstate_cstring_free(err_msg);

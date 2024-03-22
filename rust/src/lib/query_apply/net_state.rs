@@ -37,10 +37,10 @@ impl NetworkState {
         nm_checkpoint_destroy(checkpoint)
     }
 
-    /// Retrieve the `NetworkState`.
+    /// Retrieve the `NetworkState` asynchronously.
     /// Only available for feature `query_apply`.
-    pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
-        let state = nispor_retrieve(self.running_config_only)?;
+    pub async fn retrieve_async(&mut self) -> Result<(), NmstateError> {
+        let state = nispor_retrieve(self.running_config_only).await?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;
@@ -70,7 +70,15 @@ impl NetworkState {
             .user_ifaces
             .retain(|_, iface| !iface.is_ignore());
 
-        Ok(self)
+        Ok(())
+    }
+
+    pub fn retrieve(&mut self) -> Result<(), NmstateError> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        rt.block_on(self.retrieve_async())
     }
 
     /// Apply the `NetworkState`.

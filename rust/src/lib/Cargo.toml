@@ -17,6 +17,7 @@ path = "lib.rs"
 
 [dependencies]
 serde_yaml = "0.9"
+tokio = { version = "1.36.0", optional = true }
 
 [dependencies.nispor]
 version = "1.2.18"
@@ -61,6 +62,6 @@ serde_yaml = "0.9"
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
-query_apply = ["dep:nispor", "dep:nix", "dep:zbus"]
+query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio"]
 gen_conf = []
 gen_revert = []

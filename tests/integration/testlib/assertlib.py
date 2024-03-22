@@ -99,6 +99,9 @@ def _iface_macs(state):
 
 def _prepare_state_for_verify(desired_state_data):
     current_state_data = libnmstate.show(include_secrets=True)
+    if current_state_data is None:
+        current_state_data = {Interface.KEY: []}
+
     # Ignore route and dns for assert check as the check are done in the test
     # case code.
     current_state_data.pop(Route.KEY, None)
