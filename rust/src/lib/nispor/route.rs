@@ -1,5 +1,9 @@
 use log::warn;
 
+use nispor::{NetState, NetStateFilter, NetStateRouteFilter};
+
+use tokio::task;
+
 use crate::{RouteEntry, RouteType, Routes};
 
 const SUPPORTED_ROUTE_SCOPE: [nispor::RouteScope; 2] =
@@ -23,7 +27,7 @@ const IPV6_DEFAULT_GATEWAY: &str = "::/0";
 const IPV4_EMPTY_NEXT_HOP_ADDRESS: &str = "0.0.0.0";
 const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 
-pub(crate) fn get_routes(running_config_only: bool) -> Routes {
+pub(crate) async fn get_routes(running_config_only: bool) -> Routes {
     let mut ret = Routes::new();
     let mut np_routes: Vec<nispor::Route> = Vec::new();
     let route_type = [
@@ -38,20 +42,29 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
     };
 
     for protocol in protocols {
-        let mut rt_filter = nispor::NetStateRouteFilter::default();
+        let mut rt_filter = NetStateRouteFilter::default();
         rt_filter.protocol = Some(*protocol);
-        let mut filter = nispor::NetStateFilter::minimum();
+        let mut filter = NetStateFilter::minimum();
         filter.route = Some(rt_filter);
-        match nispor::NetState::retrieve_with_filter(&filter) {
-            Ok(np_state) => {
+        
+        match task::spawn(async move {
+            NetState::retrieve_with_filter_async(&filter).await
+        }).await {
+            Ok(Ok(np_state)) => {
                 for np_rt in np_state.routes {
                     np_routes.push(np_rt);
                 }
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 log::warn!(
                     "Failed to retrieve {:?} route via nispor: {}",
                     protocol,
+                    e
+                );
+            }
+            Err(e) => {
+                log::warn!(
+                    "Failed to spawn task for route retrieval: {}",
                     e
                 );
             }
