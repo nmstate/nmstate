@@ -75,312 +75,334 @@ fn main() {
         print_result_and_exit(autoconf(&argv[1..]));
     }
 
-    let mut app = clap::Command::new(APP_NAME)
+    let mut app = clap::Command
+        ::new(APP_NAME)
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
         .about("Command line of nmstate")
         .subcommand_required(true)
         .arg(
-            clap::Arg::new("verbose")
+            clap::Arg
+                ::new("verbose")
                 .short('v')
                 .multiple_occurrences(true)
                 .help("Set verbose level")
-                .global(true),
+                .global(true)
         )
-        .arg(
-            clap::Arg::new("quiet")
-                .short('q')
-                .help("Disable logging")
-                .global(true),
-        )
+        .arg(clap::Arg::new("quiet").short('q').help("Disable logging").global(true))
         .subcommand(
-            clap::Command::new(SUB_CMD_AUTOCONF)
+            clap::Command
+                ::new(SUB_CMD_AUTOCONF)
+                .alias("ac")
                 .about(
                     "Automatically configure network based on LLDP \
-                    information (experimental)")
+                    information (experimental)"
+                )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_SHOW)
+            clap::Command
+                ::new(SUB_CMD_SHOW)
                 .about("Show network state")
+                .alias("s")
+                .arg(clap::Arg::new("IFNAME").index(1).help("Show specific interface only"))
                 .arg(
-                    clap::Arg::new("IFNAME")
-                        .index(1)
-                        .help("Show specific interface only"),
-                )
-                .arg(
-                    clap::Arg::new("KERNEL")
+                    clap::Arg
+                        ::new("KERNEL")
                         .short('k')
                         .long("kernel")
                         .takes_value(false)
                         .help("Show kernel network state only")
                 )
                 .arg(
-                    clap::Arg::new("JSON")
+                    clap::Arg
+                        ::new("JSON")
                         .long("json")
                         .takes_value(false)
-                        .help("Show state in json format"),
+                        .help("Show state in json format")
                 )
                 .arg(
-                    clap::Arg::new("RUNNING_CONFIG_ONLY")
+                    clap::Arg
+                        ::new("RUNNING_CONFIG_ONLY")
                         .short('r')
                         .long("running-config")
                         .takes_value(false)
-                        .help("Show running configuration only"),
+                        .help("Show running configuration only")
                 )
                 .arg(
-                    clap::Arg::new("SHOW_SECRETS")
+                    clap::Arg
+                        ::new("SHOW_SECRETS")
                         .short('s')
                         .long("show-secrets")
                         .takes_value(false)
-                        .help("Show secrets(hide by default)"),
+                        .help("Show secrets(hide by default)")
                 )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_APPLY)
+            clap::Command
+                ::new(SUB_CMD_APPLY)
                 .about("Apply network state or network policy")
                 .alias("set")
+                .alias("a")
                 .arg(
-                    clap::Arg::new("STATE_FILE")
+                    clap::Arg
+                        ::new("STATE_FILE")
                         .required(false)
                         .multiple_occurrences(true)
                         .index(1)
-                        .help("Network state file"),
+                        .help("Network state file")
                 )
                 .arg(
-                    clap::Arg::new("NO_VERIFY")
+                    clap::Arg
+                        ::new("NO_VERIFY")
                         .long("no-verify")
                         .takes_value(false)
                         .help(
                             "Do not verify that the state was completely set \
-                            and disable rollback to previous state.",
-                        ),
+                            and disable rollback to previous state."
+                        )
                 )
                 .arg(
-                    clap::Arg::new("KERNEL")
+                    clap::Arg
+                        ::new("KERNEL")
                         .short('k')
                         .long("kernel")
                         .takes_value(false)
-                        .help("Apply network state to kernel only"),
+                        .help("Apply network state to kernel only")
                 )
                 .arg(
-                    clap::Arg::new("NO_COMMIT")
-                      .long("no-commit")
-                      .takes_value(false)
-                      .help(
-                        "Do not commit new state after verification"
-                      ),
+                    clap::Arg
+                        ::new("NO_COMMIT")
+                        .long("no-commit")
+                        .takes_value(false)
+                        .help("Do not commit new state after verification")
                 )
                 .arg(
-                    clap::Arg::new("TIMEOUT")
-                      .long("timeout")
-                      .takes_value(true)
-                      .help(
-                        "Timeout in seconds before reverting uncommited changes."
-                      ),
+                    clap::Arg
+                        ::new("TIMEOUT")
+                        .long("timeout")
+                        .takes_value(true)
+                        .help("Timeout in seconds before reverting uncommited changes.")
                 )
                 .arg(
-                    clap::Arg::new("SHOW_SECRETS")
+                    clap::Arg
+                        ::new("SHOW_SECRETS")
                         .short('s')
                         .long("show-secrets")
                         .takes_value(false)
-                        .help("Show secrets(hide by default)"),
+                        .help("Show secrets(hide by default)")
                 )
                 .arg(
-                    clap::Arg::new("MEMORY_ONLY")
+                    clap::Arg
+                        ::new("MEMORY_ONLY")
                         .long("memory-only")
                         .takes_value(false)
-                        .help("Do not make the state persistent"),
+                        .help("Do not make the state persistent")
                 )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_GEN_CONF)
+            clap::Command
+                ::new(SUB_CMD_GEN_CONF)
                 .about("Generate network configuration for specified state")
                 .arg(
-                    clap::Arg::new("STATE_FILE")
-                        .required(true)
-                        .index(1)
-                        .help("Network state file"),
-                ),
+                    clap::Arg::new("STATE_FILE").required(true).index(1).help("Network state file")
+                )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_COMMIT)
+            clap::Command
+                ::new(SUB_CMD_COMMIT)
+                .alias("c")
                 .about("Commit a change")
                 .arg(
-                    clap::Arg::new("CHECKPOINT")
+                    clap::Arg
+                        ::new("CHECKPOINT")
                         .required(false)
                         .index(1)
-                        .help("checkpoint to commit"),
-                ),
+                        .help("checkpoint to commit")
+                )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_ROLLBACK)
+            clap::Command
+                ::new(SUB_CMD_ROLLBACK)
+                .alias("r")
                 .about("Rollback a change")
                 .arg(
-                    clap::Arg::new("CHECKPOINT")
+                    clap::Arg
+                        ::new("CHECKPOINT")
                         .required(false)
                         .index(1)
-                        .help("checkpoint to rollback"),
-                ),
+                        .help("checkpoint to rollback")
+                )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_EDIT)
+            clap::Command
+                ::new(SUB_CMD_EDIT)
+                .alias("e")
                 .about("Edit network state in EDITOR")
                 .arg(
-                    clap::Arg::new("IFNAME")
-                        .required(false)
-                        .index(1)
-                        .help("Interface to rollback"),
+                    clap::Arg::new("IFNAME").required(false).index(1).help("Interface to rollback")
                 )
                 .arg(
-                    clap::Arg::new("NO_VERIFY")
+                    clap::Arg
+                        ::new("NO_VERIFY")
                         .long("no-verify")
                         .takes_value(false)
                         .help(
                             "Do not verify that the state was completely set \
-                            and disable rollback to previous state.",
-                        ),
+                            and disable rollback to previous state."
+                        )
                 )
                 .arg(
-                    clap::Arg::new("KERNEL")
+                    clap::Arg
+                        ::new("KERNEL")
                         .short('k')
                         .long("kernel")
                         .takes_value(false)
-                        .help("Apply network state to kernel only"),
+                        .help("Apply network state to kernel only")
                 )
                 .arg(
-                    clap::Arg::new("NO_COMMIT")
-                      .long("no-commit")
-                      .takes_value(false)
-                      .help(
-                        "Do not commit new state after verification"
-                      ),
+                    clap::Arg
+                        ::new("NO_COMMIT")
+                        .long("no-commit")
+                        .takes_value(false)
+                        .help("Do not commit new state after verification")
                 )
                 .arg(
-                    clap::Arg::new("MEMORY_ONLY")
+                    clap::Arg
+                        ::new("MEMORY_ONLY")
                         .long("memory-only")
                         .takes_value(false)
-                        .help("Do not make the state persistent"),
+                        .help("Do not make the state persistent")
                 )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_SERVICE)
+            clap::Command
+                ::new(SUB_CMD_SERVICE)
+                .alias("sv")
                 .about("Service mode: apply files from service folder")
                 .arg(
-                    clap::Arg::new(CONFIG_FOLDER_KEY)
+                    clap::Arg
+                        ::new(CONFIG_FOLDER_KEY)
                         .long("config")
                         .short('c')
                         .required(false)
                         .takes_value(true)
                         .default_value(DEFAULT_SERVICE_FOLDER)
-                        .help("Folder hold network state files"),
-                ),
+                        .help("Folder hold network state files")
+                )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_POLICY)
+            clap::Command
+                ::new(SUB_CMD_POLICY)
                 .alias("p")
                 .about("Generate network state from policy")
+                .arg(clap::Arg::new("POLICY_FILE").required(true).index(1).help("Policy file"))
                 .arg(
-                    clap::Arg::new("POLICY_FILE")
-                        .required(true)
-                        .index(1)
-                        .help("Policy file"),
-                )
-                .arg(
-                    clap::Arg::new("CURRENT_STATE")
+                    clap::Arg
+                        ::new("CURRENT_STATE")
                         .short('c')
                         .long("current")
                         .takes_value(true)
-                        .help("Read current network state from file"),
+                        .help("Read current network state from file")
                 )
                 .arg(
-                    clap::Arg::new("CAPTURED_STATES")
+                    clap::Arg
+                        ::new("CAPTURED_STATES")
                         .short('a')
                         .long("captured")
                         .takes_value(true)
-                        .help("Bypass the capture action by \
+                        .help(
+                            "Bypass the capture action by \
                               reading captured network state from \
-                              specified file"),
+                              specified file"
+                        )
                 )
                 .arg(
-                    clap::Arg::new("OUTPUT_CAPTURED")
+                    clap::Arg
+                        ::new("OUTPUT_CAPTURED")
                         .short('o')
                         .long("output-captured")
                         .takes_value(true)
-                        .help("Store the captured network states to \
-                              specified file"),
+                        .help(
+                            "Store the captured network states to \
+                              specified file"
+                        )
                 )
                 .arg(
-                    clap::Arg::new("JSON")
+                    clap::Arg
+                        ::new("JSON")
                         .long("json")
                         .takes_value(false)
-                        .help("Show state in json format"),
+                        .help("Show state in json format")
                 )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_FORMAT)
+            clap::Command
+                ::new(SUB_CMD_FORMAT)
                 .about("Format specified state and print out")
                 .alias("f")
                 .alias("fmt")
                 .arg(
-                    clap::Arg::new("STATE_FILE")
+                    clap::Arg
+                        ::new("STATE_FILE")
                         .index(1)
                         .default_value("-")
-                        .help("Network state file"),
-                ),
+                        .help("Network state file")
+                )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_GEN_REVERT)
+            clap::Command
+                ::new(SUB_CMD_GEN_REVERT)
                 .alias("gr")
                 .about("Generate network state to revert the desire state")
                 .arg(
-                    clap::Arg::new("STATE_FILE")
-                        .required(true)
-                        .index(1)
-                        .help("Network state file"),
+                    clap::Arg::new("STATE_FILE").required(true).index(1).help("Network state file")
                 )
                 .arg(
-                    clap::Arg::new("CURRENT_STATE")
+                    clap::Arg
+                        ::new("CURRENT_STATE")
                         .short('c')
                         .long("current")
                         .takes_value(true)
-                        .help("Read current network state from file"),
+                        .help("Read current network state from file")
                 )
                 .arg(
-                    clap::Arg::new("JSON")
+                    clap::Arg
+                        ::new("JSON")
                         .long("json")
                         .takes_value(false)
-                        .help("Show state in json format"),
-                )
-        )
-   .subcommand(
-            clap::Command::new(SUB_CMD_STATISTIC)
-                .alias("st")
-                .about("Generate statistic of specified desire states")
-                .arg(
-                    clap::Arg::new("STATE_FILE")
-                        .required(true)
-                        .multiple_occurrences(true)
-                        .index(1)
-                        .help("Network state file (repeatable)"),
-                )
-                .arg(
-                    clap::Arg::new("CURRENT_STATE")
-                        .short('c')
-                        .long("current")
-                        .takes_value(true)
-                        .help("Read current network state from file"),
-                )
-                .arg(
-                    clap::Arg::new("JSON")
-                        .long("json")
-                        .takes_value(false)
-                        .help("Show statistic in json format"),
+                        .help("Show state in json format")
                 )
         )
         .subcommand(
-            clap::Command::new(SUB_CMD_VERSION)
-            .about("Show version")
-       );
+            clap::Command
+                ::new(SUB_CMD_STATISTIC)
+                .alias("st")
+                .about("Generate statistic of specified desire states")
+                .arg(
+                    clap::Arg
+                        ::new("STATE_FILE")
+                        .required(true)
+                        .multiple_occurrences(true)
+                        .index(1)
+                        .help("Network state file (repeatable)")
+                )
+                .arg(
+                    clap::Arg
+                        ::new("CURRENT_STATE")
+                        .short('c')
+                        .long("current")
+                        .takes_value(true)
+                        .help("Read current network state from file")
+                )
+                .arg(
+                    clap::Arg
+                        ::new("JSON")
+                        .long("json")
+                        .takes_value(false)
+                        .help("Show statistic in json format")
+                )
+        )
+        .subcommand(clap::Command::new(SUB_CMD_VERSION).alias("v").about("Show version"));
     if cfg!(feature = "query_apply") {
         app = app.subcommand(
             clap::Command::new(SUB_CMD_PERSIST_NIC_NAMES)
@@ -431,7 +453,7 @@ fn main() {
                 // We don't want to expose this outside of OCP yet
                 .hide(true),
         );
-    };
+    }
     let matches = app.get_matches();
     let (log_module_filters, log_level) =
         match matches.occurrences_of("verbose") {
