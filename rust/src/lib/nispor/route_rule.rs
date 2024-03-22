@@ -62,9 +62,9 @@ pub(crate) async fn get_route_rules_async(
                 continue;
             }
         }
-        rule.iif = np_rule.iif.clone();
-        rule.ip_to = np_rule.dst.clone();
-        rule.ip_from = np_rule.src.clone();
+        rule.iif.clone_from(&np_rule.iif);
+        rule.ip_to.clone_from(&np_rule.dst);
+        rule.ip_from.clone_from(&np_rule.src);
         rule.table_id = np_rule.table;
         rule.priority = np_rule.priority.map(i64::from);
         rule.fwmark = np_rule.fw_mark;

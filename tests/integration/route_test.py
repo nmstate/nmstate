@@ -22,6 +22,7 @@ from .testlib.bridgelib import linux_bridge
 from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.route import assert_routes
+from .testlib.route import assert_routes_missing
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
@@ -805,6 +806,128 @@ def test_add_and_remove_ipv4_link_local_route(eth1_static_gateway_dns):
     routes_output = _get_routes_from_iproute(4, 100)
     assert IPV4_ADDRESS3 in routes_output
     assert IPV4_ADDRESS2 not in routes_output
+
+
+@pytest.mark.tier1
+def test_add_route_with_cwnd(eth1_up):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.CWND: 20,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+            Route.CWND: 20,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+
+
+@pytest.mark.tier1
+def test_delete_route_with_cwnd(eth1_up):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.CWND: 20,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+            Route.CWND: 20,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+
+    absent_routes = [{Route.CWND: 20, Route.STATE: Route.STATE_ABSENT}]
+    libnmstate.apply({Route.KEY: {Route.CONFIG: absent_routes}})
+
+    cur_state = libnmstate.show()
+    assert_routes_missing(routes, cur_state)
+
+
+@pytest.mark.tier1
+def test_remove_and_add_route_with_cwnd(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.DESTINATION: IPV4_TEST_NET1,
+                        Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+                        Route.CWND: 20,
+                    },
+                    {
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.DESTINATION: IPV6_TEST_NET1,
+                        Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+                        Route.CWND: 20,
+                    },
+                ]
+            },
+        }
+    )
+
+    routes = [
+        {Route.CWND: 20, Route.STATE: Route.STATE_ABSENT},
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.CWND: 30,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+            Route.CWND: 30,
+        },
+    ]
+    libnmstate.apply({Route.KEY: {Route.CONFIG: routes}})
+
+    expected_routes = routes[1:]
+    cur_state = libnmstate.show()
+    assert_routes(expected_routes, cur_state)
+
+
+@pytest.mark.tier1
+def test_route_cwnd_without_lock_means_cwnd_none(eth1_up):
+    libnmstate.apply({Interface.KEY: [ETH1_INTERFACE_STATE]})
+    cmdlib.exec_cmd(
+        f"ip route add {IPV4_TEST_NET1} via {IPV4_ADDRESS1} "
+        "dev eth1 cwnd 20".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"ip route add {IPV6_TEST_NET1} via {IPV6_GATEWAY1} "
+        "dev eth1 cwnd 20".split(),
+        check=True,
+    )
+
+    cur_state = libnmstate.show()
+
+    for route in cur_state[Route.KEY][Route.CONFIG]:
+        assert Route.CWND not in route or route[Route.CWND] != 20
 
 
 @pytest.fixture(scope="function")
@@ -1884,3 +2007,44 @@ def test_route_rule_suppress_prefix_length(route_rule_test_env):
     }
     libnmstate.apply(desired_state)
     _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+
+
+def test_append_route_rule(route_rule_test_env):
+    desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.IP_FROM: "2001:db8:f::/64",
+                    RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+                },
+                {
+                    RouteRule.IP_FROM: "192.0.2.1/32",
+                    RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+                },
+            ]
+        }
+    }
+    libnmstate.apply(desired_state)
+    _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+
+    new_desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.IP_FROM: "2001:db8:e::/64",
+                    RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+                },
+                {
+                    RouteRule.IP_FROM: "192.0.2.2/32",
+                    RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+                },
+            ]
+        },
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+    }
+
+    libnmstate.apply(new_desired_state)
+    _check_ip_rules(
+        desired_state[RouteRule.KEY][RouteRule.CONFIG]
+        + new_desired_state[RouteRule.KEY][RouteRule.CONFIG]
+    )

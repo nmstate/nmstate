@@ -205,7 +205,7 @@ fn test_policy_capture_retain_only() {
 
     assert_eq!(state.dns, current.dns);
 
-    state.dns = empty_state.dns.clone();
+    state.dns.clone_from(&empty_state.dns);
     assert_eq!(state, empty_state);
 }
 

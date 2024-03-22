@@ -241,12 +241,15 @@ pub(crate) fn purge_dns_config(
                 if apply_iface.base_iface().can_have_ip() {
                     if is_ipv6 {
                         if apply_iface.base_iface().ipv6.is_none() {
-                            apply_iface.base_iface_mut().ipv6 =
-                                iface.merged.base_iface_mut().ipv6.clone();
+                            apply_iface.base_iface_mut().ipv6.clone_from(
+                                &iface.merged.base_iface_mut().ipv6,
+                            );
                         }
                     } else if apply_iface.base_iface().ipv4.is_none() {
-                        apply_iface.base_iface_mut().ipv4 =
-                            iface.merged.base_iface_mut().ipv4.clone();
+                        apply_iface
+                            .base_iface_mut()
+                            .ipv4
+                            .clone_from(&iface.merged.base_iface_mut().ipv4);
                     }
 
                     set_iface_dns_conf(
@@ -340,12 +343,16 @@ fn _save_dns_to_iface(
         if let Some(apply_iface) = iface.for_apply.as_mut() {
             if is_ipv6 {
                 if apply_iface.base_iface().ipv6.is_none() {
-                    apply_iface.base_iface_mut().ipv6 =
-                        iface.merged.base_iface_mut().ipv6.clone();
+                    apply_iface
+                        .base_iface_mut()
+                        .ipv6
+                        .clone_from(&iface.merged.base_iface_mut().ipv6);
                 }
             } else if apply_iface.base_iface().ipv4.is_none() {
-                apply_iface.base_iface_mut().ipv4 =
-                    iface.merged.base_iface_mut().ipv4.clone();
+                apply_iface
+                    .base_iface_mut()
+                    .ipv4
+                    .clone_from(&iface.merged.base_iface_mut().ipv4);
             }
         }
         if let Some(apply_iface) = iface.for_apply.as_mut() {
@@ -635,12 +642,16 @@ fn set_iface_dns_search_or_option(
     if let Some(apply_iface) = iface.for_apply.as_mut() {
         if is_ipv6 {
             if apply_iface.base_iface().ipv6.is_none() {
-                apply_iface.base_iface_mut().ipv6 =
-                    iface.merged.base_iface_mut().ipv6.clone();
+                apply_iface
+                    .base_iface_mut()
+                    .ipv6
+                    .clone_from(&iface.merged.base_iface_mut().ipv6);
             }
         } else if apply_iface.base_iface().ipv4.is_none() {
-            apply_iface.base_iface_mut().ipv4 =
-                iface.merged.base_iface_mut().ipv4.clone();
+            apply_iface
+                .base_iface_mut()
+                .ipv4
+                .clone_from(&iface.merged.base_iface_mut().ipv4);
         }
         set_iface_dns_conf(
             is_ipv6,

@@ -52,7 +52,7 @@ pub(crate) fn get_iface_mptcp_conf(
             has_mptcp_valid_ip_addr = true;
             if let Some(mptcp_flags) = addr.mptcp_flags.as_ref() {
                 if flags.is_empty() {
-                    flags = mptcp_flags.clone();
+                    flags.clone_from(mptcp_flags);
                 } else if &flags != mptcp_flags {
                     return None;
                 }
@@ -75,7 +75,7 @@ pub(crate) fn get_iface_mptcp_conf(
             has_mptcp_valid_ip_addr = true;
             if let Some(mptcp_flags) = addr.mptcp_flags.as_ref() {
                 if flags.is_empty() {
-                    flags = mptcp_flags.clone();
+                    flags.clone_from(mptcp_flags);
                 } else if &flags != mptcp_flags {
                     return None;
                 }

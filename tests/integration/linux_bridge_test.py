@@ -13,7 +13,6 @@ import libnmstate
 from libnmstate.error import NmstateKernelIntegerRoundedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
-from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
@@ -609,13 +608,6 @@ class TestVlanFiltering:
 
         with linux_bridge(TEST_BRIDGE0, bridge_config_subtree):
             assert _vlan_filtering_enabled(TEST_BRIDGE0)
-
-    def test_pretty_state_port_name_first(
-        self, bridge_with_trunk_port_and_native_config
-    ):
-        current_state = show_only((TEST_BRIDGE0,))
-        pretty_state = PrettyState(current_state)
-        assert VLAN_FILTER_PORT_YAML in pretty_state.yaml
 
     def test_move_bridge_port_to_bond(self, bridge_with_access_port_config):
         with bond_interface(

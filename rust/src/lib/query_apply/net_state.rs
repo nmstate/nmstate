@@ -294,19 +294,51 @@ impl NetworkState {
             if let Some(h) = self.hostname.as_mut() {
                 h.update(other_hostname);
             } else {
-                self.hostname = other.hostname.clone();
+                self.hostname.clone_from(&other.hostname);
             }
         }
         self.interfaces.update(&other.interfaces);
         if other.dns.is_some() {
-            self.dns = other.dns.clone();
+            self.dns.clone_from(&other.dns);
         }
         if other.ovsdb.is_some() {
-            self.ovsdb = other.ovsdb.clone();
+            self.ovsdb.clone_from(&other.ovsdb);
         }
         if !other.ovn.is_none() {
             self.ovn = other.ovn.clone();
         }
+    }
+
+    /// Generate new NetworkState contains only changed properties
+    pub fn gen_diff(&self, current: &Self) -> Result<Self, NmstateError> {
+        let mut ret = Self::default();
+        let merged_state = MergedNetworkState::new(
+            self.clone(),
+            current.clone(),
+            false,
+            false,
+        )?;
+
+        ret.interfaces = merged_state.interfaces.gen_diff()?;
+        if merged_state.dns.is_changed() {
+            ret.dns.clone_from(&self.dns);
+        }
+
+        if merged_state.hostname.is_changed() {
+            ret.hostname.clone_from(&self.hostname);
+        }
+
+        ret.routes = merged_state.routes.gen_diff();
+        ret.rules = merged_state.rules.gen_diff();
+
+        if merged_state.ovsdb.is_changed() {
+            ret.ovsdb.clone_from(&self.ovsdb);
+        }
+
+        if merged_state.ovn.is_changed() {
+            ret.ovn = self.ovn.clone();
+        }
+        Ok(ret)
     }
 }
 
@@ -383,8 +415,11 @@ impl MergedNetworkState {
             .filter(|(_, t)| !t.is_userspace())
             .map(|(n, _)| n.as_str())
             .collect();
-        self.routes
-            .verify(&current.routes, ignored_kernel_ifaces.as_slice())?;
+        self.routes.verify(
+            &current.routes,
+            ignored_kernel_ifaces.as_slice(),
+            &current.interfaces,
+        )?;
         self.rules
             .verify(&current.rules, ignored_kernel_ifaces.as_slice())?;
         self.dns.verify(current.dns.clone().unwrap_or_default())?;

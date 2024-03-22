@@ -7,7 +7,7 @@ impl BondInterface {
         if let Some(bond_conf) = &mut self.bond {
             bond_conf.update(other.bond.as_ref());
         } else {
-            self.bond = other.bond.clone();
+            self.bond.clone_from(&other.bond);
         }
     }
 }
@@ -21,7 +21,7 @@ impl BondConfig {
             if let Some(self_opts) = self.options.as_mut() {
                 self_opts.update(other.options.as_ref());
             } else {
-                self.options = other.options.clone();
+                self.options.clone_from(&other.options);
             }
             if let Some(port) = other.port.as_ref() {
                 self.port = Some(port.clone());

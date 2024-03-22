@@ -35,7 +35,7 @@ impl LinuxBridgeInterface {
         if let Some(br_conf) = &mut self.bridge {
             br_conf.update(other.bridge.as_ref());
         } else {
-            self.bridge = other.bridge.clone();
+            self.bridge.clone_from(&other.bridge);
         }
     }
 
@@ -55,8 +55,8 @@ impl LinuxBridgeInterface {
 impl LinuxBridgeConfig {
     pub(crate) fn update(&mut self, other: Option<&LinuxBridgeConfig>) {
         if let Some(other) = other {
-            self.options = other.options.clone();
-            self.port = other.port.clone();
+            self.options.clone_from(&other.options);
+            self.port.clone_from(&other.port);
         }
     }
 }

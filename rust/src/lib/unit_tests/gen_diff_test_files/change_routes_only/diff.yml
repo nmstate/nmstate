@@ -1,0 +1,9 @@
+---
+routes:
+  config:
+  - destination: ::/0
+    next-hop-address: 2001:db8:1::4
+    next-hop-interface: eth1
+  - destination: 0.0.0.0/0
+    next-hop-address: 192.0.2.2
+    next-hop-interface: eth1

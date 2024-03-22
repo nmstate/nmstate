@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    query_apply::is_route_delayed_by_nm,
     unit_tests::testlib::{
         gen_merged_ifaces_for_route_test, gen_route_entry,
         gen_test_route_entries, gen_test_routes_conf, TEST_IPV4_ADDR1,
         TEST_IPV4_NET1, TEST_IPV6_ADDR1, TEST_IPV6_ADDR2, TEST_IPV6_NET1,
         TEST_IPV6_NET2, TEST_NIC, TEST_ROUTE_METRIC,
     },
-    ErrorKind, InterfaceType, MergedRoutes, RouteEntry, RouteState, Routes,
+    ErrorKind, InterfaceType, Interfaces, MergedRoutes, NmstateError,
+    RouteEntry, RouteState, Routes,
 };
 
 #[test]
@@ -35,12 +37,14 @@ fn test_sort_uniqe_routes() {
         config: Some(test_routes.clone()),
     };
 
-    let merged_ifaces = gen_merged_ifaces_for_route_test();
+    let (merged_ifaces, current_ifaces) = gen_merged_ifaces_for_route_test();
 
     let merged_routes =
         MergedRoutes::new(des_routes, Routes::new(), &merged_ifaces).unwrap();
 
-    merged_routes.verify(&cur_routes, &[]).unwrap();
+    merged_routes
+        .verify(&cur_routes, &[], &current_ifaces)
+        .unwrap();
 
     test_routes.sort_unstable();
     test_routes.dedup();
@@ -57,12 +61,12 @@ fn test_verify_desire_route_not_found() {
     cur_route_entries.pop();
     cur_routes.config = Some(cur_route_entries);
 
-    let merged_ifaces = gen_merged_ifaces_for_route_test();
+    let (merged_ifaces, current_ifaces) = gen_merged_ifaces_for_route_test();
 
     let merged_routes =
         MergedRoutes::new(des_routes, Routes::new(), &merged_ifaces).unwrap();
 
-    let result = merged_routes.verify(&cur_routes, &[]);
+    let result = merged_routes.verify(&cur_routes, &[], &current_ifaces);
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::VerificationError);
 }
@@ -79,13 +83,13 @@ fn test_verify_absent_route_still_found() {
     absent_route_entries.push(absent_route);
     absent_routes.config = Some(absent_route_entries);
 
-    let merged_ifaces = gen_merged_ifaces_for_route_test();
+    let (merged_ifaces, current_ifaces) = gen_merged_ifaces_for_route_test();
 
     let merged_routes =
         MergedRoutes::new(absent_routes, Routes::new(), &merged_ifaces)
             .unwrap();
 
-    let result = merged_routes.verify(&cur_routes, &[]);
+    let result = merged_routes.verify(&cur_routes, &[], &current_ifaces);
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::VerificationError);
 }
@@ -103,11 +107,13 @@ fn test_verify_current_has_more_routes() {
 
     let des_routes = gen_test_routes_conf();
 
-    let merged_ifaces = gen_merged_ifaces_for_route_test();
+    let (merged_ifaces, current_ifaces) = gen_merged_ifaces_for_route_test();
 
     let merged_routes =
         MergedRoutes::new(des_routes, Routes::new(), &merged_ifaces).unwrap();
-    merged_routes.verify(&cur_routes, &[]).unwrap();
+    merged_routes
+        .verify(&cur_routes, &[], &current_ifaces)
+        .unwrap();
 }
 
 #[test]
@@ -131,7 +137,7 @@ config:
     )
     .unwrap();
 
-    let merged_ifaces = gen_merged_ifaces_for_route_test();
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
 
     let mut merged_routes =
         MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap();
@@ -173,7 +179,7 @@ config:
     )
     .unwrap();
 
-    let merged_ifaces = gen_merged_ifaces_for_route_test();
+    let (merged_ifaces, current_ifaces) = gen_merged_ifaces_for_route_test();
 
     let mut merged_routes =
         MergedRoutes::new(desire, Routes::new(), &merged_ifaces).unwrap();
@@ -182,7 +188,9 @@ config:
 
     merged_routes.remove_routes_to_ignored_ifaces(ignored_ifaces.as_slice());
 
-    merged_routes.verify(&current, &["eth1"]).unwrap();
+    merged_routes
+        .verify(&current, &["eth1"], &current_ifaces)
+        .unwrap();
 }
 
 #[test]
@@ -431,4 +439,176 @@ fn test_route_matching_empty_via_with_none() {
     .unwrap();
     assert!(!absent_route.is_match(&not_match_route));
     assert!(!absent_route.is_match(&match_route));
+}
+
+#[test]
+fn test_routes_delayed_by_nm() {
+    let route4: RouteEntry = serde_yaml::from_str(
+        r"
+        destination: 192.0.2.1
+        next-hop-interface: eth0
+        ",
+    )
+    .unwrap();
+    let route6: RouteEntry = serde_yaml::from_str(
+        r"
+        destination: 2001:db:1::/64
+        next-hop-interface: eth0
+        ",
+    )
+    .unwrap();
+
+    let current_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth0
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: true
+            dhcp: true
+          ipv6:
+            enabled: true
+            autoconf: true
+        ",
+    )
+    .unwrap();
+
+    assert!(is_route_delayed_by_nm(&route4, &current_ifaces));
+    assert!(is_route_delayed_by_nm(&route6, &current_ifaces));
+}
+
+#[test]
+fn test_routes_not_delayed_by_nm() {
+    let route4: RouteEntry = serde_yaml::from_str(
+        r"
+        destination: 192.0.2.1
+        next-hop-interface: eth0
+        ",
+    )
+    .unwrap();
+    let route6: RouteEntry = serde_yaml::from_str(
+        r"
+        destination: 2001:db:1::/64
+        next-hop-interface: eth0
+        ",
+    )
+    .unwrap();
+
+    let current_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth0
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: true
+            dhcp: true
+            address:
+              - ip: 192.168.1.10
+                prefix-length: 24
+          ipv6:
+            enabled: true
+            autoconf: true
+            address:
+              - ip: fc00::1
+                prefix-length: 64
+        ",
+    )
+    .unwrap();
+
+    assert!(!is_route_delayed_by_nm(&route4, &current_ifaces));
+    assert!(!is_route_delayed_by_nm(&route6, &current_ifaces));
+}
+
+#[test]
+fn test_route_cwnd_zero_invalid() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r"
+        cwnd: 0
+        ",
+    );
+
+    let result = route.expect("Deserialization failed").sanitize();
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
+fn test_route_cwnd_invalid_type() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r"
+        cwnd: -20
+        ",
+    );
+
+    assert!(route.is_err());
+    let err_msg = route.unwrap_err().to_string();
+    assert!(err_msg.contains("cwnd: invalid type"));
+}
+
+#[test]
+fn test_route_cwnd_is_match() {
+    let desired_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        cwnd: 20
+        "#,
+    )
+    .unwrap();
+
+    let not_match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        "#,
+    )
+    .unwrap();
+    let not_match_route_2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        cwnd: 15
+        "#,
+    )
+    .unwrap();
+    let match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        cwnd: 20
+        "#,
+    )
+    .unwrap();
+
+    assert!(!desired_route.is_match(&not_match_route));
+    assert!(!desired_route.is_match(&not_match_route_2));
+    assert!(desired_route.is_match(&match_route));
+}
+
+#[test]
+fn test_route_without_options_is_match_with_any() {
+    let desired_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        "#,
+    )
+    .unwrap();
+
+    let not_match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.100"
+        metric: 1
+        table-id: 2
+        cwnd: 3
+        "#,
+    )
+    .unwrap();
+    let match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        metric: 1
+        table-id: 2
+        cwnd: 3
+        "#,
+    )
+    .unwrap();
+
+    assert!(!desired_route.is_match(&not_match_route));
+    assert!(desired_route.is_match(&match_route));
 }

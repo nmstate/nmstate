@@ -6,7 +6,10 @@ interfaces:
     ipv4:
       enabled: true
       dhcp: true
-    copy-mac-from: eth1
+      auto-dns: true
+      auto-gateway: true
+      auto-routes: true
+    mac-address: 52:54:00:F6:80:01
     link-aggregation:
       mode: balance-xor
       options:

@@ -1,0 +1,20 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+      - ip: 192.168.1.1
+        prefix-length: 24
+    ipv6:
+      enabled: true
+      dhcp: false
+      autoconf: false
+      address:
+      - ip: 2001:db8:1::1
+        prefix-length: 64
+      - ip: fe80::50ad:95ff:fe1b:2066
+        prefix-length: 64

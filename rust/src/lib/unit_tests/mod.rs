@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(test)]
 mod base;
 #[cfg(test)]
@@ -10,6 +12,8 @@ mod dns;
 mod ethernet;
 #[cfg(test)]
 mod ethtool;
+#[cfg(test)]
+mod gen_diff;
 #[cfg(test)]
 mod gen_revert;
 #[cfg(test)]

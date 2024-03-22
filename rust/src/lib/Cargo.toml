@@ -1,6 +1,6 @@
 [package]
 name = "nmstate"
-version = "2.2.26"
+version = "2.2.28"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Library for networking management in a declarative manner"
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ serde_yaml = "0.9"
 tokio = "1.36.0"
 
 [dependencies.nispor]
-version = "1.2.16"
+version = "1.2.18"
 optional = true
 
 [dependencies.zvariant]

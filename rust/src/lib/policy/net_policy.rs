@@ -31,18 +31,20 @@ impl TryFrom<NetworkPolicy> for NetworkState {
             return Ok(NetworkState::new());
         }
 
-        if !policy.capture.is_empty() {
-            let capture_results = match policy.current.as_ref() {
-                Some(current) => policy.capture.execute(current)?,
-                None => {
-                    let mut current = NetworkState::new();
-                    current.retrieve()?;
-                    policy.capture.execute(&current)?
-                }
-            };
-            policy.desired.fill_with_captured_data(&capture_results)
-        } else {
+        if policy.capture.is_empty() {
             policy.desired.fill_with_captured_data(&HashMap::new())
+        } else {
+            let current = if let Some(c) = policy.current {
+                c
+            } else {
+                let mut current = NetworkState::new();
+                current.retrieve()?;
+                current
+            };
+            let capture_results = policy.capture.execute(&current)?;
+            let desired_state =
+                policy.desired.fill_with_captured_data(&capture_results)?;
+            desired_state.gen_diff(&current)
         }
     }
 }

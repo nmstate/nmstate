@@ -227,7 +227,7 @@ impl InterfaceIpv4 {
             && !self.is_auto()
             && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
-            self.addresses = current.addresses.clone();
+            self.addresses.clone_from(&current.addresses);
             if let Some(addrs) = self.addresses.as_mut() {
                 addrs.as_mut_slice().iter_mut().for_each(|a| {
                     a.valid_life_time = None;
@@ -256,8 +256,12 @@ impl InterfaceIpv4 {
             && !self.is_auto()
             && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
-            self.addresses = current.addresses.clone();
+            self.addresses.clone_from(&current.addresses);
         }
+
+        // The rules is `pub(crate)`, it will not merged by `merge_json_value()`
+        self.rules.clone_from(&current.rules);
+
         self.sanitize(false).ok();
     }
 
@@ -738,8 +742,12 @@ impl InterfaceIpv6 {
             && !self.is_auto()
             && is_ip_addrs_none_or_all_auto(desired.addresses.as_deref())
         {
-            self.addresses = current.addresses.clone();
+            self.addresses.clone_from(&current.addresses);
         }
+
+        // The rules is `pub(crate)`, it will not merged by `merge_json_value()`
+        self.rules.clone_from(&current.rules);
+
         self.sanitize(false).ok();
     }
 
@@ -763,7 +771,7 @@ impl InterfaceIpv6 {
             && !self.is_auto()
             && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
-            self.addresses = current.addresses.clone();
+            self.addresses.clone_from(&current.addresses);
             if let Some(addrs) = self.addresses.as_mut() {
                 addrs.as_mut_slice().iter_mut().for_each(|a| {
                     a.valid_life_time = None;

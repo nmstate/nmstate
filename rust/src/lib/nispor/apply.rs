@@ -98,7 +98,7 @@ fn nmstate_iface_to_np(
         np_iface.ipv6 = Some(nmstate_ipv6_to_np(base_iface.ipv6.as_ref()));
     }
 
-    np_iface.mac_address = base_iface.mac_address.clone();
+    np_iface.mac_address.clone_from(&base_iface.mac_address);
 
     if let Interface::Ethernet(eth_iface) = nms_iface {
         np_iface.veth = nms_veth_conf_to_np(eth_iface.veth.as_ref());

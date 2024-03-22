@@ -28,6 +28,9 @@ pub struct BaseInterface {
     #[serde(rename = "type", default = "default_iface_type")]
     /// Interface type. Serialize and deserialize to/from `type`
     pub iface_type: InterfaceType,
+    #[serde(skip_serializing_if = "crate::serializer::is_option_string_empty")]
+    /// The driver of the specified network device.
+    pub driver: Option<String>,
     #[serde(default = "default_state")]
     /// Interface state. Default to [InterfaceState::Up] when applying.
     pub state: InterfaceState,
@@ -160,9 +163,10 @@ impl BaseInterface {
             }
         }
         if self.permanent_mac_address.is_none() {
-            self.permanent_mac_address = current.permanent_mac_address.clone();
+            self.permanent_mac_address
+                .clone_from(&current.permanent_mac_address);
         }
-        self.copy_mac_from = desired.copy_mac_from.clone();
+        self.copy_mac_from.clone_from(&desired.copy_mac_from);
     }
 
     fn has_controller(&self) -> bool {
@@ -231,6 +235,7 @@ impl BaseInterface {
         self.max_mtu = None;
         self.min_mtu = None;
         self.copy_mac_from = None;
+        self.driver = None;
 
         if let Some(ipv4_conf) = self.ipv4.as_mut() {
             ipv4_conf.sanitize(is_desired)?;
