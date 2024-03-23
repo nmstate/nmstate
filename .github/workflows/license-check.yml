@@ -23,4 +23,3 @@ jobs:
         run: |
           python3 -m pip install licenseheaders
           licenseheaders --check src/cli
-    ```
