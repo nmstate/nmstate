@@ -21,8 +21,6 @@ pub(crate) mod route_rule;
 mod settings;
 #[cfg(feature = "query_apply")]
 mod show;
-#[cfg(test)]
-mod unit_tests;
 
 #[cfg(feature = "query_apply")]
 pub(crate) use checkpoint::{

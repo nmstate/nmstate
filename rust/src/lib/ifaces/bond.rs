@@ -119,6 +119,42 @@ impl BondInterface {
         self.sort_ports_config();
         self.drop_empty_arp_ip_target();
         self.make_ad_actor_system_mac_upper_case();
+        self.check_overlap_queue_id()?;
+        Ok(())
+    }
+
+    // In kernel code drivers/net/bonding/bond_options.c
+    // bond_option_queue_id_set(), kernel is not allowing multiple bond port
+    // holding the same queue ID, hence we raise error when queue id overlapped.
+    fn check_overlap_queue_id(&self) -> Result<(), NmstateError> {
+        let mut existing_qids: HashMap<u16, &str> = HashMap::new();
+        if let Some(ports_conf) =
+            self.bond.as_ref().and_then(|b| b.ports_config.as_deref())
+        {
+            for port_conf in ports_conf
+                .iter()
+                .filter(|p| p.queue_id.is_some() && p.queue_id != Some(0))
+            {
+                if let Some(queue_id) = port_conf.queue_id {
+                    if let Some(exist_port_name) = existing_qids.get(&queue_id)
+                    {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Port {} and {} of Bond {} are sharing the \
+                                same queue-id which is not supported by \
+                                linux kernel yet",
+                                exist_port_name,
+                                port_conf.name.as_str(),
+                                self.base.name.as_str()
+                            ),
+                        ));
+                    } else {
+                        existing_qids.insert(queue_id, port_conf.name.as_str());
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
