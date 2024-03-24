@@ -43,6 +43,24 @@ querying network status and applying network states.
 
 - `./tests/` - Contains tests for unit and integration tests.
 
+
+## Compile and Install from Source
+
+- [Fork](https://github.com/nmstate/nmstate.git) and git clone to local
+- [Install rust and Cargo for the development of nmstate](https://doc.rust-lang.org/cargo/getting-started/installation.html) or install from your distribution's repositories
+- Change your current directory `cd nmstate/rust`
+- Build and compile the packages using  `cargo build` 
+  This will download the necessary dependencies and build the nmstate library and command-line tool 
+- To run unit test to ensure functionality of the  nmstate library and tools    `cargo test`
+- To view the networking state in YAML format, you can use   `target/debug/nmstatectl show`
+
+### To install nmstate, compile and build the entire project  (Optional) 
+- Change your current directory  `cd nmstate`
+- To install necessary dependencies   `sudo apt install make python3 python3-setuptools`
+- To compile and build the entire project and related libraries   `make install`
+- Check version  `nmstatectl --version`
+
+
 ## Configuring Git
 
 Before starting to contribute, make sure you have the basic git configuration: 
