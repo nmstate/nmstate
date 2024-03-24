@@ -43,32 +43,22 @@ querying network status and applying network states.
 
 - `./tests/` - Contains tests for unit and integration tests.
 
-## Compile and install nmstate
+## Compile and Install from Source
 
-### System Requirements
-To use nmstate for development, you'll need a computer running Linux operating system.  If you're on Windows or Mac, you can create a special "Linux environment" using free software like VirtualBox or VMware.
-Cargo is Rust's build system and package manager, necessary for working with Rust programs like nmstate.
+- [Fork](https://github.com/nmstate/nmstate.git) and git clone to local
+- [Install rust and Cargo for the development of nmstate](https://doc.rust-lang.org/cargo/getting-started/installation.html) or install from your distribution's repositories
+- Change your current directory `cd nmstate/rust`
+- Build and compile the packages using  `cargo build` 
+  This will download the necessary dependencies and build the nmstate library and command-line tool 
+- Run unit test to ensure functionality of the  nmstate library and tools `cargo test`
+- To view the networking state in YAML format, you can use   `target/debug/nmstatectl show`
 
+### To install nmstate, compile and build the entire project  (Optional) 
+- Change your current directory  `cd nmstate`
+- To install necessary dependencies   `sudo apt install make python3 python3-setuptools`
+- To compile and build the entire project and related libraries   `make install`
+- Check version  `nmstatectl --version`
 
-### Compile and install from source
-This approach gives control over the compilation process but requires additional setup as a developers contributing to nmstate.
-
-- [Install Rust and Cargo for the development of nmstate](https://doc.rust-lang.org/cargo/getting-started/installation.html) or install the development tools from your distribution's repositories
-- [Fork](https://github.com/nmstate/nmstate.git) and git clone to local machine
-- Change your current directory  `cd nmstate/rust`
-- Build and compile the packages using Cargo  `cargo build`  
-  This will download the necessary dependencies and build the nmstate library and command-line tool.
-- The compiled files will be placed in the target/debug directory
-- To view the networking state in YAML format, you can use  `target/debug/nmstatectl show`
-
-  
-### Installation using distribution's package manager (Alternative)
-This approach also handles dependency management during the build process.
-  - Debian/Ubuntu  `sudo apt update && sudo apt install cargo git`
-  - Fedora  `sudo dnf install cargo git`
-  - RHEL  `sudo yum install cargo git`
-
- Note: Compiling from source might require resolving dependency issues manually if they're not handled by your system's package manager.
   
 ## Configuring Git
 
