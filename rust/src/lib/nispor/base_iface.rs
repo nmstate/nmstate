@@ -43,6 +43,9 @@ impl From<(&nispor::IfaceState, &[nispor::IfaceFlag])> for InterfaceState {
             InterfaceState::Up
         } else if *state == nispor::IfaceState::Down {
             InterfaceState::Down
+        } else if *state == nispor::IfaceState::Unknown {
+            log::warn!("Interface state is 'unknown'; it will be ignored.");
+            InterfaceState::Ignore
         } else {
             InterfaceState::Unknown
         }
@@ -104,6 +107,10 @@ pub(crate) fn np_iface_to_base_iface(
         ethtool: np_ethtool_to_nmstate(np_iface),
         ..Default::default()
     };
+    if base_iface.state == InterfaceState::Unknown {
+        base_iface.state = InterfaceState::Ignore;
+    }
+
     if !InterfaceType::SUPPORTED_LIST.contains(&base_iface.iface_type) {
         log::info!(
             "Got unsupported interface type {}: {}, ignoring",
