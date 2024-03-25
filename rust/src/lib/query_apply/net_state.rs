@@ -300,6 +300,38 @@ impl NetworkState {
             self.ovn = other.ovn.clone();
         }
     }
+
+    /// Generate new NetworkState contains only changed properties
+    pub fn gen_diff(&self, current: &Self) -> Result<Self, NmstateError> {
+        let mut ret = Self::default();
+        let merged_state = MergedNetworkState::new(
+            self.clone(),
+            current.clone(),
+            false,
+            false,
+        )?;
+
+        ret.interfaces = merged_state.interfaces.gen_diff()?;
+        if merged_state.dns.is_changed() {
+            ret.dns.clone_from(&self.dns);
+        }
+
+        if merged_state.hostname.is_changed() {
+            ret.hostname.clone_from(&self.hostname);
+        }
+
+        ret.routes = merged_state.routes.gen_diff();
+        ret.rules = merged_state.rules.gen_diff();
+
+        if merged_state.ovsdb.is_changed() {
+            ret.ovsdb.clone_from(&self.ovsdb);
+        }
+
+        if merged_state.ovn.is_changed() {
+            ret.ovn = self.ovn.clone();
+        }
+        Ok(ret)
+    }
 }
 
 fn with_nm_checkpoint<T>(

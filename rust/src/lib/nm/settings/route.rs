@@ -41,6 +41,8 @@ pub(crate) fn gen_nm_ip_routes(
             Some(RouteType::Unreachable) => Some("unreachable".to_string()),
             None => None,
         };
+        nm_route.cwnd = route.cwnd;
+        nm_route.lock_cwnd = route.cwnd.map(|_| true);
         ret.push(nm_route);
     }
     Ok(ret)

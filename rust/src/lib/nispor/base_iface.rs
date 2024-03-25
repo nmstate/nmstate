@@ -58,6 +58,7 @@ pub(crate) fn np_iface_to_base_iface(
 ) -> BaseInterface {
     let mut base_iface = BaseInterface {
         name: np_iface.name.to_string(),
+        driver: np_iface.driver.clone(),
         state: (&np_iface.state, np_iface.flags.as_slice()).into(),
         iface_type: np_iface_type_to_nmstate(&np_iface.iface_type),
         ipv4: np_ipv4_to_nmstate(np_iface, running_config_only),

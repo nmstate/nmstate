@@ -192,16 +192,9 @@ fn test_policy_convert_dhcp_to_static_with_dns() {
               address:
               - ip: 192.0.2.251
                 prefix-length: 24
-              dhcp: false
+              dhcp: true
               enabled: true
         routes:
-          config:
-          - destination: 0.0.0.0/0
-            next-hop-address: 192.0.2.1
-            next-hop-interface: eth1
-          - destination: 192.51.100.0/24
-            next-hop-address: 192.0.2.1
-            next-hop-interface: eth1
           running:
           - destination: 0.0.0.0/0
             next-hop-address: 192.0.2.1
@@ -228,19 +221,15 @@ fn test_policy_convert_dhcp_to_static_with_dns() {
     let ifaces = state.interfaces.to_vec();
     assert_eq!(ifaces.len(), 1);
     assert_eq!(ifaces[0].name(), "eth1");
-    assert!(ifaces[0].base_iface().ipv4.as_ref().unwrap().enabled);
-    let ip_addrs = ifaces[0]
-        .base_iface()
-        .ipv4
-        .as_ref()
-        .unwrap()
-        .addresses
-        .as_ref()
-        .unwrap();
-    assert_eq!(ip_addrs.len(), 1);
-    assert_eq!(
-        ip_addrs[0].ip,
-        std::net::IpAddr::from_str("192.0.2.251").unwrap()
+    assert!(
+        !(*ifaces[0]
+            .base_iface()
+            .ipv4
+            .as_ref()
+            .unwrap()
+            .dhcp
+            .as_ref()
+            .unwrap())
     );
     let routes = state.routes.config.as_ref().unwrap();
     assert_eq!(routes.len(), 2);
