@@ -182,3 +182,28 @@ Do your best to follow the clean code guidelines.
 - Don’t return an error code, throw an exception instead.
 
 Ref: Book: Clean Code by Robert C. Martin (Uncle Bob)
+
+## Compilation and installation from source
+
+This guide is helpful to compile and install Nmstate from source, for installing stable release or other installation methods, please refer to [Nmstate installation guide](https://nmstate.io/user/install.md)
+
+```bash
+git clone https://github.com/nmstate/nmstate.git # Clone the source
+cd nmstate
+```
+Install cargo using rustup (recommended): https://www.rust-lang.org/tools/install
+Alternatively, you can install cargo from your distribution's repositories.
+
+```bash
+make # Build
+rust/target/release/nmstatectl show # Show the current network state
+```
+
+To install nmstate from source, install `cargo`, `make`, `python3`, and `python3-setuptools` from your distribution's repositories. It is recommended to use `rustup` for installing `cargo`: https://www.rust-lang.org/tools/install.
+
+```bash
+sudo PREFIX=/usr make install # To compile and install the release version
+nmstatectl show # Show the current network state
+```
+
+Note: In order to report current state, running nmstatectl as a non-root user should be enough. For apply support, run nmstatectl as root.
