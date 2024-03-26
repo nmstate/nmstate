@@ -7,6 +7,13 @@ use crate::{
 };
 
 impl Interfaces {
+    pub(crate) fn has_up_ovs_iface(&self) -> bool {
+        self.iter().any(|i| {
+            i.iface_type() == InterfaceType::OvsBridge
+                || i.iface_type() == InterfaceType::OvsInterface
+        })
+    }
+
     pub fn update(&mut self, other: &Self) {
         let mut new_ifaces: Vec<Interface> = Vec::new();
         let other_ifaces = other.to_vec();
