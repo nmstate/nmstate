@@ -101,6 +101,7 @@ fn main() {
         )
         .subcommand(
             clap::Command::new(SUB_CMD_SHOW)
+                .alias("s")
                 .about("Show network state")
                 .arg(
                     clap::Arg::new("IFNAME")
@@ -138,6 +139,7 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_APPLY)
                 .about("Apply network state or network policy")
+                .alias("a")
                 .alias("set")
                 .arg(
                     clap::Arg::new("STATE_FILE")
