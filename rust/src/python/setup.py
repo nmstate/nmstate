@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+import subprocess
+import sys
 import setuptools
 
 
@@ -12,6 +14,24 @@ def requirements():
                 req.append(line)
     return req
 
+
+def install_nmstate_lib():
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "nmstate"]
+        )
+    except subprocess.CalledProcessError as e:
+        print("Error installing nmstate C library:", e)
+        sys.exit(1)
+
+
+try:
+    import nmstate  # noqa: F401
+
+    print("nmstate C library found. No further action needed.")
+except ImportError:
+    print("nmstate C library not found. Attempting to install...")
+    install_nmstate_lib()
 
 setuptools.setup(
     name="nmstate",
