@@ -5,11 +5,17 @@ nmstatectl \- A nmstate command line tool
 .SH SYNOPSIS
 .B nmstatectl show \fR[\fIINTERFACE_NAME\fR] [\fB--json\fR]
 .br
+.B nmstatectl s \fR[\fIINTERFACE_NAME\fR] [\fB--json\fR]
+.br
 .B nmstatectl show [\fB-r, --running-config\fR]
+.br
+.B nmstatectl s [\fB-r, --running-config\fR]
 .br
 .B nmstatectl set \fISTATE_FILE_PATH\fR [\fIOPTIONS\fR]
 .br
 .B nmstatectl apply \fISTATE_FILE_PATH\fR [\fIOPTIONS\fR]
+.br
+.B nmstatectl a \fISTATE_FILE_PATH\fR [\fIOPTIONS\fR]
 .br
 .B nmstatectl edit \fR[\fIINTERFACE_NAME\fR] [\fIOPTIONS\fR]
 .br
@@ -36,6 +42,12 @@ Query the current network state. \fIYAML\fR is the default output format. Use
 the \fB--json\fR argument to change the output format to \fIJSON\fR. To limit
 the output state to include certain interfaces only, please specify the
 interface name. Please be advised, global config like DNS will be included.
+.RE
+.PP
+.B s
+.RS
+Alias for .B show command.
+.RE
 .PP
 For multiple interface names, use comma to separate them. You can also use
 patterns for interface names:
@@ -73,6 +85,12 @@ Apply the network state from specified file in \fIYAML\fR or \fIJSON\fR format.
 By default, if the network state after state applied is not identical to the
 desired state, \fBnmstatectl\fR rollbacks to the state before \fBset\fR
 command. Use the \fB--no-verify\fR argument to skip the verification.
+.RE
+.PP
+.B a
+.RS
+Alias for the \fBapply\fR command.
+.RE
 .RE
 .PP
 .B edit
