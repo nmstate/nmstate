@@ -237,7 +237,10 @@ rust_check:
 			--show-output --ignored; \
 	fi
 
-check: rust_check clib_check go_check
+license_header_check:
+	python3 tests/license_header_check.py;
+
+check: rust_check clib_check go_check license_header_check
 
 clean:
 	rm -f $(CLI_MANPAGE)

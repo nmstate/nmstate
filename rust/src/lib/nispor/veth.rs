@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use crate::{BaseInterface, EthernetInterface, VethConfig};
 
 pub(crate) fn np_veth_to_nmstate(

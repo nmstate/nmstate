@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use crate::{BaseInterface, VrfConfig, VrfInterface};
 
 pub(crate) fn np_vrf_to_nmstate(

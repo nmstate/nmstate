@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // This is based on the work of https://github.com/gahag/memory_logger
 // which is MIT licensed.
 

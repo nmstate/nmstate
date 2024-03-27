@@ -76,6 +76,7 @@ function run_tests {
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_FORMAT ];then
         exec_cmd "tox -e black"
+        make license_header_check
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
