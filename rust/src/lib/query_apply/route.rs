@@ -1,11 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     ErrorKind, InterfaceType, Interfaces, MergedRoutes, NmstateError,
     RouteEntry, Routes,
 };
 
 impl MergedRoutes {
+    pub(crate) fn gen_diff(&self) -> Routes {
+        let mut changed_routes: Vec<RouteEntry> = Vec::new();
+        let mut current_routes: HashSet<&RouteEntry> = HashSet::new();
+
+        if let Some(rts) = self.current.config.as_ref() {
+            for rt in rts {
+                current_routes.insert(rt);
+            }
+        }
+
+        for rts in self.indexed.values() {
+            for rt in rts {
+                if rt.is_absent() || !current_routes.contains(rt) {
+                    changed_routes.push(rt.clone());
+                }
+            }
+        }
+
+        Routes {
+            config: if !changed_routes.is_empty() {
+                Some(changed_routes)
+            } else {
+                None
+            },
+            ..Default::default()
+        }
+    }
+
     fn routes_for_verify(&self) -> Vec<RouteEntry> {
         let mut desired_routes = Vec::new();
         if let Some(rts) = self.desired.config.as_ref() {

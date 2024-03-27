@@ -12,12 +12,15 @@ from libnmstate.schema import InterfaceType
 
 from ..testlib import assertlib
 from ..testlib import cmdlib
-
+from ..testlib.retry import retry_till_true_or_timeout
+from ..testlib.env import nm_minor_version
 
 DUMMY0 = "dummy0"
 ETH1 = "eth1"
 
 TEST_DNS_SRVS = ["192.0.2.2", "192.0.2.1"]
+MIXED_DNS_SRVS = ["2001:db8:1::1", "192.0.2.9", "2001:db8:1::2"]
+RETRY_TIMEOUT = 10
 
 
 @pytest.fixture
@@ -194,7 +197,7 @@ def test_global_dns_with_dns_options():
             {
                 DNS.KEY: {
                     DNS.CONFIG: {
-                        DNS.SERVER: ["8.8.8.8", "2620:fe::9", "1.1.1.1"],
+                        DNS.SERVER: MIXED_DNS_SRVS,
                         DNS.SEARCH: ["example.org", "example.net"],
                         DNS.OPTIONS: ["rotate", "debug"],
                     }
@@ -207,3 +210,50 @@ def test_global_dns_with_dns_options():
                 DNS.KEY: {DNS.CONFIG: {}},
             }
         )
+
+
+@pytest.fixture
+def static_dns():
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {DNS.SERVER: TEST_DNS_SRVS}}})
+
+    cur_dns_config = libnmstate.show()[DNS.KEY][DNS.CONFIG]
+    assert cur_dns_config[DNS.SERVER] == TEST_DNS_SRVS
+
+    yield
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {}},
+        }
+    )
+
+
+@pytest.mark.skipif(
+    nm_minor_version() <= 47,
+    reason="NM 1.47- does not support checkpoint on global dns",
+)
+# kubernetes-nmstate depends on checkpoint to rollback to original state when
+# check fails, hence tier1
+@pytest.mark.tier1
+def test_rollback_on_global_dns(static_dns):
+    libnmstate.apply(
+        {
+            DNS.KEY: {
+                DNS.CONFIG: {
+                    # Mixing IPv6 and IPv4 name servers will force nmstate
+                    # to use global DNS API of NetworkManager
+                    DNS.SERVER: MIXED_DNS_SRVS,
+                }
+            },
+        },
+        commit=False,
+    )
+
+    assert_global_dns(MIXED_DNS_SRVS)
+
+    libnmstate.rollback()
+
+    def check_dns(srvs):
+        cur_dns_config = libnmstate.show()[DNS.KEY][DNS.CONFIG]
+        return cur_dns_config[DNS.SERVER] == srvs
+
+    assert retry_till_true_or_timeout(RETRY_TIMEOUT, check_dns, TEST_DNS_SRVS)

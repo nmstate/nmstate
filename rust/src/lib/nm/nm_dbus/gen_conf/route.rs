@@ -29,6 +29,12 @@ impl NmIpRoute {
             if let Some(route_type) = self.route_type.as_ref() {
                 write!(opt_string, ",type={}", route_type).ok();
             }
+            if let Some(cwnd) = self.cwnd {
+                write!(opt_string, ",cwnd={}", cwnd).ok();
+            }
+            if let Some(lock_cwnd) = self.lock_cwnd {
+                write!(opt_string, ",lock-cwnd={}", lock_cwnd).ok();
+            }
             ret.insert("options".to_string(), opt_string);
         }
         ret
