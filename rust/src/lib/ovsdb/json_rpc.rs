@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::time::SystemTime;

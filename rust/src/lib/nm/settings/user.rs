@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use std::collections::HashMap;
 
 use crate::nm::nm_dbus::{NmConnection, NmSettingUser};

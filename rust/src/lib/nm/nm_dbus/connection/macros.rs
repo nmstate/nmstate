@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 macro_rules! _connection_inner_string_member {
     ($self_struct: ident, $member: ident) => {
         $self_struct

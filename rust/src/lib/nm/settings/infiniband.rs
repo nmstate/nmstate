@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use crate::nm::nm_dbus::NmConnection;
 
 use crate::InfiniBandInterface;
