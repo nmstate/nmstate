@@ -1,0 +1,8 @@
+---
+interfaces:
+- name: bond99
+  type: bond
+  state: up
+  link-aggregation:
+    options:
+      miimon: 141

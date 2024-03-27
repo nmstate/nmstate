@@ -142,9 +142,22 @@ fn run_persist_immediately(
         }
         let iface_name = iface.name();
         let karg = format_ifname_karg(iface_name, &mac);
-        log::info!("Will persist the interface {iface_name} with MAC {mac}");
+        let driver = iface.base_iface().driver.as_deref().and_then(|d| {
+            if d.is_empty() {
+                None
+            } else {
+                Some(d)
+            }
+        });
+        log::info!(
+            "Will persist the interface {iface_name} \
+            driver {} with MAC {mac}",
+            driver.unwrap_or("unknown")
+        );
         if !dry_run {
-            persist_iface_name_via_systemd_link(root, &mac, iface_name)?;
+            persist_iface_name_via_systemd_link(
+                root, &mac, iface_name, driver,
+            )?;
         }
         if with_kargs {
             log::info!("Kernel argument added: {karg}");
@@ -385,6 +398,7 @@ fn persist_iface_name_via_systemd_link(
     root: &str,
     mac: &str,
     iface_name: &str,
+    driver: Option<&str>,
 ) -> Result<(), CliError> {
     let link_dir = Path::new(root).join(SYSTEMD_NETWORK_LINK_FOLDER);
 
@@ -393,13 +407,24 @@ fn persist_iface_name_via_systemd_link(
         std::fs::create_dir(&link_dir)?;
     }
 
-    let content = format!(
-        "{PERSIST_GENERATED_BY}\n\
-        [Match]\n\
-        MACAddress={mac}\n\n\
-        [Link]\n\
-        Name={iface_name}\n"
-    );
+    let content = if let Some(driver) = driver {
+        format!(
+            "{PERSIST_GENERATED_BY}\n\
+            [Match]\n\
+            MACAddress={mac}\n\n\
+            Driver={driver}\n\n\
+            [Link]\n\
+            Name={iface_name}\n"
+        )
+    } else {
+        format!(
+            "{PERSIST_GENERATED_BY}\n\
+            [Match]\n\
+            MACAddress={mac}\n\n\
+            [Link]\n\
+            Name={iface_name}\n"
+        )
+    };
 
     std::fs::write(&file_path, content.as_bytes()).map_err(|e| {
         CliError::from(format!(

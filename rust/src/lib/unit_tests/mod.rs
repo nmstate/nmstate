@@ -12,6 +12,8 @@ mod ethernet;
 #[cfg(test)]
 mod ethtool;
 #[cfg(test)]
+mod gen_diff;
+#[cfg(test)]
 mod gen_revert;
 #[cfg(test)]
 mod ifaces;

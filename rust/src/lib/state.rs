@@ -110,6 +110,45 @@ fn should_ignore(reference: &str, desire: &Value, current: &Value) -> bool {
     }
 }
 
+#[cfg(feature = "query_apply")]
+pub(crate) fn gen_diff_json_value(
+    desired: &Value,
+    current: &Value,
+) -> Option<Value> {
+    match desired {
+        Value::Object(des_obj) => {
+            if let Some(cur_obj) = current.as_object() {
+                let mut diff_map = serde_json::Map::new();
+                for (des_key, des_value) in des_obj.iter() {
+                    if let Some(cur_value) = cur_obj.get(des_key) {
+                        if let Some(ret) =
+                            gen_diff_json_value(des_value, cur_value)
+                        {
+                            diff_map.insert(des_key.clone(), ret);
+                        }
+                    } else {
+                        diff_map.insert(des_key.clone(), des_value.clone());
+                    }
+                }
+                if diff_map.is_empty() {
+                    None
+                } else {
+                    Some(Value::Object(diff_map))
+                }
+            } else {
+                Some(desired.clone())
+            }
+        }
+        _ => {
+            if desired != current {
+                Some(desired.clone())
+            } else {
+                None
+            }
+        }
+    }
+}
+
 // Whatever not defined in desired but defined in current will be copied
 pub(crate) fn merge_json_value(desired: &mut Value, current: &Value) {
     if let (Some(desired), Some(current)) =
