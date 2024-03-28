@@ -16,7 +16,7 @@ edition = "2021"
 path = "lib.rs"
 
 [dependencies]
-serde_yaml = "0.9"
+serde_yaml = { workspace = true }
 
 [dependencies.nispor]
 version = "1.2.18"
@@ -32,8 +32,7 @@ default-features = false
 features = ["v4", "v5"]
 
 [dependencies.log]
-version = "0.4.14"
-default-features = false
+workspace = true 
 
 [dependencies.zbus]
 version = "1.9.2"
@@ -46,9 +45,7 @@ default-features = false
 features = [ "preserve_order" ]
 
 [dependencies.serde]
-version = "1.0.132"
-default-features = false
-features = ["derive"]
+workspace = true
 
 [dependencies.nix]
 version = "0.26.2"
@@ -57,7 +54,7 @@ default-features = false
 features = ["feature", "hostname"]
 
 [dev-dependencies]
-serde_yaml = "0.9"
+serde_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
