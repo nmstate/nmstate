@@ -6,6 +6,11 @@ members = [
     "src/lib",
 ]
 
+[workspace.dependencies]
+log = "0.4.17"
+serde_yaml = "0.9"
+serde = {version = "1.0.137", default-features = false, features = ["derive"]}
+
 [workspace.metadata.vendor-filter]
 # For now we only care about tier 1+2 Linux
 platforms = ["*-unknown-linux-gnu"]
