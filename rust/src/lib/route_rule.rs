@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::hash::{Hash, Hasher};
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -423,6 +425,12 @@ impl Eq for RouteRuleEntry {}
 impl PartialOrd for RouteRuleEntry {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Hash for RouteRuleEntry {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.sort_key().hash(state);
     }
 }
 

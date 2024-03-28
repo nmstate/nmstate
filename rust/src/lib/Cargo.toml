@@ -1,6 +1,6 @@
 [package]
 name = "nmstate"
-version = "2.2.27"
+version = "2.2.28"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Library for networking management in a declarative manner"
 license = "Apache-2.0"
@@ -19,7 +19,7 @@ path = "lib.rs"
 serde_yaml = "0.9"
 
 [dependencies.nispor]
-version = "1.2.16"
+version = "1.2.18"
 optional = true
 
 [dependencies.zvariant]

@@ -10,6 +10,10 @@ use crate::{
 };
 
 impl MergedOvsDbGlobalConfig {
+    pub(crate) fn is_changed(&self) -> bool {
+        self.is_changed
+    }
+
     pub(crate) fn verify(
         &self,
         current: OvsDbGlobalConfig,
