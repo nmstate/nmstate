@@ -22,7 +22,8 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use nmstate::{Interface, InterfaceType, NetworkState};
+use nispor::NetStateFilter;
+use tokio::task;
 
 use crate::error::CliError;
 
@@ -48,14 +49,6 @@ pub(crate) enum PersistAction {
     Save,
     /// Remove link files not required
     CleanUp,
-}
-
-fn gather_state() -> Result<NetworkState, CliError> {
-    let mut state = NetworkState::new();
-    state.set_kernel_only(true);
-    state.set_running_config_only(true);
-    state.retrieve()?;
-    Ok(state)
 }
 
 pub(crate) fn entrypoint(
@@ -99,19 +92,21 @@ fn run_persist_immediately(
         log::info!("Host uses initrd networking");
     }
 
-    let state = gather_state()?;
+    let state_task = gather_state()?;
+    let state = state_task.await?;
+
     let mut changed = false;
     for iface in state
         .interfaces
         .iter()
-        .filter(|i| i.iface_type() == InterfaceType::Ethernet)
+        .filter(|i| i.iface_type() == nispor::IfaceType::Ethernet)
     {
         // The MAC address of bond port might has been altered when attaching
         // to bond, we need special handling here
         let mac = if iface.base_iface().controller_type
-            == Some(InterfaceType::Bond)
+            == Some(nispor::IfaceType::Bond)
         {
-            get_bond_port_mac(iface)
+            get_bond_port_mac(&iface)
         } else {
             // Prefer permanent(often stored in firmware) MAC address
             iface
@@ -252,11 +247,13 @@ pub(crate) fn clean_up(
         return Ok("".to_string());
     }
 
-    let state = gather_state()?;
+    let state_task = gather_state()?;
+    let state = state_task.await?;
+
     let macs: HashMap<&str, &str> = state
         .interfaces
         .iter()
-        .filter(|i| i.iface_type() == InterfaceType::Ethernet)
+        .filter(|i| i.iface_type() == nispor::IfaceType::Ethernet)
         .filter_map(|i| {
             i.base_iface()
                 .permanent_mac_address
@@ -469,16 +466,16 @@ fn has_any_kargs(kargs: &[&str]) -> bool {
 // Preference order on MAC address of bond port:
 // 1. Permanent MAC address
 // 2. MAC address stored in `IFLA_BOND_PORT_PERM_HWADDR`
-fn get_bond_port_mac(iface: &Interface) -> Option<String> {
+fn get_bond_port_mac(iface: &nispor::Iface) -> Option<String> {
     if let Some(mac) = iface.base_iface().permanent_mac_address.as_deref() {
         return Some(mac.to_string());
     }
 
-    let mut filter = nispor::NetStateFilter::minimum();
+    let mut filter = NetStateFilter::minimum();
     let mut iface_filter = nispor::NetStateIfaceFilter::minimum();
     iface_filter.iface_name = Some(iface.name().to_string());
     filter.iface = Some(iface_filter);
-    match nispor::NetState::retrieve_with_filter(&filter) {
+    match nispor::NetState::retrieve_with_filter_async(&filter) {
         Ok(np_state) => {
             if let Some(mac) = np_state
                 .ifaces
@@ -509,4 +506,12 @@ fn get_bond_port_mac(iface: &Interface) -> Option<String> {
     }
 
     None
+}
+
+async fn gather_state() -> Result<nispor::NetState, CliError> {
+    let mut state = nispor::NetState::new();
+    state.set_kernel_only(true);
+    state.set_running_config_only(true);
+    state.retrieve_async().await?;
+    Ok(state)
 }
