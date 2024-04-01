@@ -1834,6 +1834,47 @@ def test_absent_route_with_invalid_empty_destination(static_eth1_with_routes):
 
 
 @pytest.mark.tier1
+def test_preserve_unmanaged_routes(eth1_static_ip):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.WEIGHT: 1,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS3,
+            Route.WEIGHT: 256,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+
+    cmdlib.exec_cmd(
+        f"ip route add {IPV4_TEST_NET1} via {IPV4_ADDRESS1} "
+        "dev eth1 proto bird metric 50".split(),
+        check=True,
+    )
+
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+    routes_output4 = _get_routes_from_iproute(4, "main")
+    assert f"{IPV4_TEST_NET1} via {IPV4_ADDRESS1}" in routes_output4
+
+
+@pytest.mark.tier1
 @pytest.mark.skipif(
     nm_minor_version() < 41, reason="ECMP route is only support on NM 1.41+"
 )

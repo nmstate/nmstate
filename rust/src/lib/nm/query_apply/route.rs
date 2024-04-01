@@ -2,6 +2,8 @@
 
 use super::super::nm_dbus::{NmConnection, NmIpRoute};
 
+const DEFAULT_TABLE_ID: u32 = 254; // main route table ID
+
 pub(crate) fn is_route_removed(
     new_nm_conn: &NmConnection,
     cur_nm_conn: &NmConnection,
@@ -36,7 +38,11 @@ fn is_nm_ip_route_removed(
     cur_routes: &[NmIpRoute],
 ) -> bool {
     for cur_route in cur_routes {
-        if !new_routes.contains(cur_route) {
+        let mut cur_route_norm = cur_route.clone();
+        if cur_route_norm.table.is_none() {
+            cur_route_norm.table = Some(DEFAULT_TABLE_ID);
+        }
+        if !new_routes.contains(&cur_route_norm) {
             return true;
         }
     }
