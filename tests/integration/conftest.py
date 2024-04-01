@@ -3,6 +3,10 @@
 import logging
 import os
 import subprocess
+import yaml
+import tempfile
+
+from pathlib import Path
 
 import pytest
 
@@ -22,6 +26,11 @@ nmstate: {nmstate_version}
 """
 
 ISOLATE_NAMESPACE = "nmstate_test_ep"
+LIBNMSTATE_APPLY = libnmstate.apply
+LIBNMSTATE_SHOW = libnmstate.show
+DUMP_STATES_DIR = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), ".states"
+)
 
 
 def pytest_configure(config):
@@ -34,12 +43,23 @@ def pytest_addoption(parser):
     parser.addoption(
         "--runslow", action="store_true", default=False, help="run slow tests"
     )
+    parser.addoption(
+        "--dump-states",
+        action="store_true",
+        default=False,
+        help="dump applied and showed network states",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
     if not config.getoption("--runslow"):
         # --runslow is not in cli: skip slow tests
         _mark_skip_slow_tests(items)
+
+    if config.getoption("--dump-states"):
+        libnmstate.apply = _custom_apply_with_dump_state
+        libnmstate.show = _custom_show_with_dump_state
+
     _mark_tier2_tests(items)
 
 
@@ -167,6 +187,50 @@ def _get_osname():
             if line.startswith("PRETTY_NAME="):
                 return line.split("=", maxsplit=1)[1].strip().strip('"')
     return ""
+
+
+def _dump_state(
+    state,
+):
+    path = Path(DUMP_STATES_DIR)
+    path.mkdir(exist_ok=True)
+    test_name = (
+        os.environ.get("PYTEST_CURRENT_TEST")
+        .split(":")[-1]
+        .split(" ")[0]
+        .lower()
+    )
+    state_file = tempfile.NamedTemporaryFile(
+        dir=path, prefix=test_name + "-", suffix=".yml", delete=False
+    )
+    with open(state_file.name, "a") as outfile:
+        yaml.dump(state, outfile)
+
+
+def _custom_apply_with_dump_state(
+    desired_state,
+    *args,
+    **kwargs,
+):
+    result = LIBNMSTATE_APPLY(
+        desired_state,
+        *args,
+        **kwargs,
+    )
+    _dump_state(desired_state)
+    return result
+
+
+def _custom_show_with_dump_state(
+    *args,
+    **kwargs,
+):
+    current_state = LIBNMSTATE_SHOW(
+        *args,
+        **kwargs,
+    )
+    _dump_state(current_state)
+    return current_state
 
 
 # Only restore the interface with IPv4/IPv6 gateway with IP/DNS config only
