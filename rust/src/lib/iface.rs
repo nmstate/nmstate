@@ -3,6 +3,9 @@
 use std::collections::HashSet;
 
 use serde::{Deserialize, Deserializer, Serialize};
+use serde::de::Visitor;
+use std::fmt;
+use serde::de;
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
@@ -143,7 +146,7 @@ impl InterfaceType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The state of interface
@@ -192,6 +195,44 @@ impl From<&str> for InterfaceState {
             _ => Self::Unknown,
         }
     }
+}
+
+impl<'de> Deserialize<'de> for InterfaceState {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct InterfaceStateVisitor;
+
+        impl<'de> Visitor<'de> for InterfaceStateVisitor{
+            type Value = InterfaceState;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result{
+                formatter.write_str("a string for an interface state")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<InterfaceState, E>
+            where 
+                E: de::Error,
+            {
+
+                match value {
+                    "up" => Ok(InterfaceState::Up),
+                    "down" => Ok(InterfaceState::Down),
+                    "absent" => Ok(InterfaceState::Absent),
+                    "ignore" => Ok(InterfaceState::Ignore),
+                    "unknown" => {
+                        log::warn!("Interface state is 'unknown'; it will be ignored.");
+                        Ok(InterfaceState::Ignore)
+                    },
+                    _ => Err(E::custom(format!("unexpected interface state: {}", value))),
+                }
+                
+            }
+        }
+        deserializer.deserialize_str(InterfaceStateVisitor)
+    }  
+
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
