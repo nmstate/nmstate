@@ -62,3 +62,5 @@ mod vlan;
 mod vrf;
 #[cfg(test)]
 mod vxlan;
+#[cfg(test)]
+mod nlpm;
