@@ -37,6 +37,8 @@ mod mptcp;
 #[cfg(test)]
 mod net_state;
 #[cfg(test)]
+mod nlpm;
+#[cfg(test)]
 mod nm;
 #[cfg(test)]
 mod ovn;

@@ -16,6 +16,7 @@ edition = "2021"
 path = "lib.rs"
 
 [dependencies]
+rust-bert = "0.22.0"
 serde_yaml = "0.9"
 
 [dependencies.nispor]

@@ -99,6 +99,7 @@ mod mptcp;
 mod net_state;
 #[cfg(feature = "query_apply")]
 mod nispor;
+mod nlpm;
 mod nm;
 #[allow(deprecated)]
 mod ovn;
