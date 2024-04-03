@@ -4,9 +4,9 @@
 
 A declarative network management API for hosts.
 
-![CI](https://github.com/nmstate/nmstate/workflows/CI/badge.svg?branch=base)
-[![crates.io](https://img.shields.io/crates/v/nmstate.svg)
-[![docs.rs](https://img.shields.io/docsrs/nmstate)
+[![CI](https://github.com/nmstate/nmstate/workflows/CI/badge.svg?branch=base)](https://github.com/nmstate/nmstate/actions?query=workflow%3ACI+branch%3Abase)
+[![crates.io](https://img.shields.io/crates/v/nmstate.svg)](https://crates.io/crates/nmstate)
+[![docs.rs](https://img.shields.io/docsrs/nmstate)](https://docs.rs/nmstate)
 [![Fedora Rawhide version](https://img.shields.io/badge/dynamic/json.svg?label=Fedora%20Rawhide&url=https%3A%2F%2Fapps.fedoraproject.org%2Fmdapi%2Frawhide%2Fpkg%2Fnmstate&query=%24.version&colorB=blue)](https://src.fedoraproject.org/rpms/nmstate)
 
 Copr build status, all repos are built for Fedora Linux and RHEL/CentOS Stream/EPEL 8+:
