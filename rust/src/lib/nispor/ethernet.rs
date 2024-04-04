@@ -2,6 +2,7 @@ use crate::{
     BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
     SrIovConfig, SrIovVfConfig, VlanProtocol,
 };
+use std::{fs, path};
 
 pub(crate) fn np_ethernet_to_nmstate(
     np_iface: &nispor::Iface,
@@ -17,6 +18,29 @@ fn gen_eth_conf(np_iface: &nispor::Iface) -> EthernetConfig {
     let mut eth_conf = EthernetConfig::new();
     if let Some(sriov_info) = &np_iface.sriov {
         eth_conf.sr_iov = Some(gen_sriov_conf(sriov_info));
+    }
+    if let Some(sr_iov) = &mut eth_conf.sr_iov {
+        let p: path::PathBuf = [
+            "/sys/class/net",
+            &np_iface.name,
+            "device/sriov_drivers_autoprobe",
+        ]
+        .iter()
+        .collect();
+        if let Ok(contents) = fs::read_to_string(&p) {
+            match contents.as_str().trim().parse::<u8>() {
+                Ok(i) => {
+                    sr_iov.drivers_autoprobe = Some(i == 1);
+                }
+                Err(err) => {
+                    log::warn!(
+                        "failed to parse {}: {:?}",
+                        p.to_string_lossy(),
+                        err
+                    );
+                }
+            }
+        }
     }
     if let Some(ethtool_info) = &np_iface.ethtool {
         if let Some(link_mode_info) = &ethtool_info.link_mode {

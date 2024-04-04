@@ -285,6 +285,7 @@ class Ethernet:
     SRIOV_SUBTREE = "sr-iov"
 
     class SRIOV:
+        DRIVERS_AUTOPROBE = "drivers-autoprobe"
         TOTAL_VFS = "total-vfs"
         VFS_SUBTREE = "vfs"
 

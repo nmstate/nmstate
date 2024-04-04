@@ -5,6 +5,7 @@ interfaces:
     state: up
     ethernet:
       sr-iov:
+        drivers-autoprobe: false
         total-vfs: 1
         vfs:
           - id: 0

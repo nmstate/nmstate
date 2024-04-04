@@ -15,6 +15,7 @@ ethernet:
   auto-negotiation: "false"
   speed: "1000"
   sr-iov:
+    drivers-autoprobe: "false"
     total-vfs: "64"
     vfs:
       - id: "0"
@@ -33,6 +34,7 @@ ethernet:
     let vf_conf = sriov_conf.vfs.as_ref().unwrap().first().unwrap();
 
     assert_eq!(eth_conf.speed, Some(1000));
+    assert_eq!(sriov_conf.drivers_autoprobe, Some(false));
     assert_eq!(sriov_conf.total_vfs, Some(64));
     assert_eq!(vf_conf.id, 0);
     assert_eq!(vf_conf.spoof_check, Some(true));
