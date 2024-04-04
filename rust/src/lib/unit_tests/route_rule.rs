@@ -320,3 +320,27 @@ fn test_route_rule_auto_priority_increasing_from_empty() {
     );
     assert_eq!(rules[2].priority, Some(30002));
 }
+
+#[test]
+fn test_route_rule_sorting() {
+    let mut rules = vec![
+        RouteRuleEntry {
+            priority: Some(200),
+            ..Default::default()
+        },
+        RouteRuleEntry {
+            priority: Some(100),
+            ..Default::default()
+        },
+        RouteRuleEntry {
+            priority: Some(300),
+            ..Default::default()
+        },
+    ];
+
+    rules.sort_unstable();
+
+    assert_eq!(rules[0].priority, Some(100));
+    assert_eq!(rules[1].priority, Some(200));
+    assert_eq!(rules[2].priority, Some(300));
+}
