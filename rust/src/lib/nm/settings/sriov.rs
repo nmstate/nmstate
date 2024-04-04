@@ -27,6 +27,10 @@ pub(crate) fn gen_nm_sriov_setting(
         nm_sriov_set.total_vfs = Some(v);
     }
 
+    if let Some(autoprobe) = sriov_conf.drivers_autoprobe {
+        nm_sriov_set.autoprobe_drivers = Some(autoprobe);
+    }
+
     if let Some(vfs) = &sriov_conf.vfs {
         nm_sriov_set.vfs = Some(gen_nm_vfs(
             vfs,

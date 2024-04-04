@@ -23,6 +23,7 @@ use crate::{
 ///   max-mtu: 9702
 ///   ethernet:
 ///     sr-iov:
+///       drivers-autoprobe: false
 ///       total-vfs: 2
 ///       vfs:
 ///       - id: 0
@@ -43,6 +44,16 @@ use crate::{
 ///         qos: 0
 /// ```
 pub struct SrIovConfig {
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    /// Bind created VFs to their default kernel driver.
+    /// This relates to sriov_drivers_autoprobe.
+    /// More info here https://docs.kernel.org/PCI/pci-iov-howto.html#sr-iov-api
+    /// Deserialize and serialize from/to `drivers-autoprobe`.
+    pub drivers_autoprobe: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,

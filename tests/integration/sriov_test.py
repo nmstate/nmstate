@@ -526,3 +526,38 @@ class TestSrIov:
         libnmstate.apply(desired_state)
         vf_ifaces = get_sriov_vf_names(pf_name)
         assert len(vf_ifaces) == 62
+
+    def test_drivers_autoprobe_false(self):
+        pf_name = _test_nic_name()
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Ethernet.CONFIG_SUBTREE: {
+                        Ethernet.SRIOV_SUBTREE: {
+                            Ethernet.SRIOV.DRIVERS_AUTOPROBE: False,
+                            Ethernet.SRIOV.TOTAL_VFS: 32,
+                        },
+                    },
+                }
+            ]
+        }
+        libnmstate.apply(desired_state)
+        vf_ifaces = get_sriov_vf_names(pf_name)
+        assert len(vf_ifaces) == 0
+
+    def test_drivers_autoprobe_restore_default(self):
+        pf_name = _test_nic_name()
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Ethernet.CONFIG_SUBTREE: {
+                        Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2},
+                    },
+                }
+            ]
+        }
+        libnmstate.apply(desired_state)
+        vf_ifaces = get_sriov_vf_names(pf_name)
+        assert len(vf_ifaces) == 2

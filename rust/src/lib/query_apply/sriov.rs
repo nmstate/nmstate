@@ -23,6 +23,9 @@ impl SrIovConfig {
 
     pub(crate) fn update(&mut self, other: Option<&SrIovConfig>) {
         if let Some(other) = other {
+            if let Some(autoprobe) = other.drivers_autoprobe {
+                self.drivers_autoprobe = Some(autoprobe);
+            }
             if let Some(total_vfs) = other.total_vfs {
                 self.total_vfs = Some(total_vfs);
             }
@@ -53,6 +56,23 @@ impl SrIovConfig {
                     ));
                 }
             };
+
+        if let Some(desired_autoprobe) = self.drivers_autoprobe {
+            if !desired_autoprobe {
+                return Ok(());
+            }
+        }
+
+        if let Some(cur_autoprobe) = cur_pf_iface
+            .ethernet
+            .as_ref()
+            .and_then(|eth_conf| eth_conf.sr_iov.as_ref())
+            .and_then(|sriov_conf| sriov_conf.drivers_autoprobe.as_ref())
+        {
+            if !cur_autoprobe {
+                return Ok(());
+            }
+        }
 
         let vfs = if let Some(vfs) = cur_pf_iface
             .ethernet

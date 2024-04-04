@@ -629,6 +629,7 @@ fn test_sriov_enable_and_use_in_single_yaml() {
         assert_eq!(eth_conf.speed, Some(10000));
         assert_eq!(eth_conf.duplex, Some(EthernetDuplex::Full));
         let sr_iov_conf = eth_conf.sr_iov.as_ref().unwrap();
+        assert_eq!(sr_iov_conf.drivers_autoprobe, None);
         assert_eq!(sr_iov_conf.total_vfs, Some(2));
     } else {
         panic!("Expecting Ethernet interface, got {:?}", pf_state);
