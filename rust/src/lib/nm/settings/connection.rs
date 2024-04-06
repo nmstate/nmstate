@@ -140,13 +140,28 @@ pub(crate) fn iface_to_nm_connections(
             }
         }
     }
-    let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
-    nm_conn.flags = Vec::new();
 
     // Use stable UUID if in gen_conf mode.
     // This enable us to generate the same output for `nm_gen_conf()`
     // when the desire state is the same.
     let stable_uuid = gen_conf_mode;
+
+    let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
+    // The rollback of checkpoint of NetworkManager has bug if we reuse
+    // the uuid of in-memory profile for on-disk profile:
+    //   https://issues.redhat.com/browse/RHEL-31972
+    if (!merged_state.memory_only)
+        && (nm_conn.flags.contains(&NmSettingsConnectionFlag::Volatile)
+            || nm_conn.flags.contains(&NmSettingsConnectionFlag::Unsaved))
+    {
+        // Indicate we are new NM connection now
+        nm_conn.obj_path = String::new();
+        if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
+            nm_conn_set.uuid =
+                Some(gen_uuid(stable_uuid, iface.name(), &iface.iface_type()));
+        }
+    }
+    nm_conn.flags = Vec::new();
 
     gen_nm_conn_setting(iface, &mut nm_conn, stable_uuid)?;
     gen_nm_ip_setting(
@@ -417,12 +432,8 @@ pub(crate) fn gen_nm_conn_setting(
             };
 
         new_nm_conn_set.id = Some(conn_name);
-        new_nm_conn_set.uuid = Some(if stable_uuid {
-            uuid_from_name_and_type(iface.name(), &iface.iface_type())
-        } else {
-            // Use Linux random number generator (RNG) to generate UUID
-            uuid::Uuid::new_v4().hyphenated().to_string()
-        });
+        new_nm_conn_set.uuid =
+            Some(gen_uuid(stable_uuid, iface.name(), &iface.iface_type()));
         new_nm_conn_set.iface_type =
             Some(iface_type_to_nm(&iface.iface_type())?);
         if let Interface::Ethernet(eth_iface) = iface {
@@ -582,4 +593,17 @@ fn persisten_iface_cur_conf(
         nm_ac_uuids,
         gen_conf_mode,
     )
+}
+
+fn gen_uuid(
+    stable_uuid: bool,
+    iface_name: &str,
+    iface_type: &InterfaceType,
+) -> String {
+    if stable_uuid {
+        uuid_from_name_and_type(iface_name, iface_type)
+    } else {
+        // Use Linux random number generator (RNG) to generate UUID
+        uuid::Uuid::new_v4().hyphenated().to_string()
+    }
 }

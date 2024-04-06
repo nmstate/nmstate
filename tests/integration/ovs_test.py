@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 import os
 import pytest
+import time
 import yaml
 
 import libnmstate
@@ -2196,3 +2197,78 @@ def test_raise_error_on_unknown_ovsdb_global_section():
 def remove_ovn_state_present(state):
     for ovn_map in state.get(Ovn.BRIDGE_MAPPINGS, []):
         ovn_map.pop(Ovn.BridgeMappings.STATE, None)
+
+
+@pytest.fixture
+def ovs_bridge1_same_name_in_memory(eth1_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port("eth1")
+    bridge.add_internal_port(
+        BRIDGE1, ipv4_state={InterfaceIPv4.ENABLED: False}
+    )
+    libnmstate.apply(bridge.state, save_to_disk=False)
+    yield
+    state = bridge.state
+    for iface in state[Interface.KEY]:
+        iface[Interface.STATE] = InterfaceState.ABSENT
+    libnmstate.apply(state)
+
+
+# https://issues.redhat.com/browse/OPNET-497
+@pytest.mark.tier1
+def test_rollback_on_in_memory_ovs_bridge(
+    ovs_bridge1_same_name_in_memory, eth2_up
+):
+    try:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    # This interface is expected to fail as VLAN ID and
+                    # base interface name not defined.
+                    # Nmstate does not validate it yet, but NM failed
+                    # the validation, this is the key reproducer.
+                    # This test case will be invalid once nmstate has top
+                    # level validation on VLAN section.
+                    {
+                        Interface.NAME: VLAN_IFNAME,
+                        Interface.TYPE: InterfaceType.VLAN,
+                    },
+                    {
+                        Interface.NAME: BRIDGE1,
+                        Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                    },
+                    {
+                        Interface.NAME: BRIDGE1,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {
+                                    OVSBridge.Port.NAME: BRIDGE1,
+                                },
+                                {
+                                    OVSBridge.Port.NAME: "eth1",
+                                },
+                                {
+                                    OVSBridge.Port.NAME: "eth2",
+                                },
+                            ]
+                        },
+                    },
+                ]
+            },
+            commit=False,
+        )
+    except Exception:
+        pass
+
+    time.sleep(5)
+    cur_state = statelib.show_only((BRIDGE1,))
+    assert len(cur_state[Interface.KEY]) == 2
+    for iface in cur_state[Interface.KEY]:
+        assert iface[Interface.STATE] == InterfaceState.UP
+
+    assert all(
+        iface[Interface.NAME] != VLAN_IFNAME
+        for iface in libnmstate.show()[Interface.KEY]
+    )
