@@ -27,13 +27,14 @@ use super::super::{
     route::store_route_config,
     route_rule::store_route_rule_config,
     settings::{
-        iface_type_to_nm, NM_SETTING_OVS_PORT_SETTING_NAME,
-        NM_SETTING_VPN_SETTING_NAME,
+        iface_type_to_nm, NM_SETTING_BRIDGE_SETTING_NAME,
+        NM_SETTING_OVS_PORT_SETTING_NAME, NM_SETTING_VPN_SETTING_NAME,
     },
 };
 
 use crate::{
-    InterfaceIdentifier, InterfaceType, MergedNetworkState, NmstateError,
+    InterfaceIdentifier, InterfaceType, MergedInterfaces, MergedNetworkState,
+    NmstateError,
 };
 
 // There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
@@ -157,6 +158,7 @@ pub(crate) fn nm_apply(
         })
         .collect();
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
+        &merged_state.interfaces,
         nm_conns_to_activate.as_slice(),
         activated_nm_conns.as_slice(),
     );
@@ -395,11 +397,19 @@ fn delete_orphan_ports(
 // * Veth peer changed.
 // * NM cannot reapply changes to MPTCP flags.
 // * All VPN connection
+// * All linux bridge ports should be deactivate if its controller has
+//   default-pvid changes:
+//      https://issues.redhat.com/browse/RHEL-26750
 fn gen_nm_conn_need_to_deactivate_first(
+    merged_iface: &MergedInterfaces,
     nm_conns_to_activate: &[NmConnection],
     activated_nm_conns: &[&NmConnection],
 ) -> Vec<NmConnection> {
     let mut ret: Vec<NmConnection> = Vec::new();
+
+    let default_pvid_changed_brs: Vec<&str> =
+        get_default_pvid_changed_brs(merged_iface);
+
     for nm_conn in nm_conns_to_activate {
         if let Some(uuid) = nm_conn.uuid() {
             if let Some(activated_nm_con) =
@@ -418,6 +428,10 @@ fn gen_nm_conn_need_to_deactivate_first(
                     || is_veth_peer_changed(nm_conn, activated_nm_con)
                     || is_mptcp_flags_changed(nm_conn, activated_nm_con)
                     || nm_conn.iface_type() == Some(NM_SETTING_VPN_SETTING_NAME)
+                    || is_bridge_port_changed_default_pvid(
+                        nm_conn,
+                        &default_pvid_changed_brs,
+                    )
                 {
                     ret.push((*activated_nm_con).clone());
                 }
@@ -444,4 +458,36 @@ fn check_nm_version(nm_api: &NmApi) {
             }
         }
     }
+}
+
+fn get_default_pvid_changed_brs(merged_iface: &MergedInterfaces) -> Vec<&str> {
+    merged_iface
+        .kernel_ifaces
+        .values()
+        .filter_map(|i| {
+            if i.is_default_pvid_changed() {
+                Some(i.merged.name())
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn is_bridge_port_changed_default_pvid(
+    nm_conn: &NmConnection,
+    default_pvid_changed_brs: &[&str],
+) -> bool {
+    if nm_conn.controller_type() == Some(NM_SETTING_BRIDGE_SETTING_NAME) {
+        if let Some(ctrl_name) = nm_conn.controller() {
+            if default_pvid_changed_brs.contains(&ctrl_name) {
+                log::info!(
+                    "Reactivating linux bridge port as its controller \
+                    has `vlan-default-pvid` changes"
+                );
+                return true;
+            }
+        }
+    }
+    false
 }
