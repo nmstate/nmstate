@@ -598,3 +598,51 @@ fn test_disable_balance_slb_valid_override_current() {
         MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
     merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
+
+#[test]
+fn test_bond_port_queue_id_overlap() {
+    let mut des_iface: BondInterface = serde_yaml::from_str(
+        r"---
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: active-backup
+          ports-config:
+          - name: eth1
+            queue-id: 1
+          - name: eth2
+            queue-id: 1
+        ",
+    )
+    .unwrap();
+
+    let result = des_iface.sanitize();
+
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bond_port_queue_id_not_overlap_on_default() {
+    let mut des_iface: BondInterface = serde_yaml::from_str(
+        r"---
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: active-backup
+          ports-config:
+          - name: eth1
+            queue-id: 0
+          - name: eth2
+            queue-id: 0
+        ",
+    )
+    .unwrap();
+
+    des_iface.sanitize().unwrap();
+}

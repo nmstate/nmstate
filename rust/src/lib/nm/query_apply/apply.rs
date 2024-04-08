@@ -27,8 +27,9 @@ use super::super::{
     route::store_route_config,
     route_rule::store_route_rule_config,
     settings::{
-        iface_type_to_nm, NM_SETTING_BRIDGE_SETTING_NAME,
-        NM_SETTING_OVS_PORT_SETTING_NAME, NM_SETTING_VPN_SETTING_NAME,
+        iface_type_to_nm, NM_SETTING_BOND_SETTING_NAME,
+        NM_SETTING_BRIDGE_SETTING_NAME, NM_SETTING_OVS_PORT_SETTING_NAME,
+        NM_SETTING_VPN_SETTING_NAME,
     },
 };
 
@@ -409,6 +410,8 @@ fn gen_nm_conn_need_to_deactivate_first(
 
     let default_pvid_changed_brs: Vec<&str> =
         get_default_pvid_changed_brs(merged_iface);
+    let bond_queue_id_changed_ports =
+        get_bond_ports_with_queue_id_changed(merged_iface);
 
     for nm_conn in nm_conns_to_activate {
         if let Some(uuid) = nm_conn.uuid() {
@@ -431,6 +434,10 @@ fn gen_nm_conn_need_to_deactivate_first(
                     || is_bridge_port_changed_default_pvid(
                         nm_conn,
                         &default_pvid_changed_brs,
+                    )
+                    || is_bond_port_queue_id_changed(
+                        nm_conn,
+                        &bond_queue_id_changed_ports,
                     )
                 {
                     ret.push((*activated_nm_con).clone());
@@ -484,6 +491,37 @@ fn is_bridge_port_changed_default_pvid(
                 log::info!(
                     "Reactivating linux bridge port as its controller \
                     has `vlan-default-pvid` changes"
+                );
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn get_bond_ports_with_queue_id_changed(
+    merged_iface: &MergedInterfaces,
+) -> Vec<&str> {
+    let mut ret = Vec::new();
+    for iface in merged_iface.kernel_ifaces.values().filter(|i| {
+        (i.is_desired() || i.is_changed())
+            && i.merged.iface_type() == InterfaceType::Bond
+    }) {
+        ret.extend(iface.get_bond_ports_with_queue_id_changed());
+    }
+    ret
+}
+
+fn is_bond_port_queue_id_changed(
+    nm_conn: &NmConnection,
+    changed_ports: &[&str],
+) -> bool {
+    if nm_conn.controller_type() == Some(NM_SETTING_BOND_SETTING_NAME) {
+        if let Some(iface_name) = nm_conn.iface_name() {
+            if changed_ports.contains(&iface_name) {
+                log::info!(
+                    "Reactivating bond port {iface_name} as its \
+                    queue ID has changed"
                 );
                 return true;
             }
