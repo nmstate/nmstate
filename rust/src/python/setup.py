@@ -1,16 +1,33 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
-
+import ctypes
+import sys
 import setuptools
 
 
 def requirements():
     req = []
-    with open("requirements.txt") as fd:
+    with open("requirements.txt", encoding="utf-8") as fd:
         for line in fd:
             line.strip()
             if not line.startswith("#"):
                 req.append(line)
     return req
+
+
+def check_nmstate_c_library():
+    if "bdist_rpm" not in sys.argv:
+        try:
+            ctypes.cdll.LoadLibrary("libnmstate.so.2")
+        except OSError as exc:
+            raise RuntimeError(
+                "Error: nmstate C library not found. "
+                "Please install nmstate C library separately "
+                "before installing the Python package."
+                "See: https://nmstate.io/user/install.html"
+            ) from exc
+
+
+check_nmstate_c_library()
 
 
 setuptools.setup(
