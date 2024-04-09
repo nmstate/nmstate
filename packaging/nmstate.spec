@@ -12,6 +12,7 @@ Summary:        Declarative network manager API
 License:        LGPLv2+
 URL:            https://github.com/%{srcname}/%{srcname}
 Source0:        https://github.com/%{srcname}/%{srcname}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
+Source1:        %{url}/releases/download/v1.4.5/%{srcname}-vendor-1.4.5.tar.xz
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
@@ -84,6 +85,7 @@ This package contains the nmstate plugin for OVS database manipulation.
 
 %prep
 %setup -q
+%cargo_prep -V 1
 
 %preun
 %systemd_preun nmstate-varlink.service

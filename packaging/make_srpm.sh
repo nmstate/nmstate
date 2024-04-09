@@ -6,6 +6,7 @@ SRC_DIR="$(dirname "$0")/.."
 TMP_DIR=$(mktemp -d)
 SPEC_FILE="$TMP_DIR/nmstate.spec"
 OLD_PWD=$(pwd)
+BASE_URL="https://github.com/nmstate/nmstate/"
 
 for candidate in python3 python
 do
@@ -40,6 +41,8 @@ TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
     ./packaging/make_spec.sh > "${SPEC_FILE}"
     tar --append --file=$TAR_FILE $SPEC_FILE
     gzip "${TAR_FILE}"
+    curl -L ${BASE_URL}/releases/download/v1.4.5/nmstate-vendor-1.4.5.tar.xz \
+        --output $TMP_DIR/nmstate-vendor-1.4.5.tar.xz
 
     rpmbuild --define "_rpmdir $TMP_DIR/" --define "_srcrpmdir $TMP_DIR/" \
     -ts $TAR_FILE.gz
