@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+import copy
+
 import pytest
 
 import libnmstate
@@ -9,6 +11,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import Route
 
 from ..testlib import assertlib
 from ..testlib import cmdlib
@@ -230,3 +233,65 @@ def test_global_dns_with_dns_options():
                 DNS.KEY: {DNS.CONFIG: {}},
             }
         )
+
+
+@pytest.fixture
+def static_iface_dns():
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.STATE: InterfaceState.UP,
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.IPV4: {
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: "192.0.2.251",
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                    InterfaceIPv4.DHCP: False,
+                    InterfaceIPv4.ENABLED: True,
+                },
+            },
+        ],
+        Route.KEY: {
+            Route.CONFIG: [
+                {
+                    Route.DESTINATION: "0.0.0.0/0",
+                    Route.METRIC: 200,
+                    Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+                    Route.NEXT_HOP_INTERFACE: "eth1",
+                },
+            ]
+        },
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: ["8.8.8.8", "1.1.1.1"],
+            }
+        },
+    }
+    libnmstate.apply(desired_state)
+    yield desired_state
+
+
+def test_global_dns_do_not_touch_iface_dns(static_iface_dns):
+    state = static_iface_dns
+    original_dns_servers = copy.deepcopy(
+        state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+    )
+    state[DNS.KEY][DNS.CONFIG][DNS.SERVER].reverse()
+
+    libnmstate.apply(
+        {
+            DNS.KEY: {
+                DNS.CONFIG: state[DNS.KEY][DNS.CONFIG],
+            },
+        }
+    )
+
+    assert_global_dns(state[DNS.KEY][DNS.CONFIG])
+    output = cmdlib.exec_cmd(
+        "nmcli -g ipv4.dns c show eth1".split(), check=True
+    )[1]
+    assert output.strip() == ",".join(original_dns_servers)

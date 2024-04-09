@@ -6,6 +6,7 @@
 import logging
 from operator import attrgetter
 
+from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
@@ -224,15 +225,16 @@ def _preapply_dns_fix_for_profiles(context, net_state):
     # Whether to preserve old DNS config by DNS metadata to be removed from
     # desired state
     preserve_old_dns_config = False
-    if net_state.dns.config == net_state.dns.current_config:
-        for cur_dns_iface_name in cur_dns_iface_names:
-            iface = net_state.ifaces.all_kernel_ifaces[cur_dns_iface_name]
-            if iface.is_changed or iface.is_desired:
-                remove_existing_dns_config = True
-        if not remove_existing_dns_config:
-            preserve_old_dns_config = True
-    else:
-        remove_existing_dns_config = True
+    if not (net_state.use_global_dns and net_state.dns.config.get(DNS.SERVER)):
+        if net_state.dns.config == net_state.dns.current_config:
+            for cur_dns_iface_name in cur_dns_iface_names:
+                iface = net_state.ifaces.all_kernel_ifaces[cur_dns_iface_name]
+                if iface.is_changed or iface.is_desired:
+                    remove_existing_dns_config = True
+            if not remove_existing_dns_config:
+                preserve_old_dns_config = True
+        else:
+            remove_existing_dns_config = True
 
     if remove_existing_dns_config:
         for cur_dns_iface_name in cur_dns_iface_names:
