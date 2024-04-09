@@ -101,6 +101,11 @@ class NetState:
                             )
                             self.use_global_dns = True
                 elif self.dns.config_changed:
+                    logging.warning(
+                        "Storing DNS to NetworkManager via global DNS "
+                        "API, this will cause __all__ interface level "
+                        "DNS settings been ignored"
+                    )
                     self.use_global_dns = True
 
             self._ifaces.gen_route_metadata(self._route)
