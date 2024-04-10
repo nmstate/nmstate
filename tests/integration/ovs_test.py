@@ -819,6 +819,10 @@ def test_create_vlan_over_ovs_iface_with_use_same_name_as_bridge(
     assertlib.assert_state_match(desired_state)
 
 
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="https://issues.redhat.com/browse/RHEL-5001",
+)
 def test_create_vxlan_over_ovs_iface_with_use_same_name_as_bridge(
     ovs_bridge1_with_internal_port_same_name,
 ):
@@ -1093,6 +1097,10 @@ def unmanged_ovs_vxlan():
 
 
 @pytest.mark.tier1
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="https://issues.redhat.com/browse/RHEL-5001",
+)
 def test_ovs_vxlan_in_current_not_impact_others(unmanged_ovs_vxlan):
     with Bridge(BRIDGE1).create() as state:
         assertlib.assert_state_match(state)
