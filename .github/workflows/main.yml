@@ -158,6 +158,20 @@ jobs:
           path: junit.*xml
           retention-days: 5
 
+      - name: Remove duplicated test state dumps
+        run: |
+          if [ -d tests/integration/.states/ ]; then
+            sudo chmod 777 -R tests/integration/.states/
+            sudo apt-get install -y fdupes
+            fdupes -d -N tests/integration/.states/
+          fi
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: nmstate-test-apply-show-dump-artifact-${{ matrix.job_type }}
+          path: tests/integration/.states/*
+          retention-days: 5
+
       - name: Set artifacts permissions
         if: ${{ failure() }}
         run: sudo chmod 777 test_artifacts/*

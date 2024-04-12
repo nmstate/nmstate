@@ -8,8 +8,8 @@ use crate::{
         TEST_IPV4_NET1, TEST_IPV6_ADDR1, TEST_IPV6_ADDR2, TEST_IPV6_NET1,
         TEST_IPV6_NET2, TEST_NIC, TEST_ROUTE_METRIC,
     },
-    ErrorKind, InterfaceType, Interfaces, MergedRoutes, NmstateError,
-    RouteEntry, RouteState, Routes,
+    ErrorKind, InterfaceType, Interfaces, MergedRoutes, RouteEntry, RouteState,
+    Routes,
 };
 
 #[test]

@@ -546,10 +546,8 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
         }
     )
 
-    expected_routes = []
-
     cur_state = libnmstate.show()
-    assert_routes(expected_routes, cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
@@ -580,18 +578,17 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
         }
     )
 
-    expected_routes = []
-
     cur_state = libnmstate.show()
-    assert_routes(expected_routes, cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 # TODO: Once we can disable IPv6, we should add an IPv6 test case here
 def test_disable_ipv4_with_routes_in_current(eth1_up):
+    routes = _get_ipv4_test_routes()
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: _get_ipv4_test_routes()},
+            Route.KEY: {Route.CONFIG: routes},
         }
     )
 
@@ -601,15 +598,16 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
     libnmstate.apply({Interface.KEY: [eth1_state]})
 
     cur_state = libnmstate.show()
-    assert_routes([], cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
 def test_disable_ipv4_and_remove_wildcard_route(eth1_up):
+    routes = _get_ipv4_test_routes()
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: _get_ipv4_test_routes()},
+            Route.KEY: {Route.CONFIG: routes},
         }
     )
 
@@ -629,16 +627,17 @@ def test_disable_ipv4_and_remove_wildcard_route(eth1_up):
     )
 
     cur_state = libnmstate.show()
-    assert_routes([], cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
 @parametrize_ip_ver_routes
 def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
+    routes = get_routes_func()
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: get_routes_func()},
+            Route.KEY: {Route.CONFIG: routes},
         }
     )
 
@@ -655,7 +654,7 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
     )
 
     cur_state = libnmstate.show()
-    assert_routes([], cur_state)
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.mark.tier1
@@ -1832,6 +1831,47 @@ def test_absent_route_with_invalid_empty_destination(static_eth1_with_routes):
                 },
             }
         )
+
+
+@pytest.mark.tier1
+def test_preserve_unmanaged_routes(eth1_static_ip):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.WEIGHT: 1,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS3,
+            Route.WEIGHT: 256,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+
+    cmdlib.exec_cmd(
+        f"ip route add {IPV4_TEST_NET1} via {IPV4_ADDRESS1} "
+        "dev eth1 proto bird metric 50".split(),
+        check=True,
+    )
+
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+    routes_output4 = _get_routes_from_iproute(4, "main")
+    assert f"{IPV4_TEST_NET1} via {IPV4_ADDRESS1}" in routes_output4
 
 
 @pytest.mark.tier1
