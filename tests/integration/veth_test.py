@@ -381,3 +381,11 @@ def veth_interface_both_up(ifname, peer):
 def veth1_up():
     with veth_interface(VETH1, VETH1PEER):
         yield
+
+
+# https://issues.redhat.com/browse/RHEL-32698
+@pytest.mark.tier1
+def test_show_veth_as_veth_iface_type(veth1_up):
+    state = statelib.show_only((VETH1,))
+    assert state[Interface.KEY][0][Interface.NAME] == VETH1
+    assert state[Interface.KEY][0][Interface.TYPE] == InterfaceType.VETH
