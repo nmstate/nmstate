@@ -70,10 +70,6 @@ function container_pre_test_setup {
     set -x
     ${CONTAINER_CMD} --version && cat /etc/resolv.conf
 
-    if [[ "$CI" == "true" ]];then
-        rebuild_container_images
-    fi
-
     create_container
 
     container_exec "ulimit -c unlimited"
