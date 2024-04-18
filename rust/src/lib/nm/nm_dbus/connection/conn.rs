@@ -206,6 +206,7 @@ impl NmConnection {
         _connection_inner_string_member!(self, id)
     }
 
+    #[allow(dead_code)]
     pub fn controller(&self) -> Option<&str> {
         _connection_inner_string_member!(self, controller)
     }
@@ -316,24 +317,6 @@ impl NmConnection {
             ret.insert(key, other_setting_value);
         }
         Ok(ret)
-    }
-
-    pub fn set_parent(&mut self, parent: &str) {
-        if let Some(setting) = self.vlan.as_mut() {
-            setting.parent = Some(parent.to_string());
-        }
-        if let Some(setting) = self.vxlan.as_mut() {
-            setting.parent = Some(parent.to_string());
-        }
-        if let Some(setting) = self.infiniband.as_mut() {
-            setting.parent = Some(parent.to_string());
-        }
-        if let Some(setting) = self.mac_vlan.as_mut() {
-            setting.parent = Some(parent.to_string());
-        }
-        if let Some(setting) = self.macsec.as_mut() {
-            setting.parent = Some(parent.to_string());
-        }
     }
 
     pub fn uuid(&self) -> Option<&str> {

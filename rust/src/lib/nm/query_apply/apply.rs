@@ -21,6 +21,7 @@ use super::super::{
         },
         is_mptcp_flags_changed, is_route_removed, is_veth_peer_changed,
         is_vlan_changed, is_vrf_table_id_changed, is_vxlan_changed,
+        profile::is_uuid,
         save_nm_profiles,
         vpn::get_match_ipsec_nm_conn,
     },
@@ -291,17 +292,33 @@ fn delete_ifaces(
             // Delete OVS port profile along with OVS system and internal
             // Interface
             if nm_conn.controller_type() == Some("ovs-port") {
-                // TODO: handle pre-exist OVS config using name instead of
-                // UUID for controller
-                if let Some(uuid) = nm_conn.controller() {
-                    if !uuids_to_delete.contains(uuid) {
-                        log::info!(
-                            "Deleting NM OVS port connection {} \
-                             for absent OVS interface {}",
-                            uuid,
-                            &iface.name(),
-                        );
-                        uuids_to_delete.insert(uuid);
+                if let Some(ctrl) = nm_conn.controller() {
+                    if is_uuid(ctrl) {
+                        if !uuids_to_delete.contains(ctrl) {
+                            log::info!(
+                                "Deleting NM OVS port connection {} \
+                                 for absent OVS interface {}",
+                                ctrl,
+                                &iface.name(),
+                            );
+                            uuids_to_delete.insert(ctrl);
+                        }
+                    } else if let Some(nm_conns) =
+                        nm_conns_name_type_index.get(&(ctrl, "ovs-port"))
+                    {
+                        for nm_conn in nm_conns {
+                            if let Some(uuid) = nm_conn.uuid() {
+                                if !uuids_to_delete.contains(uuid) {
+                                    log::info!(
+                                        "Deleting NM OVS port connection {} \
+                                         for absent OVS interface {}",
+                                        uuid,
+                                        &iface.name(),
+                                    );
+                                    uuids_to_delete.insert(uuid);
+                                }
+                            }
+                        }
                     }
                 }
             }
