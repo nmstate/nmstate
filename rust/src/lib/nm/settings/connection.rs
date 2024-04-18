@@ -443,7 +443,9 @@ pub(crate) fn gen_nm_conn_setting(
         nm_conn_set.iface_name = None;
     }
     nm_conn_set.autoconnect = Some(true);
-    nm_conn_set.autoconnect_ports = if iface.is_controller() {
+    nm_conn_set.autoconnect_ports = if iface.is_controller()
+        || iface.iface_type() == InterfaceType::Other("ovs-port".to_string())
+    {
         Some(true)
     } else {
         None

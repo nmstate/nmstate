@@ -307,6 +307,9 @@ fn delete_ifaces(
 
     for uuid in &uuids_to_delete {
         nm_api
+            .connection_deactivate(uuid)
+            .map_err(nm_error_to_nmstate)?;
+        nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;
     }
@@ -381,6 +384,9 @@ fn delete_orphan_ports(
         }
     }
     for uuid in &uuids_to_delete {
+        nm_api
+            .connection_deactivate(uuid)
+            .map_err(nm_error_to_nmstate)?;
         nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;
