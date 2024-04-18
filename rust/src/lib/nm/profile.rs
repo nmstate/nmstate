@@ -3,7 +3,6 @@
 use super::nm_dbus::{NmActiveConnection, NmConnection};
 use super::settings::{
     fix_ip_dhcp_timeout, get_exist_profile, iface_to_nm_connections,
-    use_uuid_for_controller_reference, use_uuid_for_parent_reference,
 };
 
 use crate::{
@@ -107,20 +106,6 @@ pub(crate) fn perpare_nm_conns(
     }
 
     fix_ip_dhcp_timeout(&mut nm_conns_to_update);
-
-    use_uuid_for_controller_reference(
-        &mut nm_conns_to_update,
-        &merged_state.interfaces,
-        exist_nm_conns,
-        nm_acs,
-    )?;
-
-    use_uuid_for_parent_reference(
-        &mut nm_conns_to_update,
-        &merged_state.interfaces,
-        exist_nm_conns,
-        nm_acs,
-    );
 
     Ok(PerparedNmConnections {
         to_store: nm_conns_to_update,

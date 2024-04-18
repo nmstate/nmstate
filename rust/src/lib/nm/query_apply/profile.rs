@@ -183,7 +183,8 @@ fn _activate_nm_profiles(
     nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
 ) -> Result<Vec<(NmConnection, NmstateError)>, NmstateError> {
-    let mut new_controllers: Vec<&str> = Vec::new();
+    // Contain a list of `(iface_name, nm_iface_type)`.
+    let mut new_controllers: Vec<(&str, &str)> = Vec::new();
     let mut failed_nm_conns: Vec<(NmConnection, NmstateError)> = Vec::new();
     for nm_conn in nm_conns.iter().filter(|c| {
         c.iface_type().map(|t| NM_SETTING_CONTROLLERS.contains(&t))
@@ -205,7 +206,10 @@ fn _activate_nm_profiles(
                     }
                 }
             } else {
-                new_controllers.push(uuid);
+                new_controllers.push((
+                    nm_conn.iface_name().unwrap_or(""),
+                    nm_conn.iface_type().unwrap_or(""),
+                ));
                 if let Err(e) = nm_api
                     .connection_activate(uuid)
                     .map_err(nm_error_to_nmstate)
@@ -239,11 +243,13 @@ fn _activate_nm_profiles(
                     }
                 }
             } else {
-                if let Some(ctrller) = nm_conn.controller() {
+                if let (Some(ctrller), Some(ctrller_type)) =
+                    (nm_conn.controller(), nm_conn.controller_type())
+                {
                     if nm_conn.iface_type() != Some("ovs-interface") {
                         // OVS port does not do auto port activation.
-                        if new_controllers.contains(&ctrller)
-                            && nm_conn.controller_type() != Some("ovs-port")
+                        if new_controllers.contains(&(ctrller, ctrller_type))
+                            && ctrller_type != "ovs-port"
                         {
                             log::info!(
                                 "Skip connection activation as its \
@@ -377,4 +383,8 @@ fn reapply_or_activate(
         }
     }
     Ok(())
+}
+
+pub(crate) fn is_uuid(value: &str) -> bool {
+    uuid::Uuid::parse_str(value).is_ok()
 }
