@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
 use crate::NetworkState;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The IEEE 802.1X authentication configuration. The example yaml output of
@@ -49,5 +51,21 @@ impl Ieee8021XConfig {
             self.private_key_password =
                 Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
         }
+    }
+}
+
+impl std::fmt::Debug for Ieee8021XConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Ieee8021XConfig")
+            .field("identity", &self.identity)
+            .field("eap", &self.eap)
+            .field("private_key", &self.private_key)
+            .field("client_cert", &self.client_cert)
+            .field("ca_cert", &self.ca_cert)
+            .field(
+                "private_key_password",
+                &Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string()),
+            )
+            .finish()
     }
 }

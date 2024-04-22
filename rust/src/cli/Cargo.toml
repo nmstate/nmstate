@@ -1,6 +1,6 @@
 [package]
 name = "nmstatectl"
-version = "2.2.28"
+version = "2.2.29"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Command line tool for networking management in a declarative manner"
 license = "Apache-2.0"
@@ -17,18 +17,18 @@ name = "nmstatectl"
 path = "ncl.rs"
 
 [dependencies]
-nmstate = {path = "../lib", version = "2.2", default-features = false}
-serde_yaml = "0.9"
-clap = { version = "3.1", features = ["cargo"] }
-serde = { version = "1.0", features = ["derive"] }
-env_logger = "0.10.0"
-log = "0.4.14"
-serde_json = "1.0.75"
-ctrlc = { version = "3.2.1", optional = true }
-uuid = { version = "1.1", features = ["v4"] }
-chrono = "0.4"
-nispor = { version = "1.2", optional = true }
-toml = "0.8.10"
+nmstate = { workspace = true }
+serde_yaml = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
+ctrlc = { workspace = true, optional = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+nispor = { workspace = true, optional = true }
+toml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]

@@ -39,6 +39,7 @@ SYSTEMD_UNIT_MANPAGE=doc/nmstate.service.8
 ETC_README=doc/nmstate.service.README
 SPEC_FILE=packaging/nmstate.spec
 RPM_DATA=$(shell date +"%a %b %d %Y")
+RUST_SOURCES := $(shell find rust/ -name "*.rs" -print)
 
 #outdir is used by COPR as well: https://docs.pagure.org/copr.copr/user_documentation.html
 outdir ?= $(ROOT_DIR)
@@ -68,7 +69,7 @@ RELEASE ?=0
 PYTHON3_SITE_DIR ?=$(shell \
 	python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")
 
-$(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE):
+$(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE): $(RUST_SOURCES)
 	cd rust; cargo build --all --release
 
 $(CLIB_SO_DEV_DEBUG):

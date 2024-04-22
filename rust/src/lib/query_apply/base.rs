@@ -50,7 +50,13 @@ impl BaseInterface {
         if other.description.is_some() {
             self.description.clone_from(&other.description);
         }
-        if other.iface_type != InterfaceType::Unknown {
+
+        // Do not allow unknown interface type overriding existing
+        // Do not allow ethernet interface type overriding veth
+        if other.iface_type != InterfaceType::Unknown
+            && !(other.iface_type == InterfaceType::Ethernet
+                && self.iface_type == InterfaceType::Veth)
+        {
             self.iface_type = other.iface_type.clone();
         }
         if other.state != InterfaceState::Unknown {
