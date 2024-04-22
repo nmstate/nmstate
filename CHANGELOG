@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.28] - 2024-04-22
+### Breaking changes
+ - N/A
+
+### New features
+ - New nmstatectl alias for show and apply, "s" and "a". (7c6d155)
+
+### Bug fixes
+ - Hide secrets in Debug trait of NetworkState. (649d443)
+ - Always show vet interface with veth type. (115bcc5)
+ - Normalize route table of current route when determining route removed. (96a5c77)
+
 ## [2.2.27] - 2024-03-20
 ### Breaking changes
  - N/A
