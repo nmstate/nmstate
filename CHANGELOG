@@ -1,4 +1,14 @@
 # Changelog
+## [2.2.29] - 2024-04-24
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - Fix compilation on Rust 1.66. (f47eb86)
+
 ## [2.2.28] - 2024-04-22
 ### Breaking changes
  - N/A
