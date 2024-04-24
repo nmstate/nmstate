@@ -23,7 +23,8 @@ env_logger = "0.10.0"
 clap = { version = "3.1", features = ["cargo"] }
 chrono = "0.4"
 toml = "0.8.10"
-ctrlc = "3.2.1"
+# For the seek of compiling on Rust 1.66
+ctrlc = "<=3.4.2"
 
 [workspace.metadata.vendor-filter]
 # For now we only care about tier 1+2 Linux
