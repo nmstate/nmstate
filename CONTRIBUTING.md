@@ -97,7 +97,7 @@ Here are a few rules to keep in mind while writing a commit message
 
    1. Separate subject from body with a blank line
    2. Limit the subject line to 50 characters
-   3. Capitalize the subject line
+   3. Make a brief description as the subject line
    4. Do not end the subject line with a period
    5. Use the imperative mood in the subject line
    6. Wrap the body at 72 characters
