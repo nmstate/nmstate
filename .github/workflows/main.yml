@@ -71,6 +71,8 @@ jobs:
 
     - name: Install tools for tests
       run: |
+        # Workaround for https://github.com/actions/runner-images/issues/9733
+        sudo rm /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt-get update;
         sudo apt-get -y install valgrind
 
@@ -144,6 +146,8 @@ jobs:
 
       - name: Install extra kernel modules(e.g. vrf)
         run: |
+          # Workaround for https://github.com/actions/runner-images/issues/9733
+          sudo rm /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update;
           sudo apt-get -y install "linux-modules-extra-$(uname -r)"
 
@@ -182,6 +186,17 @@ jobs:
           name: nmstate-test-artifact-${{ matrix.job_type }}
           path: test_artifacts/
           retention-days: 5
+
+  build_on_rust_1_66:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust 1.66
+      run: rustup install 1.66
+
+    - name: Build on rust 1.66
+      run: cd rust && cargo +1.66 build --ignore-rust-version
 
   macos_gen_conf_build:
     strategy:
