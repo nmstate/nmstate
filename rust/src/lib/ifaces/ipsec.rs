@@ -90,6 +90,8 @@ pub struct LibreswanConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rightrsasigkey: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub rightcert: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub left: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub leftid: Option<String>,
@@ -157,6 +159,7 @@ impl std::fmt::Debug for LibreswanConfig {
             .field("right", &self.right)
             .field("rightid", &self.rightid)
             .field("rightrsasigkey", &self.rightrsasigkey)
+            .field("rightcert", &self.rightcert)
             .field("left", &self.left)
             .field("leftid", &self.leftid)
             .field("leftrsasigkey", &self.leftrsasigkey)

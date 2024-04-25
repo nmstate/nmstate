@@ -18,6 +18,9 @@ pub(crate) fn gen_nm_ipsec_vpn_setting(
         if let Some(v) = conf.rightrsasigkey.as_deref() {
             vpn_data.insert("rightrsasigkey".into(), v.to_string());
         }
+        if let Some(v) = conf.rightcert.as_deref() {
+            vpn_data.insert("rightcert".into(), v.to_string());
+        }
         if let Some(v) = conf.left.as_deref() {
             vpn_data.insert("left".into(), v.to_string());
         }
