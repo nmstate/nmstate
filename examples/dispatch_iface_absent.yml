@@ -1,0 +1,9 @@
+---
+dispatch:
+    interfaces:
+        - type: vxcan
+          state: absent
+interfaces:
+    - name: vxcan1
+      type: dispatch
+      state: absent

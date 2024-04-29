@@ -250,7 +250,7 @@ impl Interface {
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 18] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 19] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -269,5 +269,10 @@ impl InterfaceType {
         InterfaceType::Hsr,
         InterfaceType::Ipsec,
         InterfaceType::Xfrm,
+        InterfaceType::Dispatch,
     ];
+
+    pub(crate) fn is_supported(&self) -> bool {
+        Self::SUPPORTED_LIST.contains(self)
+    }
 }

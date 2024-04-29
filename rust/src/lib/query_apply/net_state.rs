@@ -299,6 +299,7 @@ impl NetworkState {
         if !other.ovn.is_none() {
             self.ovn = other.ovn.clone();
         }
+        self.dispatch = other.dispatch.clone();
     }
 
     /// Generate new NetworkState contains only changed properties
@@ -330,6 +331,9 @@ impl NetworkState {
         if merged_state.ovn.is_changed() {
             ret.ovn = self.ovn.clone();
         }
+
+        ret.dispatch = merged_state.dispatch.gen_diff();
+
         Ok(ret)
     }
 }
@@ -418,6 +422,7 @@ impl MergedNetworkState {
         self.ovsdb
             .verify(current.ovsdb.clone().unwrap_or_default())?;
         self.ovn.verify(&current.ovn)?;
+        self.dispatch.verify(&current.dispatch)?;
         Ok(())
     }
 }

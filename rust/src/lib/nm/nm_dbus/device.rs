@@ -330,7 +330,7 @@ impl From<u32> for NmDeviceStateReason {
             }
             NM_DEVICE_STATE_REASON_PEER_NOT_FOUND => Self::PeerNotFound,
             _ => {
-                log::warn!("Unknown Device state reason {}", i);
+                log::debug!("Unknown Device state reason {}", i);
                 Self::Unknown
             }
         }

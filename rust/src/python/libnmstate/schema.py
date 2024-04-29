@@ -25,6 +25,7 @@ class Interface:
     IDENTIFIER = "identifier"
     IDENTIFIER_NAME = "name"
     IDENTIFIER_MAC = "mac-address"
+    DISPATH = "dispatch"
 
 
 class Route:
@@ -552,3 +553,23 @@ class Mptcp:
     FLAG_SUBFLOW = "subflow"
     FLAG_BACKUP = "backup"
     FLAG_FULLMESH = "fullmesh"
+
+
+class Dispatch:
+    KEY = "dispatch"
+
+
+class DispatchInterface:
+    VARIABLES = "variables"
+    POST_ACTIVATION = "post-activation"
+    POST_DEACTIVATION = "post-deactivation"
+
+
+class DispatchInterfaceType:
+    KEY = "interfaces"
+    STATE = "state"
+    TYPE = "type"
+    STATE_ABSENT = "absent"
+    ACTIVATION = "activation"
+    DEACTIVATION = "deactivation"
+    ALLOWED_VARIABLE_NAMES = "allowed-variable-names"

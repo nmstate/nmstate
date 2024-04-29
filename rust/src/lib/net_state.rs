@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DnsState, ErrorKind, HostNameState, Interface, Interfaces, MergedDnsState,
+    DispatchGlobalConfig, DnsState, ErrorKind, HostNameState, Interface,
+    Interfaces, MergedDispatchGlobalConfig, MergedDnsState,
     MergedHostNameState, MergedInterfaces, MergedOvnConfiguration,
     MergedOvsDbGlobalConfig, MergedRouteRules, MergedRoutes, NmstateError,
     OvnConfiguration, OvsDbGlobalConfig, RouteRules, Routes,
@@ -103,7 +104,15 @@ pub struct NetworkState {
     #[serde(default, skip_serializing_if = "OvnConfiguration::is_none")]
     /// The OVN configuration in the system
     pub ovn: OvnConfiguration,
+    /// User defined interface types
+    #[serde(
+        default,
+        rename = "dispatch",
+        skip_serializing_if = "DispatchGlobalConfig::is_none"
+    )]
+    pub dispatch: DispatchGlobalConfig,
     #[serde(skip)]
+    // TODO: Hide user space only info when serialize
     pub(crate) kernel_only: bool,
     #[serde(skip)]
     pub(crate) no_verify: bool,
@@ -299,6 +308,7 @@ pub(crate) struct MergedNetworkState {
     pub(crate) ovsdb: MergedOvsDbGlobalConfig,
     pub(crate) routes: MergedRoutes,
     pub(crate) rules: MergedRouteRules,
+    pub(crate) dispatch: MergedDispatchGlobalConfig,
     pub(crate) memory_only: bool,
 }
 
@@ -309,12 +319,19 @@ impl MergedNetworkState {
         gen_conf_mode: bool,
         memory_only: bool,
     ) -> Result<Self, NmstateError> {
-        let interfaces = MergedInterfaces::new(
+        let mut interfaces = MergedInterfaces::new(
             desired.interfaces,
             current.interfaces,
             gen_conf_mode,
             memory_only,
         )?;
+
+        let dispatch = MergedDispatchGlobalConfig::new(
+            &desired.dispatch,
+            &current.dispatch,
+            &mut interfaces,
+        )?;
+
         let ignored_ifaces = interfaces.ignored_ifaces.as_slice();
 
         let mut routes =
@@ -347,6 +364,7 @@ impl MergedNetworkState {
             ovsdb,
             hostname,
             memory_only,
+            dispatch,
         };
         ret.validate_ipv6_link_local_address_dns_srv()?;
 

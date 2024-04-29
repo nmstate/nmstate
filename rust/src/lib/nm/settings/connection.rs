@@ -8,6 +8,7 @@ use super::{
     bond::{gen_nm_bond_port_setting, gen_nm_bond_setting},
     bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     ethtool::gen_ethtool_setting,
+    generic::gen_generic_setting,
     hsr::gen_nm_hsr_setting,
     ieee8021x::gen_nm_802_1x_setting,
     infiniband::gen_nm_ib_setting,
@@ -21,7 +22,7 @@ use super::{
         gen_nm_ovs_iface_setting, get_ovs_port_name,
     },
     sriov::gen_nm_sriov_setting,
-    user::gen_nm_user_setting,
+    user::{gen_dispatch_iface_setting, gen_nm_user_setting},
     veth::create_veth_peer_profile_if_not_found,
     vlan::gen_nm_vlan_setting,
     vpn::gen_nm_ipsec_vpn_setting,
@@ -50,6 +51,7 @@ pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
 pub(crate) const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
 pub(crate) const NM_SETTING_HSR_SETTING_NAME: &str = "hsr";
 pub(crate) const NM_SETTING_VPN_SETTING_NAME: &str = "vpn";
+pub(crate) const NM_SETTING_GENERIC_SETTING_NAME: &str = "generic";
 
 pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 14] = [
     NM_SETTING_WIRED_SETTING_NAME,
@@ -258,6 +260,10 @@ pub(crate) fn iface_to_nm_connections(
         Interface::Ipsec(iface) => {
             gen_nm_ipsec_vpn_setting(iface, &mut nm_conn);
         }
+        Interface::Dispatch(iface) => {
+            gen_generic_setting(iface, &mut nm_conn);
+            gen_dispatch_iface_setting(iface, &mut nm_conn);
+        }
         _ => (),
     };
 
@@ -381,6 +387,9 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Hsr => Ok(NM_SETTING_HSR_SETTING_NAME.to_string()),
         InterfaceType::Ipsec => Ok(NM_SETTING_VPN_SETTING_NAME.to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
+        InterfaceType::Dispatch => {
+            Ok(NM_SETTING_GENERIC_SETTING_NAME.to_string())
+        }
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,
             format!("Does not support iface type: {iface_type:?} yet"),

@@ -762,14 +762,13 @@ impl MergedInterfaces {
         self.check_infiniband_as_ports()?;
         self.mark_orphan_interface_as_absent()?;
         self.process_veth_peer_changes()?;
-        self.validate_dispatch_script_has_no_checkpoint()?;
         for iface in self
             .kernel_ifaces
             .values_mut()
             .chain(self.user_ifaces.values_mut())
             .filter(|i| i.is_changed())
         {
-            iface.post_inter_ifaces_process()?;
+            iface.post_inter_ifaces_process(self.gen_conf_mode)?;
         }
         Ok(())
     }

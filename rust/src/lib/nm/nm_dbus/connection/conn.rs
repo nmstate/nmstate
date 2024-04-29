@@ -33,7 +33,7 @@ use super::super::{
     connection::vxlan::NmSettingVxlan,
     connection::wired::NmSettingWired,
     convert::ToDbusValue,
-    NmError,
+    NmError, NmSettingGeneric,
 };
 
 const NM_AUTOCONENCT_PORT_DEFAULT: i32 = -1;
@@ -109,6 +109,7 @@ pub struct NmConnection {
     pub macsec: Option<NmSettingMacSec>,
     pub hsr: Option<NmSettingHsr>,
     pub vpn: Option<NmSettingVpn>,
+    pub generic: Option<NmSettingGeneric>,
     #[serde(skip)]
     pub obj_path: String,
     #[serde(skip)]
@@ -187,6 +188,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             loopback: _from_map!(v, "loopback", NmSettingLoopback::try_from)?,
             hsr: _from_map!(v, "hsr", NmSettingHsr::try_from)?,
             vpn: _from_map!(v, "vpn", NmSettingVpn::try_from)?,
+            generic: _from_map!(v, "generic", NmSettingGeneric::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -304,6 +306,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.vpn {
             ret.insert("vpn", v.to_value()?);
+        }
+        if let Some(v) = &self.generic {
+            ret.insert("generic", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =

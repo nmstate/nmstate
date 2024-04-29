@@ -11,7 +11,7 @@ mod mptcp;
 pub(crate) mod ovs;
 mod profile;
 mod route;
-mod user;
+pub(crate) mod user;
 mod veth;
 mod vlan;
 pub(crate) mod vpn;
