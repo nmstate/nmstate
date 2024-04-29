@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BondConfig, BondInterface, BondOptions};
+use std::collections::HashMap;
+
+use crate::{
+    BondConfig, BondInterface, BondOptions, Interface, MergedInterface,
+};
 
 impl BondInterface {
     pub(crate) fn update_bond(&mut self, other: &BondInterface) {
@@ -39,5 +43,65 @@ impl BondOptions {
                 self.balance_slb = Some(value);
             }
         }
+    }
+}
+
+impl MergedInterface {
+    pub(crate) fn get_bond_ports_with_queue_id_changed(&self) -> Vec<&str> {
+        let mut ret: Vec<&str> = Vec::new();
+        let mut des_queue_ids: HashMap<&str, u16> = HashMap::new();
+        let mut cur_queue_ids: HashMap<&str, u16> = HashMap::new();
+
+        if let Some(Interface::Bond(des_iface)) = self.desired.as_ref() {
+            if let Some(port_confs) = des_iface
+                .bond
+                .as_ref()
+                .and_then(|b| b.ports_config.as_ref())
+            {
+                for port_conf in port_confs
+                    .iter()
+                    .filter(|p| p.queue_id.is_some() && p.queue_id != Some(0))
+                {
+                    des_queue_ids.insert(
+                        port_conf.name.as_str(),
+                        port_conf.queue_id.unwrap_or_default(),
+                    );
+                }
+            }
+        }
+
+        if let Some(Interface::Bond(cur_iface)) = self.current.as_ref() {
+            if let Some(port_confs) = cur_iface
+                .bond
+                .as_ref()
+                .and_then(|b| b.ports_config.as_ref())
+            {
+                for port_conf in port_confs
+                    .iter()
+                    .filter(|p| p.queue_id.is_some() && p.queue_id != Some(0))
+                {
+                    cur_queue_ids.insert(
+                        port_conf.name.as_str(),
+                        port_conf.queue_id.unwrap_or_default(),
+                    );
+                }
+            }
+        }
+
+        // Find desired bond port with changed queue id
+        for (des_iface_name, des_queue_id) in des_queue_ids.iter() {
+            if cur_queue_ids.get(des_iface_name) != Some(des_queue_id) {
+                ret.push(des_iface_name);
+            }
+        }
+
+        // Find current port holds queue_id but desired bond port removed or
+        // unset queue_id
+        for (cur_iface_name, cur_queue_id) in cur_queue_ids.iter() {
+            if des_queue_ids.get(cur_iface_name) != Some(cur_queue_id) {
+                ret.push(cur_iface_name);
+            }
+        }
+        ret
     }
 }
