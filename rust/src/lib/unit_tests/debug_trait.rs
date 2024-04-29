@@ -30,7 +30,8 @@ fn test_debug_trait() {
     let debug_tr_net_state = format!("{:?}", &net_state);
 
     let password_hid_by_nmstate =
-        format!("private_key_password: Some(\"<_password_hid_by_nmstate>\")");
+        "private_key_password: Some(\"<_password_hid_by_nmstate>\")"
+            .to_string();
 
     assert_ne!(
         des_eth.ieee8021x.as_ref().unwrap().private_key_password,
