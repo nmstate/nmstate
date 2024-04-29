@@ -6,6 +6,8 @@ mod bond;
 #[cfg(test)]
 mod bridge;
 #[cfg(test)]
+mod debug_trait;
+#[cfg(test)]
 mod dns;
 #[cfg(test)]
 mod ethernet;

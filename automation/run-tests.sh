@@ -101,6 +101,7 @@ function run_tests {
             pytest \
             $PYTEST_OPTIONS \
             --junitxml=junit.integ.xml \
+            --dump-states \
             tests/integration \
             ${nmstate_pytest_extra_args}"
     fi
@@ -111,6 +112,7 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             --junitxml=junit.integ_tier1.xml \
+            --dump-states \
             -m tier1 \
             tests/integration \
             ${nmstate_pytest_extra_args}"
@@ -122,6 +124,7 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             --junitxml=junit.integ_tier2.xml \
+            --dump-states \
             -m tier2 \
             tests/integration \
             ${nmstate_pytest_extra_args}"
@@ -134,6 +137,7 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             --junitxml=junit.integ_slow.xml \
+            --dump-states \
             -m slow --runslow \
             tests/integration \
             ${nmstate_pytest_extra_args}"

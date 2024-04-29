@@ -1,6 +1,6 @@
 [package]
 name = "nmstate"
-version = "2.2.28"
+version = "2.2.30"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Library for networking management in a declarative manner"
 license = "Apache-2.0"
@@ -9,55 +9,46 @@ documentation = "https://nmstate.io"
 repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
 categories = ["network-programming", "os::linux-apis"]
-rust-version = "1.60"
+rust-version = "1.66"
 edition = "2021"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
-serde_yaml = "0.9"
+serde_yaml = { workspace = true }
 
 [dependencies.nispor]
-version = "1.2.18"
+workspace = true 
 optional = true
 
 [dependencies.zvariant]
-version = "2.10.0"
-default-features = false
+workspace = true
 
 [dependencies.uuid]
-version = "1.1"
-default-features = false
-features = ["v4", "v5"]
+workspace = true 
+features = ["v5"]
 
 [dependencies.log]
-version = "0.4.14"
-default-features = false
+workspace = true 
 
 [dependencies.zbus]
-version = "1.9.2"
-default-features = false
+workspace = true
 optional = true
 
 [dependencies.serde_json]
-version = "1.0.68"
-default-features = false
+workspace = true 
 features = [ "preserve_order" ]
 
 [dependencies.serde]
-version = "1.0.132"
-default-features = false
-features = ["derive"]
+workspace = true 
 
 [dependencies.nix]
-version = "0.26.2"
+workspace = true
 optional = true
-default-features = false
-features = ["feature", "hostname"]
 
 [dev-dependencies]
-serde_yaml = "0.9"
+serde_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]

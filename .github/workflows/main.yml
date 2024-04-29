@@ -71,6 +71,8 @@ jobs:
 
     - name: Install tools for tests
       run: |
+        # Workaround for https://github.com/actions/runner-images/issues/9733
+        sudo rm /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt-get update;
         sudo apt-get -y install valgrind
 
@@ -144,6 +146,8 @@ jobs:
 
       - name: Install extra kernel modules(e.g. vrf)
         run: |
+          # Workaround for https://github.com/actions/runner-images/issues/9733
+          sudo rm /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update;
           sudo apt-get -y install "linux-modules-extra-$(uname -r)"
 
@@ -158,6 +162,20 @@ jobs:
           path: junit.*xml
           retention-days: 5
 
+      - name: Remove duplicated test state dumps
+        run: |
+          if [ -d tests/integration/.states/ ]; then
+            sudo chmod 777 -R tests/integration/.states/
+            sudo apt-get install -y fdupes
+            fdupes -d -N tests/integration/.states/
+          fi
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: nmstate-test-apply-show-dump-artifact-${{ matrix.job_type }}
+          path: tests/integration/.states/*
+          retention-days: 5
+
       - name: Set artifacts permissions
         if: ${{ failure() }}
         run: sudo chmod 777 test_artifacts/*
@@ -168,6 +186,17 @@ jobs:
           name: nmstate-test-artifact-${{ matrix.job_type }}
           path: test_artifacts/
           retention-days: 5
+
+  build_on_rust_1_66:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust 1.66
+      run: rustup install 1.66
+
+    - name: Build on rust 1.66
+      run: cd rust && cargo +1.66 build --ignore-rust-version
 
   macos_gen_conf_build:
     strategy:

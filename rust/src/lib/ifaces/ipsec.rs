@@ -70,7 +70,7 @@ impl IpsecInterface {
                     log::info!(
                         "Treating IPv4 `dhcp: false` for IPSec interface {} \
                         as IPv4 disabled",
-                        self.base.name.as_str(),
+                        self.base.name.as_str()
                     );
                 }
                 ipv4_conf.enabled = false;
@@ -80,7 +80,7 @@ impl IpsecInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LibreswanConfig {
@@ -89,6 +89,8 @@ pub struct LibreswanConfig {
     pub rightid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rightrsasigkey: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rightcert: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub left: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -148,6 +150,40 @@ pub struct LibreswanConfig {
 impl LibreswanConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+impl std::fmt::Debug for LibreswanConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LibreswanConfig")
+            .field("right", &self.right)
+            .field("rightid", &self.rightid)
+            .field("rightrsasigkey", &self.rightrsasigkey)
+            .field("rightcert", &self.rightcert)
+            .field("left", &self.left)
+            .field("leftid", &self.leftid)
+            .field("leftrsasigkey", &self.leftrsasigkey)
+            .field("leftcert", &self.leftcert)
+            .field("ikev2", &self.ikev2)
+            .field(
+                "psk",
+                &Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string()),
+            )
+            .field("ikelifetime", &self.ikelifetime)
+            .field("salifetime", &self.salifetime)
+            .field("ike", &self.ike)
+            .field("esp", &self.esp)
+            .field("dpddelay", &self.dpddelay)
+            .field("dpdtimeout", &self.dpdtimeout)
+            .field("dpdaction", &self.dpdaction)
+            .field("ipsec_interface", &self.ipsec_interface)
+            .field("authby", &self.authby)
+            .field("rightsubnet", &self.rightsubnet)
+            .field("leftmodecfgclient", &self.leftmodecfgclient)
+            .field("kind", &self.kind)
+            .field("hostaddrfamily", &self.hostaddrfamily)
+            .field("clientaddrfamily", &self.clientaddrfamily)
+            .finish()
     }
 }
 

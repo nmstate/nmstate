@@ -36,6 +36,7 @@ Query the current network state. \fIYAML\fR is the default output format. Use
 the \fB--json\fR argument to change the output format to \fIJSON\fR. To limit
 the output state to include certain interfaces only, please specify the
 interface name. Please be advised, global config like DNS will be included.
+\fBnmstatectl s\fR is an aliased command for \fBnmstatectl show\fR.
 .PP
 For multiple interface names, use comma to separate them. You can also use
 patterns for interface names:
@@ -73,6 +74,7 @@ Apply the network state from specified file in \fIYAML\fR or \fIJSON\fR format.
 By default, if the network state after state applied is not identical to the
 desired state, \fBnmstatectl\fR rollbacks to the state before \fBset\fR
 command. Use the \fB--no-verify\fR argument to skip the verification.
+\fBnmstatectl a\fR is an aliased command for \fBnmstatectl apply\fR.
 .RE
 .PP
 .B edit

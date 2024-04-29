@@ -590,6 +590,45 @@ def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(
     )
 
 
+@pytest.mark.xfail(
+    reason="NetworkManager-libreswan might be too old",
+)
+def test_ipsec_ipv4_libreswan_rightcert(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            left: {HOSTA_IPV4_CRT}
+            leftid: '%fromcert'
+            leftcert: hosta.example.org
+            right: {HOSTB_IPV4_CRT}
+            rightid: '%fromcert'
+            rightcert: hostb.example.org
+            ikev2: insist
+            ikelifetime: 24h
+            salifetime: 24h""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_CRT, HOSTB_IPV4_CRT
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec_ip, HOSTB_VPN_SUBNET_PREFIX, HOSTA_NIC
+    )
+    vpn_data = cmdlib.exec_cmd(
+        f"nmcli -g vpn.data con show {HOSTA_IPSEC_CONN_NAME}".split()
+    )[1]
+    assert "rightcert =" in vpn_data
+
+
 def test_ipsec_ipv4_libreswan_psk_auth_add_and_remove(
     ipsec_hosta_conn_cleanup,
 ):
