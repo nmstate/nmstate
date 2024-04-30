@@ -138,6 +138,8 @@ pub struct LibreswanConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rightsubnet: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub leftsubnet: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub leftmodecfgclient: Option<bool>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub kind: Option<LibreswanConnectionType>,
@@ -179,6 +181,7 @@ impl std::fmt::Debug for LibreswanConfig {
             .field("ipsec_interface", &self.ipsec_interface)
             .field("authby", &self.authby)
             .field("rightsubnet", &self.rightsubnet)
+            .field("leftsubnet", &self.leftsubnet)
             .field("leftmodecfgclient", &self.leftmodecfgclient)
             .field("kind", &self.kind)
             .field("hostaddrfamily", &self.hostaddrfamily)

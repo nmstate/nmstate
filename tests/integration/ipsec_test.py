@@ -32,6 +32,7 @@ HOSTA_IPV4_CRT = "192.0.2.251"
 HOSTA_IPV4_PSK = "192.0.2.250"
 HOSTA_IPV4_RSA = "192.0.2.249"
 HOSTA_IPV4_CRT_P2P = "192.0.2.248"
+HOSTA_IPV4_CRT_SUBNET = "192.0.4.0/24"
 HOSTA_IPV4_TRANSPORT = "192.0.2.247"
 HOSTA_IPSEC_CONN_NAME = "hosta_conn"
 HOSTA_IPV6_P2P = "2001:db8:f::a"
@@ -44,6 +45,7 @@ HOSTB_IPV4_CRT = "192.0.2.152"
 HOSTB_IPV4_PSK = "192.0.2.153"
 HOSTB_IPV4_RSA = "192.0.2.154"
 HOSTB_IPV4_CRT_P2P = "192.0.2.155"
+HOSTB_IPV4_CRT_SUBNET = "192.0.3.0/24"
 HOSTB_IPV4_TRANSPORT = "192.0.2.156"
 HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
 HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
@@ -890,6 +892,41 @@ def test_ipsec_ipv4_libreswan_p2p_cert_auth_add_and_remove(
         _check_ipsec_policy,
         f"{HOSTA_IPV4_CRT_P2P}/32",
         f"{HOSTB_IPV4_CRT_P2P}/32",
+    )
+
+
+@pytest.mark.xfail(
+    reason="NetworkManager-libreswan might be older than 1.2.20",
+)
+def test_ipsec_ipv4_libreswan_leftsubnet(
+    ipsec_hosta_conn_cleanup,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          libreswan:
+            left: {HOSTA_IPV4_CRT_P2P}
+            leftid: 'hosta.example.org'
+            leftcert: hosta.example.org
+            leftsubnet: {HOSTA_IPV4_CRT_SUBNET}
+            leftmodecfgclient: no
+            right: {HOSTB_IPV4_CRT_P2P}
+            rightid: 'hostb.example.org'
+            rightsubnet: {HOSTB_IPV4_CRT_SUBNET}
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_CRT_P2P, HOSTB_IPV4_CRT_P2P
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_policy,
+        f"{HOSTA_IPV4_CRT_SUBNET}",
+        f"{HOSTB_IPV4_CRT_SUBNET}",
     )
 
 

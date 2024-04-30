@@ -71,6 +71,7 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
         ret.leftmodecfgclient =
             data.get("leftmodecfgclient").map(|s| s == "yes");
         ret.rightsubnet = data.get("rightsubnet").cloned();
+        ret.leftsubnet = data.get("leftsubnet").cloned();
         ret.kind = data.get("type").and_then(|s| match s.as_str() {
             "tunnel" => Some(LibreswanConnectionType::Tunnel),
             "transport" => Some(LibreswanConnectionType::Transport),
