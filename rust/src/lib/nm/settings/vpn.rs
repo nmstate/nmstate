@@ -76,6 +76,9 @@ pub(crate) fn gen_nm_ipsec_vpn_setting(
         if let Some(v) = conf.rightsubnet.as_deref() {
             vpn_data.insert("rightsubnet".into(), v.to_string());
         }
+        if let Some(v) = conf.leftsubnet.as_deref() {
+            vpn_data.insert("leftsubnet".into(), v.to_string());
+        }
         if let Some(v) = conf.kind {
             vpn_data.insert("type".into(), v.to_string());
         }
