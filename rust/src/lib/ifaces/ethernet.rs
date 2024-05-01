@@ -7,6 +7,8 @@ use crate::{
     MergedInterfaces, NmstateError, SrIovConfig,
 };
 
+use std::fmt::Write;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 /// Ethernet(IEEE 802.3) interface.
@@ -70,8 +72,51 @@ pub struct EthernetInterface {
     /// When applying, the [VethConfig] is only valid when
     /// [BaseInterface.iface_type] is set to [InterfaceType::Veth] explicitly.
     pub veth: Option<VethConfig>,
+    pub setting_description: Option<String>,
+}
+impl EthernetConfig {
+    pub fn to_description(&self) -> String {
+        let mut description = String::new();
+
+        if let Some(ref speed) = self.speed {
+            write!(
+                description,
+                "Configure ethernet config, set speed to {}",
+                speed
+            )
+            .unwrap();
+        }
+
+        if let Some(ref auto_neg) = self.auto_neg {
+            write!(description, ", set auto-negotiation to {}", auto_neg)
+                .unwrap();
+        }
+
+        if let Some(ref auto_neg) = self.duplex {
+            write!(description, ", set ethernet duplex to {:?}", auto_neg)
+                .unwrap();
+        }
+
+        if let Some(ref sr_iov) = self.sr_iov {
+            description.push_str(&sr_iov.to_description());
+        }
+        description
+    }
 }
 
+impl EthernetInterface {
+    pub fn to_description(&self) -> String {
+        let mut setting_description = String::new();
+
+        setting_description.push_str(&self.base.to_description());
+
+        if let Some(ref ethernet) = self.ethernet {
+            setting_description.push_str(&ethernet.to_description());
+        }
+
+        setting_description
+    }
+}
 impl Default for EthernetInterface {
     fn default() -> Self {
         let mut base = BaseInterface::new();
@@ -80,6 +125,7 @@ impl Default for EthernetInterface {
             base,
             ethernet: None,
             veth: None,
+            setting_description: None,
         }
     }
 }

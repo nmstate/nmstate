@@ -7,6 +7,8 @@ use crate::{
     NmstateError, VlanProtocol,
 };
 
+use std::fmt::Write;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
@@ -57,6 +59,100 @@ pub struct SrIovConfig {
     ///   to defaults.
     /// * If not empty, missing [SrIovVfConfig] will use current configuration.
     pub vfs: Option<Vec<SrIovVfConfig>>,
+}
+
+impl SrIovVfConfig {
+    pub fn to_description(&self) -> String {
+        let mut description = String::new();
+
+        write!(
+            description,
+            "Configure SRIOV VF config, set id to {}",
+            self.id
+        )
+        .unwrap();
+        if !self.iface_name.is_empty() {
+            write!(
+                description,
+                ", set the interface name of vf to {}",
+                self.iface_name
+            )
+            .unwrap();
+        }
+        if let Some(ref mac_address) = self.mac_address {
+            write!(
+                description,
+                ", set the mac address of vf to {}",
+                mac_address
+            )
+            .unwrap();
+        }
+        if let Some(ref spoof_check) = self.spoof_check {
+            write!(
+                description,
+                ", set the spoof check of vf to {}",
+                spoof_check
+            )
+            .unwrap();
+        }
+        if let Some(ref trust) = self.trust {
+            write!(description, ", set the trust of vf to {}", trust).unwrap();
+        }
+        if let Some(ref min_tx_rate) = self.min_tx_rate {
+            write!(
+                description,
+                ", set the min tx rate of vf to {}",
+                min_tx_rate
+            )
+            .unwrap();
+        }
+        if let Some(ref max_tx_rate) = self.max_tx_rate {
+            write!(
+                description,
+                ", set the max tx rate of vf to {}",
+                max_tx_rate
+            )
+            .unwrap();
+        }
+        if let Some(ref vlan_id) = self.vlan_id {
+            write!(description, ", set the vlan id of vf to {}", vlan_id)
+                .unwrap();
+        }
+        if let Some(ref qos) = self.qos {
+            write!(description, ", set the qos of vf to {}", qos).unwrap();
+        }
+        if let Some(ref vlan_proto) = self.vlan_proto {
+            write!(
+                description,
+                ", set the vlan protocol of vf to {:?}",
+                vlan_proto
+            )
+            .unwrap();
+        }
+        description
+    }
+}
+
+impl SrIovConfig {
+    pub fn to_description(&self) -> String {
+        let mut description = String::new();
+
+        if let Some(ref total_vfs) = self.total_vfs {
+            write!(
+                description,
+                "Configure SRIOV config, set the number of enabled VFs to {}",
+                total_vfs
+            )
+            .unwrap();
+        }
+
+        if let Some(ref vfs) = self.vfs {
+            for vf in vfs {
+                description.push_str(&vf.to_description());
+            }
+        }
+        description
+    }
 }
 
 impl SrIovConfig {
