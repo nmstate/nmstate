@@ -195,6 +195,29 @@ pub struct InterfaceIpv4 {
 }
 
 impl InterfaceIpv4 {
+    pub fn to_description(&self) -> String {
+        let mut description = String::new();
+
+        if self.enabled {
+            write!(description, ", enable IPv4").unwrap();
+            if let Some(dhcp) = self.dhcp {
+                write!(description, ", set DHCPv4 {}", dhcp).unwrap();
+            }
+            if let Some(addresses) = &self.addresses {
+                write!(description, ", set IPv4 addresses: {:?}", addresses)
+                    .unwrap(); // Assumes Display is implemented for InterfaceIpAddr
+            }
+            if let Some(auto_dns) = self.auto_dns {
+                write!(description, ", set auto DNS {}", auto_dns).unwrap();
+            }
+        } else {
+            write!(description, ", disable IPv4").unwrap();
+        }
+        description
+    }
+}
+
+impl InterfaceIpv4 {
     /// Create [InterfaceIpv4] with IP disabled.
     pub fn new() -> Self {
         Self::default()

@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::{Deserialize, Serialize};
-
 use crate::{
     DispatchConfig, ErrorKind, EthtoolConfig, Ieee8021XConfig,
     InterfaceIdentifier, InterfaceIpv4, InterfaceIpv6, InterfaceState,
     InterfaceType, LldpConfig, MergedInterface, MptcpConfig, NmstateError,
     OvsDbIfaceConfig, RouteEntry, WaitIp,
 };
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
+
+use std::fmt::Write;
 
 const MINIMUM_IPV6_MTU: u64 = 1280;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 /// Information shared among all interface types
@@ -107,6 +109,7 @@ pub struct BaseInterface {
     /// accept all packages, also known as promiscuous mode.
     /// Serialize and deserialize to/from `accpet-all-mac-addresses`.
     pub accept_all_mac_addresses: Option<bool>,
+    pub setting_description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Copy the MAC address from specified interface.
     /// Ignored during serializing.
@@ -140,6 +143,103 @@ pub struct BaseInterface {
     pub(crate) routes: Option<Vec<RouteEntry>>,
     #[serde(flatten)]
     pub _other: serde_json::Map<String, serde_json::Value>,
+}
+
+impl BaseInterface {
+    pub fn to_description(&self) -> String {
+        let mut setting_description = String::new();
+
+        // Construct the setting description from all relevant fields
+        write!(setting_description, "Configure interface {}", self.name)
+            .unwrap();
+        write!(setting_description, ", set type {:?}", self.iface_type)
+            .unwrap(); // assuming iface_type and state implement Display via Debug
+        write!(setting_description, ", set state to {:?}", self.state).unwrap();
+        if let Some(ref mtu) = self.mtu {
+            write!(setting_description, ", set mtu to {}", mtu).unwrap();
+        }
+        if let Some(ref mac) = self.mac_address {
+            write!(setting_description, ", set MAC address to {}", mac)
+                .unwrap();
+        }
+        if let Some(ref desc) = self.description {
+            write!(setting_description, ", set description to {}", desc)
+                .unwrap();
+        }
+        if let Some(ref profile_name) = self.profile_name {
+            write!(
+                setting_description,
+                ", set profile name to {}",
+                profile_name
+            )
+            .unwrap();
+        }
+
+        // Append IPv4 settings
+        if let Some(ref ipv4) = self.ipv4 {
+            setting_description.push_str(&ipv4.to_description());
+        }
+        setting_description
+    }
+}
+
+impl Serialize for BaseInterface {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut setting_description = String::new();
+
+        // Construct the setting description from all relevant fields
+        write!(setting_description, "Configure interface {}", self.name)
+            .unwrap();
+        write!(setting_description, ", set type {:?}", self.iface_type)
+            .unwrap(); // assuming iface_type and state implement Display via Debug
+        write!(setting_description, ", set state to {:?}", self.state).unwrap();
+        if let Some(ref mtu) = self.mtu {
+            write!(setting_description, ", set mtu to {}", mtu).unwrap();
+        }
+        if let Some(ref mac) = self.mac_address {
+            write!(setting_description, ", set MAC address to {}", mac)
+                .unwrap();
+        }
+        if let Some(ref desc) = self.description {
+            write!(setting_description, ", set description to {}", desc)
+                .unwrap();
+        }
+        if let Some(ref profile_name) = self.profile_name {
+            write!(
+                setting_description,
+                ", set profile name to {}",
+                profile_name
+            )
+            .unwrap();
+        }
+
+        // Append IPv4 settings
+        if let Some(ref ipv4) = self.ipv4 {
+            setting_description.push_str(&ipv4.to_description());
+        }
+
+        // Start serializing struct with all fields
+        let mut state = serializer.serialize_struct("BaseInterface", 10)?; // Adjust the field count accordingly
+
+        // Serialize all fields normally
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("profile_name", &self.profile_name)?;
+        state.serialize_field("description", &self.description)?;
+        state.serialize_field("iface_type", &self.iface_type)?;
+        state.serialize_field("state", &self.state)?;
+        state.serialize_field("identifier", &self.identifier)?;
+        state.serialize_field("mac_address", &self.mac_address)?;
+        state.serialize_field("mtu", &self.mtu)?;
+        state.serialize_field("setting_description", &setting_description)?;
+
+        // Continue with other fields...
+        // Ensure to serialize all other fields as necessary
+
+        state.end()
+    }
 }
 
 impl BaseInterface {
