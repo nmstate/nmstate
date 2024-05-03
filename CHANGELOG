@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.30] - 2024-05-03
+### Breaking changes
+ - N/A
+
+### New features
+ - Add support to IPSec libreswan rightcert property. (19755bc)
+
+### Bug fixes
+ - Fix bridge port vlan refreshing if `vlan-default-pvid` changed. (4cdc816)
+ - Do not allow bond port queue ID to overlap. (286d61c)
+ - Fix referring to controller/parent when it is in-memory. (98f9155)
+
 ## [2.2.29] - 2024-04-24
 ### Breaking changes
  - N/A
