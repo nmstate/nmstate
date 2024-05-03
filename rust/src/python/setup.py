@@ -15,7 +15,7 @@ def requirements():
 
 setuptools.setup(
     name="nmstate",
-    version="2.2.30",
+    version="2.2.31",
     author="Gris Ge",
     author_email="fge@redhat.com",
     description="Python binding of nmstate",

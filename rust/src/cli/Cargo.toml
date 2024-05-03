@@ -1,6 +1,6 @@
 [package]
 name = "nmstatectl"
-version = "2.2.30"
+version = "2.2.31"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Command line tool for networking management in a declarative manner"
 license = "Apache-2.0"
