@@ -428,3 +428,55 @@ def test_configure_vlan_with_mvrp(vlan_on_eth1):
     ] = VLAN.REGISTRATION_PROTOCOL_NONE
     libnmstate.apply(flags_state)
     assertlib.assert_state_match(flags_state)
+
+
+def test_new_vlan_default_to_reorder_headers(eth1_up):
+    with vlan_interface(VLAN_IFNAME, 102, "eth1") as desired_state:
+        desired_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
+            VLAN.REORDER_HEADERS
+        ] = True
+        assertlib.assert_state_match(desired_state)
+    assertlib.assert_absent(VLAN_IFNAME)
+
+
+@pytest.fixture
+def vlan_on_eth1_with_reorder_headers_off(vlan_on_eth1):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.REORDER_HEADERS: False,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    yield
+
+
+def test_vlan_do_not_override_reorder_headers_if_not_mentioned(
+    vlan_on_eth1_with_reorder_headers_off,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    current_state = statelib.show_only((VLAN_IFNAME,))
+    assert not current_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
+        VLAN.REORDER_HEADERS
+    ]
