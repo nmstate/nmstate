@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, InterfaceType};
+use crate::{BaseInterface, Interface, InterfaceType, MergedInterface};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -66,7 +68,7 @@ pub struct VlanConfig {
     /// Could be `gvrp`, `mvrp` or `none`. Default to none if not defined.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_protocol: Option<VlanRegistrationProtocol>,
-    /// reordering of output packet headers
+    /// reordering of output packet headers. Default to True if not defined.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reorder_headers: Option<bool>,
     /// loose binding of the interface to its master device's operating state
@@ -112,4 +114,31 @@ pub enum VlanRegistrationProtocol {
     Mvrp,
     /// No Registration Protocol
     None,
+}
+
+impl MergedInterface {
+    // Default reorder_headers to Some(true) unless current interface
+    // has `reorder_headers` set to `false`
+    pub(crate) fn post_inter_ifaces_process_vlan(&mut self) {
+        if let Some(Interface::Vlan(apply_iface)) = self.for_apply.as_mut() {
+            if let Some(Interface::Vlan(cur_iface)) = self.current.as_ref() {
+                if cur_iface
+                    .vlan
+                    .as_ref()
+                    .and_then(|v| v.reorder_headers.as_ref())
+                    != Some(&false)
+                {
+                    if let Some(vlan_conf) = apply_iface.vlan.as_mut() {
+                        if vlan_conf.reorder_headers.is_none() {
+                            vlan_conf.reorder_headers = Some(true);
+                        }
+                    }
+                }
+            } else if let Some(vlan_conf) = apply_iface.vlan.as_mut() {
+                if vlan_conf.reorder_headers.is_none() {
+                    vlan_conf.reorder_headers = Some(true);
+                }
+            }
+        }
+    }
 }

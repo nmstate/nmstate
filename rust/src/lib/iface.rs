@@ -814,6 +814,7 @@ impl MergedInterface {
         self.post_inter_ifaces_process_sriov()?;
         self.post_inter_ifaces_process_vrf()?;
         self.post_inter_ifaces_process_bond()?;
+        self.post_inter_ifaces_process_vlan();
 
         if let Some(apply_iface) = self.for_apply.as_mut() {
             apply_iface.sanitize(true)?;
