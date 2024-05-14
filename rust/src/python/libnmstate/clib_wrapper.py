@@ -200,6 +200,31 @@ def gen_conf(state):
     # pylint: enable=no-member
 
 
+def gen_diff(new_state, old_state):
+    c_err_msg = c_char_p()
+    c_err_kind = c_char_p()
+    c_new_state = c_char_p(json.dumps(new_state).encode("utf-8"))
+    c_old_state = c_char_p(json.dumps(old_state).encode("utf-8"))
+    c_diff_state = c_char_p()
+    rc = lib.nmstate_generate_differences(
+        c_new_state,
+        c_old_state,
+        byref(c_diff_state),
+        byref(c_err_kind),
+        byref(c_err_msg),
+    )
+    diff_state = c_diff_state.value
+    err_msg = c_err_msg.value
+    err_kind = c_err_kind.value
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
+    if rc != NMSTATE_PASS:
+        raise map_error(err_kind, err_msg)
+    # pylint: disable=no-member
+    return diff_state.decode("utf-8")
+    # pylint: enable=no-member
+
+
 def net_state_from_policy(policy, cur_state):
     c_err_msg = c_char_p()
     c_err_kind = c_char_p()

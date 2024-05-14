@@ -1,67 +1,55 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::ffi::CString;
-use std::time::SystemTime;
 
 use libc::{c_char, c_int};
 
 use crate::{
-    init_logger,
     state::{c_str_to_net_state, is_state_in_json},
     NMSTATE_FAIL, NMSTATE_PASS,
 };
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
-pub extern "C" fn nmstate_generate_configurations(
-    state: *const c_char,
-    configs: *mut *mut c_char,
-    log: *mut *mut c_char,
+pub extern "C" fn nmstate_generate_differences(
+    new_state: *const c_char,
+    old_state: *const c_char,
+    diff_state: *mut *mut c_char,
     err_kind: *mut *mut c_char,
     err_msg: *mut *mut c_char,
 ) -> c_int {
-    assert!(!state.is_null());
-    assert!(!configs.is_null());
-    assert!(!log.is_null());
+    assert!(!new_state.is_null());
+    assert!(!old_state.is_null());
+    assert!(!diff_state.is_null());
     assert!(!err_kind.is_null());
     assert!(!err_msg.is_null());
 
     unsafe {
-        *log = std::ptr::null_mut();
-        *configs = std::ptr::null_mut();
+        *diff_state = std::ptr::null_mut();
         *err_kind = std::ptr::null_mut();
         *err_msg = std::ptr::null_mut();
     }
 
-    if state.is_null() {
+    if new_state.is_null() {
         return NMSTATE_PASS;
     }
 
-    let logger = match init_logger() {
-        Ok(l) => l,
-        Err(e) => {
-            unsafe {
-                *err_msg = CString::new(format!("Failed to setup logger: {e}"))
-                    .unwrap()
-                    .into_raw();
-            }
-            return NMSTATE_FAIL;
+    let new_net_state = match c_str_to_net_state(new_state, err_kind, err_msg) {
+        Ok(s) => s,
+        Err(rc) => {
+            return rc;
         }
     };
-    let now = SystemTime::now();
-
-    let net_state = match c_str_to_net_state(state, err_kind, err_msg) {
-        Ok(n) => n,
+    let old_net_state = match c_str_to_net_state(old_state, err_kind, err_msg) {
+        Ok(s) => s,
         Err(rc) => {
             return rc;
         }
     };
 
-    let input_is_json = is_state_in_json(state);
-    let result = net_state.gen_conf();
-    unsafe {
-        *log = CString::new(logger.drain(now)).unwrap().into_raw();
-    }
+    let input_is_json = is_state_in_json(new_state);
+
+    let result = new_net_state.gen_diff(&old_net_state);
     match result {
         Ok(s) => {
             let serialize = if input_is_json {
@@ -81,8 +69,8 @@ pub extern "C" fn nmstate_generate_configurations(
             };
 
             match serialize {
-                Ok(cfgs) => unsafe {
-                    *configs = CString::new(cfgs).unwrap().into_raw();
+                Ok(diff) => unsafe {
+                    *diff_state = CString::new(diff).unwrap().into_raw();
                     NMSTATE_PASS
                 },
                 Err(e) => unsafe {
