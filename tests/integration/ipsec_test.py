@@ -34,6 +34,7 @@ HOSTA_IPV4_RSA = "192.0.2.249"
 HOSTA_IPV4_CRT_P2P = "192.0.2.248"
 HOSTA_IPV4_CRT_SUBNET = "192.0.4.0/24"
 HOSTA_IPV4_TRANSPORT = "192.0.2.247"
+HOSTA_IPV4_IF_SUBNET = "192.0.2.246"
 HOSTA_IPSEC_CONN_NAME = "hosta_conn"
 HOSTA_IPV6_P2P = "2001:db8:f::a"
 HOSTB_IPV6_P2P = "2001:db8:f::b"
@@ -45,6 +46,7 @@ HOSTB_IPV4_CRT = "192.0.2.152"
 HOSTB_IPV4_PSK = "192.0.2.153"
 HOSTB_IPV4_RSA = "192.0.2.154"
 HOSTB_IPV4_CRT_P2P = "192.0.2.155"
+HOSTB_IPV4_IF_SUBNET = "192.0.2.157"
 HOSTB_IPV4_CRT_SUBNET = "192.0.3.0/24"
 HOSTB_IPV4_TRANSPORT = "192.0.2.156"
 HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
@@ -61,6 +63,7 @@ HOSTB_IPSEC_PSK_CONN_NAME = "hostb_conn_psk"
 HOSTB_IPSEC_RSA_CONN_NAME = "hostb_conn_rsa"
 HOSTB_IPSEC_CRT_P2P_CONN_NAME = "hostb_conn_crt_p2p"
 HOSTB_IPSEC_TRANSPORET_CONN_NAME = "hostb_conn_transport"
+HOSTB_IPSEC_LEFTSUBNET_CONN_NAME = "hostb_conn_leftsubnet"
 HOSTB_IPSEC_IPV6_P2P_CONN_NAME = "hostb_conn_ipv6_p2p"
 HOSTB_IPSEC_IPV6_CS_CONN_NAME = "hostb_conn_ipv6_cs"
 HOSTB_IPSEC_CONN_CONTENT = """
@@ -132,6 +135,20 @@ conn hostb_conn_transport
     leftmodecfgserver=no
     right=192.0.2.247
     rightsubnet=192.0.2.247/32
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    rightmodecfgclient=no
+    ikev2=insist
+
+conn hostb_conn_leftsubnet
+    hostaddrfamily=ipv4
+    left=192.0.2.157
+    leftsubnet=192.0.3.0/24
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=no
+    right=192.0.2.246
+    rightsubnet=192.0.4.0/24
     rightid=@hosta.example.org
     rightcert=hosta.example.org
     rightmodecfgclient=no
@@ -267,6 +284,7 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPV4_PSK,
             HOSTB_IPV4_RSA,
             HOSTB_IPV4_CRT_P2P,
+            HOSTB_IPV4_IF_SUBNET,
             HOSTB_IPV4_TRANSPORT,
         ]:
             cmdlib.exec_cmd(
@@ -301,6 +319,7 @@ def setup_hostb_ipsec_conn():
             HOSTB_IPSEC_PSK_CONN_NAME,
             HOSTB_IPSEC_CRT_P2P_CONN_NAME,
             HOSTB_IPSEC_TRANSPORET_CONN_NAME,
+            HOSTB_IPSEC_LEFTSUBNET_CONN_NAME,
             HOSTB_IPSEC_IPV6_P2P_CONN_NAME,
             HOSTB_IPSEC_IPV6_CS_CONN_NAME,
         ]:
@@ -465,6 +484,10 @@ def setup_hosta_ip():
                             },
                             {
                                 InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_CRT_P2P,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            },
+                            {
+                                InterfaceIPv4.ADDRESS_IP: HOSTA_IPV4_IF_SUBNET,
                                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                             },
                             {
@@ -906,13 +929,16 @@ def test_ipsec_ipv4_libreswan_leftsubnet(
         interfaces:
         - name: hosta_conn
           type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
           libreswan:
-            left: {HOSTA_IPV4_CRT_P2P}
+            left: {HOSTA_IPV4_IF_SUBNET}
             leftid: 'hosta.example.org'
             leftcert: hosta.example.org
             leftsubnet: {HOSTA_IPV4_CRT_SUBNET}
             leftmodecfgclient: no
-            right: {HOSTB_IPV4_CRT_P2P}
+            right: {HOSTB_IPV4_IF_SUBNET}
             rightid: 'hostb.example.org'
             rightsubnet: {HOSTB_IPV4_CRT_SUBNET}
             ikev2: insist""",
@@ -920,7 +946,10 @@ def test_ipsec_ipv4_libreswan_leftsubnet(
     )
     libnmstate.apply(desired_state)
     assert retry_till_true_or_timeout(
-        RETRY_COUNT, _check_ipsec, HOSTA_IPV4_CRT_P2P, HOSTB_IPV4_CRT_P2P
+        RETRY_COUNT,
+        _check_ipsec,
+        HOSTA_IPV4_IF_SUBNET,
+        HOSTB_IPV4_IF_SUBNET,
     )
     assert retry_till_true_or_timeout(
         RETRY_COUNT,
