@@ -194,6 +194,9 @@ clib_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) \
 		-o $(TMPDIR)/nmpolicy_yaml_test \
 		rust/src/clib/test/nmpolicy_yaml_test.c -lnmstate
+	cc -g -Wall -Wextra -L$(TMPDIR) -I$(TMPDIR) \
+		-o $(TMPDIR)/nmstate_gen_diff_test \
+		rust/src/clib/test/nmstate_gen_diff_test.c -lnmstate
 	LD_LIBRARY_PATH=$(TMPDIR) \
 		valgrind --trace-children=yes --leak-check=full \
 		--error-exitcode=1 \
@@ -210,6 +213,10 @@ clib_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 		valgrind --trace-children=yes --leak-check=full \
 		--error-exitcode=1 \
 		$(TMPDIR)/nmpolicy_yaml_test 1>/dev/null
+	LD_LIBRARY_PATH=$(TMPDIR) \
+		valgrind --trace-children=yes --leak-check=full \
+		--error-exitcode=1 \
+		$(TMPDIR)/nmstate_gen_diff_test 1>/dev/null
 	rm -rf $(TMPDIR)
 
 .PHONY: go_check
