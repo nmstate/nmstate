@@ -14,7 +14,7 @@ const OVS_DB_NAME: &str = "Open_vSwitch";
 pub(crate) const GLOBAL_CONFIG_TABLE: &str = "Open_vSwitch";
 const NM_RESERVED_EXTERNAL_ID: &str = "NM.connection.uuid";
 
-const DEFAULT_OVS_DB_SOCKET_PATH: &str = "/run/openvswitch/db.sock";
+pub(crate) const DEFAULT_OVS_DB_SOCKET_PATH: &str = "/run/openvswitch/db.sock";
 
 #[derive(Debug)]
 pub(crate) struct OvsDbConnection {

@@ -6,7 +6,10 @@ use crate::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
-    ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
+    ovsdb::{
+        ovsdb_apply, ovsdb_is_running, ovsdb_retrieve,
+        DEFAULT_OVS_DB_SOCKET_PATH,
+    },
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
     NmstateError,
 };
@@ -86,6 +89,14 @@ impl NetworkState {
                 MAX_SUPPORTED_INTERFACES,
             );
         }
+        if self.interfaces.has_up_ovs_iface() && !ovsdb_is_running() {
+            log::warn!(
+                "Desired state contains OVS interfaces, but not able \
+                to connect OVS daemon at socket {}",
+                DEFAULT_OVS_DB_SOCKET_PATH
+            );
+        }
+
         if !self.kernel_only {
             self.apply_with_nm_backend()
         } else {
