@@ -1,4 +1,16 @@
 # Changelog
+## [1.4.6] - 2024-05-16
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - Do not touch interface DNS if global DNS is used. (ffe77226)
+ - Fix purging DNS config. (af07271e)
+ - Fix DNS option `ndots`, `timeout` and `attempts`. (c95e2615)
+
 ## [1.4.5] - 2023-11-02
 ### Breaking changes
  - N/A
