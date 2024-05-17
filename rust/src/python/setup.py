@@ -2,6 +2,7 @@
 import ctypes
 import sys
 import setuptools
+import subprocess
 
 
 def requirements():
@@ -17,6 +18,22 @@ def requirements():
 def check_nmstate_c_library():
     if "bdist_rpm" not in sys.argv:
         try:
+            # Run the find command
+            result = subprocess.run(
+                ["find", "/", "-name", "libnmstate.so.2"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True,
+            )
+
+            # Check if the command was successful
+            if result.returncode == 0:
+                # Print the result
+                print("-----Found files:\n", result.stdout)
+            else:
+                # Print the error if the command failed
+                print("----The Error is:\n", result.stderr)
             ctypes.cdll.LoadLibrary("libnmstate.so.2")
         except OSError as exc:
             raise RuntimeError(
