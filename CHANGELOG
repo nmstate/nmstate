@@ -1,4 +1,14 @@
 # Changelog
+## [2.2.31] - 2024-05-09
+### Breaking changes
+ - N/A
+
+### New features
+ - IPSec: Add support to `leftsubnet` property. (d03a52f5)
+
+### Bug fixes
+ - N/A
+
 ## [2.2.30] - 2024-05-03
 ### Breaking changes
  - N/A
