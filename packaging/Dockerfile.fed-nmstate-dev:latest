@@ -17,8 +17,8 @@ COPY network_manager_enable_trace.conf \
 COPY network_manager_keyfile.conf \
      /etc/NetworkManager/conf.d/96-keyfile.conf
 
-RUN sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
-    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
+# Fedora container has no /etc/systemd/journald.conf file in systemd rpm
+RUN  echo -e '[Journal]\nRateLimitInterval=0\nRateLimitBurst=0' > \
     /etc/systemd/journald.conf
 
 RUN echo net.ipv6.conf.all.disable_ipv6=0 > \

@@ -1,24 +1,22 @@
 ---
 specfile_path: nmstate.spec
 upstream_package_name: nmstate
-upstream_project_url: http://nmstate.io
+upstream_project_url: https://nmstate.io
 enable_net: true
 srpm_build_deps:
+  - cargo
   - make
   - git
+  - tar
+  - xz
 notifications:
   pull_request:
     successful_build: true
 actions:
   post-upstream-clone:
     - "make packaging/nmstate.spec"
-    - "sed -i -e '/^Source1/d' packaging/nmstate.spec"
-    - "sed -i -e '/^Source2/d' packaging/nmstate.spec"
-    - "sed -i -e '/^Source3/d' packaging/nmstate.spec"
-    - "mv packaging/nmstate.spec ./"
-    # packit will try to download all SOURCES even those are not ignored by
-    # rpm condiction check, so we remove it extra sources for copr build
-  create-archive:
+    - "cp packaging/nmstate.spec nmstate.spec"
+  fix-spec-file:
     - "make dist"
   get-current-version:
     - "cat VERSION"
