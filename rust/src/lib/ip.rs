@@ -297,14 +297,6 @@ impl InterfaceIpv4 {
                     }
                 }
             }
-        } else if self.addresses.as_ref().map_or(false, Vec::is_empty)
-            && self.enabled
-        {
-            // Empty address should equal to disabled IPv4 stack
-            if is_desired {
-                log::info!("Empty IPv4 address is considered as IPv4 disabled");
-            }
-            self.enabled = false;
         }
 
         if let Some(addrs) = self.addresses.as_mut() {

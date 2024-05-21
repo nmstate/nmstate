@@ -668,10 +668,12 @@ def test_static_route_with_empty_ip(eth1_up):
     eth1_state[Interface.IPV4] = {
         InterfaceIPv4.DHCP: False,
         InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.ADDRESS: [],
     }
     eth1_state[Interface.IPV6] = {
         InterfaceIPv6.DHCP: False,
         InterfaceIPv6.ENABLED: True,
+        InterfaceIPv4.ADDRESS: [],
     }
     routes = [
         {
