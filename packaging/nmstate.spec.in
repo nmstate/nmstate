@@ -14,11 +14,19 @@ Release:        @RELEASE@%{?dist}
 Summary:        Declarative network manager API
 License:        Apache-2.0 AND LGPL-2.1-or-later
 URL:            https://github.com/%{srcname}/%{srcname}
-Source0:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
 %if ! %{is_snapshot}
+Source0:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
 Source1:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz.asc
 Source2:        https://nmstate.io/nmstate.gpg
+%else
+Source0:        %{srcname}-%{version}-alpha-@RELEASE@.tar.gz
+%endif
+%if %{is_snapshot}
+Source3:        %{srcname}-vendor-%{version}-alpha-@RELEASE@.tar.xz
+%else
+%if 0%{?rhel}
 Source3:        %{url}/releases/download/v%{version}/%{srcname}-vendor-%{version}.tar.xz
+%endif
 %endif
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
@@ -147,13 +155,16 @@ gpg2 --import --import-options import-export,import-minimal \
 gpgv2 --keyring ./gpgkey-mantainers.gpg %{SOURCE1} %{SOURCE0}
 %endif
 
+
 pushd rust
 
-%if 0%{?rhel} && ! %{is_snapshot}
-    # Source3 is vendored dependencies
-    %cargo_prep -V 3
+%if 0%{?rhel}
+# Source3 is vendored dependencies
+%cargo_prep -V 3
 %else
-    %cargo_prep
+%cargo_prep
+# In Fedora, we should use latest ctrlc crates
+sed -i -e 's/^ctrlc.\+$/ctrlc = "3"/' Cargo.toml
 %endif
 
 popd

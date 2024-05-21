@@ -5,12 +5,13 @@ VERSION_MINOR=$(shell echo $(VERSION) | cut -f2 -d.)
 VERSION_MICRO=$(shell echo $(VERSION) | cut -f3 -d.)
 GIT_COMMIT=$(shell git rev-parse --short HEAD)
 TIMESTAMP=$(shell date +%Y%m%d)
+COMMIT_COUNT=$(shell git rev-list --count HEAD --)
 ifeq ($(RELEASE), 1)
     TARBALL=nmstate-$(VERSION).tar.gz
     VENDOR_TARBALL=nmstate-vendor-$(VERSION).tar.xz
 else
-    TARBALL=nmstate-$(VERSION)-alpha.$(TIMESTAMP).$(GIT_COMMIT).tar.gz
-    VENDOR_TARBALL=nmstate-vendor-$(VERSION).$(TIMESTAMP).$(GIT_COMMIT).tar.xz
+    TARBALL=nmstate-$(VERSION)-alpha-0.$(TIMESTAMP).$(COMMIT_COUNT)git$(GIT_COMMIT).tar.gz
+    VENDOR_TARBALL=nmstate-vendor-$(VERSION)-alpha-0.$(TIMESTAMP).$(COMMIT_COUNT)git$(GIT_COMMIT).tar.xz
 endif
 CLIB_SO_DEV=libnmstate.so
 CLIB_A_DEV=libnmstate.a
@@ -98,20 +99,8 @@ manpage: $(CLI_MANPAGE) $(CLI_MANPAGE2) $(SYSTEMD_UNIT_MANPAGE)
 clib: $(CLIB_HEADER) $(CLIB_SO_DEV_RELEASE) $(CLIB_PKG_CONFIG)
 
 .PHONY: $(SPEC_FILE)
-$(SPEC_FILE): $(SPEC_FILE).in
-	cp $(SPEC_FILE).in $(SPEC_FILE)
-	sed -i -e "s/@VERSION@/$(VERSION)/" $(SPEC_FILE)
-	if [ $(RELEASE) == 1 ];then \
-		sed -i -e "s/@RELEASE@/1/" $(SPEC_FILE); \
-		sed -i -e "s/@IS_SNAPSHOT@/0/" $(SPEC_FILE); \
-	else \
-		sed -i -e "s/@IS_SNAPSHOT@/1/" $(SPEC_FILE); \
-		sed -i -e "s/@RELEASE@/0.alpha.$(TIMESTAMP).$(GIT_COMMIT)/" \
-			$(SPEC_FILE);\
-		sed -i -e "s|^Source0:.\+|Source0: $(TARBALL)|" $(SPEC_FILE); \
-	fi
-	sed -i -e "s/@CHANGELOG@/* $(RPM_DATA) N. N. - $(VERSION)-1/" \
-		$(SPEC_FILE)
+$(SPEC_FILE):
+	env IS_RELEASE=$(RELEASE) packaging/make_spec.sh
 
 .PHONY: $(CLIB_HEADER)
 $(CLIB_HEADER): $(CLIB_HEADER).in
@@ -150,6 +139,11 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 		cargo vendor-filterer $(TMPDIR)/vendor || \
 		(echo -en "\nNot cargo-vendor-filterer, Please install via "; \
 		 echo -e "'cargo install cargo-vendor-filterer'\n";); \
+		cd $(TMPDIR); \
+		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
+	else \
+		cd rust; \
+		cargo vendor $(TMPDIR)/vendor; \
 		cd $(TMPDIR); \
 		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
 	fi
