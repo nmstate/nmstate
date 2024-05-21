@@ -14,12 +14,12 @@ impl InterfaceIpv4 {
         }
 
         // No IP address means empty.
-        if self.enabled && self.addresses.is_none() {
+        if self.addresses.is_none() {
             self.addresses = Some(Vec::new());
         }
 
         // No DHCP means off
-        if self.enabled && self.dhcp.is_none() {
+        if self.dhcp.is_none() {
             self.dhcp = Some(false);
         }
     }
@@ -27,8 +27,14 @@ impl InterfaceIpv4 {
     // Sort addresses and dedup
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
         if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
+            if addrs.is_empty() {
+                // For empty address, we do not care about ip stack enabled or
+                // false as it might varied depend on whether have route on it
+                self.enabled_defined = false;
+            } else {
+                addrs.sort_unstable();
+                addrs.dedup();
+            }
         }
     }
     pub(crate) fn update(&mut self, other: &Self) {
