@@ -149,7 +149,7 @@ int nmstate_net_state_apply(uint32_t flags, const char *state,
  *          * NMSTATE_FAIL
  *              On failure.
  */
-int nmstate_checkpoint_commit(const char *checkpoint, char **log, 
+int nmstate_checkpoint_commit(const char *checkpoint, char **log,
                               char **err_kind, char **err_msg);
 
 /**
@@ -181,7 +181,7 @@ int nmstate_checkpoint_commit(const char *checkpoint, char **log,
  *          * NMSTATE_FAIL
  *              On failure.
  */
-int nmstate_checkpoint_rollback(const char *checkpoint, char **log, 
+int nmstate_checkpoint_rollback(const char *checkpoint, char **log,
                                 char **err_kind, char **err_msg);
 
 /**
@@ -278,5 +278,46 @@ int nmstate_net_state_from_policy(const char *policy,
  *      void
  */
 void nmstate_cstring_free(char *cstring);
+
+/**
+ * nmstate_generate_differences - Generate network differences
+ *
+ * Version:
+ *      2.2.31
+ *
+ * Description:
+ *      Given new network state and old network state in JSON or YAML
+ *      format, output new state with differences only.
+ *      The returned configs is JSON string or YAML string matching the format
+ *      of new state.
+ *
+ * @new_state:
+ *      Pointer of char array for new network state in JSON or YAML format.
+ * @old_state:
+ *      Pointer of char array for old network state in JSON or YAML format.
+ * @diff_state:
+ *      Output pointer of char array for new network state with differences
+ *      only in JSON or YAML(depend on which format you use in @state) format.
+ *      The memory should be freed by nmstate_net_state_free().
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_err_msg_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_generate_differences(const char *new_state,
+                                 const char *old_state,
+                                 char **diff_state,
+                                 char **err_kind,
+                                 char **err_msg);
+
 
 #endif // _LIBNMSTATE_H_

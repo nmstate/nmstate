@@ -6,11 +6,14 @@ mod apply;
 mod checkpoint;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
+#[cfg(feature = "query_apply")]
+mod gen_diff;
 mod logger;
 #[cfg(feature = "query_apply")]
 mod policy;
 #[cfg(feature = "query_apply")]
 mod query;
+mod state;
 
 use std::ffi::CString;
 
