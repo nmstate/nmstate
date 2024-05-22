@@ -10,10 +10,10 @@ use crate::{
     MergedNetworkState, NmstateError,
 };
 
-pub(crate) fn nispor_apply(
+pub(crate) async fn nispor_apply(
     merged_state: &MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    delete_ifaces(&merged_state.interfaces)?;
+    delete_ifaces(&merged_state.interfaces).await?;
 
     let mut ifaces: Vec<&MergedInterface> = merged_state
         .interfaces
@@ -44,7 +44,7 @@ pub(crate) fn nispor_apply(
     let mut net_conf = nispor::NetConf::default();
     net_conf.ifaces = Some(np_ifaces);
 
-    if let Err(e) = net_conf.apply() {
+    if let Err(e) = net_conf.apply_async().await {
         Err(NmstateError::new(
             ErrorKind::PluginFailure,
             format!("Unknown error from nipsor plugin: {}, {}", e.kind, e.msg),
@@ -109,7 +109,9 @@ fn nmstate_iface_to_np(
     Ok(np_iface)
 }
 
-fn delete_ifaces(merged_ifaces: &MergedInterfaces) -> Result<(), NmstateError> {
+async fn delete_ifaces(
+    merged_ifaces: &MergedInterfaces,
+) -> Result<(), NmstateError> {
     let mut deleted_veths: Vec<&str> = Vec::new();
     let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
     for iface in merged_ifaces
@@ -140,7 +142,7 @@ fn delete_ifaces(merged_ifaces: &MergedInterfaces) -> Result<(), NmstateError> {
     let mut net_conf = nispor::NetConf::default();
     net_conf.ifaces = Some(np_ifaces);
 
-    if let Err(e) = net_conf.apply() {
+    if let Err(e) = net_conf.apply_async().await {
         Err(NmstateError::new(
             ErrorKind::PluginFailure,
             format!("Unknown error from nipsor plugin: {}, {}", e.kind, e.msg),

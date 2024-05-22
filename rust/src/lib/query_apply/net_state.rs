@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::future::Future;
+
 use crate::{
     nispor::{nispor_apply, nispor_retrieve, set_running_hostname},
     nm::{
@@ -43,7 +45,22 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
-        let state = nispor_retrieve(self.running_config_only)?;
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .map_err(|e| {
+                NmstateError::new(
+                    ErrorKind::Bug,
+                    format!("tokio::runtime::Builder failed with {e}"),
+                )
+            })?;
+        rt.block_on(self.retrieve_async())
+    }
+
+    /// Retrieve the `NetworkState`.
+    /// Only available for feature `query_apply`.
+    pub async fn retrieve_async(&mut self) -> Result<&mut Self, NmstateError> {
+        let state = nispor_retrieve(self.running_config_only).await?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;
@@ -79,6 +96,21 @@ impl NetworkState {
     /// Apply the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn apply(&self) -> Result<(), NmstateError> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .map_err(|e| {
+                NmstateError::new(
+                    ErrorKind::Bug,
+                    format!("tokio::runtime::Builder failed with {e}"),
+                )
+            })?;
+        rt.block_on(self.apply_async())
+    }
+
+    /// Apply the `NetworkState`.
+    /// Only available for feature `query_apply`.
+    pub async fn apply_async(&self) -> Result<(), NmstateError> {
         if self.interfaces.kernel_ifaces.len()
             + self.interfaces.user_ifaces.len()
             >= MAX_SUPPORTED_INTERFACES
@@ -98,25 +130,25 @@ impl NetworkState {
         }
 
         if !self.kernel_only {
-            self.apply_with_nm_backend()
+            self.apply_with_nm_backend().await
         } else {
             // TODO: Need checkpoint for kernel only mode
-            self.apply_without_nm_backend()
+            self.apply_without_nm_backend().await
         }
     }
 
-    fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
+    async fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
         let mut merged_state = None;
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
-        if let Err(e) = cur_net_state.retrieve() {
+        if let Err(e) = cur_net_state.retrieve_async().await {
             if e.kind().can_retry() {
                 log::info!("Retrying on: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     RETRY_NM_INTERVAL_MILLISECONDS,
                 ));
-                cur_net_state.retrieve()?;
+                cur_net_state.retrieve_async().await?;
             } else {
                 return Err(e);
             }
@@ -167,7 +199,7 @@ impl NetworkState {
 
         log::info!("Created checkpoint {}", &checkpoint);
 
-        with_nm_checkpoint(&checkpoint, self.no_commit, || {
+        with_nm_checkpoint(&checkpoint, self.no_commit, || async {
             if let Some(pf_state) = pf_state {
                 let pf_merged_state = MergedNetworkState::new(
                     pf_state,
@@ -183,9 +215,10 @@ impl NetworkState {
                     &checkpoint,
                     verify_count,
                     timeout,
-                )?;
+                )
+                .await?;
                 // Refresh current state
-                cur_net_state.retrieve()?;
+                cur_net_state.retrieve_async().await?;
                 merged_state = Some(MergedNetworkState::new(
                     self.clone(),
                     cur_net_state.clone(),
@@ -216,10 +249,12 @@ impl NetworkState {
                 verify_count,
                 timeout,
             )
+            .await
         })
+        .await
     }
 
-    fn apply_with_nm_backend_and_under_checkpoint(
+    async fn apply_with_nm_backend_and_under_checkpoint(
         &self,
         merged_state: &MergedNetworkState,
         cur_net_state: &Self,
@@ -229,7 +264,7 @@ impl NetworkState {
     ) -> Result<(), NmstateError> {
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
-        with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || {
+        with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || async {
             nm_checkpoint_timeout_extend(checkpoint, timeout)?;
             nm_apply(merged_state, checkpoint, timeout)?;
             if merged_state.ovsdb.is_changed && ovsdb_is_running() {
@@ -244,25 +279,27 @@ impl NetworkState {
                 with_retry(
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,
                     retry_count,
-                    || {
+                    || async {
                         nm_checkpoint_timeout_extend(checkpoint, timeout)?;
                         let mut new_cur_net_state = cur_net_state.clone();
                         new_cur_net_state.set_include_secrets(true);
-                        new_cur_net_state.retrieve()?;
+                        new_cur_net_state.retrieve_async().await?;
                         merged_state.verify(&new_cur_net_state)
                     },
                 )
+                .await
             } else {
                 Ok(())
             }
         })
+        .await
     }
 
-    fn apply_without_nm_backend(&self) -> Result<(), NmstateError> {
+    async fn apply_without_nm_backend(&self) -> Result<(), NmstateError> {
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
-        cur_net_state.retrieve()?;
+        cur_net_state.retrieve_async().await?;
 
         let merged_state = MergedNetworkState::new(
             self.clone(),
@@ -271,7 +308,7 @@ impl NetworkState {
             self.memory_only,
         )?;
 
-        nispor_apply(&merged_state)?;
+        nispor_apply(&merged_state).await?;
         if let Some(running_hostname) =
             self.hostname.as_ref().and_then(|c| c.running.as_ref())
         {
@@ -281,12 +318,13 @@ impl NetworkState {
             with_retry(
                 VERIFY_RETRY_INTERVAL_MILLISECONDS,
                 VERIFY_RETRY_COUNT_KERNEL_MODE,
-                || {
+                || async {
                     let mut new_cur_net_state = cur_net_state.clone();
-                    new_cur_net_state.retrieve()?;
+                    new_cur_net_state.retrieve_async().await?;
                     merged_state.verify(&new_cur_net_state)
                 },
             )
+            .await
         } else {
             Ok(())
         }
@@ -345,15 +383,17 @@ impl NetworkState {
     }
 }
 
-fn with_nm_checkpoint<T>(
+async fn with_nm_checkpoint<T, Fut>(
     checkpoint: &str,
     no_commit: bool,
     func: T,
 ) -> Result<(), NmstateError>
 where
-    T: FnOnce() -> Result<(), NmstateError>,
+    T: FnOnce() -> Fut,
+    // Once `std::ops::AsyncFnOnce` is stable, use it instead
+    Fut: Future<Output = Result<(), NmstateError>>,
 {
-    match func() {
+    match func().await {
         Ok(()) => {
             if !no_commit {
                 nm_checkpoint_destroy(checkpoint)?;
@@ -374,17 +414,19 @@ where
     }
 }
 
-fn with_retry<T>(
+async fn with_retry<T, Fut>(
     interval_ms: u64,
     count: usize,
     func: T,
 ) -> Result<(), NmstateError>
 where
-    T: FnOnce() -> Result<(), NmstateError> + Copy,
+    T: FnOnce() -> Fut + Copy,
+    // Once `std::ops::AsyncFnOnce` is stable, use it instead
+    Fut: Future<Output = Result<(), NmstateError>>,
 {
     let mut cur_count = 0usize;
     while cur_count < count {
-        if let Err(e) = func() {
+        if let Err(e) = func().await {
             if cur_count == count - 1 || !e.kind().can_retry() {
                 if e.kind().can_ignore() {
                     return Ok(());
