@@ -19,31 +19,35 @@ path = "lib.rs"
 serde_yaml = { workspace = true }
 
 [dependencies.nispor]
-workspace = true 
+workspace = true
 optional = true
 
 [dependencies.zvariant]
 workspace = true
 
 [dependencies.uuid]
-workspace = true 
+workspace = true
 features = ["v5"]
 
 [dependencies.log]
-workspace = true 
+workspace = true
 
 [dependencies.zbus]
 workspace = true
 optional = true
 
 [dependencies.serde_json]
-workspace = true 
+workspace = true
 features = [ "preserve_order" ]
 
 [dependencies.serde]
-workspace = true 
+workspace = true
 
 [dependencies.nix]
+workspace = true
+optional = true
+
+[dependencies.tokio]
 workspace = true
 optional = true
 
@@ -52,6 +56,6 @@ serde_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
-query_apply = ["dep:nispor", "dep:nix", "dep:zbus"]
+query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio"]
 gen_conf = []
 gen_revert = []

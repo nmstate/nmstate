@@ -26,7 +26,7 @@ const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 // kernel values
 const RTAX_CWND: u32 = 7;
 
-pub(crate) fn get_routes(running_config_only: bool) -> Routes {
+pub(crate) async fn get_routes(running_config_only: bool) -> Routes {
     let mut ret = Routes::new();
     let mut np_routes: Vec<nispor::Route> = Vec::new();
     let route_type = [
@@ -45,7 +45,7 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
         rt_filter.protocol = Some(*protocol);
         let mut filter = nispor::NetStateFilter::minimum();
         filter.route = Some(rt_filter);
-        match nispor::NetState::retrieve_with_filter(&filter) {
+        match nispor::NetState::retrieve_with_filter_async(&filter).await {
             Ok(np_state) => {
                 for np_rt in np_state.routes {
                     np_routes.push(np_rt);

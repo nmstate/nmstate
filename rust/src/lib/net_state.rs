@@ -246,6 +246,15 @@ impl NetworkState {
         ))
     }
 
+    #[cfg(not(feature = "query_apply"))]
+    pub async fn retrieve_async(&mut self) -> Result<&mut Self, NmstateError> {
+        Err(NmstateError::new(
+            ErrorKind::DependencyError,
+            "NetworkState::retrieve_async() need `query_apply` feature enabled"
+                .into(),
+        ))
+    }
+
     /// Replace secret string with `<_password_hid_by_nmstate>`
     pub fn hide_secrets(&mut self) {
         self.interfaces.hide_secrets();
@@ -253,6 +262,14 @@ impl NetworkState {
 
     #[cfg(not(feature = "query_apply"))]
     pub fn apply(&mut self) -> Result<(), NmstateError> {
+        Err(NmstateError::new(
+            ErrorKind::DependencyError,
+            "NetworkState::apply() need `query_apply` feature enabled".into(),
+        ))
+    }
+
+    #[cfg(not(feature = "query_apply"))]
+    pub async fn apply_async(&mut self) -> Result<(), NmstateError> {
         Err(NmstateError::new(
             ErrorKind::DependencyError,
             "NetworkState::apply() need `query_apply` feature enabled".into(),
