@@ -530,13 +530,13 @@ impl Interfaces {
         &mut self,
     ) -> Result<(), NmstateError> {
         let mut new_ifaces = Vec::new();
-        for iface in self.kernel_ifaces.values_mut() {
-            if let Interface::Unknown(iface) = iface {
+        for iface in self.kernel_ifaces.values() {
+            if let Interface::Unknown(iface) = &iface {
                 log::warn!(
                     "Setting unknown type interface {} to ethernet",
                     iface.base.name.as_str()
                 );
-                let iface_value = match serde_json::to_value(&iface) {
+                let iface_value = match serde_json::to_value(iface) {
                     Ok(mut v) => {
                         if let Some(v) = v.as_object_mut() {
                             v.insert(
@@ -552,8 +552,8 @@ impl Interfaces {
                         return Err(NmstateError::new(
                             ErrorKind::Bug,
                             format!(
-                                "BUG: Failed to convert {iface:?} to serde_json \
-                                value: {e}"
+                                "BUG: Failed to convert {iface:?} to \
+                                serde_json value: {e}"
                             ),
                         ));
                     }

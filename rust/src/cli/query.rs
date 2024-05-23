@@ -66,7 +66,7 @@ pub(crate) fn sort_netstate(
                 let mut new_iface = serde_yaml::Mapping::new();
                 for top_property in &IFACE_TOP_PRIORTIES {
                     if let Some(v) =
-                        iface.get(&Value::String(top_property.to_string()))
+                        iface.get(Value::String(top_property.to_string()))
                     {
                         new_iface.insert(
                             Value::String(top_property.to_string()),
