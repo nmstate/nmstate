@@ -34,8 +34,8 @@ impl Interface {
         let mut current = current.clone();
         self.process_allow_extra_address(&mut current);
 
-        let self_value = serde_json::to_value(&self)?;
-        let current_value = serde_json::to_value(&current)?;
+        let self_value = serde_json::to_value(self.clone())?;
+        let current_value = serde_json::to_value(current.clone())?;
 
         if let Some((reference, desire, current)) = get_json_value_difference(
             format!("{}.interface", self.name()),

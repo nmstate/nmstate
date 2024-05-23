@@ -15,6 +15,7 @@ use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 ///  * Even not desired, the `127.0.0.1/8` and `::1` are always appended to
 ///    static IP address list.
 ///  * Require NetworkManager 1.41+ unless in kernel only mode.
+///
 /// Example yaml outpuf of `[crate::NetworkState]` with loopback interface:
 /// ```yml
 /// interfaces:
