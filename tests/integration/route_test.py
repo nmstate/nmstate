@@ -23,6 +23,8 @@ from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.route import assert_routes
 from .testlib.route import assert_routes_missing
+from .testlib.servicelib import disable_service
+from .testlib.yaml import load_yaml
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
@@ -2089,4 +2091,76 @@ def test_append_route_rule(route_rule_test_env):
     _check_ip_rules(
         desired_state[RouteRule.KEY][RouteRule.CONFIG]
         + new_desired_state[RouteRule.KEY][RouteRule.CONFIG]
+    )
+
+
+@pytest.fixture
+def cleanup_veth1_kernel_mode():
+    with disable_service("NetworkManager"):
+        yield
+        desired_state = load_yaml(
+            """---
+            interfaces:
+            - name: veth1
+              type: veth
+              state: absent
+            """
+        )
+        libnmstate.apply(desired_state, kernel_only=True)
+
+
+def test_kernel_mode_static_route_and_remove(cleanup_veth1_kernel_mode):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        routes:
+         config:
+           - destination: 0.0.0.0/0
+             next-hop-address: 192.0.2.1
+             next-hop-interface: veth1
+             metric: 109
+           - destination: ::/0
+             next-hop-address: 2001:db8:1::2
+             next-hop-interface: veth1
+             metric: 102
+        """
+    )
+    libnmstate.apply(desired_state, kernel_only=True)
+
+    cur_state = libnmstate.show(kernel_only=True)
+    assert_routes(
+        desired_state[Route.KEY][Route.CONFIG], cur_state, nic="veth1"
+    )
+
+    new_state = load_yaml(
+        """---
+        routes:
+         config:
+           - state: absent
+             next-hop-interface: veth1
+        """
+    )
+    libnmstate.apply(new_state, kernel_only=True)
+
+    cur_state = libnmstate.show(kernel_only=True)
+    assert_routes_missing(
+        desired_state[Route.KEY][Route.CONFIG], cur_state, nic="veth1"
     )

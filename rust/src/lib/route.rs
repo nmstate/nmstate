@@ -237,6 +237,7 @@ impl RouteEntry {
     }
 
     /// Whether the desired route (self) matches with another
+    /// metric is ignored.
     pub(crate) fn is_match(&self, other: &Self) -> bool {
         if self.destination.as_ref().is_some()
             && self.destination.as_deref() != Some("")
@@ -275,6 +276,7 @@ impl RouteEntry {
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
     // destination, next_hop_addr, weight, cwnd)
+    // Metric is ignored
     fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, u16, u32) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
@@ -427,8 +429,16 @@ impl std::fmt::Display for RouteEntry {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct MergedRoutes {
-    pub(crate) indexed: HashMap<String, Vec<RouteEntry>>,
+    // When all routes next hop to a interface are all marked as absent,
+    // the `MergedRoutes.merged` will not have entry for this interface, but
+    // interface name is found in `MergedRoutes.route_changed_ifaces`.
+    // For backend use incremental route changes, please use
+    // `MergedRoutes.changed_routes`.
+    pub(crate) merged: HashMap<String, Vec<RouteEntry>>,
     pub(crate) route_changed_ifaces: Vec<String>,
+    // The `changed_routes` contains changed routes including those been marked
+    // as absent. Not including desired route equal to current route.
+    pub(crate) changed_routes: Vec<RouteEntry>,
     pub(crate) desired: Routes,
     pub(crate) current: Routes,
 }
@@ -450,6 +460,7 @@ impl MergedRoutes {
         }
 
         let mut changed_ifaces: HashSet<&str> = HashSet::new();
+        let mut changed_routes: HashSet<RouteEntry> = HashSet::new();
 
         let ifaces_marked_as_absent: Vec<&str> = merged_ifaces
             .kernel_ifaces
@@ -533,29 +544,32 @@ impl MergedRoutes {
             }
         }
 
-        let mut flattend_routes: Vec<RouteEntry> = Vec::new();
+        let mut merged_routes: Vec<RouteEntry> = Vec::new();
 
         if let Some(cur_rts) = current.config.as_ref() {
             for rt in cur_rts {
                 if let Some(via) = rt.next_hop_iface.as_ref() {
-                    if !ifaces_marked_as_absent.contains(&via.as_str())
-                        && ((rt.is_ipv6()
-                            && !ifaces_with_ipv6_disabled
+                    // We include current route to merged_routes when it is
+                    // not marked as absent due to absent interface or disabled
+                    // ip stack or route state:absent.
+                    if ifaces_marked_as_absent.contains(&via.as_str())
+                        || (rt.is_ipv6()
+                            && ifaces_with_ipv6_disabled
                                 .contains(&via.as_str()))
-                            || (!rt.is_ipv6()
-                                && !ifaces_with_ipv4_disabled
-                                    .contains(&via.as_str())))
-                    {
-                        if desired_routes
+                        || (!rt.is_ipv6()
+                            && ifaces_with_ipv4_disabled
+                                .contains(&via.as_str()))
+                        || desired_routes
                             .as_slice()
                             .iter()
                             .filter(|r| r.is_absent())
                             .any(|absent_rt| absent_rt.is_match(rt))
-                        {
-                            continue;
-                        }
-
-                        flattend_routes.push(rt.clone());
+                    {
+                        let mut new_rt = rt.clone();
+                        new_rt.state = Some(RouteState::Absent);
+                        changed_routes.insert(new_rt);
+                    } else {
+                        merged_routes.push(rt.clone());
                     }
                 }
             }
@@ -567,25 +581,31 @@ impl MergedRoutes {
             .iter()
             .filter(|rt| !rt.is_absent())
         {
-            flattend_routes.push(rt.clone());
+            if let Some(cur_rts) = current.config.as_ref() {
+                if !cur_rts.as_slice().iter().any(|cur_rt| cur_rt.is_match(rt))
+                {
+                    changed_routes.insert(rt.clone());
+                }
+            }
+            merged_routes.push(rt.clone());
         }
 
-        flattend_routes.sort_unstable();
-        flattend_routes.dedup();
+        merged_routes.sort_unstable();
+        merged_routes.dedup();
 
-        let mut indexed: HashMap<String, Vec<RouteEntry>> = HashMap::new();
+        let mut merged: HashMap<String, Vec<RouteEntry>> = HashMap::new();
 
-        for rt in flattend_routes {
+        for rt in merged_routes {
             if let Some(via) = rt.next_hop_iface.as_ref() {
                 let rts: &mut Vec<RouteEntry> =
-                    match indexed.entry(via.to_string()) {
+                    match merged.entry(via.to_string()) {
                         Entry::Occupied(o) => o.into_mut(),
                         Entry::Vacant(v) => v.insert(Vec::new()),
                     };
                 rts.push(rt);
             } else if rt.route_type.is_some() {
                 let rts: &mut Vec<RouteEntry> =
-                    match indexed.entry(LOOPBACK_IFACE_NAME.to_string()) {
+                    match merged.entry(LOOPBACK_IFACE_NAME.to_string()) {
                         Entry::Occupied(o) => o.into_mut(),
                         Entry::Vacant(v) => v.insert(Vec::new()),
                     };
@@ -597,10 +617,11 @@ impl MergedRoutes {
             changed_ifaces.iter().map(|i| i.to_string()).collect();
 
         Ok(Self {
-            indexed,
+            merged,
             desired,
             current,
             route_changed_ifaces,
+            changed_routes: changed_routes.drain().collect(),
         })
     }
 
@@ -620,7 +641,7 @@ impl MergedRoutes {
             .collect();
 
         for iface in ignored_ifaces.as_slice() {
-            self.indexed.remove(*iface);
+            self.merged.remove(*iface);
         }
         self.route_changed_ifaces
             .retain(|n| !ignored_ifaces.contains(&n.as_str()));

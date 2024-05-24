@@ -1,6 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use log::warn;
 
-use crate::{RouteEntry, RouteType, Routes};
+use crate::{
+    ErrorKind, MergedRoutes, NmstateError, RouteEntry, RouteType, Routes,
+};
 
 const SUPPORTED_ROUTE_SCOPE: [nispor::RouteScope; 2] =
     [nispor::RouteScope::Universe, nispor::RouteScope::Link];
@@ -227,4 +231,68 @@ fn flat_multipath_route(np_route: &nispor::Route) -> Vec<RouteEntry> {
         }
     }
     ret
+}
+
+fn nmstate_to_nispor_route_conf(
+    nmstate_rt: &RouteEntry,
+) -> Result<nispor::RouteConf, NmstateError> {
+    let mut ret = nispor::RouteConf::default();
+
+    ret.remove = nmstate_rt.is_absent();
+    ret.dst = nmstate_rt.destination.clone().unwrap_or_default();
+    ret.oif.clone_from(&nmstate_rt.next_hop_iface);
+    ret.via.clone_from(&nmstate_rt.next_hop_addr);
+    ret.metric = nmstate_rt.metric.and_then(|m| {
+        if let Ok(i) = u32::try_from(m) {
+            Some(i)
+        } else {
+            None
+        }
+    });
+    if let Some(table_id) = nmstate_rt.table_id {
+        if table_id > u8::MAX.into() {
+            return Err(NmstateError::new(
+                ErrorKind::NotImplementedError,
+                format!(
+                    "nispor apply does not support route table ID bigger \
+                    than {} yet, got {}, ignoring",
+                    u8::MAX,
+                    table_id
+                ),
+            ));
+        } else {
+            ret.table = Some(table_id as u8);
+        }
+    }
+    if nmstate_rt.weight.is_some() {
+        return Err(NmstateError::new(
+            ErrorKind::NotImplementedError,
+            "nispor apply does not support route weight yet".into(),
+        ));
+    }
+
+    if nmstate_rt.route_type.is_some() {
+        return Err(NmstateError::new(
+            ErrorKind::NotImplementedError,
+            "nispor apply does not support route type yet".into(),
+        ));
+    }
+
+    if nmstate_rt.cwnd.is_some() {
+        return Err(NmstateError::new(
+            ErrorKind::NotImplementedError,
+            "nispor apply does not support route congestion window yet".into(),
+        ));
+    }
+    Ok(ret)
+}
+
+pub(crate) fn gen_nispor_route_confs(
+    merged_routes: &MergedRoutes,
+) -> Result<Vec<nispor::RouteConf>, NmstateError> {
+    let mut ret = Vec::new();
+    for nmstate_rt in merged_routes.changed_routes.as_slice() {
+        ret.push(nmstate_to_nispor_route_conf(nmstate_rt)?)
+    }
+    Ok(ret)
 }

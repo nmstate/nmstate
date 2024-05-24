@@ -353,7 +353,7 @@ fn iface_has_route_for_table_id(
     is_ipv6: bool,
     table_id: u32,
 ) -> bool {
-    if let Some(routes) = merged_state.routes.indexed.get(iface_name) {
+    if let Some(routes) = merged_state.routes.merged.get(iface_name) {
         for route in routes.as_slice().iter().filter(|r| r.is_ipv6() == is_ipv6)
         {
             if route.table_id == Some(table_id)
