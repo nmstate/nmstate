@@ -3,6 +3,7 @@
 use crate::{
     nispor::{
         ip::{nmstate_ipv4_to_np, nmstate_ipv6_to_np},
+        route::gen_nispor_route_confs,
         veth::nms_veth_conf_to_np,
         vlan::nms_vlan_conf_to_np,
     },
@@ -43,6 +44,10 @@ pub(crate) async fn nispor_apply(
 
     let mut net_conf = nispor::NetConf::default();
     net_conf.ifaces = Some(np_ifaces);
+
+    if merged_state.routes.is_changed() {
+        net_conf.routes = Some(gen_nispor_route_confs(&merged_state.routes)?);
+    }
 
     if let Err(e) = net_conf.apply_async().await {
         Err(NmstateError::new(

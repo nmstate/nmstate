@@ -58,14 +58,14 @@ def assert_absent(*ifnames):
             time.sleep(0.5)
 
 
-def assert_state_match(desired_state_data, no_retry=False):
+def assert_state_match(desired_state_data, no_retry=False, kernel_only=False):
     """
     Given a state, assert it against the current state by treating missing
     value in desired_state as match.
     """
     for i in range(0, RETRY_COUNT):
         desired_state, current_state = _prepare_state_for_verify(
-            desired_state_data
+            desired_state_data, kernel_only=kernel_only
         )
         if desired_state.match(current_state):
             return
@@ -97,8 +97,10 @@ def _iface_macs(state):
         yield ifstate[Interface.MAC]
 
 
-def _prepare_state_for_verify(desired_state_data):
-    current_state_data = libnmstate.show(include_secrets=True)
+def _prepare_state_for_verify(desired_state_data, kernel_only=False):
+    current_state_data = libnmstate.show(
+        include_secrets=True, kernel_only=kernel_only
+    )
     # Ignore route and dns for assert check as the check are done in the test
     # case code.
     current_state_data.pop(Route.KEY, None)
