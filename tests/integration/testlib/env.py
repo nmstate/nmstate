@@ -38,3 +38,11 @@ def is_k8s():
 
 def is_el8():
     return exec_cmd("rpm -E %{?rhel}".split())[1].strip() == "8"
+
+
+def nm_libreswan_micro_version():
+    return int(
+        exec_cmd("rpm -q NetworkManager-libreswan --qf %{VERSION}".split())[1]
+        .split(".")[-1]
+        .strip()
+    )
