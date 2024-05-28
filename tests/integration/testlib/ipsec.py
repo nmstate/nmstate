@@ -24,14 +24,18 @@ HOSTB_NIC = "hostb_nic"
 HOSTB_DUMMY_NIC = "dummy0"
 HOSTB_NS = "nmstate_ipsec_test"
 HOSTB_IPSEC_CONF_NAME = "hostb_conn"
-HOSTB_IPSEC_CRT_CONN_NAME = "hostb_conn_crt"
-HOSTB_IPSEC_PSK_CONN_NAME = "hostb_conn_psk"
-HOSTB_IPSEC_RSA_CONN_NAME = "hostb_conn_rsa"
-HOSTB_IPSEC_CRT_P2P_CONN_NAME = "hostb_conn_crt_p2p"
-HOSTB_IPSEC_TRANSPORET_CONN_NAME = "hostb_conn_transport"
-HOSTB_IPSEC_LEFTSUBNET_CONN_NAME = "hostb_conn_leftsubnet"
-HOSTB_IPSEC_IPV6_P2P_CONN_NAME = "hostb_conn_ipv6_p2p"
-HOSTB_IPSEC_IPV6_CS_CONN_NAME = "hostb_conn_ipv6_cs"
+HOSTB_IPSEC_CONNS = [
+    "hostb_conn_crt",
+    "hostb_conn_psk",
+    "hostb_conn_rsa",
+    "hostb_conn_crt_p2p",
+    "hostb_conn_transport",
+    "hostb_conn_leftsubnet",
+    "hostb_conn_ipv6_p2p",
+    "hostb_conn_ipv6_cs",
+    "hostb_conn_6in4",
+    "hostb_conn_4in6",
+]
 HOSTB_IPSEC_CONN_CONTENT = """
 config setup
     protostack=netkey
@@ -142,13 +146,41 @@ conn hostb_conn_ipv6_cs
     left=2001:db8:e::b
     leftsourceip=2001:db8:e::b
     leftsubnet=::/0
-    rightaddresspool=2001:db8:9::/64
+    rightaddresspool=2001:db8:9::/120
     leftid=@hostb.example.org
     leftcert=hostb.example.org
     leftmodecfgserver=yes
     rightmodecfgclient=yes
     leftsendcert=always
     right=2001:db8:e::a
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    ikev2=insist
+
+conn hostb_conn_6in4
+    left=192.0.2.158
+    leftsubnet=2001:db8:ab::/64
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=no
+    rightmodecfgclient=no
+    leftsendcert=always
+    right=192.0.2.245
+    rightsubnet=2001:db8:aa::/64
+    rightid=@hosta.example.org
+    rightcert=hosta.example.org
+    ikev2=insist
+
+conn hostb_conn_4in6
+    left=2001:db8:d::b
+    leftsubnet=192.0.3.0/24
+    leftid=@hostb.example.org
+    leftcert=hostb.example.org
+    leftmodecfgserver=no
+    rightmodecfgclient=no
+    leftsendcert=always
+    right=2001:db8:d::a
+    rightsubnet=192.0.4.0/24
     rightid=@hosta.example.org
     rightcert=hosta.example.org
     ikev2=insist
@@ -184,26 +216,32 @@ class IpsecTestEnv:
     HOSTA_IPV4_PSK = "192.0.2.250"
     HOSTA_IPV4_RSA = "192.0.2.249"
     HOSTA_IPV4_CRT_P2P = "192.0.2.248"
-    HOSTA_IPV4_CRT_SUBNET = "192.0.4.0/24"
     HOSTA_IPV4_TRANSPORT = "192.0.2.247"
     HOSTA_IPV4_IF_SUBNET = "192.0.2.246"
+    HOSTA_IPV4_6IN4 = "192.0.2.245"
+    HOSTA_IPV4_CRT_SUBNET = "192.0.4.0/24"
     HOSTA_IPSEC_CONN_NAME = "hosta_conn"
     HOSTA_IPV6_P2P = "2001:db8:f::a"
+    HOSTA_IPV6_SUBNET = "2001:db8:aa::/64"
     HOSTB_IPV6_P2P = "2001:db8:f::b"
     HOSTA_IPV6_CS = "2001:db8:e::a"
     HOSTB_IPV6_CS = "2001:db8:e::b"
+    HOSTA_IPV6_4IN6 = "2001:db8:d::a"
+    HOSTB_IPV6_4IN6 = "2001:db8:d::b"
     HOSTB_NAME = "hostb.example.org"
     HOSTB_IPV4_CRT = "192.0.2.152"
     HOSTB_IPV4_PSK = "192.0.2.153"
     HOSTB_IPV4_RSA = "192.0.2.154"
     HOSTB_IPV4_CRT_P2P = "192.0.2.155"
-    HOSTB_IPV4_IF_SUBNET = "192.0.2.157"
-    HOSTB_IPV4_CRT_SUBNET = "192.0.3.0/24"
     HOSTB_IPV4_TRANSPORT = "192.0.2.156"
+    HOSTB_IPV4_IF_SUBNET = "192.0.2.157"
+    HOSTB_IPV4_6IN4 = "192.0.2.158"
+    HOSTB_IPV4_CRT_SUBNET = "192.0.3.0/24"
     HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
     HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
     HOSTB_VPN_SUBNET_PREFIX6 = "2001:db8:9::"
     HOSTB_VPN_SUBNET6 = f"{HOSTB_VPN_SUBNET_PREFIX6}/64"
+    HOSTB_IPV6_SUBNET = "2001:db8:ab::/64"
     HOSTB_EXT_IP = "198.51.100.1"
     HOSTB_EXT_IPV6 = "2001:db8:1::"
     PSK = PSK
@@ -327,6 +365,7 @@ class IpsecTestEnv:
             IpsecTestEnv.HOSTB_IPV4_CRT_P2P,
             IpsecTestEnv.HOSTB_IPV4_IF_SUBNET,
             IpsecTestEnv.HOSTB_IPV4_TRANSPORT,
+            IpsecTestEnv.HOSTB_IPV4_6IN4,
         ]:
             exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
@@ -334,7 +373,11 @@ class IpsecTestEnv:
                 check=True,
             )
 
-        for ipv6 in [IpsecTestEnv.HOSTB_IPV6_P2P, IpsecTestEnv.HOSTB_IPV6_CS]:
+        for ipv6 in [
+            IpsecTestEnv.HOSTB_IPV6_P2P,
+            IpsecTestEnv.HOSTB_IPV6_CS,
+            IpsecTestEnv.HOSTB_IPV6_4IN6,
+        ]:
             exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
                 f"ip -6 addr add {ipv6}/64 dev {HOSTB_NIC}".split(),
@@ -354,16 +397,7 @@ class IpsecTestEnv:
             f"--rundir {HOSTB_IPSEC_RUN_DIR}".split(),
             check=True,
         )
-        for conn_name in [
-            HOSTB_IPSEC_CRT_CONN_NAME,
-            HOSTB_IPSEC_RSA_CONN_NAME,
-            HOSTB_IPSEC_PSK_CONN_NAME,
-            HOSTB_IPSEC_CRT_P2P_CONN_NAME,
-            HOSTB_IPSEC_TRANSPORET_CONN_NAME,
-            HOSTB_IPSEC_LEFTSUBNET_CONN_NAME,
-            HOSTB_IPSEC_IPV6_P2P_CONN_NAME,
-            HOSTB_IPSEC_IPV6_CS_CONN_NAME,
-        ]:
+        for conn_name in HOSTB_IPSEC_CONNS:
             exec_cmd(
                 f"ip netns exec {HOSTB_NS} "
                 f"ipsec auto --ctlsocket {HOSTB_IPSEC_RUN_DIR}/pluto.ctl "
@@ -431,6 +465,7 @@ def setup_hosta_ip():
         IpsecTestEnv.HOSTA_IPV4_CRT_P2P,
         IpsecTestEnv.HOSTA_IPV4_IF_SUBNET,
         IpsecTestEnv.HOSTA_IPV4_TRANSPORT,
+        IpsecTestEnv.HOSTA_IPV4_6IN4,
     ]:
         desired_state[Interface.KEY][0][Interface.IPV4][
             InterfaceIPv4.ADDRESS
@@ -440,7 +475,11 @@ def setup_hosta_ip():
                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
             }
         )
-    for ip in [IpsecTestEnv.HOSTA_IPV6_P2P, IpsecTestEnv.HOSTA_IPV6_CS]:
+    for ip in [
+        IpsecTestEnv.HOSTA_IPV6_P2P,
+        IpsecTestEnv.HOSTA_IPV6_CS,
+        IpsecTestEnv.HOSTA_IPV6_4IN6,
+    ]:
         desired_state[Interface.KEY][0][Interface.IPV6][
             InterfaceIPv6.ADDRESS
         ].append(
@@ -450,6 +489,7 @@ def setup_hosta_ip():
             }
         )
 
+    print("HAHA ", desired_state)
     libnmstate.apply(desired_state)
     # Need to wait 2 seconds for IPv6 duplicate address detection,
     # otherwise the `pluto` will not listen on any IPv6 address

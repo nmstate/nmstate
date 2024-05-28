@@ -10,6 +10,7 @@ from libnmstate.schema import InterfaceIPv6
 
 
 from .testlib import cmdlib
+from .testlib.env import nm_libreswan_micro_version
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import show_only
 from .testlib.ipsec import IpsecTestEnv
@@ -107,7 +108,8 @@ def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(
 
 
 @pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
+    nm_libreswan_micro_version() < 20,
+    reason="Need NetworkManager-libreswan 1.2.20+ to support rightcert",
 )
 def test_ipsec_ipv4_libreswan_rightcert(
     ipsec_hosta_conn_cleanup,
@@ -425,7 +427,9 @@ def test_ipsec_ipv4_libreswan_authby(
 
 
 @pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
+    nm_libreswan_micro_version() < 20,
+    reason="Need NetworkManager-libreswan 1.2.20+ to support "
+    "leftmodecfgclient",
 )
 def test_ipsec_ipv4_libreswan_p2p_cert_auth_add_and_remove(
     ipsec_hosta_conn_cleanup,
@@ -462,7 +466,8 @@ def test_ipsec_ipv4_libreswan_p2p_cert_auth_add_and_remove(
 
 
 @pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be older than 1.2.20",
+    nm_libreswan_micro_version() < 20,
+    reason="Need NetworkManager-libreswan 1.2.20 to support leftsubnet",
 )
 def test_ipsec_ipv4_libreswan_leftsubnet(
     ipsec_hosta_conn_cleanup,
@@ -503,7 +508,8 @@ def test_ipsec_ipv4_libreswan_leftsubnet(
 
 
 @pytest.mark.xfail(
-    reason="NetworkManager-libreswan might be too old",
+    nm_libreswan_micro_version() < 22,
+    reason="Need NetworkManager-libreswan 1.2.20 to support transport mode",
 )
 def test_ipsec_ipv4_libreswan_transport_mode(
     ipsec_hosta_conn_cleanup,
@@ -541,7 +547,8 @@ def test_ipsec_ipv4_libreswan_transport_mode(
 
 
 @pytest.mark.xfail(
-    reason="This is not supported by latest NM-libreswan yet",
+    nm_libreswan_micro_version() < 22,
+    reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
 )
 def test_ipsec_ipv6_libreswan_p2p(
     ipsec_hosta_conn_cleanup,
@@ -580,9 +587,10 @@ def test_ipsec_ipv6_libreswan_p2p(
 
 
 @pytest.mark.xfail(
-    reason="This is not supported by latest NM-libreswan yet",
+    nm_libreswan_micro_version() < 22,
+    reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
 )
-def test_ipsec_ipv6_libreswan_client_server(
+def test_ipsec_ipv6_host_to_subnet(
     ipsec_hosta_conn_cleanup,
 ):
     desired_state = yaml.load(
@@ -593,15 +601,19 @@ def test_ipsec_ipv6_libreswan_client_server(
           ipv4:
             enabled: true
             dhcp: true
+          ipv6:
+            enabled: true
+            dhcp: true
+            autoconf: true
           libreswan:
             hostaddrfamily: ipv6
             clientaddrfamily: ipv6
             left: {IpsecTestEnv.HOSTA_IPV6_CS}
             leftid: '@hosta.example.org'
             leftcert: hosta.example.org
-            leftmodecfgclient: no
             right: {IpsecTestEnv.HOSTB_IPV6_CS}
             rightid: '@hostb.example.org'
+            ipsec-interface: 93
             ikev2: insist""",
         Loader=yaml.SafeLoader,
     )
@@ -616,7 +628,75 @@ def test_ipsec_ipv6_libreswan_client_server(
         RETRY_COUNT,
         _check_ipsec_ip,
         IpsecTestEnv.HOSTB_VPN_SUBNET_PREFIX6,
-        IpsecTestEnv.HOSTA_NIC,
+        "ipsec93",
+    )
+
+
+@pytest.mark.xfail(
+    nm_libreswan_micro_version() < 22,
+    reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
+)
+@pytest.mark.parametrize(
+    "left,right,leftsubnet,rightsubnet",
+    [
+        (
+            IpsecTestEnv.HOSTA_IPV6_4IN6,
+            IpsecTestEnv.HOSTB_IPV6_4IN6,
+            IpsecTestEnv.HOSTA_IPV4_CRT_SUBNET,
+            IpsecTestEnv.HOSTB_IPV4_CRT_SUBNET,
+        ),
+        (
+            IpsecTestEnv.HOSTA_IPV4_6IN4,
+            IpsecTestEnv.HOSTB_IPV4_6IN4,
+            IpsecTestEnv.HOSTA_IPV6_SUBNET,
+            IpsecTestEnv.HOSTB_IPV6_SUBNET,
+        ),
+    ],
+    ids=["4in6", "6in4"],
+)
+def test_ipsec_ipv6_ipv4_subnet_tunnnel(
+    ipsec_hosta_conn_cleanup,
+    left,
+    right,
+    leftsubnet,
+    rightsubnet,
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          ipv6:
+            enabled: true
+            dhcp: true
+            autoconf: true
+          libreswan:
+            left: {left}
+            leftid: '@hosta.example.org'
+            leftcert: hosta.example.org
+            leftsubnet: {leftsubnet}
+            leftmodecfgclient: false
+            right: {right}
+            rightid: '@hostb.example.org'
+            rightsubnet: {rightsubnet}
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        left,
+        right,
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_policy,
+        leftsubnet,
+        rightsubnet,
     )
 
 
@@ -761,9 +841,10 @@ def test_ipsec_dhcpv4_off_and_empty_ip_addr(
 
 
 @pytest.mark.xfail(
-    reason="This is not supported by latest NM-libreswan yet",
+    nm_libreswan_micro_version() < 22,
+    reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
 )
-def test_ipsec_dhcpv6_off(
+def test_ipsec_ipv6_host_to_site_with_dhcpv6_off(
     ipsec_hosta_conn_cleanup,
 ):
     desired_state = yaml.load(
@@ -774,15 +855,19 @@ def test_ipsec_dhcpv6_off(
           ipv4:
             enabled: true
             dhcp: true
+          ipv6:
+            enabled: true
+            dhcp: false
+            autoconf: false
           libreswan:
             hostaddrfamily: ipv6
             clientaddrfamily: ipv6
             left: {IpsecTestEnv.HOSTA_IPV6_CS}
             leftid: '@hosta.example.org'
             leftcert: hosta.example.org
-            leftmodecfgclient: no
             right: {IpsecTestEnv.HOSTB_IPV6_CS}
             rightid: '@hostb.example.org'
+            ipsec-interface: 97
             ikev2: insist""",
         Loader=yaml.SafeLoader,
     )
@@ -790,8 +875,8 @@ def test_ipsec_dhcpv6_off(
     assert retry_till_true_or_timeout(
         RETRY_COUNT,
         _check_ipsec,
-        IpsecTestEnv.HOSTA_IPV4_RSA,
-        IpsecTestEnv.HOSTB_IPV4_RSA,
+        IpsecTestEnv.HOSTA_IPV6_CS,
+        IpsecTestEnv.HOSTB_IPV6_CS,
     )
 
     iface_state = show_only(["ipsec97"])[Interface.KEY][0]
