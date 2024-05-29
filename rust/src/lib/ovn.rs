@@ -33,7 +33,7 @@ pub struct OvnConfiguration {
 impl OvnConfiguration {
     const SEPARATOR: &'static str = ",";
 
-    pub(crate) fn is_none(&self) -> bool {
+    pub fn is_none(&self) -> bool {
         self.bridge_mappings.is_none()
     }
 

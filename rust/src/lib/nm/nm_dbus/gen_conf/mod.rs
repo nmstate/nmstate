@@ -4,6 +4,7 @@ mod bond;
 mod bridge;
 mod conn;
 mod ethtool;
+mod generic;
 mod ieee8021x;
 mod infiniband;
 mod ip;

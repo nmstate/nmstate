@@ -328,8 +328,7 @@ pub(crate) fn create_index_for_nm_conns_by_name_type(
                             v.insert(vec![nm_conn]);
                         }
                     };
-                }
-                if nm_iface_type == NM_SETTING_WIRED_SETTING_NAME {
+                } else if nm_iface_type == NM_SETTING_WIRED_SETTING_NAME {
                     match ret.entry((iface_name, NM_SETTING_VETH_SETTING_NAME))
                     {
                         Entry::Occupied(o) => {
@@ -340,6 +339,7 @@ pub(crate) fn create_index_for_nm_conns_by_name_type(
                         }
                     };
                 }
+
                 match ret.entry((iface_name, nm_iface_type)) {
                     Entry::Occupied(o) => {
                         o.into_mut().push(nm_conn);

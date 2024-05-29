@@ -14,7 +14,7 @@ use super::super::{
     query_apply::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
         deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
-        dispatch::apply_dispatch_script,
+        dispatch::{apply_dispatch_iface_type_scripts, apply_dispatch_script},
         dns::{
             is_iface_dns_desired, purge_global_dns_config,
             store_dns_config_via_global_api,
@@ -56,6 +56,7 @@ pub(crate) fn nm_apply(
 
     if !merged_state.memory_only {
         delete_ifaces(&mut nm_api, merged_state)?;
+        apply_dispatch_iface_type_scripts(&merged_state.dispatch)?;
     }
 
     if let Some(hostname) = merged_state

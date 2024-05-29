@@ -296,12 +296,14 @@ fn default_iface_type() -> InterfaceType {
 impl MergedInterface {
     pub(crate) fn post_inter_ifaces_process_base_iface(
         &mut self,
+        gen_conf_mode: bool,
     ) -> Result<(), NmstateError> {
         self.post_inter_ifaces_process_ip()?;
         self.post_inter_ifaces_process_mptcp()?;
         self.post_inter_ifaces_process_ethtool();
         self.validate_mtu()?;
         self.validate_can_have_ip()?;
+        self.validate_dispatch(gen_conf_mode)?;
         Ok(())
     }
 

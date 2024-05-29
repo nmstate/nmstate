@@ -12,26 +12,30 @@ use super::{
     error::nm_error_to_nmstate,
     query_apply::{
         create_index_for_nm_conns_by_name_type,
-        device::nm_dev_iface_type_to_nmstate, dispatch::get_dispatches,
-        dns::nm_global_dns_to_nmstate, get_description, get_lldp,
-        is_lldp_enabled, nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
-        nm_ip_setting_to_nmstate6, ovs::merge_ovs_netdev_tun_iface,
+        device::nm_dev_iface_type_to_nmstate,
+        dispatch::{fill_iface_dispatch_scripts, get_global_dispatch},
+        dns::nm_global_dns_to_nmstate,
+        get_description, get_lldp, is_lldp_enabled, nm_802_1x_to_nmstate,
+        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
+        ovs::merge_ovs_netdev_tun_iface,
         query_nmstate_wait_ip, retrieve_dns_info,
+        user::get_dispatch_variables,
         vpn::get_supported_vpn_ifaces,
     },
     settings::{
-        get_bond_balance_slb, NM_SETTING_OVS_IFACE_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
+        get_bond_balance_slb, get_dispath_type,
+        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_WIRED_SETTING_NAME,
     },
 };
 use crate::{
-    BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
-    EthernetInterface, HsrInterface, InfiniBandInterface, Interface,
-    InterfaceIdentifier, InterfaceState, InterfaceType, LinuxBridgeInterface,
-    LoopbackInterface, MacSecConfig, MacSecInterface, MacVlanInterface,
-    MacVtapInterface, NetworkState, NmstateError, OvsBridgeInterface,
-    OvsInterface, UnknownInterface, VlanInterface, VrfInterface,
-    VxlanInterface,
+    BaseInterface, BondConfig, BondInterface, BondOptions, DispatchConfig,
+    DispatchInterface, DummyInterface, EthernetInterface, HsrInterface,
+    InfiniBandInterface, Interface, InterfaceIdentifier, InterfaceState,
+    InterfaceType, LinuxBridgeInterface, LoopbackInterface, MacSecConfig,
+    MacSecInterface, MacVlanInterface, MacVtapInterface, NetworkState,
+    NmstateError, OvsBridgeInterface, OvsInterface, UnknownInterface,
+    VlanInterface, VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -174,7 +178,7 @@ pub(crate) fn nm_retrieve(
         .chain(net_state.interfaces.user_ifaces.values_mut())
     {
         // Do not touch interfaces nmstate does not support yet
-        if !InterfaceType::SUPPORTED_LIST.contains(&iface.iface_type()) {
+        if !iface.iface_type().is_supported() {
             iface.base_iface_mut().state = InterfaceState::Ignore;
         }
     }
@@ -196,15 +200,11 @@ pub(crate) fn nm_retrieve(
     }
     net_state.dns = Some(dns_config);
 
-    for (iface_name, conf) in get_dispatches().drain() {
-        if let Some(iface) =
-            net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
-        {
-            iface.base_iface_mut().dispatch = Some(conf);
-        }
-    }
+    fill_iface_dispatch_scripts(&mut net_state.interfaces);
 
     merge_ovs_netdev_tun_iface(&mut net_state, &nm_devs, &nm_conns);
+
+    net_state.dispatch = get_global_dispatch()?;
 
     Ok(net_state)
 }
@@ -233,7 +233,7 @@ pub(crate) fn nm_conn_to_base_iface(
         base_iface.name = iface_name.to_string();
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = if let Some(nm_dev) = nm_dev {
-            nm_dev_iface_type_to_nmstate(nm_dev)
+            nm_dev_iface_type_to_nmstate(nm_dev, Some(nm_conn))
         } else {
             InterfaceType::Unknown
         };
@@ -246,6 +246,27 @@ pub(crate) fn nm_conn_to_base_iface(
         base_iface.profile_name = get_connection_name(nm_conn);
         if base_iface.profile_name.as_ref() == Some(&base_iface.name) {
             base_iface.profile_name = None;
+        }
+        if base_iface.iface_type == InterfaceType::Dispatch {
+            let dispatch_iface_type = if let Some(t) = get_dispath_type(nm_conn)
+            {
+                t
+            } else {
+                log::warn!(
+                    "BUG: NM connection {nm_conn:?} is marked \
+                            as InterfaceType::Dispatch, but with \
+                            device_handler undefined"
+                );
+                return None;
+            };
+            base_iface.dispatch = Some(DispatchConfig {
+                variables: get_dispatch_variables(
+                    nm_conn,
+                    &dispatch_iface_type,
+                ),
+                kind: Some(dispatch_iface_type),
+                ..Default::default()
+            });
         }
 
         base_iface.lldp =
@@ -368,6 +389,9 @@ fn iface_get(
                 iface.base = base_iface;
                 iface
             }),
+            InterfaceType::Dispatch => {
+                Interface::Dispatch(DispatchInterface { base: base_iface })
+            }
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);
                 return None;
@@ -443,7 +467,7 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
         NmDeviceState::Disconnected => base_iface.state = InterfaceState::Down,
         _ => base_iface.state = InterfaceState::Up,
     }
-    base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
+    base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev, None);
     let iface = match &base_iface.iface_type {
         InterfaceType::Ethernet => Interface::Ethernet({
             let mut iface = EthernetInterface::new();

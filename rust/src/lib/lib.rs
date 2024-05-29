@@ -119,7 +119,10 @@ mod state;
 mod statistic;
 mod unit_tests;
 
-pub use crate::dispatch::DispatchConfig;
+pub use crate::dispatch::{
+    DispatchConfig, DispatchGlobalConfig, DispatchInterfaceType,
+    DispatchInterfaceTypeState,
+};
 pub(crate) use crate::dns::MergedDnsState;
 pub use crate::dns::{DnsClientState, DnsState};
 pub use crate::error::{ErrorKind, NmstateError};
@@ -137,22 +140,23 @@ pub use crate::ifaces::{
     BondArpValidate, BondConfig, BondFailOverMac, BondInterface, BondLacpRate,
     BondMode, BondOptions, BondPortConfig, BondPrimaryReselect,
     BondXmitHashPolicy, BridgePortTrunkTag, BridgePortVlanConfig,
-    BridgePortVlanMode, BridgePortVlanRange, DummyInterface, EthernetConfig,
-    EthernetDuplex, EthernetInterface, EthtoolCoalesceConfig, EthtoolConfig,
-    EthtoolFeatureConfig, EthtoolPauseConfig, EthtoolRingConfig, HsrConfig,
-    HsrInterface, HsrProtocol, InfiniBandConfig, InfiniBandInterface,
-    InfiniBandMode, Interfaces, IpsecInterface, LibreswanAddressFamily,
-    LibreswanConfig, LibreswanConnectionType, LinuxBridgeConfig,
-    LinuxBridgeInterface, LinuxBridgeMulticastRouterType, LinuxBridgeOptions,
-    LinuxBridgePortConfig, LinuxBridgeStpOptions, LoopbackInterface,
-    MacSecConfig, MacSecInterface, MacSecOffload, MacSecValidate,
-    MacVlanConfig, MacVlanInterface, MacVlanMode, MacVtapConfig,
-    MacVtapInterface, MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
-    OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgeOptions, OvsBridgePortConfig, OvsBridgeStpOptions, OvsDpdkConfig,
-    OvsInterface, OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig,
-    VlanConfig, VlanInterface, VlanProtocol, VlanRegistrationProtocol,
-    VrfConfig, VrfInterface, VxlanConfig, VxlanInterface, XfrmInterface,
+    BridgePortVlanMode, BridgePortVlanRange, DispatchInterface, DummyInterface,
+    EthernetConfig, EthernetDuplex, EthernetInterface, EthtoolCoalesceConfig,
+    EthtoolConfig, EthtoolFeatureConfig, EthtoolPauseConfig, EthtoolRingConfig,
+    HsrConfig, HsrInterface, HsrProtocol, InfiniBandConfig,
+    InfiniBandInterface, InfiniBandMode, Interfaces, IpsecInterface,
+    LibreswanAddressFamily, LibreswanConfig, LibreswanConnectionType,
+    LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
+    LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,
+    LoopbackInterface, MacSecConfig, MacSecInterface, MacSecOffload,
+    MacSecValidate, MacVlanConfig, MacVlanInterface, MacVlanMode,
+    MacVtapConfig, MacVtapInterface, MacVtapMode, OvsBridgeBondConfig,
+    OvsBridgeBondMode, OvsBridgeBondPortConfig, OvsBridgeConfig,
+    OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
+    OvsBridgeStpOptions, OvsDpdkConfig, OvsInterface, OvsPatchConfig,
+    SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig, VlanInterface,
+    VlanProtocol, VlanRegistrationProtocol, VrfConfig, VrfInterface,
+    VxlanConfig, VxlanInterface, XfrmInterface,
 };
 pub use crate::ip::{
     AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4,
@@ -186,3 +190,5 @@ pub use crate::route_rule::{
 };
 #[cfg(feature = "query_apply")]
 pub use crate::statistic::{NmstateFeature, NmstateStatistic};
+
+pub(crate) use crate::dispatch::MergedDispatchGlobalConfig;

@@ -186,6 +186,15 @@ def test_add_remove_vrf(eth1_up):
     assertlib.assert_absent("vrf0")
 
 
+def test_add_remove_dispatch_iface():
+    with example_state(
+        "dispatch_iface.yml", cleanup="dispatch_iface_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent("vxcan1")
+
+
 @pytest.mark.skipif(
     not os.environ.get("TEST_REAL_NIC"),
     reason="Need to define TEST_REAL_NIC for infiniband test",

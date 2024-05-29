@@ -1,0 +1,22 @@
+---
+dispatch:
+    interfaces:
+        - type: vxcan
+          activation: "ip link add $name type vxcan peer $peer"
+          deactivation: "ip link del $name"
+          allowed-variable-names:
+              - peer
+          kernel-index-getter: "cat /sys/class/net/$name/ifindex"
+interfaces:
+    - name: vxcan1
+      type: dispatch
+      description: "vxcan interface created by dispatch script"
+      dispatch:
+          type: vxcan
+          variables:
+              peer: "vxcan1-ep"
+      ipv4:
+          enabled: true
+          address:
+              - ip: 192.0.2.1
+                prefix-length: 24

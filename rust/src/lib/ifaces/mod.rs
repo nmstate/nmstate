@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod base;
 mod bond;
 mod bridge_vlan;
+mod dispatch;
 mod dummy;
 mod ethernet;
 mod ethtool;
@@ -22,6 +25,7 @@ mod ovs;
 mod sriov;
 mod vlan;
 
+pub use self::dispatch::DispatchInterface;
 pub use self::xfrm::XfrmInterface;
 pub use base::*;
 pub use bond::{
@@ -43,7 +47,6 @@ pub use ethtool::{
 };
 pub use hsr::{HsrConfig, HsrInterface, HsrProtocol};
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
-pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;
 pub use ipsec::{
     IpsecInterface, LibreswanAddressFamily, LibreswanConfig,
@@ -70,3 +73,5 @@ pub use vlan::{
 };
 pub use vrf::{VrfConfig, VrfInterface};
 pub use vxlan::{VxlanConfig, VxlanInterface};
+
+pub(crate) use self::inter_ifaces::MergedInterfaces;

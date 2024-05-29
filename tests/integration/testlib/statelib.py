@@ -9,6 +9,7 @@ from operator import itemgetter
 
 import libnmstate
 from libnmstate.schema import Bond
+from libnmstate.schema import Dispatch
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
@@ -74,7 +75,12 @@ class State:
             for ifstate in self._state[Interface.KEY]
             if ifstate[Interface.NAME] in base_iface_names
         ]
-        self._state = {Interface.KEY: filtered_iface_state}
+        dispatch = self._state.get(Dispatch.KEY)
+        self._state = {
+            Interface.KEY: filtered_iface_state,
+        }
+        if dispatch:
+            self._state[Dispatch.KEY] = dispatch
 
     def update(self, other_state):
         """

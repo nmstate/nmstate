@@ -2,23 +2,20 @@
 
 use std::collections::HashSet;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
-    HsrInterface, InfiniBandInterface, IpsecInterface, LinuxBridgeInterface,
-    LoopbackInterface, MacSecInterface, MacVlanInterface, MacVtapInterface,
-    NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
-    VrfInterface, VxlanInterface, XfrmInterface,
+    BaseInterface, BondInterface, DispatchInterface, DummyInterface, ErrorKind,
+    EthernetInterface, HsrInterface, InfiniBandInterface, IpsecInterface,
+    LinuxBridgeInterface, LoopbackInterface, MacSecInterface, MacVlanInterface,
+    MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
+    VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
 };
 
 use crate::state::merge_json_value;
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
-#[serde(rename_all = "kebab-case")]
 /// Interface type
 pub enum InterfaceType {
     /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
@@ -65,14 +62,12 @@ pub enum InterfaceType {
     Vxlan,
     /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     /// Deserialize and serialize from/to 'infiniband'.
-    #[serde(rename = "infiniband")]
     InfiniBand,
     /// TUN interface. Only used for query, will be ignored when applying.
     /// Deserialize and serialize from/to 'tun'.
     Tun,
     /// MACsec interface.
     /// Deserialize and serialize from/to 'macsec'
-    #[serde(rename = "macsec")]
     MacSec,
     /// Ipsec connection.
     Ipsec,
@@ -80,9 +75,13 @@ pub enum InterfaceType {
     Xfrm,
     /// Unknown interface.
     Unknown,
-    /// Reserved for future use.
-    #[serde(untagged)]
+    /// Interface created by dispatch script. Please refer to
+    /// [crate::DispatchInterfaceType] for detail.
+    Dispatch,
+    /// User space interface reserved for internal use.
     Other(String),
+    /// Kernel interface reserved for internal use.
+    OtherKernel(String),
 }
 
 impl Default for InterfaceType {
@@ -118,9 +117,53 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::MacSec => "macsec",
                 InterfaceType::Ipsec => "ipsec",
                 InterfaceType::Xfrm => "xfrm",
-                InterfaceType::Other(ref s) => s,
+                InterfaceType::Dispatch => "dispatch",
+                InterfaceType::Other(s) => s.as_str(),
+                InterfaceType::OtherKernel(s) => s.as_str(),
             }
         )
+    }
+}
+
+impl Serialize for InterfaceType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(format!("{self}").as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for InterfaceType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let iface_type_str = String::deserialize(deserializer)?;
+        Ok(match iface_type_str.as_str() {
+            "bond" => Self::Bond,
+            "linux-bridge" => Self::LinuxBridge,
+            "dummy" => Self::Dummy,
+            "ethernet" => Self::Ethernet,
+            "hsr" => Self::Hsr,
+            "loopback" => Self::Loopback,
+            "mac-vlan" => Self::MacVlan,
+            "mac-vtap" => Self::MacVtap,
+            "ovs-bridge" => Self::OvsBridge,
+            "ovs-interface" => Self::OvsInterface,
+            "veth" => Self::Veth,
+            "vlan" => Self::Vlan,
+            "vrf" => Self::Vrf,
+            "vxlan" => Self::Vxlan,
+            "infiniband" => Self::InfiniBand,
+            "unknown" => Self::Unknown,
+            "tun" => Self::Tun,
+            "macsec" => Self::MacSec,
+            "ipsec" => Self::Ipsec,
+            "xfrm" => Self::Xfrm,
+            "dispatch" => Self::Dispatch,
+            t => Self::Other(t.to_string()),
+        })
     }
 }
 
@@ -129,7 +172,9 @@ impl InterfaceType {
     const CONTROLLER_IFACES_TYPES: [Self; 4] =
         [Self::Bond, Self::LinuxBridge, Self::OvsBridge, Self::Vrf];
 
-    // other interfaces are also considered as userspace
+    // other interface is also considered as userspace
+    // We are assuming all dispatch interface is kernel interface and waiting
+    // bug report with use case.
     pub(crate) fn is_userspace(&self) -> bool {
         self.is_other() || Self::USERSPACE_IFACE_TYPES.contains(self)
     }
@@ -191,6 +236,22 @@ impl From<&str> for InterfaceState {
             "ignore" => Self::Ignore,
             _ => Self::Unknown,
         }
+    }
+}
+
+impl std::fmt::Display for InterfaceState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Up => "up",
+                Self::Down => "down",
+                Self::Absent => "absent",
+                Self::Ignore => "ignore",
+                Self::Unknown => "unknown",
+            }
+        )
     }
 }
 
@@ -278,6 +339,7 @@ pub enum Interface {
     Ipsec(IpsecInterface),
     /// Linux xfrm interface
     Xfrm(XfrmInterface),
+    Dispatch(DispatchInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -399,8 +461,13 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Xfrm(inner))
             }
+            Some(InterfaceType::Dispatch) => {
+                let inner = DispatchInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Dispatch(inner))
+            }
             Some(iface_type) => {
-                log::warn!("Unsupported interface type {}", iface_type);
+                log::debug!("Unsupported interface type {}", iface_type);
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Unknown(inner))
@@ -414,6 +481,18 @@ impl<'de> Deserialize<'de> for Interface {
     }
 }
 
+impl std::fmt::Display for Interface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}/{} state:{}",
+            self.iface_type(),
+            self.name(),
+            self.base_iface().state
+        )
+    }
+}
+
 impl Interface {
     /// The interface name.
     pub fn name(&self) -> &str {
@@ -422,6 +501,10 @@ impl Interface {
 
     pub(crate) fn is_userspace(&self) -> bool {
         self.base_iface().iface_type.is_userspace()
+    }
+
+    pub(crate) fn is_dispatch(&self) -> bool {
+        self.base_iface().iface_type == InterfaceType::Dispatch
     }
 
     pub(crate) fn is_controller(&self) -> bool {
@@ -524,6 +607,12 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Xfrm(new_iface)
             }
+            Self::Dispatch(iface) => {
+                let new_iface = DispatchInterface {
+                    base: iface.base.clone_name_type_only(),
+                };
+                Self::Dispatch(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -622,6 +711,7 @@ impl Interface {
             Self::MacSec(iface) => &iface.base,
             Self::Ipsec(iface) => &iface.base,
             Self::Xfrm(iface) => &iface.base,
+            Self::Dispatch(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -645,6 +735,7 @@ impl Interface {
             Self::MacSec(iface) => &mut iface.base,
             Self::Ipsec(iface) => &mut iface.base,
             Self::Xfrm(iface) => &mut iface.base,
+            Self::Dispatch(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -801,6 +892,14 @@ impl MergedInterface {
             self.special_merge();
             self.create_ovs_iface_for_empty_ports();
         }
+        // kernel cannot know whether a interface is dispatch or not,
+        // hence the merged state should use desire dispatch interface type.
+        if let Some(iface_type) = self.desired.as_ref().map(|i| i.iface_type())
+        {
+            if iface_type == InterfaceType::Dispatch {
+                self.merged.base_iface_mut().iface_type = iface_type;
+            }
+        }
     }
 
     // This function is designed to hold smart changes or validations
@@ -808,9 +907,10 @@ impl MergedInterface {
     // This function will be invoked __after__ inter-ifaces process done.
     pub(crate) fn post_inter_ifaces_process(
         &mut self,
+        gen_conf_mode: bool,
     ) -> Result<(), NmstateError> {
         self.preserve_current_controller_info();
-        self.post_inter_ifaces_process_base_iface()?;
+        self.post_inter_ifaces_process_base_iface(gen_conf_mode)?;
         self.post_inter_ifaces_process_sriov()?;
         self.post_inter_ifaces_process_vrf()?;
         self.post_inter_ifaces_process_bond()?;
@@ -822,8 +922,7 @@ impl MergedInterface {
         Ok(())
     }
 
-    // After HashMap based merging, extra task required for special use case
-    // like.
+    // After HashMap based merging, extra task required for special use cases
     fn special_merge(&mut self) {
         if let (Some(desired), Some(current)) =
             (self.desired.as_ref(), self.current.as_ref())

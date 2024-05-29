@@ -94,6 +94,9 @@ impl NmConnection {
                 sections.push(("vpn-secrets", s));
             }
         }
+        if let Some(generic_cfg) = &self.generic {
+            sections.push(("generic", generic_cfg.to_keyfile()?));
+        }
 
         keyfile_sections_to_string(&sections)
     }
