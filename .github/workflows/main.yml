@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Rust ${{ matrix.rust_version }}
       run: |
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Rust ${{ matrix.rust_version }}
       run: |
@@ -92,7 +92,7 @@ jobs:
         include:
           - os_type: "el9"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: build nmstate rpm
         run: .github/workflows/build_rpm.sh ${{ matrix.os_type }}
       - uses: actions/upload-artifact@v3
@@ -110,7 +110,7 @@ jobs:
           - job_type: "c9s-nm_stable-format"
           - job_type: "c9s-nm_stable-lint"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run tests
         shell: bash
         run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
@@ -135,7 +135,7 @@ jobs:
           - job_type: "c9s-nm_1.42-integ_slow"
           - job_type: "fed-nm_stable-integ_tier1"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Enable openvswitch kernel module
         run: sudo modprobe openvswitch
@@ -192,7 +192,7 @@ jobs:
   build_on_rust_1_66:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Rust 1.66
       run: rustup install 1.66
@@ -211,7 +211,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Rust ${{ matrix.rust_version }}
       run: |
