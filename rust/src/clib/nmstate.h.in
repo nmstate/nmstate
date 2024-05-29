@@ -319,5 +319,43 @@ int nmstate_generate_differences(const char *new_state,
                                  char **err_kind,
                                  char **err_msg);
 
+/**
+ * nmstate_net_state_format - Tidy up network state in YAML/JSON format
+ *
+ * Version:
+ *      2.2.32
+ *
+ * Description:
+ *      Given network state in JSON or YAML format, output state JSON/YAML
+ *      with better layout and item ordering.
+ *      The returned configs is JSON string or YAML string matching the format
+ *      of input state.
+ *
+ * @state:
+ *      Pointer of char array for network state in JSON or YAML format.
+ * @formated_state:
+ *      Output pointer of char array for formated network state
+ *      in JSON or YAML(depend on which format you use in @state) format.
+ *      The memory should be freed by nmstate_net_state_free().
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_err_msg_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_net_state_format(const char *state,
+                             char **formated_state,
+                             char **err_kind,
+                             char **err_msg);
+
+
 
 #endif // _LIBNMSTATE_H_

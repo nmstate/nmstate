@@ -3,6 +3,7 @@
 from ctypes import c_int, c_char_p, c_uint32, POINTER, byref, cdll
 import json
 import logging
+import yaml
 
 from .error import (
     NmstateDependencyError,
@@ -222,6 +223,32 @@ def gen_diff(new_state, old_state):
         raise map_error(err_kind, err_msg)
     # pylint: disable=no-member
     return diff_state.decode("utf-8")
+    # pylint: enable=no-member
+
+
+def net_state_serialize(state, use_yaml=True):
+    c_err_msg = c_char_p()
+    c_err_kind = c_char_p()
+    if use_yaml:
+        c_state = c_char_p(yaml.dump(state).encode("utf-8"))
+    else:
+        c_state = c_char_p(json.dumps(state).encode("utf-8"))
+    c_formated_state = c_char_p()
+    rc = lib.nmstate_net_state_format(
+        c_state,
+        byref(c_formated_state),
+        byref(c_err_kind),
+        byref(c_err_msg),
+    )
+    formated_state = c_formated_state.value
+    err_msg = c_err_msg.value
+    err_kind = c_err_kind.value
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
+    if rc != NMSTATE_PASS:
+        raise map_error(err_kind, err_msg)
+    # pylint: disable=no-member
+    return formated_state.decode("utf-8")
     # pylint: enable=no-member
 
 
