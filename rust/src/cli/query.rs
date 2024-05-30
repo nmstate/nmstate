@@ -23,6 +23,8 @@ pub(crate) struct SortedNetworkState {
     ovsdb: Option<OvsDbGlobalConfig>,
     #[serde(rename = "ovn")]
     ovn: OvnConfiguration,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    description: String,
 }
 
 const IFACE_TOP_PRIORTIES: [&str; 2] = ["name", "type"];
@@ -94,6 +96,7 @@ pub(crate) fn sort_netstate(
             dns: net_state.dns,
             ovsdb: net_state.ovsdb,
             ovn: net_state.ovn,
+            description: net_state.description,
         });
     }
 
@@ -105,6 +108,7 @@ pub(crate) fn sort_netstate(
         dns: net_state.dns,
         ovsdb: net_state.ovsdb,
         ovn: net_state.ovn,
+        description: net_state.description,
     })
 }
 
