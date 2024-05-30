@@ -14,7 +14,6 @@ const DEFAULT_TIMEOUT: u32 = 60;
 pub(crate) fn apply_from_stdin(
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
-    set_ctrl_c_action();
     apply(&mut stdin(), matches)
 }
 
@@ -22,8 +21,6 @@ pub(crate) fn apply_from_files(
     file_paths: &[&str],
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
-    set_ctrl_c_action();
-
     let mut ret = String::new();
     for file_path in file_paths {
         ret += &apply(&mut std::fs::File::open(file_path)?, matches)?;
@@ -100,18 +97,16 @@ where
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );
-    let mut cur_state = NetworkState::new();
-    if matches.is_present("KERNEL") {
-        cur_state.set_kernel_only(true);
-    }
-    cur_state.set_running_config_only(true);
-    cur_state.retrieve()?;
-
-    net_state.apply()?;
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .build()
+        .map_err(|e| {
+            CliError::from(format!("tokio::runtime::Builder failed with {e}"))
+        })?;
+    let mut diff_state = rt.block_on(apply_state_async(net_state))?;
     if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
-        net_state.hide_secrets();
+        diff_state.hide_secrets();
     }
-    let diff_state = net_state.gen_diff(&cur_state)?;
     let sorted_net_state = crate::query::sort_netstate(diff_state)?;
     Ok(serde_yaml::to_string(&sorted_net_state)?)
 }
@@ -167,8 +162,16 @@ pub(crate) fn state_edit(
     desire_state.set_verify_change(!matches.is_present("NO_VERIFY"));
     desire_state.set_commit(!matches.is_present("NO_COMMIT"));
     desire_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
-    desire_state.apply()?;
-    let diff_state = desire_state.gen_diff(&cur_state)?;
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .build()
+        .map_err(|e| {
+            CliError::from(format!("tokio::runtime::Builder failed with {e}"))
+        })?;
+    let mut diff_state = rt.block_on(apply_state_async(desire_state))?;
+    if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
+        diff_state.hide_secrets();
+    }
     let sorted_net_state = crate::query::sort_netstate(diff_state)?;
     Ok(serde_yaml::to_string(&sorted_net_state)?)
 }
@@ -259,12 +262,26 @@ fn ask_for_retry() -> bool {
     }
 }
 
-fn set_ctrl_c_action() {
-    ctrlc::set_handler(|| {
-        if let Err(e) = rollback("") {
-            println!("Failed to rollback: {e}");
+async fn apply_state_async(
+    net_state: NetworkState,
+) -> Result<NetworkState, CliError> {
+    let mut cur_state = NetworkState::new();
+    cur_state.set_kernel_only(net_state.kernel_only());
+    cur_state.set_running_config_only(true);
+    cur_state.retrieve_async().await?;
+
+    let mut ctrlc_stream = tokio::signal::unix::signal(
+        tokio::signal::unix::SignalKind::interrupt(),
+    )
+    .map_err(|e| format!("tokio failed to hook on signal SIGINT: {e}"))?;
+    tokio::select! {
+        _ = ctrlc_stream.recv() => {
+            rollback("")?;
+            Err("Interrupted by SIGINT".into())
         }
-        std::process::exit(1);
-    })
-    .expect("Error setting Ctrl-C handler");
+        result = net_state.apply_async() => {
+            result?;
+            Ok(net_state.gen_diff(&cur_state)?)
+        }
+    }
 }
