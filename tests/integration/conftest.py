@@ -3,7 +3,6 @@
 import logging
 import os
 import subprocess
-import yaml
 import tempfile
 
 from pathlib import Path
@@ -11,6 +10,7 @@ from pathlib import Path
 import pytest
 
 import libnmstate
+from libnmstate.schema import Description
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
@@ -31,6 +31,9 @@ LIBNMSTATE_SHOW = libnmstate.show
 DUMP_STATES_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), ".states"
 )
+# Dump YAMLs for AI training
+OPT_DUMP_AI_TRAIN_YAML = "--dump-ai-train-yaml"
+DUMP_AI_TRAIN_YAML = False
 
 
 def pytest_configure(config):
@@ -49,6 +52,12 @@ def pytest_addoption(parser):
         default=False,
         help="dump applied and showed network states",
     )
+    parser.addoption(
+        OPT_DUMP_AI_TRAIN_YAML,
+        action="store_true",
+        default=False,
+        help="dump applied network states with top description only",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -56,7 +65,13 @@ def pytest_collection_modifyitems(config, items):
         # --runslow is not in cli: skip slow tests
         _mark_skip_slow_tests(items)
 
-    if config.getoption("--dump-states"):
+    if config.getoption(OPT_DUMP_AI_TRAIN_YAML):
+        global DUMP_AI_TRAIN_YAML
+        DUMP_AI_TRAIN_YAML = True
+
+    if config.getoption("--dump-states") or config.getoption(
+        OPT_DUMP_AI_TRAIN_YAML
+    ):
         libnmstate.apply = _custom_apply_with_dump_state
         libnmstate.show = _custom_show_with_dump_state
 
@@ -204,7 +219,7 @@ def _dump_state(
         dir=path, prefix=test_name + "-", suffix=".yml", delete=False
     )
     with open(state_file.name, "a") as outfile:
-        yaml.dump(state, outfile)
+        outfile.write(libnmstate.PrettyState(state).yaml)
 
 
 def _custom_apply_with_dump_state(
@@ -212,12 +227,21 @@ def _custom_apply_with_dump_state(
     *args,
     **kwargs,
 ):
+    if DUMP_AI_TRAIN_YAML:
+        cur_state = libnmstate.show()
     result = LIBNMSTATE_APPLY(
         desired_state,
         *args,
         **kwargs,
     )
-    _dump_state(desired_state)
+    if DUMP_AI_TRAIN_YAML:
+        if Description.KEY in desired_state:
+            diff_state = libnmstate.generate_differences(
+                desired_state, cur_state
+            )
+            _dump_state(diff_state)
+    else:
+        _dump_state(desired_state)
     return result
 
 
@@ -229,7 +253,8 @@ def _custom_show_with_dump_state(
         *args,
         **kwargs,
     )
-    _dump_state(current_state)
+    if not DUMP_AI_TRAIN_YAML:
+        _dump_state(current_state)
     return current_state
 
 

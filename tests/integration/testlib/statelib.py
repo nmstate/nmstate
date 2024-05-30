@@ -9,6 +9,7 @@ from operator import itemgetter
 
 import libnmstate
 from libnmstate.schema import Bond
+from libnmstate.schema import Description
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
@@ -111,6 +112,7 @@ class State:
         self._sort_ovs_lag_ports()
         self._sort_mptcp_flags()
         self._remove_mptcp_flags_of_ip_addr()
+        self._remove_top_descriptions()
 
     def match(self, other):
         return state_match(self.state, other.state)
@@ -293,6 +295,9 @@ class State:
                 InterfaceIPv6.ADDRESS, []
             ):
                 addr.pop(InterfaceIPv6.MPTCP_FLAGS, None)
+
+    def _remove_top_descriptions(self):
+        self._state.pop(Description.KEY, None)
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):

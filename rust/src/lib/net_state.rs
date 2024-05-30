@@ -78,6 +78,11 @@ use crate::{
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    /// Description for the whole desire state. Currently it will not be
+    /// persisted by network backend and will be ignored during applying or
+    /// querying.
+    pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Hostname of current host.
     pub hostname: Option<HostNameState>,

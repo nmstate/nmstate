@@ -371,6 +371,9 @@ impl NetworkState {
 
         ret.routes = merged_state.routes.gen_diff();
         ret.rules = merged_state.rules.gen_diff();
+        if self.description != current.description {
+            ret.description.clone_from(&self.description);
+        }
 
         if merged_state.ovsdb.is_changed() {
             ret.ovsdb.clone_from(&self.ovsdb);

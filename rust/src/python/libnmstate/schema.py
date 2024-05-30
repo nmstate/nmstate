@@ -552,3 +552,7 @@ class Mptcp:
     FLAG_SUBFLOW = "subflow"
     FLAG_BACKUP = "backup"
     FLAG_FULLMESH = "fullmesh"
+
+
+class Description:
+    KEY = "description"
