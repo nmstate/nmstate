@@ -145,6 +145,10 @@ impl NetworkState {
         self
     }
 
+    pub fn kernel_only(&self) -> bool {
+        self.kernel_only
+    }
+
     /// By default(true), When nmstate applying the network state, after applied
     /// the network state, nmstate will verify whether the outcome network
     /// configuration matches with desired, if not, will rollback to state

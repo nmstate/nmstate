@@ -24,7 +24,7 @@ serde = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }
-ctrlc = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = [ "signal"] }
 uuid = { workspace = true }
 chrono = { workspace = true }
 nispor = { workspace = true, optional = true }
@@ -32,6 +32,6 @@ toml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
-query_apply = ["nmstate/query_apply", "ctrlc", "nispor"]
+query_apply = ["nmstate/query_apply", "dep:tokio", "dep:nispor"]
 gen_conf = ["nmstate/gen_conf"]
 gen_revert = ["nmstate/gen_revert"]

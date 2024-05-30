@@ -39,7 +39,6 @@ BuildRequires:  rust-packaging
 BuildRequires:  (crate(clap/cargo) >= 3.1 with crate(clap/cargo) < 4.0)
 BuildRequires:  (crate(clap/default) >= 3.1 with crate(clap/default) < 4.0)
 BuildRequires:  (crate(chrono/default) >= 0.4 with crate(chrono/default) < 0.5)
-BuildRequires:  (crate(ctrlc/default) >= 3.2 with crate(ctrlc/default) < 4.0)
 BuildRequires:  (crate(env_logger/default) >= 0.10 with crate(env_logger/default) < 0.11)
 BuildRequires:  (crate(libc/default) >= 0.2 with crate(libc/default) < 0.3)
 BuildRequires:  (crate(log/default) >= 0.4 with crate(log/default) < 0.5)
@@ -54,6 +53,10 @@ BuildRequires:  (crate(zbus/default) >= 1.9 with crate(zbus/default) < 2.0)
 BuildRequires:  (crate(zvariant/default) >= 2.10 with crate(zvariant/default) < 3.0)
 BuildRequires:  (crate(nix/default) >= 0.26 with crate(nix/default) < 0.27)
 BuildRequires:  (crate(toml/default) >= 0.8 with crate(toml/default) < 0.9)
+BuildRequires:  (crate(tokio/default) >= 1.3 with crate(tokio/default) < 2.0)
+BuildRequires:  (crate(tokio/net) >= 1.3 with crate(tokio/net) < 2.0)
+BuildRequires:  (crate(tokio/rt) >= 1.3 with crate(tokio/rt) < 2.0)
+BuildRequires:  (crate(tokio/signal) >= 1.3 with crate(tokio/signal) < 2.0)
 %endif
 
 %description
@@ -163,8 +166,6 @@ pushd rust
 %cargo_prep -V 3
 %else
 %cargo_prep
-# In Fedora, we should use latest ctrlc crates
-sed -i -e 's/^ctrlc.\+$/ctrlc = "3"/' Cargo.toml
 %endif
 
 popd
