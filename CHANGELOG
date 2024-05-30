@@ -1,4 +1,19 @@
 # Changelog
+## [2.2.32] - 2024-05-30
+### Breaking changes
+ - N/A
+
+### New features
+ - C/Python binding: tidy up the input network state. (e5ecc3ce)
+ - C/Python binding: Add support of `NetworkState::gen_diff()`. (9b7d882c)
+ - rust: Provide async API. (486fab1c)
+
+### Bug fixes
+ - cli: Replace `ctrlc` crate with `tokio/signal`. (c67fc1d8)
+ - vlan: Default `reorder-headers: true`. (a907b00e)
+ - ip: Fix routes on empty address. (56d0749e)
+ - ovs: Warn user when cannot connect OVS daemon but desired. (ca33ca51)
+
 ## [2.2.31] - 2024-05-09
 ### Breaking changes
  - N/A
