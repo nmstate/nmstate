@@ -73,7 +73,7 @@ conn hostb_conn_rsa
     leftid=@hostb-rsa.example.org
     leftrsasigkey={RSA_SIGNATURE_HOSTB}
     leftsubnet=0.0.0.0/0
-    rightaddresspool=203.0.113.102-203.0.113.200
+    rightaddresspool=203.0.113.201-203.0.113.210
     rightrsasigkey={RSA_SIGNATURE_HOSTA}
     leftmodecfgserver=yes
     rightmodecfgclient=yes
@@ -489,7 +489,6 @@ def setup_hosta_ip():
             }
         )
 
-    print("HAHA ", desired_state)
     libnmstate.apply(desired_state)
     # Need to wait 2 seconds for IPv6 duplicate address detection,
     # otherwise the `pluto` will not listen on any IPv6 address
