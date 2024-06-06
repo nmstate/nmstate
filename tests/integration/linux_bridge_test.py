@@ -1282,3 +1282,18 @@ def test_controller_detach_from_linux_bridge(bridge0_with_port0):
         )
         == 0
     )
+
+
+@pytest.fixture
+def empty_bridge():
+    bridge_config = {}
+    with linux_bridge(TEST_BRIDGE0, bridge_config) as state:
+        yield state
+
+
+def test_attach_bond_to_empty_bridge(empty_bridge, bond0):
+    bond0[Interface.KEY][0][Interface.CONTROLLER] = TEST_BRIDGE0
+    desired_state = bond0
+    desired_state[Interface.KEY].append(empty_bridge[Interface.KEY][0])
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)

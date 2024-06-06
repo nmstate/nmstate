@@ -66,7 +66,11 @@ impl MergedInterfaces {
                     if !ctrl_iface.is_desired() {
                         continue;
                     }
-                    if let Some(ports) = ctrl_iface.merged.ports() {
+                    if let Some(ports) = ctrl_iface
+                        .desired
+                        .as_ref()
+                        .and_then(|desire| desire.ports())
+                    {
                         if !ports.contains(&merged_iface.merged.name()) {
                             return Err(NmstateError::new(
                                 ErrorKind::InvalidArgument,
