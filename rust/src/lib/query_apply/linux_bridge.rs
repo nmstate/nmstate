@@ -90,6 +90,6 @@ impl MergedInterface {
             None
         };
 
-        des_default_pvid != cur_default_pvid
+        des_default_pvid.is_some() && des_default_pvid != cur_default_pvid
     }
 }
