@@ -210,6 +210,8 @@ function upgrade_nm_from_rpm_dir {
     find $nm_rpm_dir -name \*.rpm -exec cp -v {} "${EXPORT_DIR}/nm_rpms/" \;
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd "dnf install -y ${CONT_EXPORT_DIR}/nm_rpms/*.rpm"
+    exec_cmd "rpm -q NetworkManager-libreswan || \
+        dnf install -y NetworkManager-libreswan"
     # It is fragile for the system to have connectivity check enabled in the
     # integration testing, NM will add the penalty metric to the route when the
     # machine is not connected to the Internet
