@@ -719,3 +719,36 @@ fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
     assert_eq!(desired_old, expected);
     assert_eq!(desired_new, expected);
 }
+
+#[test]
+fn test_linux_bridge_is_default_pvid_changed() {
+    let des_iface: Interface = serde_yaml::from_str(
+        r"---
+          name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port:
+            - name: eth2
+            - name: eth1",
+    )
+    .unwrap();
+    let cur_iface: Interface = serde_yaml::from_str(
+        r"---
+          name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port:
+            - name: eth1
+            - name: eth2
+            options:
+              vlan-default-pvid: 1",
+    )
+    .unwrap();
+
+    let merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+
+    assert!(!merged_iface.is_default_pvid_changed())
+}
