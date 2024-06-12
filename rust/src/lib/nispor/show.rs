@@ -6,6 +6,7 @@ use crate::{
     nispor::{
         base_iface::np_iface_to_base_iface,
         bond::{append_bond_port_config, np_bond_to_nmstate},
+        dns::get_dns,
         error::np_error_to_nmstate,
         ethernet::np_ethernet_to_nmstate,
         hostname::get_hostname_state,
@@ -25,8 +26,10 @@ use crate::{
     NetworkState, NmstateError, OvsInterface, UnknownInterface, XfrmInterface,
 };
 
+// Only report DNS config when `kernel_only: true`
 pub(crate) async fn nispor_retrieve(
     running_config_only: bool,
+    kernel_only: bool,
 ) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState {
         hostname: get_hostname_state(),
@@ -157,7 +160,9 @@ pub(crate) async fn nispor_retrieve(
     set_controller_type(&mut net_state.interfaces);
     net_state.routes = get_routes(running_config_only).await;
     net_state.rules = get_route_rules(&np_state.rules, running_config_only);
-
+    if kernel_only {
+        net_state.dns = get_dns();
+    }
     Ok(net_state)
 }
 

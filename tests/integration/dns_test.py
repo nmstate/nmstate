@@ -19,6 +19,9 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib.bondlib import bond_interface
 from .testlib.genconf import gen_conf_apply
+from .testlib.servicelib import disable_service
+from .testlib.yaml import load_yaml
+
 
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
 EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
@@ -625,3 +628,44 @@ def test_purge_dns_with_empty_server_and_search(static_dns):
 
     current_state = libnmstate.show()
     assert not current_state[DNS.KEY][DNS.CONFIG]
+
+
+def test_kernel_mode_dns_and_purge():
+    desired_state = load_yaml(
+        """---
+        dns-resolver:
+          config:
+            search:
+            - example.com
+            - example.org
+            server:
+            - 2001:4860:4860::8888
+            - 2001:4860:4860::8844
+            - 8.8.4.4
+            - 8.8.8.8
+            options:
+            - debug
+            - rotate
+        """
+    )
+    with disable_service("NetworkManager"):
+        libnmstate.apply(desired_state, kernel_only=True)
+        cur_state = libnmstate.show(kernel_only=True)
+        assert (
+            cur_state[DNS.KEY][DNS.CONFIG]
+            == desired_state[DNS.KEY][DNS.CONFIG]
+        )
+        assert (
+            cur_state[DNS.KEY][DNS.RUNNING]
+            == desired_state[DNS.KEY][DNS.CONFIG]
+        )
+
+        desired_state = load_yaml(
+            """---
+            dns-resolver:
+              config: {}
+            """
+        )
+        libnmstate.apply(desired_state, kernel_only=True)
+        cur_state = libnmstate.show(kernel_only=True)
+        assert not cur_state[DNS.KEY][DNS.CONFIG]

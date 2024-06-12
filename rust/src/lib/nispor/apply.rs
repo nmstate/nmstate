@@ -2,6 +2,8 @@
 
 use crate::{
     nispor::{
+        dns::apply_dns_conf_to_etc,
+        hostname::set_running_hostname,
         ip::{nmstate_ipv4_to_np, nmstate_ipv6_to_np},
         route::gen_nispor_route_confs,
         veth::nms_veth_conf_to_np,
@@ -50,13 +52,26 @@ pub(crate) async fn nispor_apply(
     }
 
     if let Err(e) = net_conf.apply_async().await {
-        Err(NmstateError::new(
+        return Err(NmstateError::new(
             ErrorKind::PluginFailure,
             format!("Unknown error from nipsor plugin: {}, {}", e.kind, e.msg),
-        ))
-    } else {
-        Ok(())
+        ));
     }
+
+    if let Some(running_hostname) = merged_state
+        .hostname
+        .desired
+        .as_ref()
+        .and_then(|c| c.running.as_ref())
+    {
+        set_running_hostname(running_hostname)?;
+    }
+
+    if merged_state.dns.is_changed() {
+        apply_dns_conf_to_etc(&merged_state.dns)?;
+    }
+
+    Ok(())
 }
 
 fn nmstate_iface_type_to_np(
