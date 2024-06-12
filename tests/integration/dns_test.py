@@ -617,3 +617,11 @@ def test_purge_dns_full_config(static_dns_with_options):
 
     current_state = libnmstate.show()
     assert not current_state[DNS.KEY][DNS.CONFIG]
+
+
+def test_purge_dns_with_empty_server_and_search(static_dns):
+    desired_state = {DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}}}
+    libnmstate.apply(desired_state)
+
+    current_state = libnmstate.show()
+    assert not current_state[DNS.KEY][DNS.CONFIG]

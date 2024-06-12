@@ -3,6 +3,13 @@
 use crate::{DnsState, ErrorKind, MergedDnsState, NmstateError};
 
 impl MergedDnsState {
+    pub(crate) fn is_purge(&self) -> bool {
+        self.desired.is_some()
+            && self.servers.is_empty()
+            && self.searches.is_empty()
+            && self.options.is_empty()
+    }
+
     pub(crate) fn verify(&self, current: DnsState) -> Result<(), NmstateError> {
         if !self.is_changed() {
             return Ok(());

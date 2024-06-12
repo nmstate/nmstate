@@ -92,7 +92,20 @@ fn test_is_purge_dns_empty_dict() {
         ",
     )
     .unwrap();
-    assert!(desired.config.unwrap().is_purge());
+    let current: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          server:
+          - 192.0.2.251
+          search:
+          - example.org
+          options:
+          - rotate
+        ",
+    )
+    .unwrap();
+    let merged = MergedDnsState::new(Some(desired), current).unwrap();
+    assert!(merged.is_purge());
 }
 
 #[test]
@@ -106,7 +119,20 @@ fn test_is_purge_dns_full_empty_dict() {
         ",
     )
     .unwrap();
-    assert!(desired.config.unwrap().is_purge());
+    let current: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          server:
+          - 192.0.2.251
+          search:
+          - example.org
+          options:
+          - rotate
+        ",
+    )
+    .unwrap();
+    let merged = MergedDnsState::new(Some(desired), current).unwrap();
+    assert!(merged.is_purge());
 }
 
 #[test]
@@ -118,5 +144,41 @@ fn test_not_purge() {
         ",
     )
     .unwrap();
-    assert!(!desired.config.unwrap().is_purge());
+    let current: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          server:
+          - 192.0.2.251
+          search:
+          - example.org
+        ",
+    )
+    .unwrap();
+    let merged = MergedDnsState::new(Some(desired), current).unwrap();
+    assert!(!merged.is_purge());
+}
+
+#[test]
+fn test_purge_with_empty_server_and_search() {
+    let desired: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          server: []
+          search: []
+        ",
+    )
+    .unwrap();
+    let current: DnsState = serde_yaml::from_str(
+        r"---
+        config:
+          server:
+          - 192.0.2.251
+          search:
+          - example.org
+          options: []
+        ",
+    )
+    .unwrap();
+    let merged = MergedDnsState::new(Some(desired), current).unwrap();
+    assert!(merged.is_purge());
 }
