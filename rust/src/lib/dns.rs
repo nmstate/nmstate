@@ -129,24 +129,6 @@ impl DnsClientState {
         self.server.is_none() && self.search.is_none() && self.options.is_none()
     }
 
-    // Any of these conditions means purge full DNS config:
-    //  * `server`, `search` and `options` are None. Equal to desire state
-    //    `config: {}`
-    //  * `server`, `search` and `options` are `Some<Vec::new()>`.
-    pub(crate) fn is_purge(&self) -> bool {
-        match (
-            self.server.as_ref(),
-            self.search.as_ref(),
-            self.options.as_ref(),
-        ) {
-            (None, None, None) => true,
-            (Some(srvs), Some(schs), Some(opts)) => {
-                srvs.is_empty() && schs.is_empty() && opts.is_empty()
-            }
-            _ => false,
-        }
-    }
-
     pub(crate) fn is_null(&self) -> bool {
         self.server.as_ref().map(|s| s.len()).unwrap_or_default() == 0
             && self.search.as_ref().map(|s| s.len()).unwrap_or_default() == 0
@@ -272,7 +254,12 @@ impl MergedDnsState {
         desired.sanitize()?;
 
         if let Some(conf) = desired.config.as_ref() {
-            if conf.is_purge() {
+            //  * `server`, `search` and `options` are None. Equal to desire
+            //  state `config: {}`, means purging
+            if conf.server.is_none()
+                && conf.search.is_none()
+                && conf.options.is_none()
+            {
                 servers.clear();
                 searches.clear();
                 options.clear();

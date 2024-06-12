@@ -398,23 +398,27 @@ fn set_iface_dns_conf(
     priority: Option<i32>,
 ) -> Result<(), NmstateError> {
     let dns_conf = DnsClientState {
-        server: Some(servers),
-        search: Some(searches),
-        options: Some(options),
+        server: Some(servers.clone()),
+        search: Some(searches.clone()),
+        options: Some(options.clone()),
         priority,
     };
     if is_ipv6 {
         if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
             ip_conf.dns = Some(dns_conf);
-        } else if !dns_conf.is_purge() {
+        } else if !(servers.is_empty()
+            && searches.is_empty()
+            && options.is_empty())
+        {
             return Err(NmstateError::new(
                 ErrorKind::Bug,
-                format!("BUG: The dns interface is hold None IP {iface:?}"),
+                format!("BUG: The dns interface is hold None IPv6 {iface:?}"),
             ));
         }
     } else if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
         ip_conf.dns = Some(dns_conf);
-    } else if !dns_conf.is_purge() {
+    } else if !(servers.is_empty() && searches.is_empty() && options.is_empty())
+    {
         return Err(NmstateError::new(
             ErrorKind::Bug,
             format!("BUG: The dns interface is hold None IP {iface:?}"),

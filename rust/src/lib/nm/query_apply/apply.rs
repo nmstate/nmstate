@@ -116,14 +116,7 @@ pub(crate) fn nm_apply(
                     merged_state.dns.options.as_slice(),
                 )?;
             }
-        } else if merged_state
-            .dns
-            .desired
-            .as_ref()
-            .and_then(|d| d.config.as_ref())
-            .map(|c| c.is_purge())
-            == Some(true)
-        {
+        } else if merged_state.dns.is_purge() {
             // Also need to purge interface level DNS
             store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
                 .ok();
