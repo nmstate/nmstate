@@ -173,8 +173,10 @@ port1_up = eth2_up
 
 
 def pytest_report_header(config):
+    nm_ver = _get_package_nvr("NetworkManager")
+    nm_libreswan_ver = _get_package_nvr("NetworkManager-libreswan")
     return REPORT_HEADER.format(
-        rpms=_get_package_nvr("NetworkManager"),
+        rpms=f"{nm_ver} {nm_libreswan_ver}",
         osname=_get_osname(),
         nmstate_version=_get_nmstate_version(),
     )
@@ -191,9 +193,9 @@ def _get_nmstate_version():
 
 
 def _get_package_nvr(package):
-    return (
-        subprocess.check_output(["rpm", "-q", package]).strip().decode("utf-8")
-    )
+    return subprocess.check_output(
+        ["rpm", "-q", "--qf", "%{name}-%{VERSION}-%{RELEASE}", package]
+    ).decode("utf-8")
 
 
 def _get_osname():

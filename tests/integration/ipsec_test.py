@@ -10,7 +10,8 @@ from libnmstate.schema import InterfaceIPv6
 
 
 from .testlib import cmdlib
-from .testlib.env import nm_libreswan_micro_version
+from .testlib.env import nm_libreswan_version_int
+from .testlib.env import version_str_to_int
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import show_only
 from .testlib.ipsec import IpsecTestEnv
@@ -108,7 +109,7 @@ def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 20,
+    nm_libreswan_version_int() < version_str_to_int("1.2.20"),
     reason="Need NetworkManager-libreswan 1.2.20+ to support rightcert",
 )
 def test_ipsec_ipv4_libreswan_rightcert(
@@ -427,7 +428,7 @@ def test_ipsec_ipv4_libreswan_authby(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 20,
+    nm_libreswan_version_int() < version_str_to_int("1.2.20"),
     reason="Need NetworkManager-libreswan 1.2.20+ to support "
     "leftmodecfgclient",
 )
@@ -466,7 +467,7 @@ def test_ipsec_ipv4_libreswan_p2p_cert_auth_add_and_remove(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 20,
+    nm_libreswan_version_int() < version_str_to_int("1.2.20"),
     reason="Need NetworkManager-libreswan 1.2.20 to support leftsubnet",
 )
 def test_ipsec_ipv4_libreswan_leftsubnet(
@@ -508,7 +509,7 @@ def test_ipsec_ipv4_libreswan_leftsubnet(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 22,
+    nm_libreswan_version_int() < version_str_to_int("1.2.22"),
     reason="Need NetworkManager-libreswan 1.2.20 to support transport mode",
 )
 def test_ipsec_ipv4_libreswan_transport_mode(
@@ -547,7 +548,7 @@ def test_ipsec_ipv4_libreswan_transport_mode(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 22,
+    nm_libreswan_version_int() < version_str_to_int("1.2.22"),
     reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
 )
 def test_ipsec_ipv6_libreswan_p2p(
@@ -587,7 +588,7 @@ def test_ipsec_ipv6_libreswan_p2p(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 22,
+    nm_libreswan_version_int() < version_str_to_int("1.2.22"),
     reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
 )
 def test_ipsec_ipv6_host_to_subnet(
@@ -633,7 +634,7 @@ def test_ipsec_ipv6_host_to_subnet(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 22,
+    nm_libreswan_version_int() < version_str_to_int("1.2.22"),
     reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
 )
 @pytest.mark.parametrize(
@@ -654,7 +655,7 @@ def test_ipsec_ipv6_host_to_subnet(
     ],
     ids=["4in6", "6in4"],
 )
-def test_ipsec_ipv6_ipv4_subnet_tunnnel(
+def test_ipsec_ipv6_ipv4_subnet_tunnel(
     ipsec_hosta_conn_cleanup,
     left,
     right,
@@ -841,7 +842,7 @@ def test_ipsec_dhcpv4_off_and_empty_ip_addr(
 
 
 @pytest.mark.xfail(
-    nm_libreswan_micro_version() < 22,
+    nm_libreswan_version_int() < version_str_to_int("1.2.22"),
     reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
 )
 def test_ipsec_ipv6_host_to_site_with_dhcpv6_off(
