@@ -50,11 +50,10 @@ pub struct BaseInterface {
     /// every two characters. Case insensitive when applying.
     /// Serialize and deserialize to/from `mac-address`.
     pub mac_address: Option<String>,
-    #[serde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// MAC address never change after reboots(normally stored in firmware of
     /// network interface). Using the same format as `mac_address` property.
     /// Ignored during apply.
-    /// TODO: expose it and we do not special merge for this.
     pub permanent_mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -279,6 +278,11 @@ impl BaseInterface {
                     self.iface_type,
                 ),
             ));
+        }
+
+        // Remove permanent_mac_address in desired state as it is query only
+        if is_desired {
+            self.permanent_mac_address = None;
         }
 
         Ok(())
