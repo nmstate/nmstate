@@ -23,7 +23,7 @@ use crate::{
 ///   max-mtu: 9702
 ///   ethernet:
 ///     sr-iov:
-///       drivers-autoprobe: false
+///       drivers-autoprobe: true
 ///       total-vfs: 2
 ///       vfs:
 ///       - id: 0
