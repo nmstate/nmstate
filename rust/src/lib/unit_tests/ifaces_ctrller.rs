@@ -612,6 +612,35 @@ fn test_iface_detach_controller_been_list_in_other_port_list() {
 }
 
 #[test]
+fn test_iface_controller_conflict_with_empty_br_ports() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+- name: br0
+  type: linux-bridge
+  bridge:
+    ports: []
+- name: bond99
+  type: bond
+  state: up
+  controller: br0
+  link-aggregation:
+    mode: balance-rr
+    port:
+    - eth2
+    - eth1
+",
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(des_ifaces, Interfaces::new(), false, false);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
 fn test_auto_manage_ports() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
         r"---

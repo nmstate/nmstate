@@ -19,6 +19,8 @@ from .testlib.env import is_el8
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.iproutelib import iproute_get_ip_addrs_with_order
+from .testlib.servicelib import disable_service
+from .testlib.yaml import load_yaml
 
 # TEST-NET addresses: https://tools.ietf.org/html/rfc5737#section-3
 IPV4_ADDRESS1 = "192.0.2.251"
@@ -938,3 +940,47 @@ def test_mac_address_based_matching(eth1_up):
     expected_state[Interface.KEY][0][Interface.PROFILE_NAME] = "test0"
 
     assertlib.assert_state(expected_state)
+
+
+@pytest.fixture
+def cleanup_veth1_kernel_mode():
+    with disable_service("NetworkManager"):
+        yield
+        desired_state = load_yaml(
+            """---
+            interfaces:
+            - name: veth1
+              type: veth
+              state: absent
+            """
+        )
+        libnmstate.apply(desired_state, kernel_only=True)
+
+
+# TODO(Gris): kernel mode cannot remove IP address yet
+def test_kernel_mode_static_ip(cleanup_veth1_kernel_mode):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        """
+    )
+    libnmstate.apply(desired_state, kernel_only=True)
+    assertlib.assert_state_match(desired_state, kernel_only=True)

@@ -18,7 +18,7 @@ impl MergedRoutes {
             }
         }
 
-        for rts in self.indexed.values() {
+        for rts in self.merged.values() {
             for rt in rts {
                 if rt.is_absent() || !current_routes.contains(rt) {
                     changed_routes.push(rt.clone());

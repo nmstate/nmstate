@@ -60,11 +60,13 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub async fn retrieve_async(&mut self) -> Result<&mut Self, NmstateError> {
-        let state = nispor_retrieve(self.running_config_only).await?;
+        let state =
+            nispor_retrieve(self.running_config_only, self.kernel_only).await?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;
         self.rules = state.rules;
+        self.dns = state.dns;
         if ovsdb_is_running() {
             match ovsdb_retrieve() {
                 Ok(mut ovsdb_state) => {

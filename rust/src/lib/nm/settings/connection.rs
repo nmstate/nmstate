@@ -569,7 +569,7 @@ fn persisten_iface_cur_conf(
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut iface = cur_iface.clone();
     iface.base_iface_mut().routes =
-        merged_state.routes.indexed.get(iface.name()).cloned();
+        merged_state.routes.merged.get(iface.name()).cloned();
     if let Interface::Ethernet(eth_iface) = &mut iface {
         eth_iface.veth = None;
         eth_iface.base.iface_type = InterfaceType::Ethernet;
