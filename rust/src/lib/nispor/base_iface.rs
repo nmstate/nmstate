@@ -133,6 +133,6 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
             None
         }
     } else {
-        Some(iface.permanent_mac_address.clone())
+        Some(iface.permanent_mac_address.as_str().to_uppercase())
     }
 }
