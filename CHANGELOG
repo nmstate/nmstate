@@ -1,4 +1,20 @@
 # Changelog
+## [2.2.33] - 2024-06-13
+### Breaking changes
+ - N/A
+
+### New features
+ - Provide permanent-mac-address when querying. (9d0f8c01)
+ - Add support of SRIOV drivers-autoprobe (05d6b996)
+ - Support DNS modification in kernel mode. (ddb04e8d)
+ - Support modification of static route in kernel mode. (4088e470)
+ - Add description to top level YAML/JSON API. (bb9981c7)
+
+### Bug fixes
+ - Fix error when purging DNS with empty server. (0a86028b)
+ - Validate interface in desired port list of controller. (18677227)
+ - Fix incorrect check on whether `vlan-default-pvid` changed. (018b91a9)
+
 ## [2.2.32] - 2024-05-30
 ### Breaking changes
  - N/A
