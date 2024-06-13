@@ -527,7 +527,7 @@ class TestSrIov:
         vf_ifaces = get_sriov_vf_names(pf_name)
         assert len(vf_ifaces) == 62
 
-    def test_drivers_autoprobe_false(self):
+    def test_drivers_autoprobe_false(self, disable_sriov):
         pf_name = _test_nic_name()
         desired_state = {
             Interface.KEY: [
@@ -546,7 +546,7 @@ class TestSrIov:
         vf_ifaces = get_sriov_vf_names(pf_name)
         assert len(vf_ifaces) == 0
 
-    def test_drivers_autoprobe_restore_default(self):
+    def test_drivers_autoprobe_restore_default(self, disable_sriov):
         pf_name = _test_nic_name()
         desired_state = {
             Interface.KEY: [
