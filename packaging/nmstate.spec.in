@@ -197,11 +197,16 @@ pushd rust/src/python
 popd
 
 %if ! 0%{?rhel} && ! %{is_snapshot}
-# cargo_install has problem on detecting library when running in workspace
-# due to bug https://pagure.io/fedora-rust/cargo2rpm/issue/5
-# Removing the workspace Cargo.toml will workaround this problem.
-rm rust/Cargo.toml
-pushd rust/src/lib
+# Fedora cargo2rpm has problem when working with worksace dependency
+#   https://pagure.io/fedora-rust/cargo2rpm/issue/13
+# we use `cargo package` to generate the expanded Cargo.toml which
+# is also the one used in crates.io
+cargo package --frozen --no-verify --target-dir %{_tmppath}
+tar xf %{_tmppath}/package/nmstate-%{version}.crate \
+  nmstate-%{version}/Cargo.toml
+mv nmstate-%{version}/Cargo.toml ./Cargo.toml
+# Remove worksapce Cargo.toml
+rm ../../Cargo.toml
 %cargo_install
 popd
 %endif
