@@ -67,7 +67,7 @@ def get_info(active_connection, applied_config):
     return info
 
 
-def create_setting(config, base_con_profile):
+def create_setting(config, base_con_profile, clear_dns=True):
     setting_ip = None
     if base_con_profile and config and config.get(InterfaceIPv6.ENABLED):
         setting_ip = base_con_profile.get_setting_ip6_config()
@@ -82,10 +82,11 @@ def create_setting(config, base_con_profile):
             setting_ip.props.gateway = None
             setting_ip.props.route_table = Route.USE_DEFAULT_ROUTE_TABLE
             setting_ip.props.route_metric = Route.USE_DEFAULT_METRIC
-            setting_ip.clear_dns()
-            setting_ip.clear_dns_searches()
-            setting_ip.clear_dns_options(False)
-            setting_ip.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
+            if clear_dns:
+                setting_ip.clear_dns()
+                setting_ip.clear_dns_searches()
+                setting_ip.clear_dns_options(False)
+                setting_ip.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ip:
         setting_ip = NM.SettingIP6Config.new()

@@ -104,11 +104,15 @@ class _ConnectionSetting:
         return self._setting
 
 
-def create_new_nm_simple_conn(iface, nm_profile):
+def create_new_nm_simple_conn(iface, nm_profile, clear_dns=False):
     nm_iface_type = Api2Nm.get_iface_type(iface.type)
     iface_info = iface.to_dict()
-    ipv4_set = create_ipv4_setting(iface_info.get(Interface.IPV4), nm_profile)
-    ipv6_set = create_ipv6_setting(iface_info.get(Interface.IPV6), nm_profile)
+    ipv4_set = create_ipv4_setting(
+        iface_info.get(Interface.IPV4), nm_profile, clear_dns
+    )
+    ipv6_set = create_ipv6_setting(
+        iface_info.get(Interface.IPV6), nm_profile, clear_dns
+    )
     set_wait_ip(ipv4_set, ipv6_set, iface_info.get(Interface.WAIT_IP))
     settings = [ipv4_set, ipv6_set]
     con_setting = _ConnectionSetting()

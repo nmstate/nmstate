@@ -51,7 +51,7 @@ class DnsState:
         self._config_changed = False
         self._cur_dns_state = deepcopy(cur_dns_state) if cur_dns_state else {}
         self._dns_state = merge_dns(des_dns_state, cur_dns_state or {})
-        if self._dns_state == REMOVE_DNS_CONFIG:
+        if des_dns_state is not None and self._dns_state == REMOVE_DNS_CONFIG:
             self._config_changed = True
         elif des_dns_state and des_dns_state.get(DNS.CONFIG):
             if cur_dns_state:

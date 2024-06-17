@@ -13,7 +13,7 @@ from .common import NM
 INT32_MAX = 2**31 - 1
 
 
-def create_setting(config, base_con_profile):
+def create_setting(config, base_con_profile, clear_dns=True):
     setting_ipv4 = None
     if base_con_profile and config and config.get(InterfaceIPv4.ENABLED):
         setting_ipv4 = base_con_profile.get_setting_ip4_config()
@@ -28,10 +28,11 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.route_metric = Route.USE_DEFAULT_METRIC
             setting_ipv4.clear_routes()
             setting_ipv4.clear_routing_rules()
-            setting_ipv4.clear_dns()
-            setting_ipv4.clear_dns_searches()
-            setting_ipv4.clear_dns_options(False)
-            setting_ipv4.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
+            if clear_dns:
+                setting_ipv4.clear_dns()
+                setting_ipv4.clear_dns_searches()
+                setting_ipv4.clear_dns_options(False)
+                setting_ipv4.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ipv4:
         setting_ipv4 = NM.SettingIP4Config.new()
