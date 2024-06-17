@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::Serializer;
 
 pub(crate) fn is_option_string_empty(data: &Option<String>) -> bool {

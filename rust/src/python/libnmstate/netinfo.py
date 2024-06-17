@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 # Copyright 2021 Red Hat
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

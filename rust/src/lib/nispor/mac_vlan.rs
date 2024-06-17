@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     BaseInterface, MacVlanConfig, MacVlanInterface, MacVlanMode, MacVtapConfig,
     MacVtapInterface, MacVtapMode,
