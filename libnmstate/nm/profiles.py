@@ -52,6 +52,7 @@ class NmProfiles:
 
     def apply_config(self, net_state, save_to_disk):
         if net_state.dns.config_changed:
+            clear_profile_dns = True
             if net_state.use_global_dns:
                 apply_global_dns(
                     net_state.dns.config_servers,
@@ -60,6 +61,8 @@ class NmProfiles:
                 )
             else:
                 apply_global_dns([], [], [])
+        else:
+            clear_profile_dns = False
 
         self._prepare_state_for_profiles(net_state)
         # The activation order on bridge/bond ports determins their controler's
@@ -74,7 +77,9 @@ class NmProfiles:
 
         for profile in all_profiles:
             profile.import_current()
-            profile.prepare_config(save_to_disk, gen_conf_mode=False)
+            profile.prepare_config(
+                save_to_disk, gen_conf_mode=False, clear_dns=clear_profile_dns
+            )
         _use_uuid_as_controller_and_parent(all_profiles)
 
         changed_ovs_bridges_and_ifaces = {}

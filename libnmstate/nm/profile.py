@@ -273,7 +273,9 @@ class NmProfile:
             self._iface.type == InterfaceType.ETHERNET and self._iface.is_peer
         )
 
-    def prepare_config(self, save_to_disk, gen_conf_mode=False):
+    def prepare_config(
+        self, save_to_disk, gen_conf_mode=False, clear_dns=True
+    ):
         if self._iface.is_absent or (
             self._iface.is_down
             and not gen_conf_mode
@@ -307,7 +309,7 @@ class NmProfile:
         #       of nmstate should provide full/merged configure.
         if self._iface.is_changed or self._iface.is_desired:
             self._nm_simple_conn = create_new_nm_simple_conn(
-                self._iface, self._nm_profile
+                self._iface, self._nm_profile, clear_dns
             )
         elif self._nm_profile:
             self._nm_simple_conn = NM.SimpleConnection.new_clone(
@@ -316,7 +318,7 @@ class NmProfile:
         else:
             try:
                 self._nm_simple_conn = create_new_nm_simple_conn(
-                    self._iface, self._nm_profile
+                    self._iface, self._nm_profile, clear_dns
                 )
             # No error for undesired interface
             except NmstateError:
