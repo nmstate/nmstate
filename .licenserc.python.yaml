@@ -1,0 +1,24 @@
+header:
+  license:
+    content: |
+      SPDX-License-Identifier: LGPL-2.1-or-later
+
+  paths:
+    - 'rust/src/python/*'
+
+  paths-ignore:
+    - 'target'
+    - '**/*.toml'
+    - '**/*.lock'
+    - '**/*.mod'
+    - '**/*.sum'
+    - '**/*.in'
+    - '**/*.yml'
+    - '**/*.md'
+    - 'CHANGELOG'
+    - 'LICENSE*'
+    - 'LICENSE'
+    - '.gitignore'
+    - '**/*.txt'
+
+  comment: on-failure
