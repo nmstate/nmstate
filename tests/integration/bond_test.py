@@ -22,6 +22,7 @@ from libnmstate.schema import VLAN
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
+from .testlib.apply import apply_with_description
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
@@ -93,7 +94,7 @@ def setup_remove_bond99():
             }
         ]
     }
-    libnmstate.apply(remove_bond)
+    apply_with_description("Remove bond interface bond99", remove_bond)
 
 
 @pytest.fixture
@@ -123,13 +124,17 @@ def bond99_with_eth2(eth2_up):
 @pytest.mark.tier1
 def test_add_and_remove_bond_with_two_port(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
-    libnmstate.apply(state)
+    apply_with_description(
+        "Add bond interface bond99 with two ports eth1 and eth2, set bonding "
+        "mode balance-rr",
+        state,
+    )
 
     assertlib.assert_state_match(state)
 
     state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
 
-    libnmstate.apply(state)
+    apply_with_description("Remove bonding interface bond99", state)
 
     state = statelib.show_only((state[Interface.KEY][0][Interface.NAME],))
     assert not state[Interface.KEY]
@@ -150,7 +155,11 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     bond_name = state[Interface.KEY][0][Interface.NAME]
 
-    libnmstate.apply(state)
+    apply_with_description(
+        "Add bond interface bond99 with bonding mode balance-rr, attach two "
+        "ports eth1 and eth2",
+        state,
+    )
 
     remove_bond_state = {
         Interface.KEY: [
@@ -161,7 +170,7 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
             }
         ]
     }
-    libnmstate.apply(remove_bond_state)
+    apply_with_description("Remove bond interface bond99", remove_bond_state)
     state = statelib.show_only((bond_name,))
     assert not state[Interface.KEY]
 
@@ -173,11 +182,17 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
 def test_add_and_remove_bond_with_port_config(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     try:
-        libnmstate.apply(state)
+        apply_with_description(
+            "Add bond interface bond99 with bonding mode active-backup, "
+            "attach two ports eth1 and eth2, configure the port eth1 with "
+            "priority -1 and queue ID 0, configure the port eth2 with "
+            "priority 2 and queue ID 1",
+            state,
+        )
         assertlib.assert_state_match(state)
     finally:
         state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(state)
+        apply_with_description("Delete the bond device bond99", state)
 
 
 @pytest.mark.skipif(
@@ -187,7 +202,13 @@ def test_add_and_remove_bond_with_port_config(eth1_up, eth2_up):
 def test_add_bond_with_port_config_and_modify(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     try:
-        libnmstate.apply(state)
+        apply_with_description(
+            "Add bond interface bond99 with bonding mode active-backup, "
+            "attach two ports eth1 and eth2. Configure eth1 with the "
+            "bond port priority -1 and queue id 0, configure eth2 with "
+            "bond port priority 2 and queue id 1",
+            state,
+        )
         assertlib.assert_state_match(state)
         bond_port_eth1 = {"name": "eth1", "priority": -1, "queue-id": 1}
         bond_port_eth2 = {"name": "eth2", "priority": 9, "queue-id": 0}
@@ -197,11 +218,16 @@ def test_add_bond_with_port_config_and_modify(eth1_up, eth2_up):
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
             Bond.PORTS_CONFIG_SUBTREE
         ][1] = bond_port_eth2
-        libnmstate.apply(state)
+        apply_with_description(
+            "Configure bond interface bond99 with the port eth1 and eth2, "
+            "configure the port eth1 with priority -1 and queue ID 1, "
+            "configure the port eth2 with priority 9 and queue ID 0",
+            state,
+        )
         assertlib.assert_state_match(state)
     finally:
         state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(state)
+        apply_with_description("Delete bond interface bond99", state)
 
 
 @pytest.mark.skipif(
@@ -252,7 +278,13 @@ def test_add_bond_with_port_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
         ]
     }
 
-    libnmstate.apply(desired_bond_state)
+    apply_with_description(
+        "Add the bond interface bond99, configure the static IP "
+        "192.168.122.250 with prefix length 24 for bond99, set the bonding "
+        "mode to balance-rr, attach eth1 and eth2 as the ports, set the bond "
+        "options miimon 140",
+        desired_bond_state,
+    )
 
     assertlib.assert_state_match(desired_bond_state)
 
@@ -316,7 +348,10 @@ def test_add_port_to_bond_without_port(eth1_up):
     with bond_interface(name=BOND99, port=[]) as state:
         bond_state = state[Interface.KEY][0]
         bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [port_name]
-        libnmstate.apply(state)
+        apply_with_description(
+            "Create bond interface bond99 with port eth1 attached",
+            state,
+        )
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
@@ -328,7 +363,10 @@ def test_remove_all_port_from_bond(bond99_with_2_port):
     state = bond99_with_2_port
     state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] = []
 
-    libnmstate.apply(state)
+    apply_with_description(
+        "Remove all ports from the bond device bond99",
+        state,
+    )
 
     current_state = statelib.show_only((BOND99,))
     bond_cur_state = current_state[Interface.KEY][0]
@@ -344,7 +382,10 @@ def test_replace_bond_port(eth1_up, eth2_up):
         bond_state = state[Interface.KEY][0]
         bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [port2_name]
 
-        libnmstate.apply(state)
+        apply_with_description(
+            "Configure the bond interface bond99 with the port eth2 attached",
+            state,
+        )
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
@@ -360,7 +401,10 @@ def test_remove_one_of_the_bond_port(eth1_up, eth2_up):
         bond_state = state[Interface.KEY][0]
         bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [port2_name]
 
-        libnmstate.apply(state)
+        apply_with_description(
+            "Set up the bond device bond99 with the port eth2",
+            state,
+        )
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
@@ -380,7 +424,9 @@ def test_swap_port_between_bonds(bond88_with_port, bond99_with_eth2):
 
     state = bond88_with_port
     state.update(bond99_with_eth2)
-    libnmstate.apply(state)
+    apply_with_description(
+        "Create bond device bond99, and attach port eth1 to it", state
+    )
 
     assertlib.assert_state_match(state)
 
@@ -390,13 +436,21 @@ def test_set_bond_mac_address(eth1_up):
     port_name = eth1_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, port=[port_name]) as state:
         state[Interface.KEY][0][Interface.MAC] = MAC0
-        libnmstate.apply(state)
+        apply_with_description(
+            "Set the MAC address of the bond interface bond99 to be "
+            "02:FF:FF:FF:FF:00",
+            state,
+        )
 
         current_state = statelib.show_only((BOND99, port_name))
         assert_mac_address(current_state, MAC0)
 
         state[Interface.KEY][0][Interface.MAC] = MAC1
-        libnmstate.apply(state)
+        apply_with_description(
+            "Set the MAC address of the bond interface bond99 to be "
+            "02:FF:FF:FF:FF:01",
+            state,
+        )
 
         current_state = statelib.show_only((BOND99, port_name))
         assert_mac_address(current_state, MAC1)
@@ -412,7 +466,9 @@ def test_changing_port_order_keeps_mac_of_existing_bond(bond99_with_2_port):
     assert_mac_address(current_state)
 
     bond_port.reverse()
-    libnmstate.apply(bond99_with_2_port)
+    apply_with_description(
+        "Create bond99 with two ports eth1 and eth2", bond99_with_2_port
+    )
 
     modified_state = statelib.show_only(ifaces_names)
     assert_mac_address(
@@ -429,7 +485,9 @@ def test_adding_a_port_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
 
     current_state = statelib.show_only((bond_state[Interface.NAME],))
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure bond99 with ports eth1 and eth2", desired_state
+    )
     modified_state = statelib.show_only((bond_state[Interface.NAME],))
     assert (
         modified_state[Interface.KEY][0][Interface.MAC]
@@ -445,8 +503,7 @@ def test_adding_port_to_empty_bond_doesnt_keep_mac(eth1_up):
         bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
         current_state = statelib.show_only((bond_state[Interface.NAME],))
-
-        libnmstate.apply(state)
+        apply_with_description("Configure bond99 with port eth1", state)
         modified_state = statelib.show_only((bond_state[Interface.NAME],))
         assert (
             modified_state[Interface.KEY][0][Interface.MAC]
@@ -461,8 +518,9 @@ def test_removing_port_keeps_mac_of_existing_bond(bond99_with_2_port, eth1_up):
     bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
     current_state = statelib.show_only((bond_state[Interface.NAME],))
-
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Add eth1 as the port to the bond device bond99", desired_state
+    )
     modified_state = statelib.show_only((bond_state[Interface.NAME],))
     assert (
         modified_state[Interface.KEY][0][Interface.MAC]
@@ -542,7 +600,9 @@ def test_change_bond_option_miimon(bond99_with_2_port):
     iface_state = desired_state[Interface.KEY][0]
     bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
     bond_options["miimon"] = 200
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set miimon of the bonding device bond99 to 200", desired_state
+    )
     assertlib.assert_state_match(desired_state)
 
 
@@ -553,7 +613,11 @@ def test_change_bond_option_with_an_id_value(bond99_with_eth2):
     iface_state = desired_state[Interface.KEY][0]
     iface_state[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.XOR
     iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {option_name: "2"}
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set the xmit_hash_policy to layer2+3 and bonding mode to "
+        "balance-xor for bond99",
+        desired_state,
+    )
     new_iface_state = statelib.show_only((BOND99,))[Interface.KEY][0]
     new_options = new_iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
     assert new_options.get(option_name) == "layer2+3"
@@ -775,7 +839,10 @@ def test_change_2_port_bond_mode_from_1_to_5():
         },
     ) as state:
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
-        libnmstate.apply(state)
+        apply_with_description(
+            "Set the bonding mode to balance-tlb for bond device bond99",
+            state,
+        )
 
 
 @pytest.mark.tier1
@@ -783,7 +850,9 @@ def test_set_miimon_100_on_existing_bond(bond99_with_2_port):
     state = bond99_with_2_port
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": 100}
-    libnmstate.apply(state)
+    apply_with_description(
+        "Set the bonding mode to balance-tlb for bond99", state
+    )
     assertlib.assert_state_match(state)
 
 
@@ -873,7 +942,7 @@ def test_bond_disable_arp_interval(bond99_with_2_port_and_arp_monitor):
     bond_config[Bond.OPTIONS_SUBTREE]["arp_interval"] = 0
     bond_config[Bond.OPTIONS_SUBTREE]["arp_ip_target"] = ""
 
-    libnmstate.apply(state)
+    apply_with_description("Disable ARP monitoring on bond99", state)
 
     assertlib.assert_state_match(state)
 
@@ -901,8 +970,9 @@ def test_bond_switch_mode_with_conflict_option(
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bond_config[Bond.MODE] = BondMode.ROUND_ROBIN
     bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": "140"}
-
-    libnmstate.apply(state)
+    apply_with_description(
+        "Set the bonding mode balance-rr and miimon value to 140", state
+    )
 
     assertlib.assert_state_match(state)
     current_state = statelib.show_only((BOND99,))
@@ -920,7 +990,7 @@ def test_add_invalid_port_ip_config(eth1_up):
             name=BOND99, port=[ETH1], create=False
         ) as bond_state:
             d_state[Interface.KEY].append(bond_state[Interface.KEY][0])
-            libnmstate.apply(d_state)
+            apply_with_description("Create bond99 with port eth1", d_state)
 
 
 @pytest.fixture
@@ -940,7 +1010,8 @@ def bond99_mode4_with_2_port(eth1_up, eth2_up):
 def test_remove_mode4_bond_and_create_mode5_with_the_same_port(
     bond99_mode4_with_2_port,
 ):
-    libnmstate.apply(
+    apply_with_description(
+        "Delete bond99",
         {
             Interface.KEY: [
                 {
@@ -949,8 +1020,9 @@ def test_remove_mode4_bond_and_create_mode5_with_the_same_port(
                     Interface.STATE: InterfaceState.ABSENT,
                 }
             ]
-        }
+        },
     )
+
     extra_iface_state = {Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.TLB}}
     port = bond99_mode4_with_2_port[Interface.KEY][0][Bond.CONFIG_SUBTREE][
         Bond.PORT
@@ -969,10 +1041,14 @@ def bond99_with_ports_and_vlans(bond99_with_2_port):
         Interface.TYPE: InterfaceType.VLAN,
         VLAN.CONFIG_SUBTREE: {VLAN.ID: TEST_VLAN_ID, VLAN.BASE_IFACE: BOND99},
     }
-    libnmstate.apply({Interface.KEY: [vlan_iface_info]})
+    apply_with_description(
+        "Create the vlan with vlan ID 200 over bond99",
+        {Interface.KEY: [vlan_iface_info]},
+    )
     desired_state[Interface.KEY].append(vlan_iface_info)
     yield desired_state
-    libnmstate.apply(
+    apply_with_description(
+        "Remove the vlan bond99.200",
         {
             Interface.KEY: [
                 {
@@ -980,7 +1056,7 @@ def bond99_with_ports_and_vlans(bond99_with_2_port):
                     Interface.STATE: InterfaceState.ABSENT,
                 },
             ]
-        }
+        },
     )
 
 
@@ -989,11 +1065,17 @@ def test_change_bond_mode_does_not_remove_child(bond99_with_ports_and_vlans):
     # Due to bug https://bugzilla.redhat.com/show_bug.cgi?id=1881318
     # Applying twice the desire state is the key to reproduce the problem
     desired_state = bond99_with_ports_and_vlans
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Create the vlan with vlan ID 200 over bond99",
+        desired_state,
+    )
 
     bond_iface_info = desired_state[Interface.KEY][0]
     bond_iface_info[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.ACTIVE_BACKUP
-    libnmstate.apply({Interface.KEY: [bond_iface_info]})
+    apply_with_description(
+        "Set the bonding mode to active-backup for bond99",
+        {Interface.KEY: [bond_iface_info]},
+    )
     assertlib.assert_state_match(desired_state)
 
 
@@ -1008,7 +1090,7 @@ def test_reset_bond_options_back_to_default(bond99_with_2_port):
     ] = (default_miimon * 2)
 
     # Change to non-default miimon value
-    libnmstate.apply(state)
+    apply_with_description("Change the miimon value to 200 for bond99", state)
     state = statelib.show_only((BOND99,))
     assert (
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE][
@@ -1018,7 +1100,8 @@ def test_reset_bond_options_back_to_default(bond99_with_2_port):
     )
 
     # Revert to default
-    libnmstate.apply(
+    apply_with_description(
+        "Change the bonding mode to balance-rr for bond99",
         {
             Interface.KEY: [
                 {
@@ -1029,7 +1112,7 @@ def test_reset_bond_options_back_to_default(bond99_with_2_port):
                     },
                 }
             ]
-        }
+        },
     )
 
     state = statelib.show_only((BOND99,))
@@ -1120,7 +1203,7 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
     eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
     bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
-    libnmstate.apply(desired_state)
+    apply_with_description("Set the port of bond99 to eth1", desired_state)
     # It takes some time for NM to changing bond MAC after port attached.
     assert retry_till_true_or_timeout(
         10,  # timeout
@@ -1134,11 +1217,15 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
 def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
     desired_state = bond88_with_port
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Enable accepting all mac address for bond99", desired_state
+    )
     assertlib.assert_state_match(desired_state)
 
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Disable accepting all mac address for bond99", desired_state
+    )
     assertlib.assert_state_match(desired_state)
 
 
@@ -1151,13 +1238,17 @@ def test_bond_flip_tlb_dynamic_lbs(bond99_with_2_port):
         "tlb_dynamic_lb": True
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set the bonding mode to balance-tlb and enable tlb_dynamic_lb for "
+        "bond99",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
     bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
         "tlb_dynamic_lb": False
     }
-    libnmstate.apply(desired_state)
+    apply_with_description("Disable tlb_dynamic_lb for bond99", desired_state)
     assertlib.assert_state_match(desired_state)
 
 
@@ -1169,13 +1260,16 @@ def test_bond_preserve_existing_all_slaves_active_setting(bond99_with_2_port):
         "all_slaves_active": "dropped",
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set the bonding mode to balance-tlb for bond99",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
     bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
         "tlb_dynamic_lb": False
     }
-    libnmstate.apply(desired_state)
+    apply_with_description("Disable tlb_dynamic_lb for bond99", desired_state)
     assertlib.assert_state_match(desired_state)
     current_state = statelib.show_only((BOND99,))
     assert (
@@ -1204,10 +1298,14 @@ def test_bond_mac_restriction_check_only_impact_desired(eth1_up, eth2_up):
             Interface.STATE: InterfaceState.UP,
         }
         try:
-            libnmstate.apply({Interface.KEY: [dummy_iface_state]})
+            apply_with_description(
+                "Bring up dummy0 device", {Interface.KEY: [dummy_iface_state]}
+            )
         finally:
             dummy_iface_state[Interface.STATE] = InterfaceState.ABSENT
-            libnmstate.apply({Interface.KEY: [dummy_iface_state]})
+            apply_with_description(
+                "Delete dummy0", {Interface.KEY: [dummy_iface_state]}
+            )
 
 
 def test_bond_ad_actor_system_with_multicast_mac_address(bond99_with_2_port):
@@ -1262,7 +1360,13 @@ interfaces:
   state: down""",
         Loader=yaml.SafeLoader,
     )
-    libnmstate.apply(absent_bond_down_port_state)
+    apply_with_description(
+        "Remove bond device bond99. Configure eth1 with dhcp4 enabled, "
+        "IPv4 auto dns enabled, IPv4 auto gateway enabled and IPv4 auto "
+        "routes enabled. Detach eth1, eth2 from the controller and "
+        "bring down eth1, eth2.",
+        absent_bond_down_port_state,
+    )
 
     up_eth1_state = yaml.load(
         """
@@ -1272,7 +1376,7 @@ interfaces:
   state: up""",
         Loader=yaml.SafeLoader,
     )
-    libnmstate.apply(up_eth1_state)
+    apply_with_description("Bring up eth1 device", up_eth1_state)
 
     expected_state = yaml.load(
         """
@@ -1315,7 +1419,12 @@ def test_remove_bond_and_assign_ip_to_bond_port(bond99_with_2_port):
         """,
         Loader=yaml.SafeLoader,
     )
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Remove bond99, detach eth1 from the controller, configure the "
+        "address 192.168.1.1/24, 2001:db8:1::1/64, dhcp4 disabled, dhcp6 "
+        "disabled, autoconf disabled for eth1 device",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
 
@@ -1329,12 +1438,15 @@ def test_change_bond_option_arp_missed_max(bond99_with_2_port):
     iface_state = desired_state[Interface.KEY][0]
     bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
     bond_options["arp_missed_max"] = 200
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set arp_missed_max to 200 for bond99", desired_state
+    )
     assertlib.assert_state_match(desired_state)
 
 
 def test_change_mtu_of_bond_port(bond99_with_2_port):
-    libnmstate.apply(
+    apply_with_description(
+        "Set the mtu of eth1 to 1280",
         {
             Interface.KEY: [
                 {
@@ -1343,5 +1455,5 @@ def test_change_mtu_of_bond_port(bond99_with_2_port):
                     Interface.MTU: 1280,
                 }
             ]
-        }
+        },
     )
