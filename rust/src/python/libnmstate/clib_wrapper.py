@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from ctypes import c_int, c_char_p, c_uint32, POINTER, byref, cdll
 import json

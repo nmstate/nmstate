@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::nm::nm_dbus::NmSettingMacVlan;
 
 use crate::{MacVlanConfig, MacVtapConfig};
