@@ -32,7 +32,7 @@ class NetState:
         gen_conf_mode=False,
         ignored_dns_ifaces=None,
     ):
-        self.use_global_dns = False
+        self.use_global_dns = True
         if current_state is None:
             current_state = {}
         self._ifaces = Ifaces(
@@ -76,17 +76,17 @@ class NetState:
                         "interface profile, using global DNS"
                     )
                     logging.warning(
-                        "Storing DNS to NetworkManager via global dns API, "
-                        "this will cause __all__ interface level DNS settings "
-                        "been ignored"
+                        "Storing DNS to NetworkManager via global DNS "
+                        "API, this will cause __all__ interface level "
+                        "DNS settings been ignored"
                     )
-                    self.use_global_dns = True
             else:
                 if self.dns.is_purge() or self._is_iface_dns_prefered():
                     try:
                         self._ifaces.gen_dns_metadata(
                             self._dns, self._route, ignored_dns_ifaces
                         )
+                        self.use_global_dns = False
                     except NmstateValueError as e:
                         if (
                             gen_conf_mode
@@ -99,14 +99,12 @@ class NetState:
                                 "API, this will cause __all__ interface level "
                                 "DNS settings been ignored"
                             )
-                            self.use_global_dns = True
                 elif self.dns.config_changed:
                     logging.warning(
                         "Storing DNS to NetworkManager via global DNS "
                         "API, this will cause __all__ interface level "
                         "DNS settings been ignored"
                     )
-                    self.use_global_dns = True
 
             self._ifaces.gen_route_metadata(self._route)
             self._ifaces.gen_route_rule_metadata(self._route_rule, self._route)

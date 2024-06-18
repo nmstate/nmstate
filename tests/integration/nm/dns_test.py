@@ -289,6 +289,15 @@ def test_global_dns_do_not_touch_iface_dns(static_iface_dns):
             },
         }
     )
+    # Apply the same configure twice is key reproducer of
+    # https://issues.redhat.com/browse/RHEL-42487
+    libnmstate.apply(
+        {
+            DNS.KEY: {
+                DNS.CONFIG: state[DNS.KEY][DNS.CONFIG],
+            },
+        }
+    )
 
     assert_global_dns(state[DNS.KEY][DNS.CONFIG])
     output = cmdlib.exec_cmd(
