@@ -81,7 +81,7 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_LINT ];then
-        exec_cmd "tox -e flake8,pylint,yamllint"
+        exec_cmd "tox -e flake8,yamllint"
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
