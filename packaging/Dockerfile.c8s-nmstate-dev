@@ -9,6 +9,11 @@ RUN sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
 RUN echo net.ipv6.conf.all.disable_ipv6=0 > /etc/sysctl.d/00-enable-ipv6.conf && \
     echo kernel.core_pattern=/exported-artifacts/core.%h.%e.%t > /etc/sysctl.d/01-export-kernel-cores.conf
 
+# CentOS stream 8 is end of support, hence use vault.centos.org
+RUN sed -i -e 's/^#baseurl=/baseurl=/' /etc/yum.repos.d/*.repo && \
+    sed -i -e 's/^mirrorlist=/#mirrorlist=/' /etc/yum.repos.d/*.repo && \
+    sed -i -e 's/mirror.centos.org/vault.centos.org/' /etc/yum.repos.d/*.repo
+
 RUN dnf update -y && \
     dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled powertools && \

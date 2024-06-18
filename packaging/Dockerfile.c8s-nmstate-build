@@ -2,6 +2,11 @@ FROM quay.io/centos/centos:stream8
 
 RUN echo "2022-03-07" > /build_time
 
+# CentOS stream 8 is end of support, hence use vault.centos.org
+RUN sed -i -e 's/^#baseurl=/baseurl=/' /etc/yum.repos.d/*.repo && \
+    sed -i -e 's/^mirrorlist=/#mirrorlist=/' /etc/yum.repos.d/*.repo && \
+    sed -i -e 's/mirror.centos.org/vault.centos.org/' /etc/yum.repos.d/*.repo
+
 RUN dnf -y install --setopt=install_weak_deps=False \
        git make rust-toolset rpm-build python3 python3-devel && \
     dnf clean all
