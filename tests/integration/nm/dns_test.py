@@ -304,3 +304,28 @@ def test_global_dns_do_not_touch_iface_dns(static_iface_dns):
         "nmcli -g ipv4.dns c show eth1".split(), check=True
     )[1]
     assert output.strip() == ",".join(original_dns_servers)
+
+
+# Adapted reproducer for https://issues.redhat.com/browse/RHEL-31095
+def test_keep_interface_dns_when_not_changing_global_dns(static_iface_dns):
+    # Apply changes to connection that are not related to DNS
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: ETH1,
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: False,
+                    },
+                },
+            ],
+        }
+    )
+
+    # Check the nameserver is still there
+    output = cmdlib.exec_cmd(
+        f"nmcli -t -f ipv4.dns c show {ETH1}".split(), check=True
+    )[1]
+    assert "ipv4.dns:8.8.8.8,1.1.1.1" in output
