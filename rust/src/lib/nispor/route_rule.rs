@@ -83,6 +83,8 @@ pub(crate) fn get_route_rules(
         };
         rules.push(rule);
     }
+
+    rules.sort_unstable_by_key(|rule| rule.priority.unwrap_or(0));
     ret.config = Some(rules);
 
     ret
