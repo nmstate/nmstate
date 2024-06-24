@@ -1,6 +1,6 @@
 FROM quay.io/centos/centos:stream10-development
 
-RUN echo "2024-06-24" > /build_time
+RUN echo "2024-06-26" > /build_time
 
 RUN dnf update -y && \
     dnf -y install dnf-plugins-core  && \
@@ -16,12 +16,14 @@ RUN dnf update -y && \
 
 RUN go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
 
+RUN mkdir -p /etc/NetworkManager/conf.d/
+
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf
 COPY network_manager_keyfile.conf \
      /etc/NetworkManager/conf.d/96-keyfile.conf
 
-# Fedora container has no /etc/systemd/journald.conf file in systemd rpm
+# RHEL/CentOS stream 10 container has no /etc/systemd/journald.conf file in systemd rpm
 RUN  echo -e '[Journal]\nRateLimitInterval=0\nRateLimitBurst=0' > \
     /etc/systemd/journald.conf
 
