@@ -1,0 +1,46 @@
+FROM quay.io/centos/centos:stream10-development
+
+RUN echo "2024-06-24" > /build_time
+
+RUN dnf update -y && \
+    dnf -y install dnf-plugins-core  && \
+    dnf config-manager --set-enabled crb && \
+    dnf -y install --setopt=install_weak_deps=False \
+        systemd make go rust-toolset NetworkManager NetworkManager-ovs \
+        systemd-udev python3-devel python3-pyyaml python3-setuptools dnsmasq \
+        git iproute rpm-build python3-pytest wpa_supplicant hostapd libndp python3-pip \
+        procps-ng dpdk python3-gobject-base libreswan NetworkManager-libreswan && \
+    dnf -y install \
+        https://kojipkgs.fedoraproject.org//packages/openvswitch/3.3.0/2.fc40/x86_64/openvswitch-3.3.0-2.fc40.x86_64.rpm \
+        https://kojipkgs.fedoraproject.org//packages/openvswitch/3.3.0/2.fc40/x86_64/openvswitch-ipsec-3.3.0-2.fc40.x86_64.rpm \
+        https://kojipkgs.fedoraproject.org//packages/python-sortedcontainers/2.4.0/15.fc40/noarch/python3-sortedcontainers-2.4.0-15.fc40.noarch.rpm \
+        https://kojipkgs.fedoraproject.org//packages/openvswitch/3.3.0/2.fc40/x86_64/python3-openvswitch-3.3.0-2.fc40.x86_64.rpm && \	
+    dnf -y install \
+	https://kojipkgs.fedoraproject.org//packages/tcpreplay/4.4.4/5.fc40/x86_64/tcpreplay-4.4.4-5.fc40.x86_64.rpm \
+        https://kojipkgs.fedoraproject.org//packages/libdnet/1.17.0/3.fc40/x86_64/libdnet-1.17.0-3.fc40.x86_64.rpm && \
+    pip install tox virtualenv \
+        && dnf clean all
+
+RUN go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
+
+COPY network_manager_enable_trace.conf \
+     /etc/NetworkManager/conf.d/97-trace-logging.conf
+COPY network_manager_keyfile.conf \
+     /etc/NetworkManager/conf.d/96-keyfile.conf
+
+
+RUN echo 'RateLimitBurst=0' > /etc/systemd/journald.conf
+RUN echo 'RateLimitBurst=0' >> /etc/systemd/journald.conf
+
+#RUN sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
+#    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
+#    /etc/systemd/journald.conf
+
+RUN echo net.ipv6.conf.all.disable_ipv6=0 > \
+        /etc/sysctl.d/00-enable-ipv6.conf && \
+    echo kernel.core_pattern=/exported-artifacts/core.%h.%e.%t > \
+    /etc/sysctl.d/01-export-kernel-cores.conf
+
+RUN systemctl enable systemd-udevd NetworkManager openvswitch ipsec
+
+CMD ["/usr/sbin/init"]
