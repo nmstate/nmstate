@@ -1,0 +1,221 @@
+description: Configure eth2 with the controller linux-br0
+interfaces:
+- name: eth2
+  type: ethernet
+  state: up
+  controller: linux-br0
+description: Create the linux bridge linux-br0 with the ethernet port eth1 and eth2. For both ethernet port eth1 and eth2, do not allow traffic to be sent back to the same port on which it was received, configure the stp path cost to 100, configure the stp priority to 32
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+      stp-hairpin-mode: false
+      stp-path-cost: 100
+      stp-priority: 32
+    - name: eth2
+      stp-hairpin-mode: false
+      stp-path-cost: 100
+      stp-priority: 32
+description: Create the bond interface testbond0 with the controller linux-br0, the bonding mode balance-rr, and ethernet port eth1
+interfaces:
+- name: testbond0
+  type: bond
+  state: up
+  controller: linux-br0
+  link-aggregation:
+    mode: balance-rr
+    port:
+    - eth1
+description: Configure the linux bridge linux-br0 with the group address 01:80:C2:00:00:04
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      group-addr: 01:80:C2:00:00:04
+description: Bring up ethernet device eth1 with empty controller
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  controller: ''
+description: bring up the linux bridge linux-br0
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+description: Create bridge linux-br0, add the ethernet port eth1 and eth2 to the linux bridge. In ethernet port eth1, do not allow traffic to be sent back to the same port on which it was received, set stp path cost to 100, set stp priority to 32.
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+      stp-hairpin-mode: false
+      stp-path-cost: 100
+      stp-priority: 32
+    - name: eth2
+description: Configure the linux bridge linux-br0 with the multi-cast router disabled
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      multicast-router: disabled
+description: Configure the linux bridge linux-br0 with the multi-cast router 0
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      multicast-router: disabled
+description: Configure the linux bridge linux-br0 with the multi-cast router enabled
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      multicast-router: enabled
+description: Configure the linux bridge linux-br0 with the multi-cast router 2
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      multicast-router: enabled
+description: Create the linux bridge linux-br0 with vlan default pvid set to 5
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      vlan-default-pvid: 5
+description: Create the linux-bridge linux-br0 with the IPv4 disabled and IPv6 disabled, and the bridge port testbond0 attached. Create the bond testbond0 with the controller linux-br0, the bonding mode balance-rr and the bonding port eth1
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+  bridge:
+    options:
+      group-fwd-mask: 0
+      mac-ageing-time: 300
+      multicast-snooping: true
+      stp:
+        enabled: true
+        forward-delay: 15
+        hello-time: 2
+        max-age: 20
+        priority: 32768
+    port:
+    - name: testbond0
+      stp-hairpin-mode: false
+      stp-path-cost: 100
+      stp-priority: 32
+- name: testbond0
+  type: bond
+  state: up
+  controller: linux-br0
+  link-aggregation:
+    mode: balance-rr
+    port:
+    - eth1
+description: Create the bridge linux-br0 with the ethernet port eth1
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+description: Create the linux bridge linux-br0 with the vlan protocol 802.1ad
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      vlan-protocol: 802.1ad
+description: Bring up the linux bridge linux-br0 with the empty port, configure the bonding interface test-bond0 with the bonding mode balance-rr and ethernet port eth1
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port: []
+- name: test-bond0
+  type: bond
+  state: up
+  link-aggregation:
+    mode: balance-rr
+    port:
+    - eth1
+description: Remove the bridge linux-br1
+interfaces:
+- name: linux-br1
+  type: linux-bridge
+  state: absent
+description: Delete bridge linux-br0
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: absent
+description: Create the linux bridge linux-br0 with the MAC address 36:30:DB:60:75:A0, DHCP4 enabled, bridge stp option disabled, port eth1 and eth2 attached
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  mac-address: 3E:38:8E:C9:E6:E4
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+  bridge:
+    options:
+      stp:
+        enabled: false
+    port:
+    - name: eth1
+    - name: eth2
+description: Set the description 'secondary' for the eth1 interface, set the description 'primary' for the eth2 interface
+interfaces:
+- name: eth1
+  description: secondary
+  type: ethernet
+  state: up
+- name: eth2
+  description: primary
+  type: ethernet
+  state: up
+description: Remove the linux bridge linux-br0 and keep the ethernet port eth1 up
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  controller: ''
+- name: linux-br0
+  type: linux-bridge
+  state: absent
+description: Create the linux bridge linux-br0 with the ethernet port eth2 attached
+interfaces:
+- name: linux-br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth2
