@@ -194,8 +194,9 @@ function upgrade_nm_from_copr {
     local copr_repo=$1
     # The repoid for a Copr repo is the name with the slash replaces by a colon
     local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
-    exec_cmd "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
-    exec_cmd "yum copr enable --assumeyes ${copr_repo}"
+    exec_cmd "dnf5 install --assumeyes 'dnf5-command(copr)' || \
+              dnf install --assumeyes 'dnf-command(copr)'"
+    exec_cmd "dnf copr enable --assumeyes ${copr_repo}"
     # centos-stream NetworkManager package is providing the alpha builds.
     # Sometimes it could be greater than the one packaged on Copr.
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
