@@ -4,14 +4,14 @@ RUN echo "2024-06-26" > /build_time
 
 RUN dnf update -y && \
     dnf -y install dnf-plugins-core  && \
-    dnf -y copr enable nmstate/ovs-el10 centos-stream-10-x86_64 && \ 
+    dnf -y copr enable nmstate/ovs-el10 centos-stream-10-x86_64 && \
     dnf config-manager --set-enabled crb && \
     dnf -y install --setopt=install_weak_deps=False \
         systemd make go rust-toolset NetworkManager NetworkManager-ovs \
         systemd-udev python3-devel python3-pyyaml python3-setuptools dnsmasq \
-        git iproute rpm-build python3-pytest wpa_supplicant hostapd libndp python3-pip \
-        procps-ng dpdk python3-gobject-base libreswan NetworkManager-libreswan \
-        openvswitch3.3 python3-openvswitch3.3 && \
+        git iproute rpm-build python3-pytest wpa_supplicant hostapd libndp \
+        python3-pip procps-ng dpdk libreswan NetworkManager-libreswan \
+        openvswitch3.3 && \
     dnf clean all
 
 RUN go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
