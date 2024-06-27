@@ -30,6 +30,8 @@ elif [ $OS_TYPE == "fed" ];then
 elif [ $OS_TYPE == "c9s" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c9s-nmstate-dev"
     TEST_ARG="$TEST_ARG --compiled-rpms-dir rpms/el9"
+elif [ $OS_TYPE == "c10s" ];then
+    CONTAINER_IMAGE="quay.io/nmstate/c10s-nmstate-dev"
 else
     echo "Invalid OS type ${OS_TYPE}"
     exit 1
