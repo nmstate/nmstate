@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+import json
+
 import pytest
 from contextlib import contextmanager
 
@@ -115,8 +117,8 @@ def test_add_new_port_to_bridge_with_unmanged_port(
         )
 
         # dummy1 should still be the bridge port
-        output = exec_cmd(f"npc iface {DUMMY1}".split(), check=True)[1]
-        assert f"controller: {BRIDGE0}" in output
+        output = exec_cmd(f"ip -j link show {DUMMY1}".split(), check=True)[1]
+        assert json.loads(output)[0]["master"] == BRIDGE0
 
 
 @pytest.fixture
