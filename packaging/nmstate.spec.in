@@ -172,7 +172,7 @@ popd
 
 %build
 pushd rust
-%if 0%{?rhel}
+%if 0%{?rhel} == 9
 # It is safe to ignore minimum rust version. The main blocker on MSRV is
 # toml which just increase their MSRV by a robot for no hard reason.
 %cargo_build --ignore-rust-version
