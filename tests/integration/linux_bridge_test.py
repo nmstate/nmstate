@@ -135,15 +135,13 @@ def bond0(port0_up):
 
 
 def _vlan_filtering_enabled(bridge_name):
-    _, npc_output, _ = exec_cmd(
-        cmd=(
-            "npc",
-            "iface",
-            bridge_name,
-        ),
+    output = exec_cmd(
+        cmd=(f"ip -d -j link show {bridge_name}".split()),
         check=True,
+    )[1]
+    return (
+        json.loads(output)[0]["linkinfo"]["info_data"]["vlan_filtering"] == 1
     )
-    return "vlan_filtering: true" in npc_output
 
 
 def test_create_and_remove_linux_bridge_with_min_desired_state():
@@ -904,10 +902,8 @@ def test_create_linux_bridge_with_copy_mac_from(eth1_up, eth2_up):
 
 
 def _get_permanent_mac(iface_name):
-    np_iface = json.loads(
-        exec_cmd(f"npc iface {iface_name} --json".split())[1]
-    )
-    return np_iface[0].get("permanent_mac_address")
+    iface_state = show_only((iface_name,))[Interface.KEY][0]
+    return iface_state.get("permanent-mac-address")
 
 
 @pytest.fixture
