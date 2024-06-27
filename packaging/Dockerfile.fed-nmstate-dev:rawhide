@@ -8,7 +8,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         python3-setuptools dnsmasq git iproute rpm-build python3-pytest \
         python3-virtualenv python3-tox tcpreplay wpa_supplicant hostapd \
         libndp procps-ng dpdk rust-packaging \
-        python3-gobject-base NetworkManager-libreswan libreswan \
+        NetworkManager-libreswan libreswan \
         && dnf clean all
 
 COPY network_manager_enable_trace.conf \
