@@ -382,35 +382,60 @@ impl Interfaces {
                 }
             };
             let mut has_match = false;
-            for cur_iface in current.kernel_ifaces.values() {
-                if cur_iface.base_iface().mac_address.as_deref()
-                    == Some(&mac_address)
-                {
-                    let mut new_iface = if iface.iface_type()
-                        == InterfaceType::Unknown
+            // If `permanent_mac_address` got no matches, fallback to
+            // `mac_address`
+            for use_permanent_addr in [true, false] {
+                for cur_iface in current.kernel_ifaces.values() {
+                    if iface.iface_type() != InterfaceType::Unknown
+                        && iface.iface_type() != cur_iface.iface_type()
                     {
-                        let mut new_iface_value = serde_json::to_value(iface)?;
-                        if let Some(obj) = new_iface_value.as_object_mut() {
-                            obj.insert(
-                                "type".to_string(),
-                                serde_json::Value::String(
-                                    cur_iface.iface_type().to_string(),
-                                ),
-                            );
-                        }
-                        Interface::deserialize(new_iface_value)?
+                        continue;
+                    }
+                    let cur_mac_addr = if use_permanent_addr {
+                        cur_iface
+                            .base_iface()
+                            .permanent_mac_address
+                            .as_deref()
+                            .map(|m| m.to_ascii_uppercase())
                     } else {
-                        iface.clone()
+                        cur_iface
+                            .base_iface()
+                            .mac_address
+                            .as_deref()
+                            .map(|m| m.to_ascii_uppercase())
                     };
-                    new_iface.base_iface_mut().profile_name =
-                        Some(iface.base_iface().name.clone());
-                    new_iface.base_iface_mut().name =
-                        cur_iface.name().to_string();
-                    changed_ifaces.push(new_iface);
-                    has_match = true;
+                    if cur_mac_addr.as_deref() == Some(&mac_address) {
+                        let mut new_iface = if iface.iface_type()
+                            == InterfaceType::Unknown
+                        {
+                            let mut new_iface_value =
+                                serde_json::to_value(iface)?;
+                            if let Some(obj) = new_iface_value.as_object_mut() {
+                                obj.insert(
+                                    "type".to_string(),
+                                    serde_json::Value::String(
+                                        cur_iface.iface_type().to_string(),
+                                    ),
+                                );
+                            }
+                            Interface::deserialize(new_iface_value)?
+                        } else {
+                            iface.clone()
+                        };
+                        new_iface.base_iface_mut().profile_name =
+                            Some(iface.base_iface().name.clone());
+                        new_iface.base_iface_mut().name =
+                            cur_iface.name().to_string();
+                        changed_ifaces.push(new_iface);
+                        has_match = true;
+                        break;
+                    }
+                }
+                if has_match {
                     break;
                 }
             }
+
             if !has_match {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
@@ -629,6 +654,9 @@ impl MergedInterfaces {
             MergedInterface,
         > = HashMap::new();
 
+        desired.unify_veth_and_eth();
+        current.unify_veth_and_eth();
+
         if gen_conf_mode {
             desired.set_unknown_iface_to_eth()?;
             desired.set_missing_port_to_eth();
@@ -654,9 +682,6 @@ impl MergedInterfaces {
 
         desired.remove_ignored_ifaces(ignored_ifaces.as_slice());
         current.remove_ignored_ifaces(ignored_ifaces.as_slice());
-
-        desired.unify_veth_and_eth();
-        current.unify_veth_and_eth();
 
         for (iface_name, des_iface) in desired
             .kernel_ifaces
