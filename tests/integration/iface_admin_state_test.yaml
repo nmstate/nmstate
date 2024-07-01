@@ -1,0 +1,36 @@
+description: Configure the hsr interface hsr0, set the config port to eth1 and eth2, set the hsr multicast spec to 40, set the hsr protocol to prp
+interfaces:
+- name: hsr0
+  type: hsr
+  state: up
+  hsr:
+    port1: eth1
+    port2: eth2
+    multicast-spec: 40
+    protocol: prp
+description: Delete the hsr interface hsr0
+interfaces:
+- name: hsr0
+  type: hsr
+  state: absent
+description: Set the mtu of the ethernet device eth1 to 1400
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mtu: 1400
+description: Delete the ethernet interface eth1
+interfaces:
+- name: eth1
+  type: ethernet
+  state: absent
+description: Bring down the ethernet interface eth1
+interfaces:
+- name: eth1
+  type: ethernet
+  state: down
+description: Bring down the eth1 interface
+interfaces:
+- name: eth1
+  type: ethernet
+  state: down
