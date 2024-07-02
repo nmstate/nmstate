@@ -1,0 +1,41 @@
+# This file helps reviewers quickly verify whether the description
+# accurately reflects the intended state. When the associated PR
+# is approved to merge, this file should be dropped.
+description: Revert the loopback interface to default
+interfaces:
+- name: lo
+  type: loopback
+  state: absent
+---
+description: Add the address 192.0.2.251/24 and 2001:db8:1::1/64 to loopback device
+interfaces:
+- name: lo
+  type: loopback
+  state: up
+  ipv4:
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+---
+description: Revert the loopback interface to default
+interfaces:
+- name: lo
+  type: loopback
+  state: absent
+---
+description: Set the mtu of the lookback to 12800
+interfaces:
+- name: lo
+  type: loopback
+  state: up
+  mtu: 12800
+---
+description: Restore the loopback interface to its default settings
+interfaces:
+- name: lo
+  type: loopback
+  state: absent
