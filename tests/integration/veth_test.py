@@ -16,6 +16,7 @@ from libnmstate.schema import VLAN
 
 from .testlib import assertlib
 from .testlib import statelib
+from .testlib.apply import apply_with_description
 from .testlib.veth import veth_interface
 
 
@@ -67,12 +68,18 @@ class TestVeth:
             ]
         }
         try:
-            libnmstate.apply(d_state)
+            apply_with_description(
+                "Configure the veth device veth1 and its peer device "
+                "veth1peer",
+                d_state,
+            )
             assertlib.assert_state_match(d_state)
         finally:
             d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
             d_state[Interface.KEY][1][Interface.STATE] = InterfaceState.ABSENT
-            libnmstate.apply(d_state)
+            apply_with_description(
+                "Delete the both veth1 and veth1peer devices", d_state
+            )
 
     @pytest.mark.tier1
     def test_add_with_peer_not_mentioned_in_desire(self):
@@ -123,7 +130,9 @@ class TestVeth:
             d_state[Interface.KEY][0][Veth.CONFIG_SUBTREE][
                 Veth.PEER
             ] = VETH2PEER
-            libnmstate.apply(d_state)
+            apply_with_description(
+                "Set the veth1 peer device to be veth2peer", d_state
+            )
 
             c_state = statelib.show_only(
                 (
@@ -160,7 +169,11 @@ class TestVeth:
                 },
             ]
         }
-        libnmstate.apply(d_state)
+        apply_with_description(
+            "Configure the veth1 to have the peer veth1peer, and set up the "
+            "veth1.0 over veth1 with vlan id 0",
+            d_state,
+        )
 
         c_state = statelib.show_only(
             (
@@ -173,7 +186,7 @@ class TestVeth:
 
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
         d_state[Interface.KEY][1][Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(d_state)
+        apply_with_description("Remove veth1 and veth1.0 devices", d_state)
 
     @pytest.mark.tier1
     def test_veth_enable_and_disable_accept_all_mac_addresses(self):
@@ -181,13 +194,17 @@ class TestVeth:
             d_state[Interface.KEY][0][
                 Interface.ACCEPT_ALL_MAC_ADDRESSES
             ] = True
-            libnmstate.apply(d_state)
+            apply_with_description(
+                "Enable accepting all mac address on veth1 device", d_state
+            )
             assertlib.assert_state(d_state)
 
             d_state[Interface.KEY][0][
                 Interface.ACCEPT_ALL_MAC_ADDRESSES
             ] = False
-            libnmstate.apply(d_state)
+            apply_with_description(
+                "Disable accepting all mac address on veth1 device", d_state
+            )
             assertlib.assert_state(d_state)
 
         assertlib.assert_absent(VETH1)
@@ -233,10 +250,14 @@ class TestVeth:
             ]
         }
         try:
-            libnmstate.apply(desired_state)
+            apply_with_description(
+                "Create veth1 with veth1peer as peer and 2001:db8:1::1/64",
+                desired_state,
+            )
             assertlib.assert_state_match(desired_state)
         finally:
-            libnmstate.apply(
+            apply_with_description(
+                "Remove the veth1 and veth1peer devices",
                 {
                     Interface.KEY: [
                         {
@@ -292,7 +313,7 @@ class TestVeth:
                 }
             ]
         }
-        libnmstate.apply(desired_state)
+        apply_with_description("Bring up the veth1 device", desired_state)
         assertlib.assert_state_match(desired_state)
 
     def test_change_veth_with_eth_type_without_veth_conf(self, veth1_up):
@@ -305,7 +326,7 @@ class TestVeth:
                 }
             ]
         }
-        libnmstate.apply(desired_state)
+        apply_with_description("Set up the veth1 device", desired_state)
         assertlib.assert_state_match(desired_state)
 
 
@@ -338,12 +359,19 @@ def bridges_with_port():
         ]
     }
     try:
-        libnmstate.apply(d_state)
+        apply_with_description(
+            "veth1 with veth1peer as peer, attach veth1 to OVS bridge "
+            "ovs-br0 and veth1peer to linux bridge br0",
+            d_state,
+        )
         yield d_state
     finally:
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
         d_state[Interface.KEY][1][Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(d_state)
+        apply_with_description(
+            "Delete the both ovs bridge ovs-br0 and linux bridge br0",
+            d_state,
+        )
 
 
 @contextmanager
@@ -369,12 +397,19 @@ def veth_interface_both_up(ifname, peer):
         ]
     }
     try:
-        libnmstate.apply(d_state)
+        apply_with_description(
+            f"Configure the veth {ifname} to have the peer {peer}, configure "
+            f"the veth {peer} to have the peer {ifname}",
+            d_state,
+        )
         yield d_state
     finally:
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
         d_state[Interface.KEY][1][Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(d_state)
+        apply_with_description(
+            f"Delete the veth device {ifname} and the veth peer device {peer}",
+            d_state,
+        )
 
 
 @pytest.fixture
