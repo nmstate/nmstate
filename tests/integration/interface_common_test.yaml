@@ -1,0 +1,289 @@
+description: Enable accept all mac address for eth1 interface
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  accept-all-mac-addresses: true
+description: Set accept all mac address to false for eth1 interface
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  accept-all-mac-addresses: false
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Disable ethtool feature rx-checksum on the ethernet device eth1
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ethtool:
+    feature:
+      rx-checksum: false
+description: Remove the veth device veth1 and veth1.ep
+interfaces:
+- name: veth1
+  type: ethernet
+  state: absent
+- name: veth1.ep
+  type: ethernet
+  state: absent
+description: Configure the veth device veth1 with the mtu 1400
+interfaces:
+- name: veth1
+  type: ethernet
+  state: up
+  mtu: 1400
+description: Disable ethtool feature highdma on the veth device veth1 with the veth peer veth1.ep configured
+interfaces:
+- name: veth1
+  type: ethernet
+  state: up
+  ethtool:
+    feature:
+      highdma: false
+  veth:
+    peer: veth1.ep
+description: Bring up eth1 interface and add the description 'bar'
+interfaces:
+- name: eth1
+  description: bar
+  type: ethernet
+  state: up
+description: Set the MAC address to d4:ee:07:25:42:5a for eth1 interface
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mac-address: D4:EE:07:25:42:5A
+description: Set the MAC address to d4:EE:07:25:42:5a for eth1 interface
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mac-address: D4:EE:07:25:42:5A
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Delete the dummy device dummy0
+interfaces:
+- name: dummy0
+  type: dummy
+  state: absent
+description: remove dummy device dummy1
+interfaces:
+- name: dummy1
+  type: unknown
+  state: absent
+  type: unknown
+description: Bring up the dummy device dummy1
+interfaces:
+- name: dummy1
+  type: dummy
+  state: up
+description: Delete the dummy device dummy0
+interfaces:
+- name: dummy0
+  type: dummy
+  state: absent
+description: Configure ethernet device eth1 to have the static IPv4 address 192.0.2.251/24 and static IPv6 address 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Set up the ethernet device lldptest with lldp disabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: false
+description: Configure the ethernet device lldptest with lldp enabled
+interfaces:
+- name: lldptest
+  type: ethernet
+  state: up
+  lldp:
+    enabled: true
+description: Bring up the interface dummy_test
+interfaces:
+- name: dummy_test
+  type: dummy
+  state: up
+description: Delete the interface dummy_test
+interfaces:
+- name: dummy_test
+  type: dummy
+  state: absent
+description: Delete the interface dummy_test
+interfaces:
+- name: dummy_test
+  type: dummy
+  state: absent
+description: Bring up the interface dummy_test
+interfaces:
+- name: dummy_test
+  type: dummy
+  state: up

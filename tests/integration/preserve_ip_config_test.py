@@ -28,6 +28,7 @@ from libnmstate.schema import InterfaceState
 
 from .testlib import statelib
 from .testlib import cmdlib
+from .testlib.apply import apply_with_description
 
 _IPV4_EXTRA_CONFIG = "ipv4.dad-timeout"
 _IPV4_EXTRA_VALUE = "0"
@@ -39,7 +40,9 @@ IPV6_ADDRESS1 = "2001:db8:1::1"
 
 
 def test_reapply_preserve_ip_config(eth1_up):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure ethernet device eth1 to have the address "
+        "192.0.2.251/24 and 2001:db8:1::1/64",
         {
             Interface.KEY: [
                 {
@@ -67,8 +70,9 @@ def test_reapply_preserve_ip_config(eth1_up):
                     Interface.MTU: 1500,
                 }
             ]
-        }
+        },
     )
+
     cur_state = statelib.show_only(("eth1",))
     iface_name = cur_state[Interface.KEY][0][Interface.NAME]
 

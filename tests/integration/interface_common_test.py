@@ -15,6 +15,7 @@ from libnmstate.schema import InterfaceState
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
+from .testlib.apply import apply_with_description
 from .testlib.genconf import gen_conf_apply
 
 
@@ -42,19 +43,27 @@ def dummy_interface(name):
             }
         ]
     }
-    libnmstate.apply(dummy_desired_state)
+    apply_with_description(
+        f"Bring up the interface {name}",
+        dummy_desired_state,
+    )
     try:
         yield dummy_desired_state
     finally:
         dummy_state = dummy_desired_state[Interface.KEY][0]
         dummy_state[Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(dummy_desired_state)
+        apply_with_description(
+            f"Delete the interface {name}",
+            dummy_desired_state,
+        )
 
 
 def test_iface_description_removal(eth1_up):
     desired_state = eth1_up
     desired_state[Interface.KEY][0][Interface.DESCRIPTION] = "bar"
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Bring up eth1 interface and add the description 'bar'", desired_state
+    )
     current_state = statelib.show_only(("eth1",))
     assert current_state[Interface.KEY][0][Interface.DESCRIPTION] == "bar"
 
@@ -67,7 +76,10 @@ def test_iface_description_removal(eth1_up):
 def test_iface_mac_address_lowercase(eth1_up):
     desired_state = eth1_up
     desired_state[Interface.KEY][0][Interface.MAC] = "d4:ee:07:25:42:5a"
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set the MAC address to d4:ee:07:25:42:5a for eth1 interface",
+        desired_state,
+    )
     current_state = statelib.show_only(("eth1",))
     assert (
         current_state[Interface.KEY][0][Interface.MAC] == "D4:EE:07:25:42:5A"
@@ -77,7 +89,10 @@ def test_iface_mac_address_lowercase(eth1_up):
 def test_iface_mac_address_mixedcase(eth1_up):
     desired_state = eth1_up
     desired_state[Interface.KEY][0][Interface.MAC] = "d4:EE:07:25:42:5a"
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set the MAC address to d4:EE:07:25:42:5a for eth1 interface",
+        desired_state,
+    )
     current_state = statelib.show_only(("eth1",))
     assert (
         current_state[Interface.KEY][0][Interface.MAC] == "D4:EE:07:25:42:5A"
@@ -109,12 +124,16 @@ def test_take_over_virtual_interface_and_rollback(ip_link_dummy):
 def test_enable_and_disable_accept_all_mac_addresses(eth1_up):
     desired_state = eth1_up
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Enable accept all mac address for eth1 interface", desired_state
+    )
     current_state = statelib.show_only(("eth1",))
     assert current_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES]
 
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set accept all mac address to false for eth1 interface", desired_state
+    )
     current_state = statelib.show_only(("eth1",))
     eth1_state = current_state[Interface.KEY][0]
     assert not eth1_state[Interface.ACCEPT_ALL_MAC_ADDRESSES]

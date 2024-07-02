@@ -15,6 +15,7 @@ from libnmstate.schema import Veth
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib.apply import apply_with_description
 from .testlib.env import is_fedora
 
 MAX_NETDEVSIM_WAIT_TIME = 5
@@ -108,7 +109,10 @@ def test_ethtool_feature_using_ethtool_cli_alias_rx_checksumming(eth1_up):
             Ethtool.Feature.CONFIG_SUBTREE: {"rx-checksumming": False}
         },
     }
-    libnmstate.apply({Interface.KEY: [desire_iface_state]})
+    apply_with_description(
+        "Disable ethtool feature rx-checksum on the ethernet device eth1",
+        {Interface.KEY: [desire_iface_state]},
+    )
 
     desire_feature = desire_iface_state[Ethtool.CONFIG_SUBTREE][
         Ethtool.Feature.CONFIG_SUBTREE
@@ -180,9 +184,14 @@ def veth1_with_ethtool_feature_highdma_false():
             }
         },
     }
-    libnmstate.apply({Interface.KEY: [iface_state]})
+    apply_with_description(
+        "Disable ethtool feature highdma on the veth device veth1 with "
+        "the veth peer veth1.ep configured",
+        {Interface.KEY: [iface_state]},
+    )
     yield iface_state
-    libnmstate.apply(
+    apply_with_description(
+        "Remove the veth device veth1 and veth1.ep",
         {
             Interface.KEY: [
                 {
@@ -214,9 +223,14 @@ def veth1_with_ethtool_feature_highdma_true():
             }
         },
     }
-    libnmstate.apply({Interface.KEY: [iface_state]})
+    apply_with_description(
+        "Enable ethtool feature highdma on the veth device veth1 with "
+        "the veth peer veth1.ep configured",
+        {Interface.KEY: [iface_state]},
+    )
     yield iface_state
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the veth device veth1 and veth1.ep",
         {
             Interface.KEY: [
                 {
@@ -242,7 +256,8 @@ def test_ethtool_preserve_existing_ethtool_feature_setting(
 ):
     iface_state = veth1_with_ethtool_feature_highdma_false
 
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the veth device veth1 with the mtu 1400",
         {
             Interface.KEY: [
                 {
@@ -250,7 +265,7 @@ def test_ethtool_preserve_existing_ethtool_feature_setting(
                     Interface.MTU: 1400,
                 }
             ]
-        }
+        },
     )
     iface_state[Interface.MTU] = 1400
     assertlib.assert_state_match({Interface.KEY: [iface_state]})
