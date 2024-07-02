@@ -14,6 +14,7 @@ from libnmstate.schema import Mptcp
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib.apply import apply_with_description
 
 
 IPV4_ADDRESS1 = "192.0.2.251"
@@ -61,7 +62,11 @@ def eth1_with_static_ip(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 interface with the address "
+        "192.0.2.251/24 and 2001:db8:1::1/64",
+        desired_state,
+    )
     yield desired_state
 
 
@@ -116,8 +121,10 @@ def test_enable_mptcp_flags_and_remove(eth1_with_static_ip, mptcp_flags):
             }
         ]
     }
-    libnmstate.apply(desired_state)
-
+    apply_with_description(
+        f"Configure eth1 to have the mptcp address flag {mptcp_flags}",
+        desired_state,
+    )
     expected_state[Interface.KEY][0][Interface.MPTCP] = {
         Mptcp.ADDRESS_FLAGS: mptcp_flags
     }
