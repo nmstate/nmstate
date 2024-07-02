@@ -7,12 +7,12 @@ from pathlib import Path
 import yaml
 import pytest
 
-import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 
 from .testlib.cmdlib import exec_cmd
+from .testlib.apply import apply_with_description
 from .testlib.assertlib import assert_absent
 from .testlib.assertlib import assert_state_match
 from .testlib.statelib import show_only
@@ -107,7 +107,8 @@ def nmstate_etc_config():
         with open(file_path, "w") as fd:
             fd.write(content)
     yield
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the dummy device dummy0",
         {
             Interface.KEY: [
                 {
@@ -115,8 +116,9 @@ def nmstate_etc_config():
                     Interface.STATE: InterfaceState.ABSENT,
                 }
             ]
-        }
+        },
     )
+
     for file in (
         TEST_CONFIG1_APPLIED_FILE_PATH,
         TEST_CONFIG2_APPLIED_FILE_PATH,
@@ -147,7 +149,8 @@ def test_nmstate_service_apply(nmstate_etc_config, conf_do_not_delete_applied):
 
 @pytest.fixture
 def dummy1_up():
-    libnmstate.apply(
+    apply_with_description(
+        "Bring up the dummy device dummy1",
         {
             Interface.KEY: [
                 {
@@ -156,10 +159,11 @@ def dummy1_up():
                     Interface.TYPE: InterfaceType.DUMMY,
                 }
             ]
-        }
+        },
     )
     yield
-    libnmstate.apply(
+    apply_with_description(
+        "remove dummy device dummy1",
         {
             Interface.KEY: [
                 {
@@ -167,7 +171,7 @@ def dummy1_up():
                     Interface.STATE: InterfaceState.ABSENT,
                 }
             ]
-        }
+        },
     )
 
 
