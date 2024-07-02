@@ -1,0 +1,34 @@
+description: Delete the loopback interface
+interfaces:
+- name: lo
+  type: loopback
+  state: absent
+description: Set the address to 192.0.2.251/24 and 2001:db8:1::1/64 for loopback device
+interfaces:
+- name: lo
+  type: loopback
+  state: up
+  ipv4:
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Delete the loopback interface
+interfaces:
+- name: lo
+  type: loopback
+  state: absent
+description: Set the mtu of the lookback to 12800
+interfaces:
+- name: lo
+  type: loopback
+  state: up
+  mtu: 12800
+description: Remove the lookback device
+interfaces:
+- name: lo
+  type: loopback
+  state: absent
