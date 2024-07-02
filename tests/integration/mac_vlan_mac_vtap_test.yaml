@@ -1,0 +1,128 @@
+# This file helps reviewers quickly verify whether the description
+# accurately reflects the intended state. When the associated PR
+# is approved to merge, this file should be dropped.
+description: Remove the MacVlan interface macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: absent
+---
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to bridge and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: bridge
+    promiscuous: true
+---
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to passthru and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+---
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to private and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: private
+    promiscuous: true
+---
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to vepa and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: vepa
+    promiscuous: true
+---
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to passthru and promiscuous to False
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: false
+---
+description: Bring up MacVlan interface macvlan0 with MTU 1400
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mtu: 1400
+---
+description: Delete the MacVtap interface macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: absent
+---
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to bridge and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: bridge
+    promiscuous: true
+---
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to passthru and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+---
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to private and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: private
+    promiscuous: true
+---
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to vepa and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: vepa
+    promiscuous: true
+---
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to passthru and promiscuous to False
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: false
+---
+description: Bring up MacVtap interface macvtap0 with MTU 1400
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mtu: 1400
