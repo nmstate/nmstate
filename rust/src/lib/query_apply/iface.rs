@@ -247,6 +247,49 @@ impl Interface {
             _ => (),
         }
     }
+
+    pub(crate) fn set_port_mac_and_type(
+        &mut self,
+        port_name: &str,
+        mac_address: &str,
+        port_iface_type: InterfaceType,
+    ) {
+        match self {
+            Interface::Bond(iface) => iface.set_port_mac_and_type(
+                port_name,
+                mac_address,
+                port_iface_type,
+            ),
+            Interface::OvsBridge(iface) => iface.set_port_mac_and_type(
+                port_name,
+                mac_address,
+                port_iface_type,
+            ),
+            Interface::LinuxBridge(iface) => iface.set_port_mac_and_type(
+                port_name,
+                mac_address,
+                port_iface_type,
+            ),
+            Interface::Vrf(iface) => iface.set_port_mac_and_type(
+                port_name,
+                mac_address,
+                port_iface_type,
+            ),
+            _ => {
+                log::error!(
+                    "BUG: Interface::set_port_mac_and_type() \
+                    been invoked on interface {} with type {} , \
+                    but only support vrf, bond, ovs and linux bridge. \
+                    Arguments: {} {} {}",
+                    self.name(),
+                    self.iface_type(),
+                    port_name,
+                    mac_address,
+                    port_iface_type,
+                );
+            }
+        }
+    }
 }
 
 impl InterfaceType {

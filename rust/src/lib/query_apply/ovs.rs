@@ -115,6 +115,47 @@ impl OvsBridgeInterface {
             self.bridge.clone_from(&other.bridge);
         }
     }
+
+    pub(crate) fn set_port_mac_and_type(
+        &mut self,
+        port_name: &str,
+        mac_address: &str,
+        port_iface_type: InterfaceType,
+    ) {
+        if let Some(ports_config) =
+            self.bridge.as_mut().and_then(|b| b.ports.as_deref_mut())
+        {
+            for port_config in ports_config.iter_mut() {
+                if port_config.name == port_name {
+                    port_config.permanent_mac_address =
+                        Some(mac_address.to_string());
+                    port_config.iface_type = Some(port_iface_type);
+                    return;
+                }
+                if let Some(bond_ports_conf) =
+                    port_config.bond.as_mut().and_then(|b| b.ports.as_mut())
+                {
+                    for bond_port in bond_ports_conf.iter_mut() {
+                        if bond_port.name == port_name {
+                            bond_port.permanent_mac_address =
+                                Some(mac_address.to_string());
+                            bond_port.iface_type = Some(port_iface_type);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        log::error!(
+            "BUG: OvsBridgeInterface::set_port_mac_and_type() failed to set \
+             port {} with mac_address {} type {}: {:?}",
+            port_name,
+            mac_address,
+            port_iface_type,
+            self
+        );
+    }
 }
 
 impl OvsInterface {

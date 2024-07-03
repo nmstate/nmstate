@@ -737,6 +737,32 @@ impl Interface {
             iface.change_port_name(org_port_name, new_port_name);
         }
     }
+
+    pub(crate) fn resolve_ports_mac_ref(
+        &mut self,
+        mac2iface: &crate::ifaces::Mac2Iface,
+    ) -> Result<(), NmstateError> {
+        match self {
+            Interface::Bond(iface) => iface.resolve_ports_mac_ref(mac2iface),
+            Interface::OvsBridge(iface) => {
+                iface.resolve_ports_mac_ref(mac2iface)
+            }
+            Interface::LinuxBridge(iface) => {
+                iface.resolve_ports_mac_ref(mac2iface)
+            }
+            Interface::Vrf(iface) => iface.resolve_ports_mac_ref(mac2iface),
+            _ => Err(NmstateError::new(
+                ErrorKind::Bug,
+                format!(
+                    "BUG: Interface::resolve_ports_mac_ref() \
+                    been invoked on interface {} with type {} , \
+                    but only support vrf, bond, ovs and linux bridge",
+                    self.name(),
+                    self.iface_type()
+                ),
+            )),
+        }
+    }
 }
 
 // The default on enum is experimental, but clippy is suggestion we use

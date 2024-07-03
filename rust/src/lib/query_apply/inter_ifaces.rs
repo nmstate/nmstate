@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use crate::{
     state::{gen_diff_json_value, merge_json_value},
-    ErrorKind, Interface, InterfaceType, Interfaces, MergedInterfaces,
-    NmstateError,
+    ErrorKind, Interface, InterfaceIdentifier, InterfaceType, Interfaces,
+    MergedInterfaces, NmstateError,
 };
 
 impl Interfaces {
@@ -92,6 +94,51 @@ impl Interfaces {
                 }
             } else if let Some(iface) = self.kernel_ifaces.get_mut(&ctrl_name) {
                 iface.remove_port(&port_name)
+            }
+        }
+    }
+
+    pub(crate) fn tidy_up_for_retreive(&mut self) {
+        // Purge user space ignored interfaces
+        self.user_ifaces.retain(|_, iface| !iface.is_ignore());
+
+        // Include mac address, interface type of subordinates in controller's
+        // configure
+        self.include_mac_and_type_in_controller_and_parent();
+    }
+
+    fn include_mac_and_type_in_controller_and_parent(&mut self) {
+        let mut port_name_to_mac_type: HashMap<
+            String,
+            (String, InterfaceType),
+        > = HashMap::new();
+
+        for iface in self
+            .kernel_ifaces
+            .values()
+            .filter(|i| i.controller().is_some())
+        {
+            if let Some(mac) =
+                iface.base_iface().permanent_mac_address.as_deref()
+            {
+                port_name_to_mac_type.insert(
+                    iface.name().to_string(),
+                    (mac.to_string(), iface.iface_type()),
+                );
+            }
+        }
+
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .chain(self.user_ifaces.values_mut())
+            .filter(|i| i.is_controller())
+        {
+            for port_name in iface.ports().unwrap_or_default() {
+                if let (mac, iface_type) = port_name_to_mac_type.get(port_name)
+                {
+                    iface.set_port_mac_and_type(port, mac, iface_type);
+                }
             }
         }
     }

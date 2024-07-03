@@ -752,3 +752,83 @@ fn test_linux_bridge_is_default_pvid_changed() {
 
     assert!(!merged_iface.is_default_pvid_changed())
 }
+
+#[test]
+fn test_bridge_resolve_port_ref_by_profile_name() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: br0-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            ports:
+            - profile-name: br0-port1",
+    )
+    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    assert_eq!(
+        merged_ifaces
+            .kernel_ifaces
+            .get("br0")
+            .unwrap()
+            .desired
+            .as_ref()
+            .unwrap()
+            .ports(),
+        Some(vec!["eth1"])
+    );
+}
+
+#[test]
+fn test_linux_bridge_validate_interface_name_and_profile_name_missmatch() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: br0-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            ports:
+            - profile-name: br0-port1
+              name: eth2",
+    )
+    .unwrap();
+    let result = MergedInterfaces::new(des_ifaces, cur_ifaces, false, false);
+
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}

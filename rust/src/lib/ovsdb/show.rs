@@ -132,6 +132,7 @@ fn parse_ovs_bond_conf(
         if let Some(ovsdb_iface) = ovsdb_ifaces.get(bond_port_uuid) {
             bond_port_confs.push(OvsBridgeBondPortConfig {
                 name: ovsdb_iface.name.to_string(),
+                ..Default::default()
             });
         }
     }

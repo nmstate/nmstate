@@ -7,8 +7,9 @@ use serde::{
 };
 
 use crate::{
-    deserializer::NumberAsString, BaseInterface, ErrorKind, Interface,
-    InterfaceState, InterfaceType, MergedInterface, NmstateError,
+    deserializer::NumberAsString, ifaces::Mac2IfaceName, BaseInterface,
+    ErrorKind, Interface, InterfaceState, InterfaceType, MergedInterface,
+    NmstateError,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -49,8 +50,13 @@ use crate::{
 ///       updelay: 0
 ///       use_carrier: true
 ///     port:
-///     - eth1
-///     - eth2
+///       - eth1
+///       - eth2
+///     ports-config:
+///       - name: eth1
+///         priority: 10
+///       - name: eth2
+///         priority: 20
 /// ```
 pub struct BondInterface {
     #[serde(flatten)]
@@ -166,14 +172,34 @@ impl BondInterface {
                 .as_ref()
                 .and_then(|bond_conf| bond_conf.port.as_ref())
                 .map(|ports| {
-                    ports.as_slice().iter().map(|p| p.as_str()).collect()
+                    ports
+                        .as_slice()
+                        .iter()
+                        .filter_map(|p| {
+                            if p.is_empty() {
+                                Some(p.as_str())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
                 })
         } else {
             self.bond
                 .as_ref()
                 .and_then(|bond_conf| bond_conf.ports_config.as_ref())
                 .map(|ports| {
-                    ports.as_slice().iter().map(|p| p.name.as_str()).collect()
+                    ports
+                        .as_slice()
+                        .iter()
+                        .map(|p| {
+                            if p.name.is_empty() {
+                                None
+                            } else {
+                                Some(p.name.as_str())
+                            }
+                        })
+                        .collect()
                 })
         }
     }
@@ -411,6 +437,34 @@ impl BondInterface {
             }
         }
         ret
+    }
+
+    pub(crate) fn resolve_ports_mac_ref(
+        &mut self,
+        mac2iface: &Mac2IfaceName,
+    ) -> Result<(), NmstateError> {
+        if let Some(ports_config) = self
+            .bond
+            .as_mut()
+            .and_then(|b| b.ports_config.as_deref_mut())
+        {
+            for port_conf in ports_config.iter_mut() {
+                let mac_address = match port_conf.mac_address.clone() {
+                    Some(n) => n,
+                    None => {
+                        continue;
+                    }
+                };
+                mac2iface.resolve_port_mac(
+                    &self.base.iface_type,
+                    self.base.name.as_str(),
+                    mac_address.as_str(),
+                    port_conf.iface_type.as_ref(),
+                    &mut port_conf.name,
+                )?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -1467,11 +1521,36 @@ impl MergedInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct BondPortConfig {
-    /// name is mandatory when specifying the ports configuration.
+    /// The kernel interface name of bond port.
+    /// When applying, this property will be ignored if `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`
+    #[serde(skip_serializing_if = "String::is_empty", default)]
     pub name: String,
+    /// Define network backend matching method on choosing network interface.
+    /// Default to [InterfaceIdentifier::Name].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identifier: Option<InterfaceIdentifier>,
+    /// The interface type of bond port.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// When undefined or set to `InterfaceType::Unknown` with
+    /// `InterfaceIdentifier::MacAddress`. The only matching interface will
+    /// be used as port. Nmstate will raise error when multiple interfaces
+    /// matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iface_type: Option<InterfaceType>,
+    /// The MAC address of bond port.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// Will match permanent MAC address first, then fallback to use
+    /// active/current MAC address.
+    /// The only matching interface will be used as port. Nmstate will raise
+    /// error when multiple interfaces matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,

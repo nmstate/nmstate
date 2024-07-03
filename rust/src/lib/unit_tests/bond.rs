@@ -4,7 +4,7 @@ use crate::{
     BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
     BondFailOverMac, BondInterface, BondLacpRate, BondMode,
     BondPrimaryReselect, BondXmitHashPolicy, ErrorKind, Interface, Interfaces,
-    MergedInterface,
+    MergedInterface, MergedInterfaces,
 };
 
 #[test]
@@ -645,4 +645,90 @@ fn test_bond_port_queue_id_not_overlap_on_default() {
     .unwrap();
 
     des_iface.sanitize().unwrap();
+}
+
+#[test]
+fn test_bond_resolve_port_ref_by_profile_name() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: bond99-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: bond99
+          type: bond
+          state: up
+          link-aggregation:
+            mode: active-backup
+            ports-config:
+            - profile-name: bond99-port1
+            options:
+              fail_over_mac: active",
+    )
+    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    assert_eq!(
+        merged_ifaces
+            .kernel_ifaces
+            .get("bond99")
+            .unwrap()
+            .desired
+            .as_ref()
+            .unwrap()
+            .ports(),
+        Some(vec!["eth1"])
+    );
+}
+
+#[test]
+fn test_bond_validate_interface_name_and_profile_name_missmatch() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: bond99-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: bond99
+          type: bond
+          state: up
+          link-aggregation:
+            mode: active-backup
+            ports-config:
+            - profile-name: bond99-port1
+              name: eth2
+            options:
+              fail_over_mac: active",
+    )
+    .unwrap();
+    let result = MergedInterfaces::new(des_ifaces, cur_ifaces, false, false);
+
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
 }

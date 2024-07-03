@@ -22,6 +22,7 @@ mod ovs;
 mod sriov;
 mod vlan;
 
+pub(crate) use self::inter_ifaces_controller::Mac2Iface;
 pub use self::xfrm::XfrmInterface;
 pub use base::*;
 pub use bond::{
@@ -68,5 +69,5 @@ pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{
     VlanConfig, VlanInterface, VlanProtocol, VlanRegistrationProtocol,
 };
-pub use vrf::{VrfConfig, VrfInterface};
+pub use vrf::{VrfConfig, VrfInterface, VrfPortConfig};
 pub use vxlan::{VxlanConfig, VxlanInterface};
