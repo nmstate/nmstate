@@ -14,6 +14,7 @@ from libnmstate.schema import Veth
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
+from .testlib.apply import apply_with_description
 from .testlib.dummy import nm_unmanaged_dummy
 from .testlib.env import is_el8
 from .testlib.ifacelib import get_mac_address
@@ -57,7 +58,11 @@ def setup_eth1_ipv4(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with the address "
+        "192.0.2.251/24 and dhcp4 disabled",
+        desired_state,
+    )
     yield desired_state
 
 
@@ -81,7 +86,11 @@ def setup_eth1_ipv6(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with the address "
+        "2001:db8:1::1/64, dhcp6 disabled, autoconf disabled",
+        desired_state,
+    )
 
     return desired_state
 
@@ -115,7 +124,12 @@ def setup_eth1_static_ip(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with the address "
+        "192.0.2.251/24, 2001:db8:1::1/64, dhcp4 disabled, dhcp6 disabled, "
+        "autoconf disabled",
+        desired_state,
+    )
 
     return desired_state
 
@@ -132,7 +146,9 @@ def setup_eth1_ipv6_disable(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with IPv6 disabled", desired_state
+    )
 
     return desired_state
 
@@ -149,7 +165,11 @@ def test_add_static_ipv4_with_full_state(eth1_up):
             InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
         }
     ]
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with the address "
+        "198.51.100.249/24 and dhcp4 disabled",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -174,7 +194,11 @@ def test_add_static_ipv4_with_min_state(eth2_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth2 ethernet device with address 198.51.100.250/24 "
+        "and dhcp4 disabled",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -191,7 +215,9 @@ def test_remove_static_ipv4(setup_eth1_ipv4):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with IPv4 disabled", desired_state
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -217,7 +243,10 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with address 192.0.2.252/30",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -258,7 +287,12 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with address "
+        "192.0.2.251/24 and dhcp4 disabled, configure the eth2 ethernet "
+        "device with address 192.0.2.251/24 and dhcp4 disabled",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -284,7 +318,11 @@ def test_add_iface_with_same_static_ipv4_address_to_existing(
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth2 ethernet device with address 192.0.2.251/24 and "
+        "dhcp4 disabled",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -306,7 +344,12 @@ def test_add_static_ipv6_with_full_state(eth1_up):
             InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
         },
     ]
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with the address "
+        "2001:db8:2::1/64 and 2001:db8:1::1/64, dhcp6 disabled and autoconf "
+        "disabled",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
 
@@ -326,7 +369,11 @@ def test_add_static_ipv6_with_link_local(eth1_up):
         },
     ]
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with address 2001:db8:1::1/64, "
+        "dhcp6 disabled, and autoconf disabled",
+        desired_state,
+    )
 
     # Make sure only the link local address got ignored.
     cur_state = statelib.show_only(("eth1",))
@@ -357,7 +404,11 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
         },
     ]
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with IPv6 link local address "
+        "only",
+        desired_state,
+    )
 
     # Make sure the link local address got ignored.
     cur_state = statelib.show_only(("eth1",))
@@ -379,7 +430,11 @@ def test_add_static_ipv6_with_no_address(eth1_up):
     eth1_desired_state[Interface.STATE] = InterfaceState.UP
     eth1_desired_state[Interface.IPV6][InterfaceIPv6.ENABLED] = True
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with IPv6 link local address "
+        "only",
+        desired_state,
+    )
 
     cur_state = statelib.show_only(("eth1",))
     eth1_cur_state = cur_state[Interface.KEY][0]
@@ -406,7 +461,11 @@ def test_add_static_ipv6_with_min_state(eth2_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth2 ethernet device with the address "
+        "2001:db8:1::1/64, dhcp6 disabled and autoconf disabled",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -423,7 +482,9 @@ def test_disable_static_ipv6(setup_eth1_ipv6):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the eth1 ethernet device with IPv6 disabled", desired_state
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -506,7 +567,11 @@ def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with the address "
+        "2001:db8:2::1/64",
+        desired_state,
+    )
     eth1_desired_state = desired_state[Interface.KEY][0]
     current_state = statelib.show_only(("eth1",))
 
@@ -559,7 +624,13 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with the address "
+        "2001:db8:1::1/64, dhcp6 disabled and autoconf disabled, configure "
+        "the ethernet device eth2 with the address 2001:db8:1::1/64, dhcp6 "
+        "disabled and autoconf disabled",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -585,7 +656,11 @@ def test_add_iface_with_same_static_ipv6_address_to_existing(
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth2 to have the address "
+        "2001:db8:1::1/64, dhcp6 disabled, autoconf disabled",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -610,7 +685,11 @@ def test_add_iface_with_static_ipv6_expanded_format(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with the address "
+        "2001:db8:85a3::8a2e:370:7331/64, dhcp6 disabled, autoconf disabled",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
 
@@ -620,7 +699,11 @@ def test_modify_ipv4_with_reapply(setup_eth1_ipv4):
     ipv4_addr = IPV4_ADDRESS2
     ipv4_state = setup_eth1_ipv4[Interface.KEY][0][Interface.IPV4]
     ipv4_state[InterfaceIPv4.ADDRESS][0][InterfaceIPv4.ADDRESS_IP] = ipv4_addr
-    libnmstate.apply(setup_eth1_ipv4)
+    apply_with_description(
+        "Configure the ethernet device eth1 to have the address "
+        "192.0.2.252/24",
+        setup_eth1_ipv4,
+    )
 
     assertlib.assert_state(setup_eth1_ipv4)
 
@@ -631,7 +714,11 @@ def test_modify_ipv6_with_reapply(setup_eth1_ipv6):
     ipv6_addr = IPV6_ADDRESS2
     ipv6_state = setup_eth1_ipv6[Interface.KEY][0][Interface.IPV6]
     ipv6_state[InterfaceIPv6.ADDRESS][0][InterfaceIPv6.ADDRESS_IP] = ipv6_addr
-    libnmstate.apply(setup_eth1_ipv6)
+    apply_with_description(
+        "Configure the ethernet device eth1 to have the address "
+        "2001:db8:2::1/64",
+        setup_eth1_ipv6,
+    )
 
     assertlib.assert_state(setup_eth1_ipv6)
 
@@ -756,10 +843,17 @@ def test_static_ip_kernel_mode():
         ]
     }
     try:
-        libnmstate.apply(desired_state, kernel_only=True)
+        apply_with_description(
+            "Configure the ethernet interface test-veth1 with the peer "
+            "test-veth1.ep, configure the address "
+            "192.0.2.251/24 and address 2001:db8:1::1/64",
+            desired_state,
+            kernel_only=True,
+        )
         assertlib.assert_state_match(desired_state)
     finally:
-        libnmstate.apply(
+        apply_with_description(
+            "Delete the ethernet interface test-veth1",
             {
                 Interface.KEY: [
                     {
@@ -788,7 +882,12 @@ def test_merge_ip_enabled_property_from_current(setup_eth1_static_ip):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with DHCP4, IPv4 auto dns, IPv4 "
+        "auto gateway, IPv4 auto routes, DHCP6, autoconf, IPv6 auto dns, "
+        "IPv6 auto gateway, IPv6 auto routes",
+        desired_state,
+    )
     desired_state[Interface.KEY][0][Interface.IPV4][
         InterfaceIPv4.ENABLED
     ] = True
@@ -821,7 +920,11 @@ def test_preserve_ipv4_addresses_order(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 to have the address "
+        "192.0.2.252/24, 192.0.2.251/24 and dhcp4 disabled",
+        desired_state,
+    )
     ip_addrs = iproute_get_ip_addrs_with_order(iface="eth1", is_ipv6=False)
     assert ip_addrs[0] == IPV4_ADDRESS2
     assert ip_addrs[1] == IPV4_ADDRESS1
@@ -855,7 +958,12 @@ def test_preserve_ipv6_addresses_order(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with the address "
+        "2001:db8:2::1/64, 2001:db8:1::1/64, dhcp6 disabled, autoconf "
+        "disabled",
+        desired_state,
+    )
     ip_addrs = iproute_get_ip_addrs_with_order(iface="eth1", is_ipv6=True)
     assert ip_addrs[0] == IPV6_ADDRESS2
     assert ip_addrs[1] == IPV6_ADDRESS1
@@ -879,7 +987,10 @@ def test_remove_all_ip_address(setup_eth1_static_ip):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with empty address",
+        desired_state,
+    )
     desired_state[Interface.KEY][0][Interface.IPV4][
         InterfaceIPv4.ENABLED
     ] = False
@@ -908,7 +1019,11 @@ def test_ignore_dhcp_client_id_if_static(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with address 192.0.2.251/24 "
+        "with dhcp4 disabled",
+        desired_state,
+    )
 
 
 def test_mac_address_based_matching(eth1_up):
@@ -934,7 +1049,11 @@ def test_mac_address_based_matching(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        f"Set interface holding MAC address {eth1_mac} with "
+        "192.0.2.251/24 and profile name test0",
+        desired_state,
+    )
     expected_state = desired_state
     expected_state[Interface.KEY][0][Interface.NAME] = "eth1"
     expected_state[Interface.KEY][0][Interface.PROFILE_NAME] = "test0"
@@ -954,7 +1073,9 @@ def cleanup_veth1_kernel_mode():
               state: absent
             """
         )
-        libnmstate.apply(desired_state, kernel_only=True)
+        apply_with_description(
+            "Delete the veth device veth1", desired_state, kernel_only=True
+        )
 
 
 # TODO(Gris): kernel mode cannot remove IP address yet
@@ -982,5 +1103,10 @@ def test_kernel_mode_static_ip(cleanup_veth1_kernel_mode):
                 prefix-length: 64
         """
     )
-    libnmstate.apply(desired_state, kernel_only=True)
+    apply_with_description(
+        "Configure the veth device veth1 with the peer veth1_peer and "
+        "address 192.0.2.251/24 and 2001:db8:1::1/64",
+        desired_state,
+        kernel_only=True,
+    )
     assertlib.assert_state_match(desired_state, kernel_only=True)
