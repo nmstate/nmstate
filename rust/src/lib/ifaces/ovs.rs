@@ -253,6 +253,85 @@ impl OvsBridgeInterface {
             }
         }
     }
+
+    pub(crate) fn resolve_ports_mac_ref(
+        &mut self,
+        mac2iface: &crate::ifaces::Mac2Iface,
+    ) -> Result<(), NmstateError> {
+        if let Some(ports_conf) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_mut())
+        {
+            for port_conf in ports_conf.iter_mut() {
+                let profile_name = match port_conf.profile_name.clone() {
+                    Some(n) => n,
+                    None => {
+                        continue;
+                    }
+                };
+                let iface_name = mac2iface.resolve_port_mac(
+                    self.base.name.as_str(),
+                    profile_name.as_str(),
+                )?;
+                if port_conf.name.is_empty() {
+                    port_conf.name = iface_name;
+                } else if port_conf.name != iface_name {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "OVS Bridge {} is holding a port with \
+                            conflicting interface name and profile name: \
+                            profile name {} resolved to interface name {}, \
+                            but desired port interface name is {}",
+                            self.base.name,
+                            profile_name,
+                            iface_name,
+                            port_conf.name
+                        ),
+                    ));
+                }
+            }
+            for bond_conf in
+                ports_conf.iter_mut().filter_map(|p| p.bond.as_mut())
+            {
+                if let Some(bond_ports) = bond_conf.ports.as_mut() {
+                    for port_conf in bond_ports.iter_mut() {
+                        let profile_name = match port_conf.profile_name.clone()
+                        {
+                            Some(n) => n,
+                            None => {
+                                continue;
+                            }
+                        };
+                        let iface_name = mac2iface.resolve_port_mac(
+                            self.base.name.as_str(),
+                            profile_name.as_str(),
+                        )?;
+                        if port_conf.name.is_empty() {
+                            port_conf.name = iface_name;
+                        } else if port_conf.name != iface_name {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "OVS Bridge {} is holding a bond port \
+                                    with conflicting interface name and \
+                                    profile name: profile name {} \
+                                    resolved to interface name {}, \
+                                    but desired port interface name is {}",
+                                    self.base.name,
+                                    profile_name,
+                                    iface_name,
+                                    port_conf.name
+                                ),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -326,7 +405,37 @@ impl OvsBridgeOptions {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgePortConfig {
+    /// The kernel interface name of this OVS bridge port.
+    /// When applying, this property will be ignored if `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`
+    /// When applying with `identifier` set to `InterfaceIdentifier::Name` and
+    /// current kernel does not have this interface, nmstate will treat it as
+    /// creating new OVS internal interface with this name.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    /// Define network backend matching method on choosing network interface.
+    /// Default to [InterfaceIdentifier::Name].
+    /// The OVS internal interface can only have `InterfaceIdentifier::Name`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identifier: Option<InterfaceIdentifier>,
+    /// The interface type of OVS bridge system interface.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// When undefined or set to `InterfaceType::Unknown` with
+    /// `InterfaceIdentifier::MacAddress`. The only matching interface will
+    /// be used as port. Nmstate will raise error when multiple interfaces
+    /// matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iface_type: Option<InterfaceType>,
+    /// The MAC address of OVS bridge system interface.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// Will match permanent MAC address first, then fallback to use
+    /// active/current MAC address.
+    /// The only matching interface will be used. Nmstate will raise
+    /// error when multiple interfaces matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "link-aggregation"
@@ -572,7 +681,33 @@ impl OvsBridgeBondConfig {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct OvsBridgeBondPortConfig {
+    /// The kernel interface name of this OVS bridge bond port.
+    /// When applying, this property will be ignored if `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    /// Define network backend matching method on choosing network interface.
+    /// Default to [InterfaceIdentifier::Name].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identifier: Option<InterfaceIdentifier>,
+    /// The interface type of OVS bridge bond port.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// When undefined or set to `InterfaceType::Unknown` with
+    /// `InterfaceIdentifier::MacAddress`. The only matching interface will
+    /// be used as port. Nmstate will raise error when multiple interfaces
+    /// matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iface_type: Option<InterfaceType>,
+    /// The MAC address of OVS bridge bond port.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// Will match permanent MAC address first, then fallback to use
+    /// active/current MAC address.
+    /// The only matching interface will be used. Nmstate will raise
+    /// error when multiple interfaces matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mac_address: Option<String>,
 }
 
 impl OvsBridgeBondPortConfig {

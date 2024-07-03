@@ -87,11 +87,7 @@ impl NetworkState {
             self.hide_secrets();
         }
 
-        // Purge user space ignored interfaces
-        self.interfaces
-            .user_ifaces
-            .retain(|_, iface| !iface.is_ignore());
-
+        self.interfaces.tidy_up_for_retreive();
         Ok(self)
     }
 

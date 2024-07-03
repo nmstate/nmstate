@@ -7,8 +7,8 @@ use std::str::FromStr;
 use serde::{de, de::Visitor, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType,
-    NmstateError, VlanProtocol,
+    ifaces::Mac2Iface, BaseInterface, BridgePortVlanConfig, ErrorKind,
+    InterfaceIdentifier, InterfaceType, NmstateError, VlanProtocol,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,7 +91,17 @@ impl LinuxBridgeInterface {
             .as_ref()
             .and_then(|br_conf| br_conf.port.as_ref())
             .map(|ports| {
-                ports.as_slice().iter().map(|p| p.name.as_str()).collect()
+                ports
+                    .as_slice()
+                    .iter()
+                    .filter_map(|p| {
+                        if !p.name.is_empty() {
+                            Some(p.name.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
             })
     }
 
@@ -339,6 +349,49 @@ impl LinuxBridgeInterface {
             }
         }
     }
+
+    pub(crate) fn resolve_ports_mac_ref(
+        &mut self,
+        mac2iface: &Mac2Iface,
+    ) -> Result<(), NmstateError> {
+        if let Some(ports_conf) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
+        {
+            for port_conf in ports_conf.iter_mut() {
+                let profile_name = match port_conf.profile_name.clone() {
+                    Some(n) => n,
+                    None => {
+                        continue;
+                    }
+                };
+                let iface_name = mac2iface.resolve_port_mac(
+                    self.base.name.as_str(),
+                    profile_name.as_str(),
+                )?;
+                if port_conf.name.is_empty() {
+                    port_conf.name = iface_name;
+                } else if port_conf.name != iface_name {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Linux bridge {} is holding a port with \
+                            conflicting interface name and profile name: \
+                            profile name {} resolved to interface name {}, \
+                            but desired port interface name is {}",
+                            self.base.name,
+                            profile_name,
+                            iface_name,
+                            port_conf.name
+                        ),
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -367,7 +420,31 @@ impl LinuxBridgeConfig {
 #[non_exhaustive]
 pub struct LinuxBridgePortConfig {
     /// The kernel interface name of this bridge port.
+    /// When applying, this property will be ignored if `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`
+    #[serde(skip_serializing_if = "String::is_empty", default)]
     pub name: String,
+    /// Define network backend matching method on choosing network interface.
+    /// Default to [InterfaceIdentifier::Name].
+    pub identifier: Option<InterfaceIdentifier>,
+    /// The interface type of bridge port.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// When undefined or set to `InterfaceType::Unknown` with
+    /// `InterfaceIdentifier::MacAddress`. The only matching interface will
+    /// be used as port. Nmstate will raise error when multiple interfaces
+    /// matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iface_type: Option<InterfaceType>,
+    /// The MAC address of bond port.
+    /// When applying, this property is only valid when `identifier` set to
+    /// `InterfaceIdentifier::MacAddress`.
+    /// Will match permanent MAC address first, then fallback to use
+    /// active/current MAC address.
+    /// The only matching interface will be used as port. Nmstate will raise
+    /// error when multiple interfaces matches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,

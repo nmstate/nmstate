@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, InterfaceState, InterfaceType, OvsDbIfaceConfig};
+use crate::{
+    BaseInterface, InterfaceIdentifier, InterfaceState, InterfaceType,
+    OvsDbIfaceConfig,
+};
 
 impl BaseInterface {
     pub(crate) fn sanitize_current_for_verify(&mut self) {
@@ -43,6 +46,12 @@ impl BaseInterface {
         // query, we should ignore it during verify
         if self.profile_name.as_deref() == Some(self.name.as_str()) {
             self.profile_name = None;
+        }
+
+        // The MAC address might change when port assigned to controller,
+        // hence we ignore MAC address check when `identifier: mac-address`
+        if self.identifier == Some(InterfaceIdentifier::MacAddress) {
+            self.mac_address = None;
         }
     }
 

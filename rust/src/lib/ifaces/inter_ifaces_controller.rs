@@ -3,8 +3,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    BondMode, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
-    MergedInterface, MergedInterfaces, NmstateError, OvsInterface,
+    BondMode, ErrorKind, Interface, InterfaceIdentifier, InterfaceState,
+    InterfaceType, Interfaces, MergedInterface, MergedInterfaces, NmstateError,
+    OvsInterface,
 };
 
 fn is_port_overbook(
@@ -236,7 +237,7 @@ impl MergedInterfaces {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Controller interface {ctrl_name} is \
-                                holding unknown port {iface_name}"
+                            holding unknown port {iface_name}"
                         ),
                     ));
                 }
@@ -510,6 +511,23 @@ impl MergedInterfaces {
 }
 
 impl Interfaces {
+    pub(crate) fn resolve_ports_mac_ref(
+        &mut self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        let mac2iface = Mac2Iface::new(self, current);
+
+        for iface in self
+            .user_ifaces
+            .values_mut()
+            .chain(self.kernel_ifaces.values_mut())
+            .filter(|i| i.is_up() && i.is_controller())
+        {
+            iface.resolve_ports_mac_ref(&mac2iface)?;
+        }
+        Ok(())
+    }
+
     // Automatically convert ignored interface to `state: up` when all below
     // conditions met:
     //  1. Not mentioned in desire state.
@@ -582,6 +600,209 @@ impl Interfaces {
                 iface.base_iface_mut().state = InterfaceState::Up;
                 self.kernel_ifaces.insert(iface_name, iface);
             }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct Mac2Iface {
+    // Holding MAC address as key, Vec<(iface_name, iface_type)> as value.
+    // It is OK to overlap in current state, as long as the desired state is
+    // not ambiguous on port referring.
+    permanent: HashMap<String, Vec<(String, InterfaceType)>>,
+    active: HashMap<String, Vec<(String, InterfaceType)>>,
+    // Holding interface name as key, (MAC address, iface_type) as value.
+    name_indexed: HashMap<String, (String, InterfaceType)>,
+}
+
+impl Mac2Iface {
+    pub(crate) fn new(desired: &Interfaces, current: &Interfaces) -> Self {
+        let mut permanent: HashMap<String, Vec<(String, InterfaceType)>> =
+            HashMap::new();
+        let mut active: HashMap<String, Vec<(String, InterfaceType)>> =
+            HashMap::new();
+        let mut name_indexed: HashMap<Strnig, (String, InterfaceType)> =
+            HashMap::new();
+
+        for use_permanent in [true, false] {
+            for (iface, mac) in current
+                .kernel_ifaces
+                .values()
+                .chain(self.kernel_ifaces.values())
+                .filter_map(|i| {
+                    let mac_addr = if use_permanent {
+                        i.base_iface().permanent_mac_address.as_deref()
+                    } else {
+                        i.base_iface().mac_address.as_deref()
+                    };
+                    if let Some(mac) = mac_addr {
+                        if mac.is_empty() {
+                            None
+                        } else {
+                            Some(i, mac)
+                        }
+                    }
+                })
+            {
+                if iface.is_absent() {
+                    if use_permanent {
+                        permanent.remove(mac);
+                    } else {
+                        active.remove(mac);
+                    }
+                } else {
+                    if use_permanent {
+                        permanent.entry(mac.to_string())
+                    } else {
+                        active.entry(mac.to_string())
+                    }
+                    .and_modify(|v| {
+                        v.push((iface_name.to_string(), iface_type))
+                    })
+                    .or_insert(vec![(iface_name.to_string(), iface_type)])
+                }
+            }
+        }
+
+        for iface in current
+            .kernel_ifaces
+            .values()
+            .chain(self.kernel_ifaces.values())
+        {
+            if iface.is_absent() {
+                name_indexed.remove(iface.name())
+            } else {
+                if let Some(mac) = iface
+                    .base_iface()
+                    .permanent_mac_address
+                    .as_deref()
+                    .or_else(iface.base_iface().mac_address.as_deref())
+                {
+                    if !mac.is_empty() {
+                        name_indexed.insert(
+                            iface.name().to_string(),
+                            (mac.to_string(), iface.iface_type()),
+                        );
+                    }
+                }
+            }
+        }
+
+        Self {
+            permanent,
+            active,
+            name_indexed,
+        }
+    }
+
+    fn get_by_mac(&self, mac: &str) -> Option<&Vec<(String, InterfaceType)>> {
+        self.permanent.get(mac).or_else(self.active.get(mac))
+    }
+
+    pub(crate) fn resolve_port_mac(
+        &self,
+        controller_type: &InterfaceType,
+        controller_name: &str,
+        port_mac: &str,
+        port_iface_type: Option<&InterfaceType>,
+        port_iface_name: &mut String,
+    ) -> Result<(), NmstateError> {
+        if port_iface_name.is_empty() {
+            // Resolve this interface name out
+            self.permanent_mac_address
+        } else {
+            // valid whether interface name, mac and type matches
+            if let Some(mac, iface_type) =
+                self.name_indexed.get(port_iface_name)
+            {
+                if !port_mac.is_empty() && port_mac != mac {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "{} interface {} is desiring a port {} \
+                            with mac address {}, but the MAC address of \
+                            port is {}",
+                            controller_type,
+                            controller_name,
+                            port_iface_name,
+                            port_mac,
+                            mac
+                        ),
+                    ));
+                }
+                if let Some(port_iface_type) = port_iface_type {
+                    if iface_type != InterfaceType::Unknown
+                        && iface_type != port_iface_type
+                    {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "{} interface {} is desiring a port {} \
+                                with type {}, but the interface type of \
+                                port is {}",
+                                controller_type,
+                                controller_name,
+                                port_iface_name,
+                                port_iface_type,
+                                iface_type
+                            ),
+                        ));
+                    }
+                }
+            }
+            if !port_mac.is_empty() {
+                if let Some(ifaces) = self.get_by_mac(port_mac) {
+                    if !ifaces.any(|(iface_name, iface_type)| {
+                        iface_name == port_iface_name && {
+                            if port_iface_type == InterfaceType::Unknown {
+                                true
+                            } else {
+                                port_iface_type == iface_type
+                            }
+                        }
+                    }) {}
+                }
+            }
+        }
+
+        match self.0.get(profile_name) {
+            Some(ifaces) => {
+                if ifaces.is_empty() {
+                    Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "{} interface {} is holding port referred by \
+                            profile name {}, but no interface is \
+                            holding that profile name",
+                            controller_type, controller_name, profile_name
+                        ),
+                    ))
+                } else if let Some(iface_name) = ifaces.first() {
+                    Ok(iface_name.to_string())
+                } else {
+                    Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "{} interface {} is holding port referred \
+                            by profile name {}, but 2+ interface is
+                            holding that profile name: {:?}",
+                            controller_type,
+                            controller_name,
+                            profile_name,
+                            ifaces,
+                        ),
+                    ))
+                }
+            }
+            None => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Bond {} is holding port referred by \
+                    profile name {}, but no interface is \
+                    holding that profile name",
+                    controller_name, profile_name
+                ),
+            )),
         }
     }
 }

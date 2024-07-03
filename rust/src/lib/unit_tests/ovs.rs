@@ -948,3 +948,181 @@ fn test_ovs_bridge_with_mac() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_ovs_bridge_resolve_port_ref_by_profile_name() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: br0-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            ports:
+            - profile-name: br0-port1",
+    )
+    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    assert_eq!(
+        merged_ifaces
+            .user_ifaces
+            .get(&("br0".to_string(), InterfaceType::OvsBridge))
+            .unwrap()
+            .desired
+            .as_ref()
+            .unwrap()
+            .ports(),
+        Some(vec!["eth1"])
+    );
+}
+
+#[test]
+fn test_ovs_bridge_resolve_bond_port_ref_by_profile_name() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: br0-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: br0-port2
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1B
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            ports:
+            - name: br0-bond0
+              link-aggregation:
+                  mode: balance-slb
+                  ports:
+                  - profile-name: br0-port1
+                  - profile-name: br0-port2",
+    )
+    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    assert_eq!(
+        merged_ifaces
+            .user_ifaces
+            .get(&("br0".to_string(), InterfaceType::OvsBridge))
+            .unwrap()
+            .desired
+            .as_ref()
+            .unwrap()
+            .ports(),
+        Some(vec!["eth1", "eth2"])
+    );
+}
+
+#[test]
+fn test_ovs_bridge_validate_interface_name_and_profile_name_missmatch() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: br0-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            ports:
+            - profile-name: br0-port1
+              name: eth2",
+    )
+    .unwrap();
+    let result = MergedInterfaces::new(des_ifaces, cur_ifaces, false, false);
+
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_bond_validate_interface_name_and_profile_name_missmatch() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: br0-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            ports:
+            - name: br0-bond0
+              link-aggregation:
+                  mode: balance-slb
+                  ports:
+                  - profile-name: br0-port1
+                    name: eth2",
+    )
+    .unwrap();
+    let result = MergedInterfaces::new(des_ifaces, cur_ifaces, false, false);
+
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}

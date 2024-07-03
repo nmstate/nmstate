@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{InterfaceType, Interfaces, MergedInterfaces, VrfInterface};
+use crate::{
+    ErrorKind, InterfaceType, Interfaces, MergedInterfaces, VrfInterface,
+};
 
 #[test]
 fn test_vrf_stringlized_attributes() {
@@ -84,4 +86,135 @@ fn test_vrf_on_bond_vlan_got_auto_remove() {
         .as_ref()
         .unwrap();
     assert!(iface.is_absent());
+}
+
+#[test]
+fn test_vrf_inconsistent_ports_and_ports_config() {
+    let mut des_ifaces: VrfInterface = serde_yaml::from_str(
+        r"---
+        name: vrf1
+        type: vrf
+        state: up
+        vrf:
+          route-table-id: 101
+          ports:
+            - eth1
+            - eth2
+          ports-config:
+            - name: eth3
+            - name: eth1
+            - name: eth2
+        ",
+    )
+    .unwrap();
+
+    let result = des_ifaces.sanitize(true);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_unify_ports_and_ports_config() {
+    let mut des_ifaces: VrfInterface = serde_yaml::from_str(
+        r"---
+        name: vrf1
+        type: vrf
+        state: up
+        vrf:
+          route-table-id: 101
+          ports-config:
+            - name: eth3
+            - name: eth1
+            - name: eth2
+        ",
+    )
+    .unwrap();
+
+    des_ifaces.sanitize(true).unwrap();
+
+    assert_eq!(
+        des_ifaces.vrf.as_ref().and_then(|v| v.port.as_deref()),
+        Some(
+            ["eth1".to_string(), "eth2".to_string(), "eth3".to_string()]
+                .as_slice()
+        )
+    );
+
+    let mut des_ifaces: VrfInterface = serde_yaml::from_str(
+        r"---
+        name: vrf1
+        type: vrf
+        state: up
+        vrf:
+          route-table-id: 101
+          ports:
+            - eth3
+            - eth1
+            - eth2
+        ",
+    )
+    .unwrap();
+
+    des_ifaces.sanitize(true).unwrap();
+
+    assert_eq!(
+        des_ifaces
+            .vrf
+            .as_ref()
+            .and_then(|v| v.ports_config.as_deref())
+            .map(|ports_config| ports_config
+                .iter()
+                .map(|p| p.name.clone())
+                .collect()),
+        Some(vec![
+            Some("eth1".to_string()),
+            Some("eth2".to_string()),
+            Some("eth3".to_string())
+        ])
+    );
+}
+
+#[test]
+fn test_vrf_resolve_port_ref_by_profile_name() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1a",
+    )
+    .unwrap();
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: vrf0-port1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1a
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+            ports-config:
+            - profile-name: vrf0-port1",
+    )
+    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    assert_eq!(
+        merged_ifaces
+            .kernel_ifaces
+            .get("vrf0")
+            .unwrap()
+            .desired
+            .as_ref()
+            .unwrap()
+            .ports(),
+        Some(vec!["eth1"])
+    );
 }

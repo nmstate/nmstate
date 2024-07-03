@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    BridgePortVlanConfig, Interface, LinuxBridgeConfig, LinuxBridgeInterface,
-    MergedInterface,
+    BridgePortVlanConfig, Interface, InterfaceType, LinuxBridgeConfig,
+    LinuxBridgeInterface, MergedInterface,
 };
 
 impl LinuxBridgeInterface {
@@ -52,6 +52,42 @@ impl LinuxBridgeInterface {
             }
         }
         false
+    }
+
+    pub(crate) fn set_port_mac_and_type(
+        &mut self,
+        port_name: &str,
+        mac_address: &str,
+        port_iface_type: InterfaceType,
+    ) {
+        if let Some(ports_config) =
+            self.bridge.as_mut().and_then(|b| b.port.as_deref_mut())
+        {
+            if ports_config
+                .iter_mut()
+                .find_map(|p| {
+                    if p.name == port_name {
+                        p.permanent_mac_address = Some(mac_address.to_string());
+                        p.iface_type = Some(port_iface_type);
+                        Some(())
+                    } else {
+                        None
+                    }
+                })
+                .is_some()
+            {
+                return;
+            }
+        }
+
+        log::error!(
+            "BUG: LinuxBridgeInterface::set_port_mac_and_type() failed to set \
+             port {} with mac {} type {}: {:?}",
+            port_name,
+            mac_address,
+            port_iface_type,
+            self
+        );
     }
 }
 

@@ -383,8 +383,13 @@ impl Interfaces {
             };
             let mut has_match = false;
             for cur_iface in current.kernel_ifaces.values() {
-                if cur_iface.base_iface().mac_address.as_deref()
-                    == Some(&mac_address)
+                if cur_iface
+                    .base_iface()
+                    .mac_address
+                    .as_deref()
+                    .map(|m| m.to_ascii_uppercase())
+                    .as_deref()
+                    == Some(mac_address.as_str())
                 {
                     let mut new_iface = if iface.iface_type()
                         == InterfaceType::Unknown
@@ -631,12 +636,14 @@ impl MergedInterfaces {
 
         if gen_conf_mode {
             desired.set_unknown_iface_to_eth()?;
+            desired.resolve_ports_mac_ref(&current)?;
             desired.set_missing_port_to_eth();
         } else {
             desired.resolve_sriov_reference(&current)?;
             desired.resolve_mac_identifider_in_current(&current)?;
             desired.resolve_unknown_ifaces(&current)?;
             desired.resolve_mac_identifider_in_desired(&current)?;
+            desired.resolve_ports_mac_ref(&current)?;
         }
 
         desired.auto_managed_controller_ports(&current);
