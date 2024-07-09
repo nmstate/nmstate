@@ -948,3 +948,28 @@ fn test_ovs_bridge_with_mac() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_deny_unknown_field_in_ovs_bond() {
+    let result = serde_yaml::from_str::<OvsBridgeInterface>(
+        r"
+        name: br0
+        type: ovs-bridge
+        state: up
+        mac-address: 05:04:03:02:01:00
+        bridge:
+          port:
+          - name: bond1
+            link-aggregation:
+              mode: active-backup
+              bond-downdelay: 100
+              bond-updelay: 101
+              invalid: foo
+              ports:
+              - name: eth1
+              - name: eth2
+        ",
+    );
+
+    assert!(result.is_err());
+}

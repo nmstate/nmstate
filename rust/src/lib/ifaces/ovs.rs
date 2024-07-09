@@ -485,8 +485,6 @@ impl OvsInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[non_exhaustive]
 /// The example yaml output of OVS bond:
 /// ```yml
 /// ---
@@ -511,6 +509,9 @@ impl OvsInterface {
 ///           - name: eth2
 ///           - name: eth1
 /// ```
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
 pub struct OvsBridgeBondConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<OvsBridgeBondMode>,
