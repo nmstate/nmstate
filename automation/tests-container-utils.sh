@@ -8,7 +8,7 @@ function remove_container {
 }
 
 function container_exec {
-    ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
+    time ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
         /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
 }
 
