@@ -32,6 +32,7 @@ from .testlib import bondlib
 from .testlib import ifacelib
 from .testlib import statelib
 from .testlib.env import is_k8s
+from .testlib.apply import apply_with_description
 from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
@@ -166,14 +167,21 @@ def iface_with_dynamic_ip_up(ifname):
         ]
     }
     try:
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Configure the dhcpcli ethernet interface with DHCPv4, IPv4 auto "
+            "dns, IPv4 auto gateway, IPv4 auto routes, IPv4 auto route table "
+            "ID 0, DHCPv6, autoconf, IPv6 auto dns, IPv6 auto gateway, IPv6 "
+            "auto routes, use default auto route table ID for IPv6",
+            desired_state,
+        )
         assert _poll(_has_ipv4_dhcp_gateway)
         assert _poll(_has_dhcpv4_addr)
         assert _poll(_has_ipv6_auto_gateway)
         assert _poll(_has_dhcpv6_addr)
         yield statelib.show_only((ifname,))
     finally:
-        libnmstate.apply(
+        apply_with_description(
+            f"Remove the interface {ifname}",
             {
                 Interface.KEY: [
                     {
@@ -181,7 +189,7 @@ def iface_with_dynamic_ip_up(ifname):
                         Interface.STATE: InterfaceState.ABSENT,
                     }
                 ]
-            }
+            },
         )
 
 
@@ -194,7 +202,12 @@ def test_ipv4_dhcp(dhcpcli_up):
         enabled=True, dhcp=True
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with DHCPv4, IPv4 auto "
+        "dns, IPv4 auto gateway, IPv4 auto routes, use default auto route "
+        "table ID",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
     assert _poll(_has_ipv4_dhcp_nameserver)
@@ -210,7 +223,12 @@ def test_ipv6_dhcp_only(dhcpcli_up):
         enabled=True, dhcp=True, autoconf=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with the DHCPv6, IPv6 "
+        "auto dns, IPv6 auto gateway, IPv6 auto routes, IPv6 autoconf "
+        "should be disabled, use default auto route table ID",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv6_auto_nameserver)
@@ -229,7 +247,12 @@ def test_ipv6_dhcp_and_autoconf(dhcpcli_up):
         enabled=True, dhcp=True, autoconf=True
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv6, router "
+        "advertisement, IPv6 auto dns, IPv6 auto gateway, IPv6 "
+        "auto routes",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv6_auto_gateway)
@@ -269,7 +292,14 @@ def test_static_ip_with_auto_ip_enabled(dhcpcli_up):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet dhcpcli with the address "
+        "192.0.2.253/24, IPv4 auto dns, IPv4 auto gateway, IPv4 auto routes, "
+        "use default auto route table ID for IPv4, IPv6 DHCPv6, autoconf, "
+        "IPv6 address 2001:db8:1::3/64, IPv6 auto dns, IPv6 auto gateway, "
+        "IPv6 auto routes, use default auto route table ID for IPv6",
+        desired_state,
+    )
 
     assert _poll(_has_ipv4_dhcp_nameserver)
     assert _poll(_has_ipv4_dhcp_gateway)
@@ -318,7 +348,12 @@ def test_ipv4_dhcp_ignore_gateway(dhcpcli_up):
         enabled=True, dhcp=True, auto_gateway=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with IPv4 dhcp enabled, "
+        "IPv4 auto dns, IPv4 auto routes, use default auto route table ID, "
+        "do not apply IPv4 default gateway retrieved from DHCP server",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv4_dhcp_nameserver)
@@ -334,7 +369,12 @@ def test_ipv4_dhcp_ignore_dns(dhcpcli_up):
         enabled=True, dhcp=True, auto_dns=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with IPv4 dhcp enabled, "
+        "do not apply IPv4 DNS resolver information retrieved from "
+        "DHCP server, IPv4 auto gateway, IPv4 auto routes, IPv4 auto route ",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv4_dhcp_gateway)
@@ -350,7 +390,12 @@ def test_ipv4_dhcp_ignore_routes(dhcpcli_up):
         enabled=True, dhcp=True, auto_routes=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with DHCPv4, IPv4 auto "
+        "dns, IPv4 auto gateway, do not set IPv4 routes retrieved from DHCP "
+        "server, IPv4 auto table ID 0",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv4_dhcp_nameserver)
@@ -366,7 +411,12 @@ def test_ipv4_dhcp_set_table_id(dhcpcli_up):
         enabled=True, dhcp=True, table_id=100
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with DHCPv4, IPv4 auto "
+        "dns, IPv4 auto gateway, do not set IPv4 routes retrieved from DHCP "
+        "server, IPv4 auto table ID 100",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
 
@@ -378,7 +428,13 @@ def test_ipv6_dhcp_set_table_id_without_autoconf(dhcpcli_up):
         enabled=True, dhcp=True, table_id=100
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with dhcp6 only, router "
+        "advertisement should be ignored, IPv6 auto dns enabled, IPv6 auto "
+        "gateway enabled, IPv6 auto routes enabled, the route table id used "
+        "to hold routes retrieved from autoconf is 100",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
 
@@ -390,7 +446,13 @@ def test_ipv6_dhcp_set_table_id_with_autoconf(dhcpcli_up):
         enabled=True, dhcp=True, autoconf=True, table_id=100
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv6, router "
+        "advertisement, IPv6 auto dns, IPv6 auto gateway, IPv6 auto "
+        "routes, the route table id used to hold routes "
+        "retrieved from autoconf is 100",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
 
@@ -402,7 +464,13 @@ def test_ipv6_dhcp_and_autoconf_ignore_gateway(dhcpcli_up):
         enabled=True, dhcp=True, autoconf=True, auto_gateway=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv6, IPv6 router "
+        "advertisement, IPv6 auto dns, IPv6 auto routes, do not set the "
+        "default gateway retrieved from autoconf, IPv6 auto route table "
+        "ID 0",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv6_auto_extra_route)
@@ -418,7 +486,13 @@ def test_ipv6_dhcp_and_autoconf_ignore_dns(dhcpcli_up):
         enabled=True, dhcp=True, autoconf=True, auto_dns=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the dhcpcli ethernet with DHCPv6, router advertisement, "
+        "IPv6 auto gateway, IPv6 auto routes, do not apply IPv6 DNS resolver "
+        "information retrieved from autoconf, use default auto route table "
+        "ID",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv6_auto_gateway)
@@ -434,7 +508,13 @@ def test_ipv6_dhcp_and_autoconf_ignore_routes(dhcpcli_up):
         enabled=True, dhcp=True, autoconf=True, auto_routes=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with dhcp6, "
+        "autoconf, IPv6 auto dns, IPv6 auto gateway, do not set "
+        "the routes retrieved from autoconf, IPv6 auto route table "
+        "ID 0",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv6_auto_nameserver)
@@ -463,7 +543,11 @@ def test_ipv4_dhcp_off_and_option_on(dhcpcli_up):
 
     dhcp_cli_desired_state[Interface.IPV4] = ipv4_state
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with static ip 192.0.2.252/24 "
+        "and DHCPv4 disabled",
+        desired_state,
+    )
 
     current_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_current_state = current_state[Interface.KEY][0]
@@ -498,7 +582,11 @@ def test_ipv6_dhcp_off_and_option_on(dhcpcli_up):
     ]
     dhcp_cli_desired_state[Interface.IPV6] = ipv6_state
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with static address "
+        "2001:db8:2::1/64",
+        desired_state,
+    )
 
     current_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_current_state = current_state[Interface.KEY][0]
@@ -520,7 +608,12 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
         enabled=True, dhcp=True
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set up the ethernet interface dhcpcli with DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto routes, use default auto route table "
+        "ID",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv4_dhcp_nameserver)
     assert _poll(_has_ipv4_dhcp_gateway)
@@ -534,7 +627,11 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
         enabled=True, dhcp=False
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with the address "
+        "192.0.2.249/24",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
     # When converting from DHCP to static without address mentioned,
     # nmstate should convert existing dynamic IP addresses to static
@@ -552,7 +649,12 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
         enabled=True, dhcp=True, autoconf=True
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with DHCPv6, autoconf, "
+        "IPv6 auto dns, IPv6 auto gateway, IPv6 auto routes, IPv6 auto route "
+        "table ID 0",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv6_auto_gateway)
@@ -566,7 +668,12 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     dhcp_cli_desired_state[Interface.IPV6] = _create_ipv6_state(enabled=True)
 
     print(desired_state)
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with address "
+        "2001:db8:1::f01/128 and 2001:db8:1:0:f81a:47ff:fe84:50d8/64 "
+        "configured",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
     assert not _poll_till_not(_has_ipv6_auto_gateway)
@@ -639,7 +746,12 @@ def test_port_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
         enabled=True, dhcp=True
     )
 
-    libnmstate.apply(dhcpcli_up)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with DHCPv4, IPv4 auto "
+        "dns, IPv4 auto gateway, IPv4 auto routes, use default auto route "
+        "table ID",
+        dhcpcli_up,
+    )
 
     assert _poll(_has_dhcpv4_addr)
 
@@ -668,7 +780,19 @@ def test_port_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
                 Interface.IPV6: _create_ipv6_state(enabled=False),
             }
         )
-        libnmstate.apply(state)
+
+        dhcpcli_ip_info = dhcpcli_ip[0]
+        ip_address = dhcpcli_ip_info["ip"]
+        prefix_length = dhcpcli_ip_info["prefix-length"]
+
+        apply_with_description(
+            "Create the linux bridge brtest0 with address "
+            f"{ip_address}/{prefix_length}, IPv4 auto dns, IPv4 auto "
+            "gateway, IPv4 auto routes, IPv6 disabled. Disable the bridge "
+            "options stp, attach the port dhcpcli. Configure ethernet device "
+            "dhcpcli with IPv4 disabled and controller brtest0 specified.",
+            state,
+        )
 
         assertlib.assert_state_match(state)
 
@@ -948,10 +1072,16 @@ def dummy00():
         Interface.TYPE: InterfaceType.DUMMY,
         Interface.STATE: InterfaceState.UP,
     }
-    libnmstate.apply({Interface.KEY: [ifstate]})
+    apply_with_description(
+        "Bring up the dummy device dummy00", {Interface.KEY: [ifstate]}
+    )
     yield ifstate
     ifstate[Interface.STATE] = InterfaceState.ABSENT
-    libnmstate.apply({Interface.KEY: [ifstate]}, verify_change=False)
+    apply_with_description(
+        "Delete the dummy device dummy00",
+        {Interface.KEY: [ifstate]},
+        verify_change=False,
+    )
 
 
 @parametrize_ip_ver
@@ -963,7 +1093,13 @@ def test_activate_dummy_without_dhcp_service(ip_ver, dummy00):
         ifstate[Interface.IPV6] = _create_ipv6_state(
             enabled=True, dhcp=True, autoconf=True
         )
-    libnmstate.apply({Interface.KEY: [ifstate]})
+    apply_with_description(
+        "Configure the dummy device dummy00 with DHCPv4, IPv4 auto dns, IPv4 "
+        "auto gateway, IPv4 auto routes, use default auto route table ID for "
+        "IPv4, DHCPv6, autoconf, IPv6 auto dns, IPv6 auto gateway, IPv6 auto "
+        "routes, use default auto route table ID for IPv6",
+        {Interface.KEY: [ifstate]},
+    )
 
 
 @pytest.mark.tier1
@@ -973,10 +1109,19 @@ def test_dummy_disable_ip_stack_with_on_going_dhcp(dummy00):
     ifstate[Interface.IPV6] = _create_ipv6_state(
         enabled=True, dhcp=True, autoconf=True
     )
-    libnmstate.apply({Interface.KEY: [ifstate]})
+    apply_with_description(
+        "Configure the dummy00 interface with the DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto routes, use default auto route table "
+        "ID for IPv4, DHCPv6, autoconf, IPv6 auto dns, IPv6 auto gateway, "
+        "IPv6 auto routes, use default auto route table ID for IPv6",
+        {Interface.KEY: [ifstate]},
+    )
     ifstate[Interface.IPV4] = _create_ipv4_state(enabled=False)
     ifstate[Interface.IPV6] = _create_ipv6_state(enabled=False)
-    libnmstate.apply({Interface.KEY: [ifstate]})
+    apply_with_description(
+        "Disable the IPv4 and IPv6 on the dummy00 interface",
+        {Interface.KEY: [ifstate]},
+    )
 
 
 def test_dhcp4_with_static_ipv6(dhcpcli_up):
@@ -996,7 +1141,12 @@ def test_dhcp4_with_static_ipv6(dhcpcli_up):
         ],
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto routes, use default auto route table "
+        "ID for IPv4, IPv6 address 2001:db8:2::1/64 configured",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv4_dhcp_nameserver)
     assert _poll(_has_ipv4_dhcp_gateway)
@@ -1020,7 +1170,14 @@ def test_dhcp6_and_autoconf_with_static_ipv4(dhcpcli_up):
         ],
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with address "
+        "192.0.2.252/24 configured. "
+        "Configure the ethernet device dhcpcli with DHCPv6, IPv6 router "
+        "advertisement, IPv6 auto dns, IPv6 auto gateway, IPv6 auto routes, "
+        "use default auto route table ID for IPv6",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
     assert _poll(_has_ipv6_auto_gateway)
@@ -1051,7 +1208,11 @@ def dhcpcli_up_with_static_ip(dhcpcli_up):
         ],
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with static IP address "
+        "192.0.2.252/24 and 2001:db8:2::1/64",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
     yield desired_state
 
@@ -1065,7 +1226,12 @@ def test_change_static_to_dhcp4_with_disabled_ipv6(dhcpcli_up_with_static_ip):
     )
     dhcp_cli_desired_state[Interface.IPV6] = {InterfaceIPv6.ENABLED: False}
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with DHCPv4, IPv4 auto "
+        "dns, IPv4 auto gateway, IPv4 auto routes, use default auto route "
+        "table ID for IPv4, IPv6 disabled",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
     assert _poll(_has_ipv4_dhcp_nameserver)
     assert _poll(_has_ipv4_dhcp_gateway)
@@ -1084,7 +1250,12 @@ def test_change_static_to_dhcp6_autoconf_with_disabled_ipv4(
     )
     dhcp_cli_desired_state[Interface.IPV4] = {InterfaceIPv4.ENABLED: False}
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the etheret device dhcpcli with IPv4 disabled, DHCPv6 "
+        "enabled, autoconf enabled, IPv6 auto dns, IPv6 auto gateway, IPv6 "
+        "auto routes, use default auto route table ID for IPv6",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
     assert _poll(_has_dhcpv6_addr)
     assert _poll(_has_ipv6_auto_gateway)
@@ -1154,7 +1325,16 @@ def dhcpcli_up_with_static_ip_and_route(dhcpcli_up_with_static_ip):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the route with the destination 2001:db8:2::/64 to "
+        "the next hop address 2001:db8:1::3 on the device dhcpcli."
+        "Configure the IPv6 default route to the address "
+        "2001:db8:1::3 and IPv4 default route to the address "
+        "address 192.0.2.251 on the device dhcpcli. Configure "
+        "IPv4 destination 203.0.113.0/24 to the next hop address "
+        "192.0.2.251 on the device dhcpcli",
+        desired_state,
+    )
     yield desired_state
 
 
@@ -1173,7 +1353,14 @@ def test_static_ip_with_routes_switch_back_to_dynamic(
         enabled=True, dhcp=True, autoconf=True
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto routes, use default auto route table "
+        "ID for IPv4. Configure the ethernet device dhcpcli with DHCPv6, "
+        "autoconf, IPv6 auto dns, IPv6 auto gateway, IPv6 auto routes, "
+        "use default auto route table ID for IPv6",
+        desired_state,
+    )
     assertlib.assert_state(desired_state)
 
     assert _poll(_has_ipv4_dhcp_nameserver)
@@ -1206,11 +1393,18 @@ def eth1_with_dhcp6_no_dhcp_server():
     iface_state[Interface.IPV6] = _create_ipv6_state(
         enabled=True, dhcp=True, autoconf=False
     )
-    libnmstate.apply({Interface.KEY: [iface_state]})
+    apply_with_description(
+        "Configure the ethernet device eth1 with DHCPv6, and "
+        "router advertisements should be ignored, IPv6 auto dns "
+        "enabled, IPv6 auto gateway enabled, IPv6 auto routes enabled, "
+        "use default auto route table ID for IPv6",
+        {Interface.KEY: [iface_state]},
+    )
     try:
         yield iface_state
     finally:
-        libnmstate.apply(
+        apply_with_description(
+            "Delete the ethernet interface eth1",
             {
                 Interface.KEY: [
                     {
@@ -1239,14 +1433,18 @@ def test_switch_from_dynamic_ip_without_dhcp_srv_to_static_ipv6(
             }
         ],
     }
-    libnmstate.apply({Interface.KEY: [iface_state]})
+    apply_with_description(
+        "Configure the ethernet interface eth1 with address "
+        "2001:db8:2::1/64",
+        {Interface.KEY: [iface_state]},
+    )
     assertlib.assert_state_match({Interface.KEY: [iface_state]})
 
 
 @pytest.fixture
 def dhcpcli_up_with_dns_cleanup(dhcpcli_up):
     yield dhcpcli_up
-    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
+    apply_with_description("Clear the DNS config", {DNS.KEY: {DNS.CONFIG: {}}})
 
 
 def test_dynamic_ip_with_static_dns(dhcpcli_up_with_dns_cleanup, clean_state):
@@ -1268,7 +1466,16 @@ def test_dynamic_ip_with_static_dns(dhcpcli_up_with_dns_cleanup, clean_state):
     }
     desired_state = {Interface.KEY: [iface_state], DNS.KEY: dns_config}
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Change the DNS server to 2001:4860:4860::8888 and 8.8.8.8, "
+        "set the dns search to example.org and example.com. "
+        "Configure the ethernet device dhcpcli with DHCPv4 and "
+        "IPv4 auto dns disabled, IPv4 auto gateway enabled, IPv4 auto "
+        "routes enabled, IPv4 auto routet table ID 0. Configure the ethernet "
+        "device dhcpcli with DHCPv6, autoconf, IPv6 auto dns, IPv6 auto "
+        "gateway, IPv6 auto routes, use default auto route table ID for IPv6",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
     assert _poll(_has_ipv4_dhcp_gateway)
@@ -1294,11 +1501,24 @@ def clean_state():
             iface_state[Interface.IPV6][InterfaceIPv6.AUTO_DNS] = False
             iface_state[Interface.IPV6][InterfaceIPv6.AUTO_ROUTES] = False
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Do not apply DNS resolver information and the routes retrieved from "
+        "DHCPv4 on the ethernet device eth0. Do not apply DNS resolver "
+        "information and the routes retrieved from autoconf or DHCPv6",
+        desired_state,
+    )
     try:
         yield
     finally:
-        libnmstate.apply(current_state)
+        apply_with_description(
+            "Set the static DNS nameservers to 10.11.5.19 and 10.2.32.1 and "
+            "empty search domains, configure the ethernet device dhcpcli to "
+            "have the IPv4 and IPv6 disabled. Configure the ethernet device "
+            "eth0 to apply DNS resolver information and the routes retrieved "
+            "from DHCPv4. Configure the ethernet device eth0 to apply DNS "
+            "resolver information and the routes retrieved from autoconf.",
+            current_state,
+        )
 
 
 def _sort_ip_addresses(addresses):
@@ -1318,7 +1538,13 @@ def test_enable_dhcp_with_no_server(dummy00):
         enabled=True, dhcp=True, autoconf=False
     )
     desired_state = {Interface.KEY: [iface_info]}
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set up the dummy device dummy00 with DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto routes, use default auto route table "
+        "ID for IPv4, DHCPv6, autoconf disabled, IPv6 auto dns, IPv6 auto "
+        "gateway, IPv6 auto routes, use default auto route table ID for IPv6",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
 
@@ -1362,7 +1588,9 @@ def test_show_running_config_does_not_include_auto_config(
     ids=["llt", "ll", "raw"],
 )
 def test_dhcpv6_duid(dhcpcli_up_with_dynamic_ip, duid_type):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with IPv6 dhcp-duid "
+        f"{duid_type}",
         {
             Interface.KEY: [
                 {
@@ -1375,7 +1603,7 @@ def test_dhcpv6_duid(dhcpcli_up_with_dynamic_ip, duid_type):
                     },
                 }
             ]
-        }
+        },
     )
 
 
@@ -1385,7 +1613,9 @@ def test_dhcpv6_duid(dhcpcli_up_with_dynamic_ip, duid_type):
     ids=["ll", "iaid+duid", "raw"],
 )
 def test_dhcpv4_client_id(dhcpcli_up_with_dynamic_ip, client_id_type):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli to have IPv4 "
+        f"dhcp-client-id {client_id_type} configured",
         {
             Interface.KEY: [
                 {
@@ -1397,7 +1627,7 @@ def test_dhcpv4_client_id(dhcpcli_up_with_dynamic_ip, client_id_type):
                     },
                 }
             ]
-        }
+        },
     )
 
 
@@ -1409,7 +1639,9 @@ def test_dhcpv4_client_id(dhcpcli_up_with_dynamic_ip, client_id_type):
     ],
 )
 def test_auto6_addr_gen_mode(dhcpcli_up_with_dynamic_ip, addr_gen_mode):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with the IPv6 address "
+        f"generation mode {addr_gen_mode}",
         {
             Interface.KEY: [
                 {
@@ -1422,12 +1654,13 @@ def test_auto6_addr_gen_mode(dhcpcli_up_with_dynamic_ip, addr_gen_mode):
                     },
                 }
             ]
-        }
+        },
     )
 
 
 def test_hide_addr_gen_mode_if_ipv6_disabled(dhcpcli_up_with_dynamic_ip):
-    libnmstate.apply(
+    apply_with_description(
+        "configure the ethernet device dhcpcli with IPv6 disabled",
         {
             Interface.KEY: [
                 {
@@ -1437,7 +1670,7 @@ def test_hide_addr_gen_mode_if_ipv6_disabled(dhcpcli_up_with_dynamic_ip):
                     },
                 }
             ]
-        }
+        },
     )
     current_state = statelib.show_only((DHCP_CLI_NIC,))
     assert (
@@ -1457,7 +1690,10 @@ def test_hide_addr_gen_mode_if_ipv6_disabled(dhcpcli_up_with_dynamic_ip):
     ],
 )
 def test_wait_ip(eth1_up, wait_ip):
-    libnmstate.apply(
+    apply_with_description(
+        f"Configure wait-ip to be {wait_ip} for ethernet device eth1 with "
+        "DHCPv4, IPv4 auto dns, IPv4 auto gateway, IPv4 auto routes, DHCPv6, "
+        "autoconf, IPv6 auto dns, IPv6 auto gateway, IPv6 auto routes",
         {
             Interface.KEY: [
                 {
@@ -1474,12 +1710,14 @@ def test_wait_ip(eth1_up, wait_ip):
                     },
                 }
             ],
-        }
+        },
     )
 
 
 def test_auto_route_metric(dhcpcli_up_with_dynamic_ip):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with IPv4 auto-route-metric "
+        "901 and IPv6 auto-route-metric 902 configured",
         {
             Interface.KEY: [
                 {
@@ -1497,7 +1735,7 @@ def test_auto_route_metric(dhcpcli_up_with_dynamic_ip):
                     },
                 }
             ],
-        }
+        },
     )
     _poll(_has_auto_route_with_desired_metric, family=4, metric=901)
     _poll(_has_auto_route_with_desired_metric, family=6, metric=902)
@@ -1516,7 +1754,10 @@ def _has_auto_route_with_desired_metric(family, metric):
 
 @pytest.mark.tier1
 def test_ipv6_link_local_dns_srv(dhcpcli_up_with_dynamic_ip):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure DNS server to 2001:4860:4860::8888 and "
+        "fe80::deef:1%dhcpcli. Configure the ethernet device "
+        "dhcpcli to disable IPv4 auto dns and IPv6 auto dns",
         {
             DNS.KEY: {
                 DNS.CONFIG: {
@@ -1542,7 +1783,7 @@ def test_ipv6_link_local_dns_srv(dhcpcli_up_with_dynamic_ip):
                     },
                 }
             ],
-        }
+        },
     )
     assert _poll(_has_ipv4_dhcp_gateway)
     assert _poll(_has_ipv6_auto_gateway)
@@ -1560,7 +1801,7 @@ def test_ipv6_link_local_dns_srv(dhcpcli_up_with_dynamic_ip):
         IPV6_DNS_NAMESERVER_LOCAL,
     ]
     # Remove DNS server before clean up
-    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
+    apply_with_description("Purge DNS config", {DNS.KEY: {DNS.CONFIG: {}}})
 
 
 def _has_ipv6_token_addr(token):
@@ -1579,7 +1820,10 @@ def _has_ipv6_token_addr(token):
 
 @pytest.fixture
 def dhcpcli_with_ipv6_token(dhcpcli_up):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet interface dhcpcli with DHCPv6, autoconf, "
+        "IPv6 auto dns, IPv6 auto gateway, IPv6 auto routes, and "
+        f"IPv6 token {TEST_IPV6_TOKEN} specified",
         {
             Interface.KEY: [
                 {
@@ -1595,7 +1839,7 @@ def dhcpcli_with_ipv6_token(dhcpcli_up):
                     },
                 }
             ],
-        }
+        },
     )
     yield
 
@@ -1606,7 +1850,8 @@ def test_set_ipv6_token(dhcpcli_with_ipv6_token):
 
 
 def test_remove_ipv6_token_with_empty_str(dhcpcli_with_ipv6_token):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli to have the IPv6 token ::",
         {
             Interface.KEY: [
                 {
@@ -1622,14 +1867,15 @@ def test_remove_ipv6_token_with_empty_str(dhcpcli_with_ipv6_token):
                     },
                 }
             ],
-        }
+        },
     )
     assert _poll(_has_dhcpv6_addr)
     assert not _has_ipv6_token_addr(TEST_IPV6_TOKEN)
 
 
 def test_remove_ipv6_token_with_all_zero(dhcpcli_with_ipv6_token):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli to have the IPv6 token ::",
         {
             Interface.KEY: [
                 {
@@ -1645,7 +1891,7 @@ def test_remove_ipv6_token_with_all_zero(dhcpcli_with_ipv6_token):
                     },
                 }
             ],
-        }
+        },
     )
     assert _poll(_has_dhcpv6_addr)
     assert not _has_ipv6_token_addr(TEST_IPV6_TOKEN)
@@ -1668,14 +1914,16 @@ def test_set_ipv6_token_with_none_compact_format(dhcpcli_with_ipv6_token):
                     },
                 }
             ],
-        }
+        },
     )
     assert _poll(_has_dhcpv6_addr)
     assert _has_ipv6_token_addr(TEST_IPV6_TOKEN)
 
 
 def test_change_ipv6_token(dhcpcli_with_ipv6_token):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with the IPv6 token "
+        f"{TEST_IPV6_TOKEN2}",
         {
             Interface.KEY: [
                 {
@@ -1691,14 +1939,16 @@ def test_change_ipv6_token(dhcpcli_with_ipv6_token):
                     },
                 }
             ],
-        }
+        },
     )
     assert _poll(_has_dhcpv6_addr)
     assert _has_ipv6_token_addr(TEST_IPV6_TOKEN2)
 
 
 def test_ipv6_token_ignored_when_autoconf_off(dhcpcli_with_ipv6_token):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure the ethernet device dhcpcli to have the DHCPv6 disabled, "
+        "autoconf disabled",
         {
             Interface.KEY: [
                 {
@@ -1713,7 +1963,7 @@ def test_ipv6_token_ignored_when_autoconf_off(dhcpcli_with_ipv6_token):
                     },
                 }
             ],
-        }
+        },
     )
 
 
@@ -1768,7 +2018,16 @@ def test_auto_iface_with_static_routes(dhcp_env):
             }
         ],
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the destination route 2001:db8:2::/64 to the next hop "
+        "address 2001:db8:1::1 and the destination route 203.0.113.0/24 to "
+        "the next hop address 192.0.2.251 on the device dhcpcli. Configure "
+        "the dhcpcli ethernet interface with DHCPv4, IPv4 auto dns, IPv4 "
+        "auto gateway, IPv4 auto routes, use default auto route table ID for "
+        "IPv4, DHCPv6, autoconf, IPv6 auto dns, IPv6 auto gateway, IPv6 auto "
+        "routes, use default auto route table ID for IPv6",
+        desired_state,
+    )
     current_config_routes = [
         route
         for route in libnmstate.show()[Route.KEY][Route.CONFIG]
@@ -1826,7 +2085,11 @@ def test_switch_auto_to_static_with_dynamic_ips(dhcpcli_up):
         InterfaceIPv6.DHCP
     ] = False
 
-    libnmstate.apply(new_desired_state)
+    apply_with_description(
+        "Configure the address 192.0.2.246/24, 2001:db8:1::6bb/128, and "
+        "2001:db8:1:0:34a4:2cff:fed2:936/64 on the ethernet device dhcpcli",
+        new_desired_state,
+    )
     assert not _poll_till_not(_has_ipv4_dhcp_nameserver)
     assert not _poll_till_not(_has_ipv6_auto_gateway)
     assert _poll(_has_dhcpv4_addr_as_static)
@@ -1854,7 +2117,17 @@ def test_set_dhcp_fqdn_and_remove(dhcpcli_up):
             }
         ],
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto rotues, IPv4 dhcp-send-hostname "
+        "enabled, IPv4 dhcp-custom-hostname set to dhcpcli.example.net. "
+        "Configure the ethernet interface dhcpcli with DHCPv6 enabled, IPv6 "
+        "router advertisement enabled, IPv6 auto dns enabled, IPv6 auto "
+        "gateway enabled, IPv6 auto routes enabled, IPv6 dhcp send hostname "
+        "enabled, IPv6 dhcp-custom-hostname set to dhcpcli.example.org",
+        desired_state,
+    )
+
     assertlib.assert_state_match(desired_state)
 
     desired_state = {
@@ -1877,7 +2150,11 @@ def test_set_dhcp_fqdn_and_remove(dhcpcli_up):
             }
         ],
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli to have empty IPv4 "
+        "dhcp-custom-hostname and IPv6 dhcp-custom-hostname",
+        desired_state,
+    )
     desired_state[Interface.KEY][0][Interface.IPV4].pop(
         InterfaceIPv4.DHCP_CUSTOM_HOSTNAME
     )
@@ -1908,7 +2185,16 @@ def test_dhcp_hostname_with_send_host_off(dhcpcli_up):
             }
         ],
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with IPv4 enabled, DHCPv4 "
+        "set to True, IPv4 auto dns set to true, IPv4 auto gateway set to "
+        "true, IPv4 auto routes enabled, IPv4 dhcp-send-hostname disabled. "
+        "Configure the ethernet interface dhcpcli with IPv6 enabled, DHCPv6 "
+        "enabled, IPv6 autoconf enabled, IPv6 auto dns enabled, IPv6 auto "
+        "gateway enabled, IPv6 auto routes enabled, IPv6 dhcp send hostname "
+        "disabled",
+        desired_state,
+    )
     desired_state[Interface.KEY][0][Interface.IPV4].pop(
         InterfaceIPv4.DHCP_CUSTOM_HOSTNAME
     )
@@ -1939,7 +2225,16 @@ def test_set_dhcp_host_name_and_remove(dhcpcli_up):
             }
         ],
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto routes, IPv4 dhcp-send-hostname "
+        "enabled, IPv4 dhcp-custom-hostname set to dhcpcli. "
+        "Configure the ethernet interface dhcpcli with DHCPv6, autoconf, "
+        "IPv6 auto dns, IPv6 auto gateway, IPv6 auto routes, "
+        "IPv6 dhcp send hostname enabled, IPv6 dhcp-custom-hostname set to "
+        "dhcpcli6",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
 
@@ -1969,7 +2264,14 @@ def test_auto_ip_with_pre_exist_address_without_dhcp_srv(eth1_up):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the ethernet device eth1 with DHCPv4, no static IPv4 "
+        "address, IPv4 auto dns, IPv4 auto gateway, IPv4 auto routes, "
+        "use default auto route table ID for IPv4, DHCPv6, no static IPv6 "
+        "address, autoconf, IPv6 auto dns, IPv6 auto gateway, IPv6 auto "
+        "routes, use default auto route table ID for IPv6",
+        desired_state,
+    )
 
 
 def test_append_static_dns_before_auto_dns(dhcpcli_up_with_dns_cleanup):
@@ -1993,7 +2295,14 @@ def test_append_static_dns_before_auto_dns(dhcpcli_up_with_dns_cleanup):
         ],
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the DNS server to 8.8.8.8. Configure the ethernet device "
+        "dhcpcli with DHCPv4, IPv4 auto dns, IPv4 auto gateway, IPv4 auto "
+        "routes, use default auto route table ID for IPv4, DHCPv6, autoconf, "
+        "IPv6 auto dns, IPv6 auto gateway, IPv6 auto routes, use default "
+        "auto route table ID for IPv6",
+        desired_state,
+    )
 
     assert _poll(_has_ipv4_dhcp_nameserver)
 
@@ -2019,7 +2328,10 @@ def test_static_ipv6_route_not_covert_auto_ip(dhcpcli_up_with_dynamic_ip):
     """
     desired_state = yaml.load(state_yml, Loader=yaml.SafeLoader)
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "set the default route to fe80::1 on dhcpcli",
+        desired_state,
+    )
     assert _poll(_has_dhcpv4_addr)
     assert _poll(_has_dhcpv6_addr)
 
