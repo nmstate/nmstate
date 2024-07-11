@@ -53,7 +53,7 @@ done
 echo $NM_COPR
 echo $NM_RPM_DIR
 
-ARGS="--test-type integ_tier1"
+ARGS="--test-type integ_tier1 --nolog"
 if [[ -v NM_COPR ]];then
     ARGS="$ARGS --copr $NM_COPR"
 fi

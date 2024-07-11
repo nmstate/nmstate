@@ -22,6 +22,7 @@ CENTOS_8_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 CENTOS_9_STREAM_IMAGE_DEV="quay.io/nmstate/c9s-nmstate-dev"
 CENTOS_10_STREAM_IMAGE_DEV="quay.io/nmstate/c10s-nmstate-dev"
 
+COLLECT_LOGS="true"
 
 PYTEST_OPTIONS="--verbose --verbose \
         --log-file-level=DEBUG \
@@ -167,7 +168,9 @@ function run_exit {
         k8s::collect_artifacts
         k8s::cleanup
     else
-        collect_artifacts
+        if [ $COLLECT_LOGS == "true" ];then
+            collect_artifacts
+        fi
         remove_container
         remove_tempdir
     fi
@@ -229,7 +232,7 @@ function run_customize_command {
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
     el8,el9,el10,centos-stream,fed,rawhide,copr:,artifacts-dir:,test-vdsm,\
-    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:" \
+    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:,nolog" \
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -288,6 +291,9 @@ while true; do
         ;;
     --k8s)
         RUN_K8S="true"
+        ;;
+    --nolog)
+        COLLECT_LOGS="false"
         ;;
     --use-installed-nmstate)
         INSTALL_NMSTATE="false"
