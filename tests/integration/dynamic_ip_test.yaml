@@ -1,0 +1,1464 @@
+description: Configure the dummy device dummy00 with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Bring up the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+description: Delete the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: absent
+description: Delete the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: absent
+description: Bring up the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+description: Configure the dummy device dummy00 with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Delete the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: absent
+description: Configure the dummy device dummy00 with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Bring up the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+description: Clear the DNS config
+dns-resolver:
+  config: {}
+interfaces: []
+description: Configure the DNS server to 8.8.8.8. Configure the ethernet device dhcpcli with DHCP4 enabled and DHCP6 enabled
+dns-resolver:
+  config:
+    server:
+    - 8.8.8.8
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the ethernet device dhcpcli with the IPv6 address generation mode stable-privacy
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    addr-gen-mode: stable-privacy
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the destination route 2001:db8:2::/64 to the next hop address 2001:db8:1::1 and the destination route 203.0.113.0/24 to the next hop address 192.0.2.251 on the device dhcpcli. Enable the dhcp4 and dhcp6 on the device dhcpcli
+routes:
+  config:
+  - destination: 2001:db8:2::/64
+    next-hop-interface: dhcpcli
+    next-hop-address: 2001:db8:1::1
+  - destination: 203.0.113.0/24
+    next-hop-interface: dhcpcli
+    next-hop-address: 192.0.2.251
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device eth1 with DHCP4 and DHCP6 enabled
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    address: []
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    address: []
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the ethernet device dhcpcli with IPv4 auto-route-metric 901 and IPv6 auto-route-metric 902 configured
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    auto-route-metric: 901
+  ipv6:
+    auto-route-metric: 902
+description: Configure the ethernet device dhcpcli with the IPv6 token ::fad
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    token: ::fad
+description: Enable dhcp6 and autoconf on the ethernet device dhcpcli with IPv6 token ::fac specified
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    token: ::fac
+description: Configure the ethernet interface dhcpcli with IPv4 address 192.0.2.252/24 and IPv6 address 2001:db8:2::1/64
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:2::1
+      prefix-length: 64
+description: Enable DHCP4 but disabled IPv6 on the ethernet device dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: false
+description: Configure the ethernet interface dhcpcli with IPv4 address 192.0.2.252/24 and IPv6 address 2001:db8:2::1/64
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:2::1
+      prefix-length: 64
+description: Configure the etheret device dhcpcli with IPv4 disabled, IPv6 autoconf enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Enable dhcp6 and autoconf on the ethernet device dhcpcli with IPv6 token ::fac specified
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    token: ::fac
+description: Configure the ethernet device dhcpcli with DHCP4 enabled. Configure the ethernet device dhcpcli with IPv6 address 2001:db8:2::1/64 configured
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:2::1
+      prefix-length: 64
+description: Configure the ethernet device dhcpcli with IPv4 address 192.0.2.252/24 configured. Configure the ethernet device dhcpcli with IPv6 router advertisement
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli with IPv4 enabled, DHCP4 set to True, IPv4 auto dns set to true, IPv4 auto gateway set to true, IPv4 auto routes enabled, IPv4 dhcp-send-hostname disabled. Configure the ethernet interface dhcpcli with IPv6 enabled, DHCP6 enabled, IPv6 autoconf enabled, IPv6 auto dns enabled, IPv6 auto gateway enabled, IPv6 auto routes enabled, IPv6 dhcp send hostname disabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    dhcp-send-hostname: false
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    dhcp-send-hostname: false
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the ethernet device dhcpcli to have IPv4 dhcp-client-id iaid+duid configured
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    dhcp-client-id: iaid+duid
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli to have IPv4 dhcp-client-id 0f:66:55:BC:73:4D configured
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    dhcp-client-id: 0f:66:55:BC:73:4D
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the ethernet device dhcpcli to have IPv6 dhcp-duid llt configured
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    dhcp-duid: llt
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli to have IPv6 dhcp-duid 0f:66:55:BC:73:4D configured
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    dhcp-duid: 0f:66:55:BC:73:4D
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Delete the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: absent
+description: Configure the dummy00 interface with the DHCP4 enabled. Configure the dummy interface dummy00 with IPv6 autoconf enabled
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Disable the IPv4 and IPv6 on the dummy00 interface
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+description: Bring up the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+description: Do not apply DNS resolver information and the routes retrieved from DHCP4 on the ethernet device eth0. Do not apply DNS resolver information and the routes retrieved from autoconf
+interfaces:
+- name: eth0
+  type: ethernet
+  state: up
+  ipv4:
+    auto-dns: false
+    auto-routes: false
+  ipv6:
+    auto-dns: false
+    auto-routes: false
+description: Configure the DNS server to 2001:4860:4860::8888 and 8.8.8.8, configure the dns search to example.org and example.com. Configure the ethernet device dhcpcli with DHCP4 enabled and IPv4 auto dns disabled. Configure the ethernet device dhcpcli with IPv6 router advertisement enabled, do not apply IPv6 DNS resolver information retrieved from autoconf
+dns-resolver:
+  config:
+    server:
+    - 2001:4860:4860::8888
+    - 8.8.8.8
+    search:
+    - example.org
+    - example.com
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: false
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: false
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: 'Configure the DNS server to 10.11.5.19 and 10.2.32.1, configure the ethernet device dhcpcli to have the IPv4 and IPv6 disabled. Configure the ethernet device eth0 to apply DNS resolver information and the routes retrieved from DHCP4. Configure the ethernet device eth0 to apply DNS resolver information and the routes retrieved from autoconf. '
+dns-resolver:
+  running:
+    server:
+    - 10.11.5.19
+    - 10.2.32.1
+    search: []
+  config: {}
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+- name: eth0
+  type: ethernet
+  state: up
+  ipv4:
+    auto-dns: true
+    auto-routes: true
+  ipv6:
+    auto-dns: true
+    auto-routes: true
+description: Set up the dummy device dummy00 with DHCP4 enabled. Configure the dummy device dummy00 with DHCPv6 only and the router advertisements should be ignored.
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: false
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Delete the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: absent
+description: Bring up the dummy device dummy00
+interfaces:
+- name: dummy00
+  type: dummy
+  state: up
+description: configure the ethernet device dhcpcli with IPv6 disabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: false
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the ethernet interface dhcpcli with dhcp4 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet interface dhcpcli with IPv4 dhcp enabled, do not apply IPv6 DNS resolver information retrieved from DHCP server
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: false
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet interface dhcpcli with IPv4 dhcp enabled, do not apply IPv6 DNS resolver information and default gateway retrieved from DHCP server
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: false
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet interface dhcpcli with IPv4 dhcp enabled, do not set routes retrieved from DHCP server
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: false
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli, set the IPv4 address 192.0.2.252/24
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+description: Enable the DHCP4 on the ethernet device dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 100
+description: Configure the ethernet device dhcpcli with the IPv4 address 192.0.2.249/24
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    dhcp: false
+    address:
+    - ip: 192.0.2.233
+      prefix-length: 24
+description: Set up the ethernet interface dhcpcli with DHCP4 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli using router advertisement
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the dhcpcli ethernet with router advertisement, do not apply IPv6 DNS resolver information retrieved from autoconf
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: false
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli with IPv6 router advertisement, do not set the default gateway retrieved from autoconf
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: false
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli with autoconf enabled, do not set the routes retrieved from autoconf
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: false
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli with static address 2001:db8:2::1/64
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:2::1
+      prefix-length: 64
+description: Configure the ethernet device dhcpcli with the DHCP6 only, IPv6 autoconf should be disabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: false
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli with IPv6 router advertisement, the route table id used to hold routes retrieved from autoconf is 100
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 100
+description: Configure the ethernet device dhcpcli with dhcp6 only, router advertisement should be ignored, the route table id used to hold routes retrieved from autoconf is 100
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: false
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 100
+description: Configure the IPv6 automatically on ethernet interface dhcpcli with router advertisement
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet interface dhcpcli with static IPv6 address 2001:db8:1::f01/128 and 2001:db8:1:0:f81a:47ff:fe84:50d8/64 configured
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::46e
+      prefix-length: 128
+    - ip: 2001:db8:1:0:f85f:70ff:fe07:30cf
+      prefix-length: 64
+description: Purge DNS config
+dns-resolver:
+  config: {}
+interfaces: []
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure DNS server to 2001:4860:4860::8888 and fe80::deef:1%dhcpcli. Configure the ethernet device dhcpcli to disable IPv4 auto dns and IPv6 auto dns
+dns-resolver:
+  config:
+    server:
+    - 2001:4860:4860::8888
+    - fe80::deef:1%dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    auto-dns: false
+  ipv6:
+    auto-dns: false
+description: Configure the ethernet device dhcpcli to have the DHCP6 disabled, autoconf disabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    dhcp: false
+    autoconf: false
+description: Enable dhcp6 and autoconf on the ethernet device dhcpcli with IPv6 token ::fac specified
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    token: ::fac
+description: Configure the ethernet interface dhcpcli with DHCP4
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Create the linux bridge brtest0 with static IPv4 address 192.0.2.241/24 configured, disable the bridge options stp, attach the port dhcpcli. Configure ethernet device dhcpcli with IPv4 disabled and controller brtest0 specified.
+interfaces:
+- name: brtest0
+  type: linux-bridge
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.233
+      prefix-length: 24
+  ipv6:
+    enabled: false
+  bridge:
+    options:
+      stp:
+        enabled: false
+    port:
+    - name: dhcpcli
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: false
+  controller: brtest0
+description: Enable dhcp6 and autoconf on the ethernet device dhcpcli with IPv6 token ::fac specified
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    token: ::fac
+description: 'Configure the ethernet device dhcpcli to have the IPv6 token ::'
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    token: '::'
+description: Enable dhcp6 and autoconf on the ethernet device dhcpcli with IPv6 token ::fac specified
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    token: ::fac
+description: 'Configure the ethernet device dhcpcli to have the IPv6 token ::'
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    token: '::'
+description: Configure the ethernet device dhcpcli with DHCP4 enabled IPv4 dhcp-send-hostname enabled, IPv4 dhcp-custom-hostname set to dhcpcli.example.net.Configure the ethernet interface dhcpcli with IPv6 router advertisement enabled, IPv6 dhcp send hostname enabled, IPv6 dhcp-custom-hostname set to dhcpcli.example.org
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    dhcp-send-hostname: true
+    dhcp-custom-hostname: dhcpcli.example.net
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    dhcp-send-hostname: true
+    dhcp-custom-hostname: dhcpcli.example.org
+description: Configure the ethernet device dhcpcli to have empty IPv4 dhcp-custom-hostname and IPv6 dhcp-custom-hostname
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    dhcp-custom-hostname: ''
+  ipv6:
+    dhcp-custom-hostname: ''
+description: Configure the ethernet device dhcpcli with DHCP4 enabled IPv4 dhcp-send-hostname enabled, IPv4 dhcp-custom-hostname set to dhcpcli.Configure the ethernet interface dhcpcli with IPv6 autoconf via IPv6 router announcement enabled, IPv6 dhcp send hostname enabled, IPv6 dhcp-custom-hostname set to dhcpcli6
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    dhcp-send-hostname: true
+    dhcp-custom-hostname: dhcpcli
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    dhcp-send-hostname: true
+    dhcp-custom-hostname: dhcpcli6
+description: Enable dhcp6 and autoconf on the ethernet device dhcpcli with IPv6 token ::fac specified
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    token: ::fac
+description: Enable dhcp6 and autoconf on the ethernet device dhcpcli with IPv6 token ::fac specified
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    token: ::fac
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the ethernet dhcpcli with IPv4 address 192.0.2.253/24 and IPv6 address 2001:db8:1::3/64
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    address:
+    - ip: 192.0.2.253
+      prefix-length: 24
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    address:
+    - ip: 2001:db8:1::3
+      prefix-length: 64
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet device dhcpcli with DHCP4 enabled. Configure the ethernet device dhcpcli with IPv6 autoconf enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Configure the ethernet interface dhcpcli with IPv4 address 192.0.2.252/24 and IPv6 address 2001:db8:2::1/64
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:2::1
+      prefix-length: 64
+description: Configure the route with the destination 2001:db8:2::/64 to the next hop address 2001:db8:1::3 on the device dhcpcli.Configure the IPv6 default route to the address 2001:db8:1::3 and IPv4 default route to the address address 192.0.2.251 on the device dhcpcli. Configure IPv4 destination 203.0.113.0/24 to the next hop address 192.0.2.251 on the device dhcpcli
+routes:
+  config:
+  - destination: 2001:db8:2::/64
+    next-hop-interface: dhcpcli
+    next-hop-address: 2001:db8:1::3
+  - destination: ::/0
+    next-hop-interface: dhcpcli
+    next-hop-address: 2001:db8:1::3
+  - destination: 0.0.0.0/0
+    next-hop-interface: dhcpcli
+    next-hop-address: 192.0.2.251
+  - destination: 203.0.113.0/24
+    next-hop-interface: dhcpcli
+    next-hop-address: 192.0.2.251
+interfaces: []
+description: Remove the interface dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: absent
+description: Configure the dhcpcli ethernet interface with dhcp4 and dhcp6 enabled
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: set the default route to fe80::1 on dhcpcli
+routes:
+  config:
+  - destination: ::/0
+    next-hop-interface: dhcpcli
+    next-hop-address: fe80::1
+interfaces: []
+description: Configure IPv4 address 192.0.2.246/24, IPv6 address 2001:db8:1::6bb/128, and IPv6 address 2001:db8:1:0:34a4:2cff:fed2:936/64 on the ethernet device dhcpcli
+interfaces:
+- name: dhcpcli
+  type: ethernet
+  state: up
+  ipv4:
+    dhcp: false
+    address:
+    - ip: 192.0.2.233
+      prefix-length: 24
+  ipv6:
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::46e
+      prefix-length: 128
+    - ip: 2001:db8:1:0:f85f:70ff:fe07:30cf
+      prefix-length: 64
+description: Configure the ethernet device eth1 with DHCPv6 only, and router advertisements should be ignored
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: false
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+description: Delete the ethernet interface eth1
+interfaces:
+- name: eth1
+  type: ethernet
+  state: absent
+description: Configure the ethernet interface eth1 with IPv6 address 2001:db8:2::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv6:
+    dhcp: false
+    address:
+    - ip: 2001:db8:2::1
+      prefix-length: 64
+description: Configure wait-ip to be any for ethernet device eth1.Configure the ethernet device eth1 with DHCP4 enabled. Configure the ethernet interface eth1 with autoconf via IPv6 router announcement enabled.
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+description: Configure wait-ip to be ipv4+ipv6 for ethernet device eth1.Configure the ethernet device eth1 with DHCP4 enabled. Configure the ethernet interface eth1 with autoconf via IPv6 router announcement enabled.
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  wait-ip: ipv4+ipv6
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+description: Configure wait-ip to be ipv4 for ethernet device eth1.Configure the ethernet device eth1 with DHCP4 enabled. Configure the ethernet interface eth1 with autoconf via IPv6 router announcement enabled.
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  wait-ip: ipv4
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+description: Configure wait-ip to be ipv6 for ethernet device eth1.Configure the ethernet device eth1 with DHCP4 enabled. Configure the ethernet interface eth1 with autoconf via IPv6 router announcement enabled.
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  wait-ip: ipv6
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
