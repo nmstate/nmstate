@@ -372,9 +372,11 @@ fn reapply_or_activate(
 ) -> Result<(), NmstateError> {
     if let Err(e) = nm_api.connection_reapply(nm_conn) {
         if let Some(uuid) = nm_conn.uuid() {
-            log::debug!(
-                "Reapply operation failed trying activation, \
+            log::info!(
+                "Reapply operation failed on {} {} {uuid}, \
                 reason: {}, retry on normal activation",
+                nm_conn.iface_type().unwrap_or(""),
+                nm_conn.iface_name().unwrap_or(""),
                 e
             );
             nm_api
