@@ -696,6 +696,7 @@ impl Interface {
             Interface::Loopback(iface) => iface.sanitize(is_desired)?,
             Interface::MacSec(iface) => iface.sanitize(is_desired)?,
             Interface::Ipsec(iface) => iface.sanitize(is_desired),
+            Interface::Vlan(iface) => iface.sanitize(is_desired)?,
             _ => (),
         }
         Ok(())

@@ -480,3 +480,21 @@ def test_vlan_do_not_override_reorder_headers_if_not_mentioned(
     assert not current_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
         VLAN.REORDER_HEADERS
     ]
+
+
+def test_base_iface_optional(vlan_on_eth1):
+    new_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                },
+            }
+        ]
+    }
+
+    libnmstate.apply(new_state)
+    assertlib.assert_state_match(new_state)
