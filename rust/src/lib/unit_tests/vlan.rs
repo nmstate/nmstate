@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ErrorKind, InterfaceType, Interfaces, MergedInterfaces, VlanInterface,
-    VlanProtocol,
+    ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
+    MergedInterfaces, VlanInterface, VlanProtocol,
 };
 
 #[test]
@@ -212,4 +212,29 @@ fn test_vlan_update() {
         iface1.vlan.as_ref().unwrap().protocol,
         Some(VlanProtocol::Ieee8021Q)
     );
+}
+
+#[test]
+fn test_vlan_base_iface_optional() {
+    let current: Interface = serde_yaml::from_str(
+        r"---
+        name: vlan1
+        type: vlan
+        vlan:
+          base-iface: eth0
+          id: 100",
+    )
+    .unwrap();
+    let desired: Interface = serde_yaml::from_str(
+        r"---
+        name: vlan1
+        type: vlan
+        vlan:
+          id: 101",
+    )
+    .unwrap();
+
+    let mut merged_iface =
+        MergedInterface::new(Some(desired), Some(current)).unwrap();
+    merged_iface.post_inter_ifaces_process().unwrap();
 }
