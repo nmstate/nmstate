@@ -1,0 +1,13 @@
+---
+interfaces:
+- name: vlan0
+  type: vlan
+  state: up
+  vlan:
+    base-iface: veth0
+    id: 4
+- name: veth0
+  type: veth
+  state: up
+  veth:
+    peer: veth0_p
