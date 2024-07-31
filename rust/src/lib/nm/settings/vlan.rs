@@ -14,7 +14,7 @@ pub(crate) fn gen_nm_vlan_setting(
     if let Some(vlan_conf) = iface.vlan.as_ref() {
         let mut nm_vlan = nm_conn.vlan.as_ref().cloned().unwrap_or_default();
         nm_vlan.id = Some(vlan_conf.id.into());
-        nm_vlan.parent = Some(vlan_conf.base_iface.clone());
+        nm_vlan.parent = vlan_conf.base_iface.clone();
         if let Some(protocol) = vlan_conf.protocol {
             match protocol {
                 VlanProtocol::Ieee8021Ad => {
