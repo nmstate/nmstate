@@ -167,7 +167,7 @@ fn gen_vlan_iface(vlan_name: &str, id: u32, parent: &str) -> Interface {
     base_iface.iface_type = InterfaceType::Vlan;
     base_iface.state = InterfaceState::Up;
     let mut vlan_conf = VlanConfig::default();
-    vlan_conf.base_iface = parent.to_string();
+    vlan_conf.base_iface = Some(parent.to_string());
     vlan_conf.id = id.try_into().unwrap();
     let mut vlan_iface = VlanInterface::new();
     vlan_iface.base = base_iface;
