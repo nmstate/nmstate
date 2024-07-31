@@ -30,10 +30,11 @@ def is_el8():
 
 
 def nm_libreswan_version_int():
-    version_str = exec_cmd(
-        "rpm -q NetworkManager-libreswan --qf %{VERSION}".split(),
-        check=True,
-    )[1]
+    ret_code, version_str, _ = exec_cmd(
+        "rpm -q NetworkManager-libreswan --qf %{VERSION}".split()
+    )
+    if ret_code != 0:
+        return 0
     return version_str_to_int(version_str)
 
 
