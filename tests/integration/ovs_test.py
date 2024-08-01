@@ -40,6 +40,7 @@ from .testlib.retry import retry_till_true_or_timeout
 from .testlib.servicelib import disable_service
 from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
+from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 
 
 BOND1 = "bond1"
@@ -2196,3 +2197,10 @@ def test_raise_error_on_unknown_ovsdb_global_section():
 def remove_ovn_state_present(state):
     for ovn_map in state.get(Ovn.BRIDGE_MAPPINGS, []):
         ovn_map.pop(Ovn.BridgeMappings.STATE, None)
+
+
+@pytest.mark.tier1
+@ip_monitor_assert_stable_link_up(BRIDGE1)
+def test_ovs_link_stable(ovs_bridge1_with_internal_port_same_name):
+    desired_state = ovs_bridge1_with_internal_port_same_name
+    libnmstate.apply(desired_state)
