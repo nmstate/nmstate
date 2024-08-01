@@ -20,6 +20,8 @@ use super::{
     },
 };
 
+const NM_OVS_DEV_TYPES: [&str; 3] = ["ovs-interface", "ovs-port", "ovs-bridge"];
+
 pub struct NmApi<'a> {
     pub(crate) dbus: NmDbus<'a>,
     checkpoint: Option<String>,
@@ -221,14 +223,22 @@ impl<'a> NmApi<'a> {
     ) -> Result<(), NmError> {
         debug!("connection_reapply: {:?}", nm_conn);
         self.extend_timeout_if_required()?;
-        if let Some(iface_name) = nm_conn.iface_name() {
-            let nm_dev_obj_path = self.dbus.nm_dev_obj_path_get(iface_name)?;
-            self.dbus.nm_dev_reapply(&nm_dev_obj_path, nm_conn)
+
+        // We cannot use `org.freedesktop.NetworkManager.GetDeviceByIpIface`
+        // because OVS bridge/port/iface might hold identical device name.
+        // Need to check interface type also.
+        if let (Some(iface_name), Some(nm_iface_type)) =
+            (nm_conn.iface_name(), nm_conn.iface_type())
+        {
+            let nm_dev_obj_path =
+                self.get_disk_obj_path(iface_name, nm_iface_type)?;
+            self.dbus.nm_dev_reapply(nm_dev_obj_path.as_str(), nm_conn)
         } else {
             Err(NmError::new(
-                ErrorKind::InvalidArgument,
+                ErrorKind::Bug,
                 format!(
-                    "Failed to extract interface name from connection {nm_conn:?}"
+                    "Failed to extract interface name and type from \
+                    connection {nm_conn:?}"
                 ),
             ))
         }
@@ -399,6 +409,32 @@ impl<'a> NmApi<'a> {
     ) -> Result<(), NmError> {
         self.extend_timeout_if_required()?;
         self.dbus.set_global_dns_configuration(config.to_value()?)
+    }
+
+    // Use `org.freedesktop.NetworkManager.GetDeviceByIpIface`.
+    // Except OVS bridge/port/iface as they might hold identical device name
+    // where we search all disks.
+    fn get_disk_obj_path(
+        &mut self,
+        iface_name: &str,
+        nm_iface_type: &str,
+    ) -> Result<String, NmError> {
+        if NM_OVS_DEV_TYPES.contains(&nm_iface_type) {
+            if let Some(nm_dev) = self
+                .devices_get()?
+                .into_iter()
+                .find(|d| d.name == iface_name && d.iface_type == nm_iface_type)
+            {
+                Ok(nm_dev.obj_path)
+            } else {
+                Err(NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Interface {iface_name}/{nm_iface_type} not found"),
+                ))
+            }
+        } else {
+            self.dbus.nm_dev_obj_path_get(iface_name)
+        }
     }
 }
 

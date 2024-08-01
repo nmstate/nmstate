@@ -15,7 +15,7 @@ use super::super::{
     },
 };
 
-use crate::NmstateError;
+use crate::{ErrorKind, NmstateError};
 
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
@@ -191,12 +191,6 @@ fn _activate_nm_profiles(
             == Some(true)
     }) {
         if let Some(uuid) = nm_conn.uuid() {
-            log::info!(
-                "Activating connection {}: {}/{}",
-                uuid,
-                nm_conn.iface_name().unwrap_or(""),
-                nm_conn.iface_type().unwrap_or("")
-            );
             if nm_ac_uuids.contains(&uuid) {
                 if let Err(e) = reapply_or_activate(nm_api, nm_conn) {
                     if e.kind().can_retry() {
@@ -370,19 +364,35 @@ fn reapply_or_activate(
     nm_api: &mut NmApi,
     nm_conn: &NmConnection,
 ) -> Result<(), NmstateError> {
-    if let Err(e) = nm_api.connection_reapply(nm_conn) {
-        if let Some(uuid) = nm_conn.uuid() {
-            log::info!(
-                "Reapply operation failed on {} {} {uuid}, \
-                reason: {}, retry on normal activation",
-                nm_conn.iface_type().unwrap_or(""),
-                nm_conn.iface_name().unwrap_or(""),
-                e
-            );
-            nm_api
-                .connection_activate(uuid)
-                .map_err(nm_error_to_nmstate)?;
+    let uuid = match nm_conn.uuid() {
+        Some(u) => u,
+        None => {
+            return Err(NmstateError::new(
+                ErrorKind::Bug,
+                format!(
+                    "reapply_or_activate(): Got NmConnection without UUID \
+                    {nm_conn:?}"
+                ),
+            ));
         }
+    };
+    log::info!(
+        "Reapplying connection {}: {}/{}",
+        uuid,
+        nm_conn.iface_name().unwrap_or(""),
+        nm_conn.iface_type().unwrap_or("")
+    );
+    if let Err(e) = nm_api.connection_reapply(nm_conn) {
+        log::info!(
+            "Reapply operation failed on {} {} {uuid}, \
+            reason: {}, retry on normal activation",
+            nm_conn.iface_type().unwrap_or(""),
+            nm_conn.iface_name().unwrap_or(""),
+            e
+        );
+        nm_api
+            .connection_activate(uuid)
+            .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
 }
