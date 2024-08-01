@@ -390,7 +390,7 @@ impl ToDbusValue for NmSettingConnection {
             ret.insert("slave-type", zvariant::Value::new(v.as_str()));
         }
         if let Some(v) = &self.lldp {
-            ret.insert("lldp", zvariant::Value::new(v));
+            ret.insert("lldp", zvariant::Value::new(*v as i32));
         }
         if let Some(v) = &self.mptcp_flags {
             ret.insert("mptcp-flags", zvariant::Value::new(v));
