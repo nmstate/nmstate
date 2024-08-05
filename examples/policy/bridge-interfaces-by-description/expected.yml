@@ -10,9 +10,6 @@ interfaces:
     ipv4:
       dhcp: true
       enabled: true
-      auto-dns: true
-      auto-gateway: true
-      auto-routes: true
     mac-address: 00:00:5E:00:00:01
     name: br1
     state: up

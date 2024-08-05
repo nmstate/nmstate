@@ -161,7 +161,12 @@ impl MergedInterfaces {
                 cur_iface.sanitize(false).ok();
                 cur_iface
             } else {
-                ret.push(des_iface.clone());
+                if let Some(origin_des_iface) = &merged_iface.desired {
+                    ret.push(origin_des_iface.clone());
+                } else {
+                    // Should never happen, but just in case.
+                    ret.push(des_iface.clone());
+                }
                 continue;
             };
             let desired_value = serde_json::to_value(des_iface)?;
