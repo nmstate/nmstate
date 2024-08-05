@@ -1,4 +1,17 @@
 # Changelog
+## [2.2.34] - 2024-08-01
+### Breaking changes
+ - Set Minimum Supported Rust Version to 1.66. (ef4a5e58)
+
+### New features
+ - N/A
+
+### Bug fixes
+ - ovs bond: Deny unknown fields in ovs bond section. (d8453ea0)
+ - vlan: make 'base-iface' optional for the desired state. (bd3cbc82)
+ - nm: Increase reapply failure log to info level. (2600188b)
+ - mac identifier: Prefer permanent MAC address. (bf4ff6c9)
+
 ## [2.2.33] - 2024-06-13
 ### Breaking changes
  - N/A
