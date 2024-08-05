@@ -1,0 +1,180 @@
+description: Remove the MacVlan interface macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: absent
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to bridge and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: bridge
+    promiscuous: true
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to passthru and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+description: Remove the MacVlan interface macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: absent
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to private and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: private
+    promiscuous: true
+description: Remove the MacVlan interface macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: absent
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to vepa and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: vepa
+    promiscuous: true
+description: Remove the MacVlan interface macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: absent
+description: Remove the MacVlan interface macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: absent
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to passthru and promiscuous to False
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: false
+description: Delete the MacVtap interface macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: absent
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to bridge and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: bridge
+    promiscuous: true
+description: Delete the MacVtap interface macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: absent
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to passthru and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to private and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: private
+    promiscuous: true
+description: Delete the MacVtap interface macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: absent
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to vepa and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: vepa
+    promiscuous: true
+description: Delete the MacVtap interface macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: absent
+description: Delete the MacVtap interface macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: absent
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to passthru and promiscuous to False
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: false
+description: Set the MTU to 1400 for macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mtu: 1400
+description: Configure the MacVlan interface macvlan0 on the base interface eth1, set the mode to passthru and promiscuous to True
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+description: Remove the MacVlan interface macvlan0
+interfaces:
+- name: macvlan0
+  type: mac-vlan
+  state: absent
+description: Configure the MacVtap interface macvtap0 on the base interface eth1, set the mode to passthru and promiscuous to True
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+description: Set the MTU to 1400 for macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: up
+  mtu: 1400
+description: Delete the MacVtap interface macvtap0
+interfaces:
+- name: macvtap0
+  type: mac-vtap
+  state: absent

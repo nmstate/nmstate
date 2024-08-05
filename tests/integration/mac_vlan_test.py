@@ -25,6 +25,7 @@ import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import MacVlan
+from .testlib.apply import apply_with_description
 
 from .testlib import assertlib
 
@@ -62,7 +63,9 @@ def test_edit_mac_vlan_(eth1_up):
     ) as desired_state:
         assertlib.assert_state(desired_state)
         desired_state[Interface.KEY][0][Interface.MTU] = 1400
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Set the MTU to 1400 for macvlan0", desired_state
+        )
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(MACVLAN0)
@@ -85,8 +88,16 @@ def macvlan_interface(ifname, mode, promiscuous):
         ]
     }
     try:
-        libnmstate.apply(d_state)
+        apply_with_description(
+            f"Configure the MacVlan interface {ifname} on the base interface "
+            f"eth1, set the mode to {mode} and promiscuous to {promiscuous}",
+            d_state,
+        )
         yield d_state
     finally:
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(d_state)
+        apply_with_description(
+            f"Remove the MacVlan interface "
+            f"{d_state[Interface.KEY][0][Interface.NAME]}",
+            d_state,
+        )
