@@ -330,6 +330,31 @@ def test_add_gateway(eth1_up):
     assert_routes(routes, cur_state)
 
 
+def test_add_static_route_with_route_src(eth1_up):
+    routes = [
+        {
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.SOURCE: IPV4_ADDRESS1,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+        },
+        {
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.SOURCE: IPV6_ADDRESS1,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+
+
 def test_add_route_without_metric(eth1_up):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
     for route in routes:

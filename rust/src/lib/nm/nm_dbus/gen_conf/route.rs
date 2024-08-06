@@ -35,6 +35,9 @@ impl NmIpRoute {
             if let Some(lock_cwnd) = self.lock_cwnd {
                 write!(opt_string, ",lock-cwnd={}", lock_cwnd).ok();
             }
+            if let Some(src) = self.src.as_ref() {
+                write!(opt_string, ",src={}", src).ok();
+            }
             ret.insert("options".to_string(), opt_string);
         }
         ret

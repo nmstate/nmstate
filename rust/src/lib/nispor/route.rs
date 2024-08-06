@@ -194,10 +194,12 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
         }
     };
 
+    let source = np_route.prefered_src.as_ref().map(|src| src.to_string());
     let mut route_entry = RouteEntry::new();
     route_entry.destination = destination;
     route_entry.next_hop_iface = np_route.oif.as_ref().cloned();
     route_entry.next_hop_addr = next_hop_addr;
+    route_entry.source = source;
     route_entry.metric = np_route.metric.map(i64::from);
     route_entry.table_id = Some(np_route.table);
     // according to `man ip-route`, cwnd is useless without the lock flag, so

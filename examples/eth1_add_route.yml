@@ -13,6 +13,7 @@ interfaces:
 routes:
   config:
     - destination: 198.51.100.0/24
+      source: 192.0.2.251
       metric: 150
       next-hop-address: 192.0.2.1
       next-hop-interface: eth1

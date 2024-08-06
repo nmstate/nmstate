@@ -260,12 +260,17 @@ fn test_route_sanitize_ipv6_host_not_compact() {
         r#"
 destination: "2001:db8:1:0000:000::1"
 next-hop-address: "2001:db8:a:0000:000::1"
+source: "2001:0db8:85a3:0000:0000:8a2e:0370:7001"
 "#,
     )
     .unwrap();
     route.sanitize().unwrap();
     assert_eq!(route.destination, Some("2001:db8:1::1/128".to_string()));
     assert_eq!(route.next_hop_addr, Some("2001:db8:a::1".to_string()));
+    assert_eq!(
+        route.source,
+        Some("2001:db8:85a3::8a2e:370:7001".to_string())
+    );
 }
 
 #[test]
