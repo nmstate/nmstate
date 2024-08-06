@@ -183,6 +183,10 @@ pub struct RouteEntry {
     /// Congestion window clamp
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwnd: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Route source defines which IP address should be used as the source
+    /// for packets routed via a specific route
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -271,13 +275,16 @@ impl RouteEntry {
         if self.cwnd.is_some() && self.cwnd != other.cwnd {
             return false;
         }
+        if self.source.as_ref().is_some() && self.source != other.source {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr, weight, cwnd)
+    // destination, next_hop_addr, source, weight, cwnd)
     // Metric is ignored
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, u16, u32) {
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, &str, u16, u32) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
             !self
@@ -291,6 +298,7 @@ impl RouteEntry {
                 .unwrap_or(LOOPBACK_IFACE_NAME),
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
+            self.source.as_deref().unwrap_or(""),
             self.weight.unwrap_or_default(),
             self.cwnd.unwrap_or_default(),
         )
@@ -321,6 +329,25 @@ impl RouteEntry {
                     new_via
                 );
                 self.next_hop_addr = Some(new_via);
+            }
+        }
+        if let Some(src) = self.source.as_ref() {
+            let new_src = format!(
+                "{}",
+                src.parse::<std::net::IpAddr>().map_err(|e| {
+                    NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!("Failed to parse IP address '{}': {}", src, e),
+                    )
+                })?
+            );
+            if src != &new_src {
+                log::info!(
+                    "Route source address {} sanitized to {}",
+                    src,
+                    new_src
+                );
+                self.source = Some(new_src);
             }
         }
         if let Some(weight) = self.weight {
@@ -409,6 +436,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.next_hop_addr.as_ref() {
             props.push(format!("next-hop-address: {v}"));
+        }
+        if let Some(v) = self.source.as_ref() {
+            props.push(format!("source: {v}"));
         }
         if let Some(v) = self.metric.as_ref() {
             props.push(format!("metric: {v}"));

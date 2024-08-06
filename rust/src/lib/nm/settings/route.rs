@@ -32,6 +32,7 @@ pub(crate) fn gen_nm_ip_routes(
             None => None,
         };
         nm_route.next_hop = route.next_hop_addr.as_ref().cloned();
+        nm_route.src = route.source.as_ref().cloned();
         if let Some(weight) = route.weight {
             nm_route.weight = Some(weight as u32);
         }

@@ -38,6 +38,7 @@ class Route:
     DESTINATION = "destination"
     NEXT_HOP_INTERFACE = "next-hop-interface"
     NEXT_HOP_ADDRESS = "next-hop-address"
+    SOURCE = "source"
     METRIC = "metric"
     WEIGHT = "weight"
     ROUTETYPE = "route-type"
