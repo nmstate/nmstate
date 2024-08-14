@@ -301,7 +301,7 @@ fn test_auto_absent_ovs_interface() {
     absent_br0.base.name = "br0".to_string();
     absent_br0.base.state = InterfaceState::Absent;
     let mut ifaces = Interfaces::new();
-    ifaces.push(Interface::OvsBridge(absent_br0));
+    ifaces.push(Interface::OvsBridge(Box::new(absent_br0)));
 
     let merged_ifaces =
         MergedInterfaces::new(ifaces, cur_ifaces, false, false).unwrap();

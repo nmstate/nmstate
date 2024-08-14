@@ -163,11 +163,13 @@ impl NetworkState {
                 iface.ethernet.as_ref().map(|e| e.sr_iov.is_some())
             {
                 if let Some(eth_conf) = iface.ethernet.as_ref() {
-                    pf_ifaces.push(Interface::Ethernet(EthernetInterface {
-                        base: iface.base.clone_name_type_only(),
-                        ethernet: Some(eth_conf.clone()),
-                        ..Default::default()
-                    }));
+                    pf_ifaces.push(Interface::Ethernet(Box::new(
+                        EthernetInterface {
+                            base: iface.base.clone_name_type_only(),
+                            ethernet: Some(eth_conf.clone()),
+                            ..Default::default()
+                        },
+                    )));
                 }
             }
         }

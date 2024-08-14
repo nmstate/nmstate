@@ -49,7 +49,7 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
         ipv6: Some(InterfaceIpv6::new()),
         ..Default::default()
     };
-    let iface = Interface::Ethernet(eth_iface);
+    let iface = Interface::Ethernet(Box::new(eth_iface));
     let mut nm_conn = NmConnection::default();
     gen_nm_conn_setting(&iface, &mut nm_conn, stable_uuid)?;
     gen_nm_ip_setting(&iface, None, &mut nm_conn)?;

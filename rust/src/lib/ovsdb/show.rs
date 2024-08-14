@@ -54,7 +54,7 @@ pub(crate) fn ovsdb_retrieve() -> Result<NetworkState, NmstateError> {
         });
         iface.bridge =
             Some(parse_ovs_bridge_conf(ovsdb_br, &ovsdb_ports, &ovsdb_ifaces));
-        ret.append_interface_data(Interface::OvsBridge(iface));
+        ret.append_interface_data(Interface::OvsBridge(Box::new(iface)));
     }
 
     for ovsdb_iface in ovsdb_ifaces.values() {
@@ -346,12 +346,12 @@ fn ovsdb_iface_to_nmstate(
     }
 
     let mut iface = match ovsdb_iface.iface_type.as_str() {
-        "system" => Interface::Unknown(UnknownInterface::new()),
-        "internal" => Interface::OvsInterface(OvsInterface::new()),
+        "system" => Interface::Unknown(Box::new(UnknownInterface::new())),
+        "internal" => Interface::OvsInterface(Box::new(OvsInterface::new())),
         "patch" => {
             let mut ovs_iface = OvsInterface::new();
             ovs_iface.patch = parse_ovs_patch_conf(ovsdb_iface);
-            Interface::OvsInterface(ovs_iface)
+            Interface::OvsInterface(Box::new(ovs_iface))
         }
         "dpdk" => {
             let mut ovs_iface = OvsInterface::new();
@@ -359,7 +359,7 @@ fn ovsdb_iface_to_nmstate(
             // DPDK interface does not have kernel representative, the MTU is
             // set in ovsdb.
             ovs_iface.base.mtu = get_dpdk_mtu(ovsdb_iface);
-            Interface::OvsInterface(ovs_iface)
+            Interface::OvsInterface(Box::new(ovs_iface))
         }
         i => {
             log::warn!("Unknown OVS interface type {i}");

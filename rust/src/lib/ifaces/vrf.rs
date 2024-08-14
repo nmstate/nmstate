@@ -95,14 +95,12 @@ impl VrfInterface {
         current: Option<&Interface>,
     ) -> Result<(), NmstateError> {
         if self.vrf.as_ref().map(|v| v.table_id) == Some(0) {
-            if let Some(&Interface::Vrf(VrfInterface {
-                vrf:
-                    Some(VrfConfig {
-                        table_id: cur_table_id,
-                        ..
-                    }),
-                ..
-            })) = current
+            if let Some(cur_table_id) =
+                if let Some(Interface::Vrf(vrf_iface)) = current {
+                    vrf_iface.vrf.as_ref().map(|v| v.table_id)
+                } else {
+                    None
+                }
             {
                 if let Some(vrf_conf) = self.vrf.as_mut() {
                     vrf_conf.table_id = cur_table_id;
