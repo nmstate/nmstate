@@ -36,7 +36,7 @@ pub(crate) fn get_supported_vpn_ifaces(
                     base_iface.iface_type = InterfaceType::Ipsec;
                     iface.base = base_iface;
                     iface.libreswan = Some(get_libreswan_conf(nm_set_vpn));
-                    ret.push(Interface::Ipsec(iface));
+                    ret.push(Interface::Ipsec(Box::new(iface)));
                 }
             }
         }

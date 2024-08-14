@@ -205,14 +205,14 @@ impl Interfaces {
             }
         }
         for psudo_vf_name in new_vf_names {
-            current.push(Interface::Ethernet(EthernetInterface {
+            current.push(Interface::Ethernet(Box::new(EthernetInterface {
                 base: BaseInterface {
                     name: psudo_vf_name,
                     iface_type: InterfaceType::Ethernet,
                     ..Default::default()
                 },
                 ..Default::default()
-            }));
+            })));
         }
     }
 }

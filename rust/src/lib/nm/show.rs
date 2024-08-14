@@ -278,12 +278,12 @@ fn iface_get(
             InterfaceType::LinuxBridge => Interface::LinuxBridge({
                 let mut iface = LinuxBridgeInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Ethernet => Interface::Ethernet({
                 let mut iface = EthernetInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Bond => Interface::Bond({
                 let mut iface = BondInterface::new();
@@ -296,52 +296,52 @@ fn iface_get(
                     ..Default::default()
                 };
                 iface.bond = Some(bond_config);
-                iface
+                Box::new(iface)
             }),
             InterfaceType::OvsInterface => Interface::OvsInterface({
                 let mut iface = OvsInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Dummy => Interface::Dummy({
                 let mut iface = DummyInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Vlan => Interface::Vlan({
                 let mut iface = VlanInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Vxlan => Interface::Vxlan({
                 let mut iface = VxlanInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::MacVlan => Interface::MacVlan({
                 let mut iface = MacVlanInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::MacVtap => Interface::MacVtap({
                 let mut iface = MacVtapInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Vrf => Interface::Vrf({
                 let mut iface = VrfInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::OvsBridge => Interface::OvsBridge({
                 let mut iface = OvsBridgeInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Loopback => Interface::Loopback({
                 let mut iface = LoopbackInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             InterfaceType::MacSec => Interface::MacSec({
                 let mut iface = MacSecInterface::new();
@@ -361,12 +361,12 @@ fn iface_get(
                     }
                     iface.macsec = Some(macsec_config);
                 }
-                iface
+                Box::new(iface)
             }),
             InterfaceType::Hsr => Interface::Hsr({
                 let mut iface = HsrInterface::new();
                 iface.base = base_iface;
-                iface
+                Box::new(iface)
             }),
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);
@@ -448,79 +448,79 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
         InterfaceType::Ethernet => Interface::Ethernet({
             let mut iface = EthernetInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::Dummy => Interface::Dummy({
             let mut iface = DummyInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::LinuxBridge => Interface::LinuxBridge({
             let mut iface = LinuxBridgeInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::OvsInterface => Interface::OvsInterface({
             let mut iface = OvsInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::OvsBridge => Interface::OvsBridge({
             let mut iface = OvsBridgeInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::Bond => Interface::Bond({
             let mut iface = BondInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::Vlan => Interface::Vlan({
             let mut iface = VlanInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::Vxlan => Interface::Vxlan({
             let mut iface = VxlanInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::MacVlan => Interface::MacVlan({
             let mut iface = MacVlanInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::MacVtap => Interface::MacVtap({
             let mut iface = MacVtapInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::Vrf => Interface::Vrf({
             let mut iface = VrfInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::Loopback => Interface::Loopback({
             let mut iface = LoopbackInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::MacSec => Interface::MacSec({
             let mut iface = MacSecInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
         InterfaceType::Hsr => Interface::Hsr({
             let mut iface = HsrInterface::new();
             iface.base = base_iface;
-            iface
+            Box::new(iface)
         }),
-        InterfaceType::InfiniBand => Interface::InfiniBand({
+        InterfaceType::InfiniBand => Interface::InfiniBand(Box::new({
             InfiniBandInterface {
                 base: base_iface,
                 ..Default::default()
             }
-        }),
+        })),
         iface_type
             if iface_type == &InterfaceType::Other("ovs-port".to_string()) =>
         {
@@ -543,7 +543,7 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
                 let mut iface = LoopbackInterface::new();
                 base_iface.iface_type = InterfaceType::Loopback;
                 iface.base = base_iface;
-                Interface::Loopback(iface)
+                Interface::Loopback(Box::new(iface))
             } else {
                 // For unknown/unsupported interface,
                 // if it has MAC address, we treat it as UnknownInterface which
@@ -554,7 +554,7 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
                 }
                 let mut iface = UnknownInterface::new();
                 iface.base = base_iface;
-                Interface::Unknown(iface)
+                Interface::Unknown(Box::new(iface))
             }
         }
     };

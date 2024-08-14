@@ -243,41 +243,41 @@ impl<'de> Deserialize<'de> for UnknownInterface {
 /// Represent a kernel or user space network interface.
 pub enum Interface {
     /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
-    Bond(BondInterface),
+    Bond(Box<BondInterface>),
     /// Dummy interface.
-    Dummy(DummyInterface),
+    Dummy(Box<DummyInterface>),
     /// Ethernet interface or virtual ethernet(veth) of linux kernel
-    Ethernet(EthernetInterface),
+    Ethernet(Box<EthernetInterface>),
     /// HSR interface provided by Linux kernel.
-    Hsr(HsrInterface),
+    Hsr(Box<HsrInterface>),
     /// Bridge provided by Linux kernel.
-    LinuxBridge(LinuxBridgeInterface),
+    LinuxBridge(Box<LinuxBridgeInterface>),
     /// OpenvSwitch bridge.
-    OvsBridge(OvsBridgeInterface),
+    OvsBridge(Box<OvsBridgeInterface>),
     /// OpenvSwitch system interface.
-    OvsInterface(OvsInterface),
+    OvsInterface(Box<OvsInterface>),
     /// Unknown interface.
-    Unknown(UnknownInterface),
+    Unknown(Box<UnknownInterface>),
     /// VLAN interface.
-    Vlan(VlanInterface),
+    Vlan(Box<VlanInterface>),
     /// VxLAN interface.
-    Vxlan(VxlanInterface),
+    Vxlan(Box<VxlanInterface>),
     /// MAC VLAN interface.
-    MacVlan(MacVlanInterface),
+    MacVlan(Box<MacVlanInterface>),
     /// MAC VTAP interface.
-    MacVtap(MacVtapInterface),
+    MacVtap(Box<MacVtapInterface>),
     /// [Virtual Routing and Forwarding interface](https://www.kernel.org/doc/html/latest/networking/vrf.html)
-    Vrf(VrfInterface),
+    Vrf(Box<VrfInterface>),
     /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
-    InfiniBand(InfiniBandInterface),
+    InfiniBand(Box<InfiniBandInterface>),
     /// Linux loopback interface
-    Loopback(LoopbackInterface),
+    Loopback(Box<LoopbackInterface>),
     /// MACsec interface.
-    MacSec(MacSecInterface),
+    MacSec(Box<MacSecInterface>),
     /// Ipsec connection
-    Ipsec(IpsecInterface),
+    Ipsec(Box<IpsecInterface>),
     /// Linux xfrm interface
-    Xfrm(XfrmInterface),
+    Xfrm(Box<XfrmInterface>),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -312,103 +312,103 @@ impl<'de> Deserialize<'de> for Interface {
             Some(InterfaceType::Ethernet) => {
                 let inner = EthernetInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Ethernet(inner))
+                Ok(Interface::Ethernet(Box::new(inner)))
             }
             Some(InterfaceType::LinuxBridge) => {
                 let inner = LinuxBridgeInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::LinuxBridge(inner))
+                Ok(Interface::LinuxBridge(Box::new(inner)))
             }
             Some(InterfaceType::Bond) => {
                 let inner = BondInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Bond(inner))
+                Ok(Interface::Bond(Box::new(inner)))
             }
             Some(InterfaceType::Veth) => {
                 let inner = EthernetInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Ethernet(inner))
+                Ok(Interface::Ethernet(Box::new(inner)))
             }
             Some(InterfaceType::Vlan) => {
                 let inner = VlanInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Vlan(inner))
+                Ok(Interface::Vlan(Box::new(inner)))
             }
             Some(InterfaceType::Vxlan) => {
                 let inner = VxlanInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Vxlan(inner))
+                Ok(Interface::Vxlan(Box::new(inner)))
             }
             Some(InterfaceType::Dummy) => {
                 let inner = DummyInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Dummy(inner))
+                Ok(Interface::Dummy(Box::new(inner)))
             }
             Some(InterfaceType::OvsInterface) => {
                 let inner = OvsInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::OvsInterface(inner))
+                Ok(Interface::OvsInterface(Box::new(inner)))
             }
             Some(InterfaceType::OvsBridge) => {
                 let inner = OvsBridgeInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::OvsBridge(inner))
+                Ok(Interface::OvsBridge(Box::new(inner)))
             }
             Some(InterfaceType::MacVlan) => {
                 let inner = MacVlanInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::MacVlan(inner))
+                Ok(Interface::MacVlan(Box::new(inner)))
             }
             Some(InterfaceType::MacVtap) => {
                 let inner = MacVtapInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::MacVtap(inner))
+                Ok(Interface::MacVtap(Box::new(inner)))
             }
             Some(InterfaceType::Vrf) => {
                 let inner = VrfInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Vrf(inner))
+                Ok(Interface::Vrf(Box::new(inner)))
             }
             Some(InterfaceType::Hsr) => {
                 let inner = HsrInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Hsr(inner))
+                Ok(Interface::Hsr(Box::new(inner)))
             }
             Some(InterfaceType::InfiniBand) => {
                 let inner = InfiniBandInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::InfiniBand(inner))
+                Ok(Interface::InfiniBand(Box::new(inner)))
             }
             Some(InterfaceType::Loopback) => {
                 let inner = LoopbackInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Loopback(inner))
+                Ok(Interface::Loopback(Box::new(inner)))
             }
             Some(InterfaceType::MacSec) => {
                 let inner = MacSecInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::MacSec(inner))
+                Ok(Interface::MacSec(Box::new(inner)))
             }
             Some(InterfaceType::Ipsec) => {
                 let inner = IpsecInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Ipsec(inner))
+                Ok(Interface::Ipsec(Box::new(inner)))
             }
             Some(InterfaceType::Xfrm) => {
                 let inner = XfrmInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Xfrm(inner))
+                Ok(Interface::Xfrm(Box::new(inner)))
             }
             Some(iface_type) => {
                 log::warn!("Unsupported interface type {}", iface_type);
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Unknown(inner))
+                Ok(Interface::Unknown(Box::new(inner)))
             }
             None => {
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Interface::Unknown(inner))
+                Ok(Interface::Unknown(Box::new(inner)))
             }
         }
     }
@@ -438,96 +438,96 @@ impl Interface {
             Self::LinuxBridge(iface) => {
                 let mut new_iface = LinuxBridgeInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::LinuxBridge(new_iface)
+                Self::LinuxBridge(Box::new(new_iface))
             }
             Self::Ethernet(iface) => {
                 let mut new_iface = EthernetInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
                 // Do not use veth interface type when clone internally
                 new_iface.base.iface_type = InterfaceType::Ethernet;
-                Self::Ethernet(new_iface)
+                Self::Ethernet(Box::new(new_iface))
             }
             Self::Vlan(iface) => {
                 let mut new_iface = VlanInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Vlan(new_iface)
+                Self::Vlan(Box::new(new_iface))
             }
             Self::Vxlan(iface) => {
                 let mut new_iface = VxlanInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Vxlan(new_iface)
+                Self::Vxlan(Box::new(new_iface))
             }
             Self::Dummy(iface) => {
                 let mut new_iface = DummyInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Dummy(new_iface)
+                Self::Dummy(Box::new(new_iface))
             }
             Self::OvsInterface(iface) => {
                 let mut new_iface = OvsInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::OvsInterface(new_iface)
+                Self::OvsInterface(Box::new(new_iface))
             }
             Self::OvsBridge(iface) => {
                 let mut new_iface = OvsBridgeInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::OvsBridge(new_iface)
+                Self::OvsBridge(Box::new(new_iface))
             }
             Self::Bond(iface) => {
                 let mut new_iface = BondInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Bond(new_iface)
+                Self::Bond(Box::new(new_iface))
             }
             Self::MacVlan(iface) => {
                 let mut new_iface = MacVlanInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::MacVlan(new_iface)
+                Self::MacVlan(Box::new(new_iface))
             }
             Self::MacVtap(iface) => {
                 let mut new_iface = MacVtapInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::MacVtap(new_iface)
+                Self::MacVtap(Box::new(new_iface))
             }
             Self::Vrf(iface) => {
                 let mut new_iface = VrfInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Vrf(new_iface)
+                Self::Vrf(Box::new(new_iface))
             }
             Self::Hsr(iface) => {
                 let mut new_iface = HsrInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Hsr(new_iface)
+                Self::Hsr(Box::new(new_iface))
             }
             Self::InfiniBand(iface) => {
                 let new_iface = InfiniBandInterface {
                     base: iface.base.clone_name_type_only(),
                     ..Default::default()
                 };
-                Self::InfiniBand(new_iface)
+                Self::InfiniBand(Box::new(new_iface))
             }
             Self::Loopback(iface) => {
                 let mut new_iface = LoopbackInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Loopback(new_iface)
+                Self::Loopback(Box::new(new_iface))
             }
             Self::MacSec(iface) => {
                 let mut new_iface = MacSecInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::MacSec(new_iface)
+                Self::MacSec(Box::new(new_iface))
             }
             Self::Ipsec(iface) => {
                 let mut new_iface = IpsecInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Ipsec(new_iface)
+                Self::Ipsec(Box::new(new_iface))
             }
             Self::Xfrm(iface) => {
                 let mut new_iface = XfrmInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Xfrm(new_iface)
+                Self::Xfrm(Box::new(new_iface))
             }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
-                Self::Unknown(new_iface)
+                Self::Unknown(Box::new(new_iface))
             }
         }
     }
@@ -745,7 +745,7 @@ impl Interface {
 #[allow(clippy::derivable_impls)]
 impl Default for Interface {
     fn default() -> Self {
-        Interface::Unknown(UnknownInterface::default())
+        Interface::Unknown(Box::default())
     }
 }
 

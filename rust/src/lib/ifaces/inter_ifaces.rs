@@ -547,7 +547,7 @@ impl Interfaces {
             iface.base.name.clone_from(&iface_name);
             log::warn!("Assuming undefined port {} as ethernet", iface_name);
             self.kernel_ifaces
-                .insert(iface_name, Interface::Ethernet(iface));
+                .insert(iface_name, Interface::Ethernet(Box::new(iface)));
         }
     }
 
@@ -599,7 +599,7 @@ impl Interfaces {
         for iface in new_ifaces {
             self.kernel_ifaces.insert(
                 iface.base.name.to_string(),
-                Interface::Ethernet(iface),
+                Interface::Ethernet(Box::new(iface)),
             );
         }
         Ok(())
