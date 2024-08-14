@@ -178,8 +178,9 @@ impl MergedInterfaces {
                 new_iface.base_iface_mut().state = des_iface.base_iface().state;
                 let mut new_iface_value = serde_json::to_value(&new_iface)?;
                 merge_json_value(&mut new_iface_value, &diff_value);
-                let new_iface =
+                let mut new_iface =
                     serde_json::from_value::<Interface>(new_iface_value)?;
+                new_iface.include_diff_context(&cur_iface);
                 ret.push(new_iface);
             }
         }

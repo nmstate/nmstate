@@ -1,0 +1,18 @@
+---
+routes:
+  running:
+    - destination: 0.0.0.0/0
+      next-hop-address: 192.0.2.1
+      next-hop-interface: eth1
+      table-id: 254
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: 00:00:51:00:00:0A
+    ipv4:
+      enabled: true
+      address:
+        - ip: 192.0.2.9
+          prefix-length: 16
+      dhcp: false

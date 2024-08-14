@@ -247,6 +247,11 @@ impl Interface {
             _ => (),
         }
     }
+
+    pub(crate) fn include_diff_context(&mut self, current: &Self) {
+        self.base_iface_mut()
+            .include_diff_context(current.base_iface());
+    }
 }
 
 impl InterfaceType {
