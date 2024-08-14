@@ -1,0 +1,9 @@
+---
+capture:
+  gw: routes.running.destination=="0.0.0.0/0"
+  gw-iface: interfaces.name==capture.gw.routes.running.0.next-hop-interface
+desiredState:
+  interfaces:
+    - name: "{{ capture.gw-iface.interfaces.0.name }}"
+      identifier: mac-address
+      mac-address: "{{ capture.gw-iface.interfaces.0.mac-address }}"

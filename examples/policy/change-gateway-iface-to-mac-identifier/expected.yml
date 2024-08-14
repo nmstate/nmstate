@@ -1,0 +1,8 @@
+---
+interfaces:
+  - name: eth1
+    profile-name: eth1
+    type: ethernet
+    state: up
+    identifier: mac-address
+    mac-address: 00:00:51:00:00:0A
