@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-import pytest
+import time
 
+import pytest
 import yaml
 
 import libnmstate
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
@@ -15,9 +17,10 @@ from libnmstate.schema import VLAN
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
+from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.ovslib import Bridge
 from ..testlib.retry import retry_till_true_or_timeout
-from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.servicelib import disable_service
 
 
 BRIDGE0 = "brtest0"
@@ -599,3 +602,35 @@ def test_ovs_bond_auto_managed_ignored_port(unmaaged_dummy1, eth1_up):
                 Loader=yaml.SafeLoader,
             )
         )
+
+
+@pytest.fixture
+def ovs_service_off():
+    with disable_service("openvswitch"):
+        yield
+
+
+@pytest.fixture
+def turn_off_nm_logging():
+    cmdlib.exec_cmd("nmcli general logging level OFF domains all".split())
+    yield
+    cmdlib.exec_cmd("nmcli general logging level TRACE domains all".split())
+
+
+def test_nm_trace_log_on_retry(ovs_service_off, turn_off_nm_logging):
+    # Sleep 1 second to make sure follow up query of log does not
+    # get NetworkManager log from other test case
+    time.sleep(1)
+    apply_time = cmdlib.exec_cmd("date +%H:%M:%S".split())[1]
+
+    bridge = Bridge(BRIDGE0)
+    bridge.add_internal_port(
+        BRIDGE0, ipv4_state={InterfaceIPv4.ENABLED: False}
+    )
+    with pytest.raises(NmstateVerificationError):
+        libnmstate.apply(bridge.state, verbose_on_retry=True)
+
+    nm_log = cmdlib.exec_cmd(
+        f"journalctl -t NetworkManager --since {apply_time}".split()
+    )[1]
+    assert "<trace>" in nm_log

@@ -389,6 +389,18 @@ impl<'a> NmDbus<'a> {
     ) -> Result<(), NmError> {
         Ok(self.proxy.set_property("GlobalDnsConfiguration", value)?)
     }
+
+    pub(crate) fn get_logging(&self) -> Result<(String, String), NmError> {
+        Ok(self.proxy.get_logging()?)
+    }
+
+    pub(crate) fn set_logging(
+        &self,
+        level: &str,
+        domains: &str,
+    ) -> Result<(), NmError> {
+        Ok(self.proxy.set_logging(level, domains)?)
+    }
 }
 
 fn str_to_obj_path(obj_path: &str) -> Result<zvariant::ObjectPath, NmError> {

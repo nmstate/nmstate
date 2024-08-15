@@ -39,23 +39,48 @@ use crate::{
     NmstateError,
 };
 
-// There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
-// `cur_net_state`, `des_net_state` into single struct. Suppress the clippy
-// warning for now
 pub(crate) fn nm_apply(
     merged_state: &MergedNetworkState,
     checkpoint: &str,
     timeout: u32,
+    enable_trace_log: bool,
 ) -> Result<(), NmstateError> {
     let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
 
-    check_nm_version(&nm_api);
+    if enable_trace_log {
+        let cur_log_config = nm_api.get_log_config().ok();
+        if cur_log_config.is_some() {
+            if let Err(e) = nm_api.enable_trace_log() {
+                log::error!("Failed to enable NetworkManager trace log: {e}");
+            }
+        }
+        let result = _nm_apply(&mut nm_api, merged_state, checkpoint, timeout);
+        if let Some(cur_log_config) = cur_log_config {
+            if let Err(e) = nm_api.set_log_config(&cur_log_config) {
+                log::error!(
+                    "Failed to restore log level {cur_log_config}: {e}"
+                );
+            }
+        }
+        result
+    } else {
+        _nm_apply(&mut nm_api, merged_state, checkpoint, timeout)
+    }
+}
+
+fn _nm_apply(
+    nm_api: &mut NmApi,
+    merged_state: &MergedNetworkState,
+    checkpoint: &str,
+    timeout: u32,
+) -> Result<(), NmstateError> {
+    check_nm_version(nm_api);
 
     nm_api.set_checkpoint(checkpoint, timeout);
     nm_api.set_checkpoint_auto_refresh(true);
 
-    if !merged_state.memory_only {
-        delete_ifaces(&mut nm_api, merged_state)?;
+    if !merged_state.option.memory_only {
+        delete_ifaces(nm_api, merged_state)?;
     }
 
     if let Some(hostname) = merged_state
@@ -64,7 +89,7 @@ pub(crate) fn nm_apply(
         .as_ref()
         .and_then(|c| c.config.as_ref())
     {
-        if merged_state.memory_only {
+        if merged_state.option.memory_only {
             log::debug!(
                 "NM: Cannot change configure hostname in memory only mode, \
                 ignoring"
@@ -90,7 +115,7 @@ pub(crate) fn nm_apply(
     if merged_state.dns.is_changed()
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
     {
-        purge_global_dns_config(&mut nm_api)?;
+        purge_global_dns_config(nm_api)?;
 
         if merged_state.dns.is_search_or_option_only() {
             // When user desire static DNS search and dynamic DNS nameserver,
@@ -110,7 +135,7 @@ pub(crate) fn nm_apply(
                     will try to set via global DNS"
                 );
                 store_dns_config_via_global_api(
-                    &mut nm_api,
+                    nm_api,
                     merged_state.dns.servers.as_slice(),
                     merged_state.dns.searches.as_slice(),
                     merged_state.dns.options.as_slice(),
@@ -122,7 +147,7 @@ pub(crate) fn nm_apply(
                 .ok();
         } else {
             store_dns_config_via_global_api(
-                &mut nm_api,
+                nm_api,
                 merged_state.dns.servers.as_slice(),
                 merged_state.dns.searches.as_slice(),
                 merged_state.dns.options.as_slice(),
@@ -157,33 +182,26 @@ pub(crate) fn nm_apply(
         nm_conns_to_activate.as_slice(),
         activated_nm_conns.as_slice(),
     );
-    deactivate_nm_profiles(
-        &mut nm_api,
-        nm_conns_to_deactivate_first.as_slice(),
-    )?;
+    deactivate_nm_profiles(nm_api, nm_conns_to_deactivate_first.as_slice())?;
 
     save_nm_profiles(
-        &mut nm_api,
+        nm_api,
         nm_conns_to_store.as_slice(),
-        merged_state.memory_only,
+        merged_state.option.memory_only,
     )?;
-    if !merged_state.memory_only {
-        delete_exist_profiles(
-            &mut nm_api,
-            &exist_nm_conns,
-            &nm_conns_to_store,
-        )?;
+    if !merged_state.option.memory_only {
+        delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_store)?;
         delete_orphan_ovs_ports(
-            &mut nm_api,
+            nm_api,
             &merged_state.interfaces,
             &exist_nm_conns,
             &nm_conns_to_activate,
         )?;
     }
 
-    activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice())?;
+    activate_nm_profiles(nm_api, nm_conns_to_activate.as_slice())?;
 
-    deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
+    deactivate_nm_profiles(nm_api, nm_conns_to_deactivate.as_slice())?;
 
     apply_dispatch_script(&merged_state.interfaces)?;
 

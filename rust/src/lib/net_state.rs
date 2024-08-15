@@ -109,21 +109,7 @@ pub struct NetworkState {
     /// The OVN configuration in the system
     pub ovn: OvnConfiguration,
     #[serde(skip)]
-    pub(crate) kernel_only: bool,
-    #[serde(skip)]
-    pub(crate) no_verify: bool,
-    #[serde(skip)]
-    pub(crate) no_commit: bool,
-    #[serde(skip)]
-    pub(crate) timeout: Option<u32>,
-    #[serde(skip)]
-    pub(crate) include_secrets: bool,
-    #[serde(skip)]
-    pub(crate) include_status_data: bool,
-    #[serde(skip)]
-    pub(crate) running_config_only: bool,
-    #[serde(skip)]
-    pub(crate) memory_only: bool,
+    pub option: NetworkStateOption,
 }
 
 impl NetworkState {
@@ -146,12 +132,12 @@ impl NetworkState {
     /// querying/applying the network state.
     /// Default is false.
     pub fn set_kernel_only(&mut self, value: bool) -> &mut Self {
-        self.kernel_only = value;
+        self.option.kernel_only = value;
         self
     }
 
     pub fn kernel_only(&self) -> bool {
-        self.kernel_only
+        self.option.kernel_only
     }
 
     /// By default(true), When nmstate applying the network state, after applied
@@ -160,7 +146,7 @@ impl NetworkState {
     /// before apply(only when [NetworkState::set_kernel_only()] set to false.
     /// When set to false, no verification will be performed.
     pub fn set_verify_change(&mut self, value: bool) -> &mut Self {
-        self.no_verify = !value;
+        self.option.no_verify = !value;
         self
     }
 
@@ -170,7 +156,7 @@ impl NetworkState {
     /// [NetworkState::set_timeout()].  Default to true for making the network
     /// state persistent.
     pub fn set_commit(&mut self, value: bool) -> &mut Self {
-        self.no_commit = !value;
+        self.option.no_commit = !value;
         self
     }
 
@@ -178,20 +164,20 @@ impl NetworkState {
     /// The time to wait before rolling back the network state to the state
     /// before [NetworkState::apply()` invoked.
     pub fn set_timeout(&mut self, value: u32) -> &mut Self {
-        self.timeout = Some(value);
+        self.option.timeout = Some(value);
         self
     }
 
     /// Whether to include secrets(like password) in [NetworkState::retrieve()]
     /// Default is false.
     pub fn set_include_secrets(&mut self, value: bool) -> &mut Self {
-        self.include_secrets = value;
+        self.option.include_secrets = value;
         self
     }
 
     /// Deprecated. No use at all.
     pub fn set_include_status_data(&mut self, value: bool) -> &mut Self {
-        self.include_status_data = value;
+        self.option.include_status_data = value;
         self
     }
 
@@ -201,14 +187,25 @@ impl NetworkState {
     /// * Routes retrieved by DHCPv4 or IPv6 router advertisement.
     /// * LLDP neighbor information.
     pub fn set_running_config_only(&mut self, value: bool) -> &mut Self {
-        self.running_config_only = value;
+        self.option.running_config_only = value;
         self
     }
 
     /// When set to true, the network state be applied and only stored in memory
     /// which will be purged after system reboot.
     pub fn set_memory_only(&mut self, value: bool) -> &mut Self {
-        self.memory_only = value;
+        self.option.memory_only = value;
+        self
+    }
+
+    /// Nmstate will retry the apply action on error of selected types.
+    /// When set to true, Nmstate will temporarily enable verbose
+    /// logging of network backend(NetworkManager) during retry of network state
+    /// apply.
+    /// The logging level of NetworkManager will be restored afterwards.
+    /// Default is false.
+    pub fn set_verbose_log_when_retry(&mut self, value: bool) -> &mut Self {
+        self.option.verbose_log_when_retry = value;
         self
     }
 
@@ -325,7 +322,7 @@ pub(crate) struct MergedNetworkState {
     pub(crate) ovsdb: MergedOvsDbGlobalConfig,
     pub(crate) routes: MergedRoutes,
     pub(crate) rules: MergedRouteRules,
-    pub(crate) memory_only: bool,
+    pub(crate) option: NetworkStateOption,
 }
 
 impl MergedNetworkState {
@@ -333,13 +330,12 @@ impl MergedNetworkState {
         desired: NetworkState,
         current: NetworkState,
         gen_conf_mode: bool,
-        memory_only: bool,
     ) -> Result<Self, NmstateError> {
         let interfaces = MergedInterfaces::new(
             desired.interfaces,
             current.interfaces,
             gen_conf_mode,
-            memory_only,
+            desired.option.memory_only,
         )?;
         let ignored_ifaces = interfaces.ignored_ifaces.as_slice();
 
@@ -372,10 +368,52 @@ impl MergedNetworkState {
             ovn,
             ovsdb,
             hostname,
-            memory_only,
+            option: desired.option,
         };
         ret.validate_ipv6_link_local_address_dns_srv()?;
 
         Ok(ret)
     }
+}
+
+/// Query and apply options for [NetworkState]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct NetworkStateOption {
+    pub kernel_only: bool,
+    /// When nmstate applying the network state, after applied
+    /// the network state, nmstate will verify whether the outcome network
+    /// configuration matches with desired, if not, will rollback to state
+    /// before apply(only when [NetworkState::set_kernel_only()] set to false.
+    /// When set to true, no verification will be performed.
+    /// Default is perform verification and rollback on failure.
+    pub no_verify: bool,
+    /// Only available when [NetworkState::set_kernel_only()] set to false.
+    /// When set to true, the network configuration will not commit
+    /// persistently, and will rollback after timeout defined by
+    /// [NetworkState::set_timeout()].
+    /// Default is making network state persistent.
+    pub no_commit: bool,
+    /// Only available when [NetworkState::set_commit()] set to false.
+    /// The time to wait before rolling back the network state to the state
+    /// before [NetworkState::apply()` invoked.
+    pub timeout: Option<u32>,
+    /// Whether to include secrets(like password) in [NetworkState::retrieve()]
+    /// Default is false.
+    pub include_secrets: bool,
+    /// Deprecated, no use at all
+    pub include_status_data: bool,
+    /// Query activated/running network configuration excluding:
+    /// * IP address retrieved by DHCP or IPv6 auto configuration.
+    /// * DNS client resolver retrieved by DHCP or IPv6 auto configuration.
+    /// * Routes retrieved by DHCPv4 or IPv6 router advertisement.
+    /// * LLDP neighbor information.
+    pub running_config_only: bool,
+    /// When set to true, the network state be applied and only stored in
+    /// memory which will be purged after system reboot.
+    pub memory_only: bool,
+    /// Nmstate will retry the apply action on selected error.
+    /// When set to true, Nmstate will temporarily enable verbose
+    /// logging of network backend(NetworkManager) during retry of network
+    /// state apply.
+    pub verbose_log_when_retry: bool,
 }

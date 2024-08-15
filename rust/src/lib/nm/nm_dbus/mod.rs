@@ -56,3 +56,6 @@ pub use self::nm_api::NmApi;
 pub(crate) use self::convert::ToDbusValue;
 #[cfg(feature = "gen_conf")]
 pub(crate) use self::gen_conf::ToKeyfile;
+
+#[cfg(feature = "query_apply")]
+pub use self::query_apply::NmLogConfig;

@@ -15,6 +15,8 @@ use crate::{
     NMSTATE_FAIL, NMSTATE_PASS,
 };
 
+const NMSTATE_FLAG_VERBOSE_WHEN_RETRY: u32 = 1 << 9;
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn nmstate_net_state_apply(
@@ -73,6 +75,10 @@ pub extern "C" fn nmstate_net_state_apply(
 
     if (flags & NMSTATE_FLAG_MEMORY_ONLY) > 0 {
         net_state.set_memory_only(true);
+    }
+
+    if (flags & NMSTATE_FLAG_VERBOSE_WHEN_RETRY) > 0 {
+        net_state.set_verbose_log_when_retry(true);
     }
 
     net_state.set_timeout(rollback_timeout);

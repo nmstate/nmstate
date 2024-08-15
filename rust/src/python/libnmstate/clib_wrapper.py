@@ -40,6 +40,8 @@ NMSTATE_FLAG_INCLUDE_SECRETS = 1 << 4
 NMSTATE_FLAG_NO_COMMIT = 1 << 5
 NMSTATE_FLAG_MEMORY_ONLY = 1 << 6
 NMSTATE_FLAG_RUNNING_CONFIG_ONLY = 1 << 7
+# NMSTATE_FLAG_YAML_OUTPUT = 1 << 8
+NMSTATE_FLAG_VERBOSE_WHEN_RETRY = 1 << 9
 NMSTATE_PASS = 0
 
 
@@ -92,6 +94,7 @@ def apply_net_state(
     save_to_disk=True,
     commit=True,
     rollback_timeout=60,
+    verbose_on_retry=False,
 ):
     c_err_msg = c_char_p()
     c_err_kind = c_char_p()
@@ -109,6 +112,9 @@ def apply_net_state(
 
     if not save_to_disk:
         flags |= NMSTATE_FLAG_MEMORY_ONLY
+
+    if verbose_on_retry:
+        flags = NMSTATE_FLAG_VERBOSE_WHEN_RETRY
 
     rc = lib.nmstate_net_state_apply(
         flags,

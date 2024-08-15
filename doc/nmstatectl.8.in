@@ -166,6 +166,14 @@ rebooting.
 .IP \fB--timeout\fR=<\fITIMEOUT\fR>
 the user must commit the changes within \fItimeout\fR, or they will be
 automatically rolled back. Default: 60 seconds.
+.IP \fB--verbose-when-retry
+Nmstate will retry the apply action on error of selected types.
+When this arguemnt is defined, Nmstate will temporarily enable verbose
+logging of network backend(NetworkManager) during retry of network state
+apply. The logging level of NetworkManager will be restored afterwards.
+If the apply action did not fail in first try, the log level will not
+be changed.
+By default, no log level changes to NetworkManager.
 .IP \fB--version
 displays nmstate version.
 .SH LIMITATIONS

@@ -97,6 +97,11 @@ where
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );
+    net_state.set_verbose_log_when_retry(
+        matches
+            .try_contains_id("VERBOSE_WHEN_RETRY")
+            .unwrap_or_default(),
+    );
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .build()

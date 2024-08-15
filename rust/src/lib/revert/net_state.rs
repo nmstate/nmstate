@@ -7,12 +7,8 @@ impl NetworkState {
         &self,
         current: &Self,
     ) -> Result<Self, NmstateError> {
-        let merged_state = MergedNetworkState::new(
-            self.clone(),
-            current.clone(),
-            false,
-            false,
-        )?;
+        let merged_state =
+            MergedNetworkState::new(self.clone(), current.clone(), false)?;
         Ok(Self {
             interfaces: merged_state.interfaces.generate_revert()?,
             routes: merged_state.routes.generate_revert(),

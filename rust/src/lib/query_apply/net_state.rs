@@ -60,8 +60,11 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub async fn retrieve_async(&mut self) -> Result<&mut Self, NmstateError> {
-        let state =
-            nispor_retrieve(self.running_config_only, self.kernel_only).await?;
+        let state = nispor_retrieve(
+            self.option.running_config_only,
+            self.option.kernel_only,
+        )
+        .await?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;
@@ -78,12 +81,12 @@ impl NetworkState {
                 }
             }
         }
-        if !self.kernel_only {
-            let nm_state = nm_retrieve(self.running_config_only)?;
+        if !self.option.kernel_only {
+            let nm_state = nm_retrieve(self.option.running_config_only)?;
             // TODO: Priority handling
             self.update_state(&nm_state);
         }
-        if !self.include_secrets {
+        if !self.option.include_secrets {
             self.hide_secrets();
         }
 
@@ -131,7 +134,7 @@ impl NetworkState {
             );
         }
 
-        if !self.kernel_only {
+        if !self.option.kernel_only {
             self.apply_with_nm_backend().await
         } else {
             // TODO: Need checkpoint for kernel only mode
@@ -142,7 +145,7 @@ impl NetworkState {
     async fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
         let mut merged_state = None;
         let mut cur_net_state = NetworkState::new();
-        cur_net_state.set_kernel_only(self.kernel_only);
+        cur_net_state.set_kernel_only(self.option.kernel_only);
         cur_net_state.set_include_secrets(true);
         if let Err(e) = cur_net_state.retrieve_async().await {
             if e.kind().can_retry() {
@@ -172,11 +175,10 @@ impl NetworkState {
                 self.clone(),
                 cur_net_state.clone(),
                 false,
-                self.memory_only,
             )?);
         }
 
-        let timeout = if let Some(t) = self.timeout {
+        let timeout = if let Some(t) = self.option.timeout {
             t
         } else if pf_state.is_some() {
             VERIFY_RETRY_COUNT_SRIOV_MAX as u32
@@ -201,13 +203,12 @@ impl NetworkState {
 
         log::info!("Created checkpoint {}", &checkpoint);
 
-        with_nm_checkpoint(&checkpoint, self.no_commit, || async {
+        with_nm_checkpoint(&checkpoint, self.option.no_commit, || async {
             if let Some(pf_state) = pf_state {
                 let pf_merged_state = MergedNetworkState::new(
                     pf_state,
                     cur_net_state.clone(),
                     false,
-                    self.memory_only,
                 )?;
                 let verify_count =
                     get_proper_verify_retry_count(&pf_merged_state.interfaces);
@@ -225,7 +226,6 @@ impl NetworkState {
                     self.clone(),
                     cur_net_state.clone(),
                     false,
-                    self.memory_only,
                 )?);
             }
 
@@ -266,40 +266,46 @@ impl NetworkState {
     ) -> Result<(), NmstateError> {
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
-        with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || async {
-            nm_checkpoint_timeout_extend(checkpoint, timeout)?;
-            nm_apply(merged_state, checkpoint, timeout)?;
-            if merged_state.ovsdb.is_changed && ovsdb_is_running() {
-                ovsdb_apply(merged_state)?;
-            }
-            if let Some(running_hostname) =
-                self.hostname.as_ref().and_then(|c| c.running.as_ref())
-            {
-                set_running_hostname(running_hostname)?;
-            }
-            if !self.no_verify {
-                with_retry(
-                    VERIFY_RETRY_INTERVAL_MILLISECONDS,
-                    retry_count,
-                    || async {
-                        nm_checkpoint_timeout_extend(checkpoint, timeout)?;
-                        let mut new_cur_net_state = cur_net_state.clone();
-                        new_cur_net_state.set_include_secrets(true);
-                        new_cur_net_state.retrieve_async().await?;
-                        merged_state.verify(&new_cur_net_state)
-                    },
-                )
-                .await
-            } else {
-                Ok(())
-            }
-        })
+        with_retry(
+            RETRY_NM_INTERVAL_MILLISECONDS,
+            RETRY_NM_COUNT,
+            |cur_retry_count| async move {
+                nm_checkpoint_timeout_extend(checkpoint, timeout)?;
+                let enable_trace = cur_retry_count > 0
+                    && merged_state.option.verbose_log_when_retry;
+                nm_apply(merged_state, checkpoint, timeout, enable_trace)?;
+                if merged_state.ovsdb.is_changed && ovsdb_is_running() {
+                    ovsdb_apply(merged_state)?;
+                }
+                if let Some(running_hostname) =
+                    self.hostname.as_ref().and_then(|c| c.running.as_ref())
+                {
+                    set_running_hostname(running_hostname)?;
+                }
+                if !self.option.no_verify {
+                    with_retry(
+                        VERIFY_RETRY_INTERVAL_MILLISECONDS,
+                        retry_count,
+                        |_| async {
+                            nm_checkpoint_timeout_extend(checkpoint, timeout)?;
+                            let mut new_cur_net_state = cur_net_state.clone();
+                            new_cur_net_state.set_include_secrets(true);
+                            new_cur_net_state.retrieve_async().await?;
+                            merged_state.verify(&new_cur_net_state)
+                        },
+                    )
+                    .await
+                } else {
+                    Ok(())
+                }
+            },
+        )
         .await
     }
 
     async fn apply_without_nm_backend(&self) -> Result<(), NmstateError> {
         let mut cur_net_state = NetworkState::new();
-        cur_net_state.set_kernel_only(self.kernel_only);
+        cur_net_state.set_kernel_only(self.option.kernel_only);
         cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve_async().await?;
 
@@ -307,7 +313,6 @@ impl NetworkState {
             self.clone(),
             cur_net_state.clone(),
             false,
-            self.memory_only,
         )?;
 
         nispor_apply(&merged_state).await?;
@@ -316,11 +321,11 @@ impl NetworkState {
         {
             set_running_hostname(running_hostname)?;
         }
-        if !self.no_verify {
+        if !self.option.no_verify {
             with_retry(
                 VERIFY_RETRY_INTERVAL_MILLISECONDS,
                 VERIFY_RETRY_COUNT_KERNEL_MODE,
-                || async {
+                |_| async {
                     let mut new_cur_net_state = cur_net_state.clone();
                     new_cur_net_state.retrieve_async().await?;
                     merged_state.verify(&new_cur_net_state)
@@ -355,12 +360,8 @@ impl NetworkState {
     /// Generate new NetworkState contains only changed properties
     pub fn gen_diff(&self, current: &Self) -> Result<Self, NmstateError> {
         let mut ret = Self::default();
-        let merged_state = MergedNetworkState::new(
-            self.clone(),
-            current.clone(),
-            false,
-            false,
-        )?;
+        let merged_state =
+            MergedNetworkState::new(self.clone(), current.clone(), false)?;
 
         ret.interfaces = merged_state.interfaces.gen_diff()?;
         if merged_state.dns.is_changed() {
@@ -425,13 +426,13 @@ async fn with_retry<T, Fut>(
     func: T,
 ) -> Result<(), NmstateError>
 where
-    T: FnOnce() -> Fut + Copy,
+    T: FnOnce(usize) -> Fut + Copy,
     // Once `std::ops::AsyncFnOnce` is stable, use it instead
     Fut: Future<Output = Result<(), NmstateError>>,
 {
     let mut cur_count = 0usize;
     while cur_count < count {
-        if let Err(e) = func().await {
+        if let Err(e) = func(cur_count).await {
             if cur_count == count - 1 || !e.kind().can_retry() {
                 if e.kind().can_ignore() {
                     return Ok(());

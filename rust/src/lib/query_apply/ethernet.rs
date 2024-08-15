@@ -177,7 +177,10 @@ impl NetworkState {
         if pf_ifaces.is_empty() {
             None
         } else {
-            let mut pf_state = NetworkState::default();
+            let mut pf_state = NetworkState {
+                option: self.option.clone(),
+                ..Default::default()
+            };
             for pf_iface in pf_ifaces {
                 pf_state.interfaces.push(pf_iface);
             }

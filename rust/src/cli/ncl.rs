@@ -193,6 +193,13 @@ fn main() {
                         .takes_value(false)
                         .help("Do not make the state persistent"),
                 )
+                .arg(
+                    clap::Arg::new("VERBOSE_WHEN_RETRY")
+                        .long("verbose-when-retry")
+                        .takes_value(false)
+                        .help("Enable verbose logging of network backend \
+                              when retrying the apply failure"),
+                )
         )
         .subcommand(
             clap::Command::new(SUB_CMD_GEN_CONF)

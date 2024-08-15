@@ -75,6 +75,12 @@ trait NetworkManager {
         checkpoint: &zvariant::ObjectPath,
         add_timeout: u32,
     ) -> zbus::Result<()>;
+
+    /// GetLogging method
+    fn get_logging(&self) -> zbus::Result<(String, String)>;
+
+    /// SetLogging method
+    fn set_logging(&self, level: &str, domains: &str) -> zbus::Result<()>;
 }
 
 #[dbus_proxy(

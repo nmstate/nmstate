@@ -37,7 +37,7 @@ impl NetworkState {
                 .use_pseudo_sriov_vf_name(&mut current.interfaces);
         }
         let merged_state =
-            MergedNetworkState::new(self.clone(), current, false, false)?;
+            MergedNetworkState::new(self.clone(), current, false)?;
 
         features.append(&mut merged_state.interfaces.get_features());
         features.append(&mut merged_state.dns.get_features());
