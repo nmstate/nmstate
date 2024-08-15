@@ -43,12 +43,23 @@ pub struct Ieee8021XConfig {
     /// Deserialize and serialize from/to `private-key-password`.
     /// Replaced to `<_password_hid_by_nmstate>` when querying.
     pub private_key_password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Deserialize and serialize from/to `phase2-auth`.
+    pub phase2_auth: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Deserialize and serialize from/to `password`.
+    /// Replaced to `<_password_hid_by_nmstate>` when querying.
+    pub password: Option<String>,
 }
 
 impl Ieee8021XConfig {
     pub(crate) fn hide_secrets(&mut self) {
         if self.private_key_password.is_some() {
             self.private_key_password =
+                Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
+        }
+        if self.password.is_some() {
+            self.password =
                 Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
         }
     }
@@ -64,6 +75,11 @@ impl std::fmt::Debug for Ieee8021XConfig {
             .field("ca_cert", &self.ca_cert)
             .field(
                 "private_key_password",
+                &Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string()),
+            )
+            .field("phase2_auth", &self.phase2_auth)
+            .field(
+                "password",
                 &Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string()),
             )
             .finish()

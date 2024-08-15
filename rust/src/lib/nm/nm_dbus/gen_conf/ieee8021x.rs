@@ -52,6 +52,12 @@ impl ToKeyfile for NmSetting8021X {
                 zvariant::Value::new(v),
             );
         }
+        if let Some(v) = &self.phase2_auth {
+            ret.insert("phase2-auth".to_string(), zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.password {
+            ret.insert("password".to_string(), zvariant::Value::new(v));
+        }
         Ok(ret)
     }
 }
