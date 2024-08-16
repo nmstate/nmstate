@@ -31,6 +31,7 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import ifacelib
 from .testlib import statelib
+from .testlib.apply import apply_with_description
 from .testlib.veth import create_veth_pair
 from .testlib.veth import remove_veth_pair
 
@@ -340,12 +341,16 @@ def test_show_running_config_has_no_lldp_neighbor(lldptest_up):
 def lldp_enabled(ifstate):
     lldp_config = ifstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
     lldp_config[LLDP.ENABLED] = True
-    libnmstate.apply(ifstate)
+    apply_with_description(
+        "Configure the ethernet device lldptest with lldp enabled", ifstate
+    )
     try:
         yield ifstate
     finally:
         lldp_config[LLDP.ENABLED] = False
-        libnmstate.apply(ifstate)
+        apply_with_description(
+            "Set up the ethernet device lldptest with lldp disabled", ifstate
+        )
 
 
 def _send_lldp_packet():
