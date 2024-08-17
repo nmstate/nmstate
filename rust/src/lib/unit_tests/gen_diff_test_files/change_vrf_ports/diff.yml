@@ -1,0 +1,9 @@
+---
+interfaces:
+- name: vrf100
+  type: vrf
+  state: up
+  vrf:
+    ports:
+      - eth2
+      - eth3

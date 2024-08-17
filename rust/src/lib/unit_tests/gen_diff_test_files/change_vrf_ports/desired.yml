@@ -1,0 +1,10 @@
+---
+interfaces:
+- name: vrf100
+  type: vrf
+  state: up
+  vrf:
+    route-table-id: 100
+    ports:
+      - eth3
+      - eth2

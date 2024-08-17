@@ -15,7 +15,7 @@ vrf:
     )
     .unwrap();
 
-    assert_eq!(iface.vrf.unwrap().table_id, 101);
+    assert_eq!(iface.vrf.unwrap().table_id, Some(101));
 }
 
 #[test]

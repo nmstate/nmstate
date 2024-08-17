@@ -94,16 +94,22 @@ impl VrfInterface {
         &mut self,
         current: Option<&Interface>,
     ) -> Result<(), NmstateError> {
-        if self.vrf.as_ref().map(|v| v.table_id) == Some(0) {
+        if self
+            .vrf
+            .as_ref()
+            .and_then(|v| v.table_id)
+            .unwrap_or_default()
+            == 0
+        {
             if let Some(cur_table_id) =
                 if let Some(Interface::Vrf(vrf_iface)) = current {
-                    vrf_iface.vrf.as_ref().map(|v| v.table_id)
+                    vrf_iface.vrf.as_ref().and_then(|v| v.table_id)
                 } else {
                     None
                 }
             {
                 if let Some(vrf_conf) = self.vrf.as_mut() {
-                    vrf_conf.table_id = cur_table_id;
+                    vrf_conf.table_id = Some(cur_table_id);
                 }
             } else {
                 let e = NmstateError::new(
@@ -134,12 +140,12 @@ pub struct VrfConfig {
     #[serde(
         rename = "route-table-id",
         default,
-        deserialize_with = "crate::deserializer::u32_or_string"
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     /// Route table ID of this VRF interface.
-    /// Use 0 to preserve current `table_id`.
     /// Deserialize and serialize from/to `route-table-id`.
-    pub table_id: u32,
+    pub table_id: Option<u32>,
 }
 
 impl MergedInterface {
@@ -147,11 +153,14 @@ impl MergedInterface {
     pub(crate) fn post_inter_ifaces_process_vrf(
         &mut self,
     ) -> Result<(), NmstateError> {
-        if let Some(Interface::Vrf(apply_iface)) = self.for_apply.as_mut() {
-            apply_iface.merge_table_id(self.current.as_ref())?;
-        }
-        if let Some(Interface::Vrf(verify_iface)) = self.for_verify.as_mut() {
-            verify_iface.merge_table_id(self.current.as_ref())?;
+        if !self.merged.is_absent() {
+            if let Some(Interface::Vrf(apply_iface)) = self.for_apply.as_mut() {
+                apply_iface.merge_table_id(self.current.as_ref())?;
+            }
+            if let Some(Interface::Vrf(verify_iface)) = self.for_verify.as_mut()
+            {
+                verify_iface.merge_table_id(self.current.as_ref())?;
+            }
         }
         Ok(())
     }
