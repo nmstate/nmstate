@@ -33,7 +33,7 @@ use super::super::{
     connection::vxlan::NmSettingVxlan,
     connection::wired::NmSettingWired,
     convert::ToDbusValue,
-    NmError,
+    NmError, NmIfaceType,
 };
 
 const NM_AUTOCONENCT_PORT_DEFAULT: i32 = -1;
@@ -198,8 +198,8 @@ impl NmConnection {
         _connection_inner_string_member!(self, iface_name)
     }
 
-    pub fn iface_type(&self) -> Option<&str> {
-        _connection_inner_string_member!(self, iface_type)
+    pub fn iface_type(&self) -> Option<&NmIfaceType> {
+        self.connection.as_ref().and_then(|c| c.iface_type.as_ref())
     }
 
     pub fn id(&self) -> Option<&str> {
@@ -211,8 +211,10 @@ impl NmConnection {
         _connection_inner_string_member!(self, controller)
     }
 
-    pub fn controller_type(&self) -> Option<&str> {
-        _connection_inner_string_member!(self, controller_type)
+    pub fn controller_type(&self) -> Option<&NmIfaceType> {
+        self.connection
+            .as_ref()
+            .and_then(|c| c.controller_type.as_ref())
     }
 
     #[cfg(feature = "query_apply")]
@@ -335,10 +337,10 @@ impl NmConnection {
 pub struct NmSettingConnection {
     pub id: Option<String>,
     pub uuid: Option<String>,
-    pub iface_type: Option<String>,
+    pub iface_type: Option<NmIfaceType>,
     pub iface_name: Option<String>,
     pub controller: Option<String>,
-    pub controller_type: Option<String>,
+    pub controller_type: Option<NmIfaceType>,
     pub autoconnect: Option<bool>,
     pub autoconnect_ports: Option<bool>,
     pub lldp: Option<bool>,
@@ -352,10 +354,14 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
         Ok(Self {
             id: _from_map!(v, "id", String::try_from)?,
             uuid: _from_map!(v, "uuid", String::try_from)?,
-            iface_type: _from_map!(v, "type", String::try_from)?,
+            iface_type: _from_map!(v, "type", NmIfaceType::try_from)?,
             iface_name: _from_map!(v, "interface-name", String::try_from)?,
             controller: _from_map!(v, "master", String::try_from)?,
-            controller_type: _from_map!(v, "slave-type", String::try_from)?,
+            controller_type: _from_map!(
+                v,
+                "slave-type",
+                NmIfaceType::try_from
+            )?,
             autoconnect: _from_map!(v, "autoconnect", bool::try_from)?
                 .or(Some(true)),
             autoconnect_ports: NmSettingConnection::i32_to_autoconnect_ports(
@@ -378,7 +384,7 @@ impl ToDbusValue for NmSettingConnection {
             ret.insert("uuid", zvariant::Value::new(v.as_str()));
         }
         if let Some(v) = &self.iface_type {
-            ret.insert("type", zvariant::Value::new(v.as_str()));
+            ret.insert("type", zvariant::Value::new(v.to_string()));
         }
         if let Some(v) = &self.iface_name {
             ret.insert("interface-name", zvariant::Value::new(v.as_str()));
@@ -387,7 +393,7 @@ impl ToDbusValue for NmSettingConnection {
             ret.insert("master", zvariant::Value::new(v.as_str()));
         }
         if let Some(v) = &self.controller_type {
-            ret.insert("slave-type", zvariant::Value::new(v.as_str()));
+            ret.insert("slave-type", zvariant::Value::new(v.to_string()));
         }
         if let Some(v) = &self.lldp {
             ret.insert("lldp", zvariant::Value::new(*v as i32));

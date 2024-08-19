@@ -60,12 +60,6 @@ trait NetworkManager {
         active_connection: &zvariant::ObjectPath,
     ) -> zbus::Result<()>;
 
-    /// GetDeviceByIpIface method
-    fn get_device_by_ip_iface(
-        &self,
-        iface: &str,
-    ) -> zbus::Result<zvariant::OwnedObjectPath>;
-
     /// GetAllDevices method
     fn get_all_devices(&self) -> zbus::Result<Vec<zvariant::OwnedObjectPath>>;
 

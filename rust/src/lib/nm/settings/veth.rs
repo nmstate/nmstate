@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::super::nm_dbus::{NmConnection, NmSettingVeth};
+use super::super::nm_dbus::{NmConnection, NmIfaceType, NmSettingVeth};
 
-use super::{
-    connection::{
-        gen_nm_conn_setting, NM_SETTING_VETH_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
-    },
-    ip::gen_nm_ip_setting,
-};
+use super::{connection::gen_nm_conn_setting, ip::gen_nm_ip_setting};
 
 use crate::{
     BaseInterface, EthernetInterface, Interface, InterfaceIpv4, InterfaceIpv6,
@@ -32,8 +26,8 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
     for nm_conn in exist_nm_conns {
         if let Some(iface_type) = nm_conn.iface_type() {
             if nm_conn.iface_name() == Some(peer_name)
-                && [NM_SETTING_WIRED_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME]
-                    .contains(&iface_type)
+                && [NmIfaceType::Ethernet, NmIfaceType::Veth]
+                    .contains(iface_type)
             {
                 return Ok(nm_conn.clone());
             }

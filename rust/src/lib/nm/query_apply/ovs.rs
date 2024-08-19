@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::super::nm_dbus::{NmApi, NmConnection, NmDevice};
+use super::super::nm_dbus::{NmApi, NmConnection, NmDevice, NmIfaceType};
 use super::super::{
     query_apply::profile::{delete_profiles, is_uuid},
-    settings::{get_exist_profile, NM_SETTING_OVS_PORT_SETTING_NAME},
+    settings::get_exist_profile,
     show::nm_conn_to_base_iface,
 };
 
@@ -43,7 +43,7 @@ pub(crate) fn delete_orphan_ovs_ports(
                     .connection
                     .as_ref()
                     .and_then(|c| c.controller_type.as_ref())
-                    == Some(&NM_SETTING_OVS_PORT_SETTING_NAME.to_string())
+                    == Some(&NmIfaceType::OvsPort)
                 {
                     if let Some(ovs_port_name) = exist_profile
                         .connection
@@ -105,11 +105,11 @@ pub(crate) fn merge_ovs_netdev_tun_iface(
 ) {
     let tun_nm_devs: Vec<&NmDevice> = nm_devs
         .iter()
-        .filter(|d| d.iface_type.as_str() == "tun")
+        .filter(|d| d.iface_type == NmIfaceType::Tun)
         .collect();
     let tun_nm_conns: Vec<&NmConnection> = nm_conns
         .iter()
-        .filter(|c| c.iface_type() == Some("tun"))
+        .filter(|c| c.iface_type() == Some(&NmIfaceType::Tun))
         .collect();
     for iface in net_state
         .interfaces

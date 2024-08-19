@@ -25,8 +25,8 @@ pub use self::active_connection::{
     NmActiveConnection, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
 pub use self::connection::{
-    NmConnection, NmIpRoute, NmIpRouteRule, NmIpRouteRuleAction, NmRange,
-    NmSetting8021X, NmSettingBond, NmSettingBondPort, NmSettingBridge,
+    NmConnection, NmIfaceType, NmIpRoute, NmIpRouteRule, NmIpRouteRuleAction,
+    NmRange, NmSetting8021X, NmSettingBond, NmSettingBondPort, NmSettingBridge,
     NmSettingBridgePort, NmSettingBridgeVlanRange, NmSettingConnection,
     NmSettingEthtool, NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod,
     NmSettingLoopback, NmSettingMacSec, NmSettingMacVlan, NmSettingOvsBridge,

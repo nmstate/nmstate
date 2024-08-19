@@ -2201,6 +2201,28 @@ def remove_ovn_state_present(state):
 
 @pytest.mark.tier1
 @ip_monitor_assert_stable_link_up(BRIDGE1)
-def test_ovs_link_stable(ovs_bridge1_with_internal_port_same_name):
+def test_ovs_internal_iface_link_stable(
+    ovs_bridge1_with_internal_port_same_name,
+):
     desired_state = ovs_bridge1_with_internal_port_same_name
+    libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def ovs_bridge1_with_bond_as_system_iface(eth1_up, eth2_up):
+    with bond_interface(BOND1, ["eth1"]):
+        bridge = Bridge(BRIDGE1)
+        bridge.add_system_port(BOND1)
+        bridge.add_internal_port(
+            BRIDGE1, ipv4_state={InterfaceIPv4.ENABLED: False}
+        )
+        with bridge.create() as state:
+            yield state
+
+
+@pytest.mark.tier1
+@ip_monitor_assert_stable_link_up(BRIDGE1)
+@ip_monitor_assert_stable_link_up(BOND1)
+def test_ovs_system_iface_link_stable(ovs_bridge1_with_bond_as_system_iface):
+    desired_state = ovs_bridge1_with_bond_as_system_iface
     libnmstate.apply(desired_state)
