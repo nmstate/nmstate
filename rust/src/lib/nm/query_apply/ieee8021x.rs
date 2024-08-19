@@ -20,6 +20,8 @@ pub(crate) fn nm_802_1x_to_nmstate(
             .and_then(vec_u8_to_file_path),
         ca_cert: nm_setting.ca_cert.as_deref().and_then(vec_u8_to_file_path),
         private_key_password: nm_setting.private_key_password.clone(),
+        phase2_auth: nm_setting.phase2_auth.clone(),
+        password: nm_setting.password.clone(),
     }
 }
 

@@ -1,1 +1,2 @@
-* TLS
+*   PEAP,TLS
+"client.example.org"	MSCHAPV2	"password"	[2]
