@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::NmIfaceType;
+
 const NM_DEVICE_STATE_UNKNOWN: u32 = 0;
 const NM_DEVICE_STATE_UNMANAGED: u32 = 10;
 const NM_DEVICE_STATE_UNAVAILABLE: u32 = 20;
@@ -340,7 +342,7 @@ impl From<u32> for NmDeviceStateReason {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmDevice {
     pub name: String,
-    pub iface_type: String,
+    pub iface_type: NmIfaceType,
     pub state: NmDeviceState,
     pub state_reason: NmDeviceStateReason,
     pub is_mac_vtap: bool,

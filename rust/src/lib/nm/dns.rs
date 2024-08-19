@@ -1,20 +1,34 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    dns::parse_dns_ipv6_link_local_srv, ip::is_ipv6_addr,
-    nm::settings::SUPPORTED_NM_KERNEL_IFACE_TYPES,
-};
+use crate::{dns::parse_dns_ipv6_link_local_srv, ip::is_ipv6_addr};
 use crate::{
     DnsClientState, ErrorKind, Interface, InterfaceType, MergedInterface,
     MergedInterfaces, MergedNetworkState, NmstateError,
 };
 
 use super::nm_dbus::{
-    NmActiveConnection, NmDevice, NmDeviceState,
+    NmActiveConnection, NmDevice, NmDeviceState, NmIfaceType,
     NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
+
+const SUPPORT_NM_KERNEL_IFACES: [NmIfaceType; 14] = [
+    NmIfaceType::Ethernet,
+    NmIfaceType::Veth,
+    NmIfaceType::Bond,
+    NmIfaceType::Dummy,
+    NmIfaceType::Bridge,
+    NmIfaceType::OvsIface,
+    NmIfaceType::Vrf,
+    NmIfaceType::Vlan,
+    NmIfaceType::Vxlan,
+    NmIfaceType::Macvlan,
+    NmIfaceType::Loopback,
+    NmIfaceType::Infiniband,
+    NmIfaceType::Macsec,
+    NmIfaceType::Hsr,
+];
 
 pub(crate) fn store_dns_config_to_iface(
     merged_state: &mut MergedNetworkState,
@@ -540,8 +554,7 @@ fn is_external_managed(
 ) -> bool {
     for nm_ac in nm_acs {
         if nm_ac.iface_name.as_str() == iface_name
-            && SUPPORTED_NM_KERNEL_IFACE_TYPES
-                .contains(&nm_ac.iface_type.as_str())
+            && is_supported_kernel_iface(&nm_ac.iface_type)
             && nm_ac.state_flags & NM_ACTIVATION_STATE_FLAG_EXTERNAL > 0
         {
             return true;
@@ -553,8 +566,7 @@ fn is_external_managed(
 fn is_unmanaged(iface_name: &str, nm_devs: &[NmDevice]) -> bool {
     for nm_dev in nm_devs {
         if nm_dev.name.as_str() == iface_name
-            && SUPPORTED_NM_KERNEL_IFACE_TYPES
-                .contains(&nm_dev.iface_type.as_str())
+            && is_supported_kernel_iface(&nm_dev.iface_type)
             && nm_dev.state == NmDeviceState::Unmanaged
         {
             return true;
@@ -922,4 +934,8 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
             merged_state.dns.searches.as_slice().join(" ")
         ),
     ))
+}
+
+fn is_supported_kernel_iface(nm_iface_type: &NmIfaceType) -> bool {
+    SUPPORT_NM_KERNEL_IFACES.contains(nm_iface_type)
 }

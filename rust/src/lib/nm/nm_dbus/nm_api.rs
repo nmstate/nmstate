@@ -18,9 +18,8 @@ use super::{
     query_apply::device::{
         nm_dev_delete, nm_dev_from_obj_path, nm_dev_get_llpd,
     },
+    NmIfaceType,
 };
-
-const NM_OVS_DEV_TYPES: [&str; 3] = ["ovs-interface", "ovs-port", "ovs-bridge"];
 
 pub struct NmApi<'a> {
     pub(crate) dbus: NmDbus<'a>,
@@ -411,29 +410,27 @@ impl<'a> NmApi<'a> {
         self.dbus.set_global_dns_configuration(config.to_value()?)
     }
 
-    // Use `org.freedesktop.NetworkManager.GetDeviceByIpIface`.
-    // Except OVS bridge/port/iface as they might hold identical device name
-    // where we search all disks.
+    // We have to search all NmDevice because OVS port might hold identical
+    // interface name as OVS system interface.
     fn get_disk_obj_path(
         &mut self,
         iface_name: &str,
-        nm_iface_type: &str,
+        nm_iface_type: &NmIfaceType,
     ) -> Result<String, NmError> {
-        if NM_OVS_DEV_TYPES.contains(&nm_iface_type) {
-            if let Some(nm_dev) = self
-                .devices_get()?
-                .into_iter()
-                .find(|d| d.name == iface_name && d.iface_type == nm_iface_type)
-            {
-                Ok(nm_dev.obj_path)
-            } else {
-                Err(NmError::new(
-                    ErrorKind::InvalidArgument,
-                    format!("Interface {iface_name}/{nm_iface_type} not found"),
-                ))
-            }
+        if let Some(nm_dev) = self.devices_get()?.into_iter().find(|d| {
+            d.name == iface_name
+                && ((&d.iface_type == nm_iface_type)
+                    || ([NmIfaceType::Veth, NmIfaceType::Ethernet]
+                        .contains(nm_iface_type)
+                        && [NmIfaceType::Veth, NmIfaceType::Ethernet]
+                            .contains(&d.iface_type)))
+        }) {
+            Ok(nm_dev.obj_path)
         } else {
-            self.dbus.nm_dev_obj_path_get(iface_name)
+            Err(NmError::new(
+                ErrorKind::InvalidArgument,
+                format!("Interface {iface_name}/{nm_iface_type} not found"),
+            ))
         }
     }
 }

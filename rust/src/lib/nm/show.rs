@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::nm::nm_dbus::{
     NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
-    NmLldpNeighbor, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
+    NmIfaceType, NmLldpNeighbor, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
 
 use super::{
@@ -19,10 +19,7 @@ use super::{
         query_nmstate_wait_ip, retrieve_dns_info,
         vpn::get_supported_vpn_ifaces,
     },
-    settings::{
-        get_bond_balance_slb, NM_SETTING_OVS_IFACE_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
-    },
+    settings::get_bond_balance_slb,
 };
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
@@ -68,10 +65,9 @@ pub(crate) fn nm_retrieve(
         // The OVS `netdev` datapath has both ovs-interface and
         // tun interface, we only store ovs-interface here, then
         // `merge_ovs_netdev_tun_iface()` afterwards
-        if nm_dev.iface_type == "tun"
+        if nm_dev.iface_type == NmIfaceType::Tun
             && nm_devs.as_slice().iter().any(|n| {
-                n.name == nm_dev.name
-                    && n.iface_type == NM_SETTING_OVS_IFACE_SETTING_NAME
+                n.name == nm_dev.name && n.iface_type == NmIfaceType::OvsIface
             })
         {
             continue;
@@ -217,7 +213,7 @@ pub(crate) fn nm_conn_to_base_iface(
     lldp_neighbors: Option<Vec<NmLldpNeighbor>>,
 ) -> Option<BaseInterface> {
     if let Some(iface_name) = nm_conn.iface_name().or_else(|| {
-        if nm_conn.iface_type() == Some("vpn") {
+        if nm_conn.iface_type() == Some(&NmIfaceType::Vpn) {
             nm_conn.id()
         } else {
             None
@@ -382,17 +378,17 @@ fn iface_get(
 
 fn get_first_nm_conn<'a>(
     nm_conns_name_type_index: &'a HashMap<
-        (&'a str, &'a str),
+        (&'a str, NmIfaceType),
         Vec<&'a NmConnection>,
     >,
     name: &'a str,
-    nm_iface_type: &'a str,
+    nm_iface_type: &'a NmIfaceType,
 ) -> Option<&'a NmConnection> {
     // Treating veth as ethernet
-    let nm_iface_type = if nm_iface_type == NM_SETTING_VETH_SETTING_NAME {
-        NM_SETTING_WIRED_SETTING_NAME
+    let nm_iface_type = if nm_iface_type == &NmIfaceType::Veth {
+        NmIfaceType::Ethernet
     } else {
-        nm_iface_type
+        nm_iface_type.clone()
     };
     if let Some(nm_conns) = nm_conns_name_type_index.get(&(name, nm_iface_type))
     {
@@ -408,18 +404,18 @@ fn get_first_nm_conn<'a>(
 
 fn get_nm_ac<'a>(
     nm_acs_name_type_index: &'a HashMap<
-        (&'a str, &'a str),
+        (&'a str, NmIfaceType),
         &'a NmActiveConnection,
     >,
     name: &'a str,
-    nm_iface_type: &'a str,
+    nm_iface_type: &'a NmIfaceType,
 ) -> Option<&'a NmActiveConnection> {
     nm_acs_name_type_index
         .get(&(
             name,
             match nm_iface_type {
-                NM_SETTING_VETH_SETTING_NAME => NM_SETTING_WIRED_SETTING_NAME,
-                t => t,
+                NmIfaceType::Veth => NmIfaceType::Ethernet,
+                t => t.clone(),
             },
         ))
         .copied()

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::NmIfaceType;
 #[cfg(feature = "query_apply")]
 use super::{
     connection::nm_con_get_from_obj_path,
@@ -12,7 +13,7 @@ pub const NM_ACTIVATION_STATE_FLAG_EXTERNAL: u32 = 0x80;
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmActiveConnection {
     pub uuid: String,
-    pub iface_type: String,
+    pub iface_type: NmIfaceType,
     pub iface_name: String,
     pub state_flags: u32,
 }
@@ -96,10 +97,7 @@ pub(crate) fn get_nm_ac_by_obj_path(
             Some(i) => i.to_string(),
             None => "".to_string(),
         };
-        let iface_type = match nm_conn.iface_type() {
-            Some(i) => i.to_string(),
-            None => "".to_string(),
-        };
+        let iface_type = nm_conn.iface_type().cloned().unwrap_or_default();
         Ok(Some(NmActiveConnection {
             uuid: nm_ac_obj_path_uuid_get(connection, obj_path)?,
             iface_name,
