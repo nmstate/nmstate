@@ -1,4 +1,19 @@
 # Changelog
+## [2.2.35] - 2024-08-20
+### Breaking changes
+ - Rust API: `VrfConfig.table_id` changed `u32` to `Option<u32>`.(2900bf5e)
+ - Rust API: Use Box to wrap Interface enum entries. (5d5319ca)
+
+### New features
+ - Add 802.1x PEAP auth. (f43657da)
+
+### Bug fixes
+ - nm: Fix incorrect device-reapply call. (b1255c3d, 19e60c17)
+ - nm: Change unknown device state log to debug. (20d72e7e)
+ - nm: send lldp with correct D-Bus type INT32. (35557b0d)
+ - gen_diff: Include context information for `gen_diff()`. (c34563d9)
+ - gen_diff: Use original desired interface when creating new interface. (ee8c8a26)
+
 ## [2.2.34] - 2024-08-01
 ### Breaking changes
  - Set Minimum Supported Rust Version to 1.66. (ef4a5e58)
