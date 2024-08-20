@@ -494,6 +494,8 @@ class Ieee8021X:
     PRIVATE_KEY_PASSWORD = "private-key-password"
     CLIENT_CERT = "client-cert"
     CA_CERT = "ca-cert"
+    PHASE2_AUTH = "phase2-auth"
+    PASSWORD = "password"
 
 
 class Ethtool:

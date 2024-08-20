@@ -203,6 +203,7 @@ function upgrade_nm_from_copr {
     exec_cmd "dnf copr enable --assumeyes ${copr_repo}"
     # centos-stream NetworkManager package is providing the alpha builds.
     # Sometimes it could be greater than the one packaged on Copr.
+    exec_cmd "systemctl stop NetworkManager"
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd "dnf install --assumeyes NetworkManager NetworkManager-ovs  \
         --disablerepo '*' --enablerepo '${copr_repo_id}'"
@@ -213,6 +214,7 @@ function upgrade_nm_from_rpm_dir {
     local nm_rpm_dir=$1
     mkdir $EXPORT_DIR/nm_rpms || true
     find $nm_rpm_dir -name \*.rpm -exec cp -v {} "${EXPORT_DIR}/nm_rpms/" \;
+    exec_cmd "systemctl stop NetworkManager"
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd "dnf install -y ${CONT_EXPORT_DIR}/nm_rpms/*.rpm"
     exec_cmd "rpm -q NetworkManager-libreswan || \
@@ -232,7 +234,8 @@ function run_customize_command {
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
     el8,el9,el10,centos-stream,fed,rawhide,copr:,artifacts-dir:,test-vdsm,\
-    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:,nolog" \
+    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:,nolog,\
+    pretest-exec:" \
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -301,6 +304,10 @@ while true; do
     --compiled-rpms-dir)
         shift
         COMPILED_RPMS_DIR="$1"
+        ;;
+    --pretest-exec)
+        shift
+        PRETEST_EXEC="$1"
         ;;
     --help)
         set +x
@@ -384,4 +391,9 @@ if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
    [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
     install_nmstate
 fi
+
+if [[ -v PRETEST_EXEC ]];then
+    exec_cmd "$PRETEST_EXEC"
+fi
+
 run_tests
