@@ -85,3 +85,21 @@ fn test_vrf_on_bond_vlan_got_auto_remove() {
         .unwrap();
     assert!(iface.is_absent());
 }
+
+#[test]
+fn test_vrf_skip_port_if_null() {
+    let iface: VrfInterface = serde_yaml::from_str(
+        r#"---
+        name: vrf1
+        type: vrf
+        state: up
+        vrf:
+          route-table-id: "101"
+        "#,
+    )
+    .unwrap();
+
+    let iface_yaml = serde_yaml::to_string(&iface).unwrap();
+
+    assert!(!iface_yaml.contains("port"))
+}
