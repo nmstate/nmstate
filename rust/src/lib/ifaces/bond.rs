@@ -14,7 +14,9 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
-/// Bond interface. When serializing or deserializing, the [BaseInterface] will
+/// Bond interface.
+///
+/// When serializing or deserializing, the [BaseInterface] will
 /// be flatted and [BondConfig] stored as `link-aggregation` section. The yaml
 /// output [crate::NetworkState] containing an example bond interface:
 /// ```yml
@@ -700,13 +702,14 @@ impl From<BondAllPortsActive> for u8 {
     }
 }
 
+/// The `arp_all_targets` kernel bond option.
+///
+/// Specifies the quantity of arp_ip_targets that must be reachable in order for
+/// the ARP monitor to consider a port as being up. This option affects only
+/// active-backup mode for ports with arp_validation enabled.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case", remote = "BondArpAllTargets")]
 #[non_exhaustive]
-/// The `arp_all_targets` kernel bond option: Specifies the quantity of
-/// arp_ip_targets that must be reachable in order for the ARP monitor to
-/// consider a port as being up. This option affects only active-backup mode
-/// for ports with arp_validation enabled.
 pub enum BondArpAllTargets {
     /// consider the port up only when any of the `arp_ip_targets` is reachable
     #[serde(alias = "0")]
@@ -752,13 +755,14 @@ impl std::fmt::Display for BondArpAllTargets {
     }
 }
 
+/// The `arp_validate` kernel bond option.
+///
+/// Specifies whether or not ARP probes and replies should be validated in any
+/// mode that supports arp monitoring, or whether non-ARP traffic should be
+/// filtered (disregarded) for link monitoring purposes.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "snake_case", remote = "BondArpValidate")]
 #[non_exhaustive]
-/// The `arp_validate` kernel bond option: Specifies whether or not ARP probes
-/// and replies should be validated in any mode that supports arp monitoring, or
-/// whether non-ARP traffic should be filtered (disregarded) for link monitoring
-/// purposes.
 pub enum BondArpValidate {
     /// No validation or filtering is performed.
     /// Serialize to `none`.
@@ -839,13 +843,15 @@ impl std::fmt::Display for BondArpValidate {
     }
 }
 
+/// The `fail_over_mac` kernel bond option.
+///
+/// Specifies whether active-backup mode should set all ports to the same MAC
+/// address at port attachment (the traditional behavior), or, when enabled,
+/// perform special handling of the bond's MAC address in accordance with the
+/// selected policy.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case", remote = "BondFailOverMac")]
 #[non_exhaustive]
-/// The `fail_over_mac` kernel bond option: Specifies whether active-backup mode
-/// should set all ports to the same MAC address at port attachment (the
-/// traditional behavior), or, when enabled, perform special handling of the
-/// bond's MAC address in accordance with the selected policy.
 pub enum BondFailOverMac {
     /// This setting disables fail_over_mac, and causes bonding to set all
     /// ports of an active-backup bond to the same MAC address at attachment
@@ -910,14 +916,15 @@ impl std::fmt::Display for BondFailOverMac {
     }
 }
 
+/// The `primary_reselect` kernel bond option.
+///
+/// Specifies the reselection policy for the primary port. This affects how the
+/// primary port is chosen to become the active port when failure of the active
+/// port or recovery of the primary port occurs. This option is designed to
+/// prevent flip-flopping between the primary port and other ports.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case", remote = "BondPrimaryReselect")]
 #[non_exhaustive]
-/// The `primary_reselect` kernel bond option: Specifies the reselection policy
-/// for the primary port. This affects how the primary port is chosen to
-/// become the active port when failure of the active port or recovery of the
-/// primary port occurs. This option is designed to prevent flip-flopping
-/// between the primary port and other ports.
 pub enum BondPrimaryReselect {
     ///The primary port becomes the active port whenever it comes back up.
     /// Serialize to `always`.
@@ -974,11 +981,13 @@ impl std::fmt::Display for BondPrimaryReselect {
     }
 }
 
+/// The `xmit_hash_policy` kernel bond option.
+///
+/// Selects the transmit hash policy to use for port selection in balance-xor,
+/// 802.3ad, and tlb modes.
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
 #[serde(remote = "BondXmitHashPolicy")]
-/// The `xmit_hash_policy` kernel bond option: Selects the transmit hash policy
-/// to use for port selection in balance-xor, 802.3ad, and tlb modes.
 pub enum BondXmitHashPolicy {
     #[serde(rename = "layer2", alias = "0")]
     /// Serialize to `layer2`.
