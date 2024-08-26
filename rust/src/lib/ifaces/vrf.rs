@@ -132,7 +132,7 @@ impl VrfInterface {
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct VrfConfig {
-    #[serde(alias = "ports")]
+    #[serde(alias = "ports", skip_serializing_if = "Option::is_none")]
     /// Port list.
     /// Deserialize and serialize from/to `port`.
     /// Also deserialize from `ports`.
