@@ -23,14 +23,14 @@ const COPY_MAC_ALLOWED_IFACE_TYPES: [InterfaceType; 3] = [
     InterfaceType::OvsInterface,
 ];
 
+/// Represent a list of [Interface].
+///
+/// With special [serde::Deserializer] and [serde::Serializer].  When applying
+/// complex nested interface(e.g. bridge over bond over vlan of eth1), the
+/// supported maximum nest level is 4 like previous example.  For 5+ nested
+/// level, you need to place controller interface before its ports.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
-/// Represent a list of [Interface] with special [serde::Deserializer] and
-/// [serde::Serializer].
-/// When applying complex nested interface(e.g. bridge over bond over vlan of
-/// eth1), the supported maximum nest level is 4 like previous example.
-/// For 5+ nested level, you need to place controller interface before its
-/// ports.
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
     pub(crate) user_ifaces: HashMap<(String, InterfaceType), Interface>,

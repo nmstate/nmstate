@@ -14,6 +14,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 /// Bridge interface provided by linux kernel.
+///
 /// When serializing or deserializing, the [BaseInterface] will
 /// be flatted and [LinuxBridgeConfig] stored as `bridge` section. The yaml
 /// output [crate::NetworkState] containing an example linux bridge interface:
