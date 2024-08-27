@@ -245,6 +245,18 @@ class TestVrf:
         }
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
+        apply_with_description(
+            "Delete the vrf interface test-vrf0",
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_VRF0,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            },
+        )
+        assertlib.assert_absent(TEST_VRF0)
 
     def test_add_and_remove_port(self, vrf0_with_port0, port1_up):
         iface_info = vrf0_with_port0
