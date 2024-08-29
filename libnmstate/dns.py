@@ -82,18 +82,20 @@ class DnsState:
                     raise NmstateValueError(
                         "Option '{}' is not supported to hold "
                         "a value, only support these without "
-                        "value: {} and these with values: {}:n",
-                        opt,
-                        ", ".join(SUPPORTED_DNS_OPTS_NO_VALUE),
-                        ":n, ".join(SUPPORTED_DNS_OPTS_WITH_VALUE),
+                        "value: {} and these with values: {}:n".format(
+                            opt,
+                            ", ".join(SUPPORTED_DNS_OPTS_NO_VALUE),
+                            ":n, ".join(SUPPORTED_DNS_OPTS_WITH_VALUE),
+                        )
                     )
             elif opt not in SUPPORTED_DNS_OPTS_NO_VALUE:
                 raise NmstateValueError(
                     "Option '{}' is not supported, only support these "
-                    "without value: {} and these with values: {}:n",
-                    opt,
-                    ", ".join(SUPPORTED_DNS_OPTS_NO_VALUE),
-                    ":n, ".join(SUPPORTED_DNS_OPTS_WITH_VALUE),
+                    "without value: {} and these with values: {}:n".format(
+                        opt,
+                        ", ".join(SUPPORTED_DNS_OPTS_NO_VALUE),
+                        ":n, ".join(SUPPORTED_DNS_OPTS_WITH_VALUE),
+                    )
                 )
 
     @property
