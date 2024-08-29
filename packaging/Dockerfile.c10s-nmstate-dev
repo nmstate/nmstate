@@ -1,0 +1,37 @@
+FROM quay.io/centos/centos:stream10-development
+
+RUN echo "2024-06-26" > /build_time
+
+RUN dnf update -y && \
+    dnf -y install dnf-plugins-core  && \
+    dnf -y copr enable nmstate/ovs-el10 centos-stream-10-x86_64 && \
+    dnf config-manager --set-enabled crb && \
+    dnf -y install --setopt=install_weak_deps=False \
+        systemd make go rust-toolset NetworkManager NetworkManager-ovs \
+        systemd-udev python3-devel python3-pyyaml python3-setuptools dnsmasq \
+        git iproute rpm-build python3-pytest wpa_supplicant hostapd libndp \
+        python3-pip procps-ng dpdk libreswan NetworkManager-libreswan \
+        openvswitch3.3 && \
+    dnf clean all
+
+RUN go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
+
+RUN mkdir -p /etc/NetworkManager/conf.d/
+
+COPY network_manager_enable_trace.conf \
+     /etc/NetworkManager/conf.d/97-trace-logging.conf
+COPY network_manager_keyfile.conf \
+     /etc/NetworkManager/conf.d/96-keyfile.conf
+
+# RHEL/CentOS stream 10 container has no /etc/systemd/journald.conf file in systemd rpm
+RUN  echo -e '[Journal]\nRateLimitInterval=0\nRateLimitBurst=0' > \
+    /etc/systemd/journald.conf
+
+RUN echo net.ipv6.conf.all.disable_ipv6=0 > \
+        /etc/sysctl.d/00-enable-ipv6.conf && \
+    echo kernel.core_pattern=/exported-artifacts/core.%h.%e.%t > \
+    /etc/sysctl.d/01-export-kernel-cores.conf
+
+RUN systemctl enable systemd-udevd NetworkManager openvswitch ipsec
+
+CMD ["/usr/sbin/init"]

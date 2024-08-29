@@ -174,7 +174,10 @@ port1_up = eth2_up
 
 def pytest_report_header(config):
     nm_ver = _get_package_nvr("NetworkManager")
-    nm_libreswan_ver = _get_package_nvr("NetworkManager-libreswan")
+    try:
+        nm_libreswan_ver = _get_package_nvr("NetworkManager-libreswan")
+    except subprocess.CalledProcessError:
+        nm_libreswan_ver = "NetworkManager-libreswan (not installed)"
     return REPORT_HEADER.format(
         rpms=f"{nm_ver} {nm_libreswan_ver}",
         osname=_get_osname(),

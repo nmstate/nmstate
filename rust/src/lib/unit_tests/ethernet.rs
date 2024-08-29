@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ErrorKind, EthernetInterface, InterfaceType, Interfaces, MergedInterfaces,
+    ErrorKind, EthernetInterface, InterfaceIdentifier, InterfaceType,
+    Interfaces, MergedInterfaces,
 };
 
 #[test]
@@ -197,6 +198,160 @@ fn test_new_veth_without_peer_config() {
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
-        assert!(e.msg().contains("Veth interface veth1 does not exist"));
+        assert!(e.msg().contains("interface veth1 does not exist"));
     }
+}
+
+#[test]
+fn test_mac_identifer_use_permanent_mac_first() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b
+          permanent-mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b
+          permanent-mac-address: 00:23:45:67:89:1b
+        ",
+    )
+    .unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: wan0
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1b
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let des_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth2")
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(
+        des_iface.base_iface().identifier.as_ref(),
+        Some(InterfaceIdentifier::MacAddress).as_ref()
+    );
+    assert_eq!(des_iface.base_iface().profile_name.as_deref(), Some("wan0"))
+}
+
+#[test]
+fn test_mac_identifer_use_fallback_to_mac() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b
+          permanent-mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b
+          permanent-mac-address: 00:23:45:67:89:1b
+        - name: eth3
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1c
+        ",
+    )
+    .unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: wan0
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1c
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let des_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth3")
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(
+        des_iface.base_iface().identifier.as_ref(),
+        Some(InterfaceIdentifier::MacAddress).as_ref()
+    );
+    assert_eq!(des_iface.base_iface().profile_name.as_deref(), Some("wan0"))
+}
+
+#[test]
+fn test_mac_identifer_check_iface_type_also() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: bond0
+          type: bond
+          state: up
+          mac-address: 00:23:45:67:89:1b
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - eth2
+            - eth1
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b
+          permanent-mac-address: 00:23:45:67:89:1a
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: 00:23:45:67:89:1b
+          permanent-mac-address: 00:23:45:67:89:1b
+        ",
+    )
+    .unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: wan0
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: 00:23:45:67:89:1b
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let des_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth2")
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(
+        des_iface.base_iface().identifier.as_ref(),
+        Some(InterfaceIdentifier::MacAddress).as_ref()
+    );
+    assert_eq!(des_iface.base_iface().profile_name.as_deref(), Some("wan0"))
 }

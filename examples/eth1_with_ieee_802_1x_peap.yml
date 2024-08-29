@@ -1,0 +1,11 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    802.1x:
+      eap-methods:
+        - peap
+      identity: client.example.org
+      password: password
+      phase2-auth: mschapv2

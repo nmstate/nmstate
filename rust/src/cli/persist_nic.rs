@@ -357,7 +357,7 @@ pub(crate) fn get_systemd_preferred_iface_name(
         cmd.arg(root).arg("udevadm");
     }
     cmd.args(UDEVADM_CMD_OPT)
-        .arg(&format!("/sys/class/net/{iface_name}"));
+        .arg(format!("/sys/class/net/{iface_name}"));
     let output = cmd.output()?;
     if !output.status.success() {
         return Err(CliError::from(format!(

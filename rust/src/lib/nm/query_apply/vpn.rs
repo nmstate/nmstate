@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::super::{
-    nm_dbus::{NmActiveConnection, NmConnection, NmSettingVpn},
+    nm_dbus::{NmActiveConnection, NmConnection, NmIfaceType, NmSettingVpn},
     show::nm_conn_to_base_iface,
 };
 
@@ -19,7 +19,7 @@ pub(crate) fn get_supported_vpn_ifaces(
 ) -> Result<Vec<Interface>, NmstateError> {
     let mut ret = Vec::new();
     for nm_conn in nm_acs.iter().filter_map(|nm_ac| {
-        if nm_ac.iface_type == "vpn" {
+        if nm_ac.iface_type == NmIfaceType::Vpn {
             nm_saved_conn_uuid_index.get(nm_ac.uuid.as_str())
         } else {
             None
@@ -36,7 +36,7 @@ pub(crate) fn get_supported_vpn_ifaces(
                     base_iface.iface_type = InterfaceType::Ipsec;
                     iface.base = base_iface;
                     iface.libreswan = Some(get_libreswan_conf(nm_set_vpn));
-                    ret.push(Interface::Ipsec(iface));
+                    ret.push(Interface::Ipsec(Box::new(iface)));
                 }
             }
         }
@@ -99,7 +99,10 @@ pub(crate) fn get_match_ipsec_nm_conn<'a>(
 ) -> Vec<&'a NmConnection> {
     all_nm_conns
         .iter()
-        .filter(|c| c.iface_type() == Some("vpn") && c.id() == Some(iface_name))
+        .filter(|c| {
+            c.iface_type() == Some(&NmIfaceType::Vpn)
+                && c.id() == Some(iface_name)
+        })
         .collect()
 }
 

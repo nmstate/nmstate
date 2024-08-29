@@ -422,13 +422,14 @@ fn gen_dummy_ifaces(iface_count: usize) -> NetworkState {
     let mut ret = NetworkState::default();
 
     for i in 0..iface_count {
-        ret.interfaces.push(Interface::Dummy(DummyInterface {
-            base: BaseInterface {
-                name: format!("dummy{i}"),
-                iface_type: InterfaceType::Dummy,
-                ..Default::default()
-            },
-        }));
+        ret.interfaces
+            .push(Interface::Dummy(Box::new(DummyInterface {
+                base: BaseInterface {
+                    name: format!("dummy{i}"),
+                    iface_type: InterfaceType::Dummy,
+                    ..Default::default()
+                },
+            })));
     }
     ret
 }

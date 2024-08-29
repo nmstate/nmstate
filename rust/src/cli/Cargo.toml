@@ -1,6 +1,6 @@
 [package]
 name = "nmstatectl"
-version = "2.2.34"
+version = "2.2.36"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Command line tool for networking management in a declarative manner"
 license = "Apache-2.0"
@@ -8,9 +8,9 @@ homepage = "https://nmstate.io"
 documentation = "https://nmstate.io"
 repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
-categories = ["network-programming", "os::linux"]
+categories = ["network-programming"]
 edition = "2021"
-rust-version = "1.58"
+rust-version = "1.66"
 
 [[bin]]
 name = "nmstatectl"

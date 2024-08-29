@@ -1,0 +1,19 @@
+---
+interfaces:
+- name: vrf100
+  type: vrf
+  state: up
+  vrf:
+    route-table-id: 100
+    ports:
+      - eth1
+      - eth2
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth2
+  type: ethernet
+  state: up
+- name: eth3
+  type: ethernet
+  state: up

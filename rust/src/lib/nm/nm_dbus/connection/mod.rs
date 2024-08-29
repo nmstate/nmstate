@@ -25,6 +25,7 @@ mod dns;
 mod ethtool;
 mod hsr;
 mod ieee8021x;
+mod iface_type;
 mod infiniband;
 mod ip;
 mod loopback;
@@ -52,6 +53,7 @@ pub use self::conn::{
 pub use self::ethtool::NmSettingEthtool;
 pub use self::hsr::NmSettingHsr;
 pub use self::ieee8021x::NmSetting8021X;
+pub use self::iface_type::NmIfaceType;
 pub use self::infiniband::NmSettingInfiniBand;
 pub use self::ip::{NmSettingIp, NmSettingIpMethod};
 pub use self::loopback::NmSettingLoopback;

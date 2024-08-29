@@ -19,7 +19,7 @@ NM_TYPE="${array[1]}"
 TEST_TYPE="${array[2]}"
 TEST_ARG="--test-type $TEST_TYPE"
 
-CUSTOMIZE_ARG=""
+PRETEST_EXEC="true"
 COPR_ARG=""
 
 if [ $OS_TYPE == "c8s" ];then
@@ -30,6 +30,8 @@ elif [ $OS_TYPE == "fed" ];then
 elif [ $OS_TYPE == "c9s" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c9s-nmstate-dev"
     TEST_ARG="$TEST_ARG --compiled-rpms-dir rpms/el9"
+elif [ $OS_TYPE == "c10s" ];then
+    CONTAINER_IMAGE="quay.io/nmstate/c10s-nmstate-dev"
 else
     echo "Invalid OS type ${OS_TYPE}"
     exit 1
@@ -41,7 +43,9 @@ fi
 
 if [ $NM_TYPE == "nm_1.42" ];then
     TEST_ARG="$TEST_ARG --copr networkmanager/NetworkManager-1.42"
+    PRETEST_EXEC='dnf copr enable -y nmstate/nm-libreswan-rhel9.2; dnf install -y NetworkManager-libreswan-1.2.14-4.el9'
 fi
+
 
 mkdir $TEST_ARTIFACTS_DIR || exit 1
 
@@ -62,4 +66,4 @@ env \
     $TEST_CMD \
         $TEST_ARG \
         --artifacts-dir $TEST_ARTIFACTS_DIR \
-        "$CUSTOMIZE_ARG"
+        --pretest-exec "$PRETEST_EXEC"

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::{
-    NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVeth,
-    NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
+    NmConnection, NmIfaceType, NmSettingConnection, NmSettingMacVlan,
+    NmSettingVeth, NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
 };
 use super::{
     bond::{gen_nm_bond_port_setting, gen_nm_bond_setting},
@@ -32,41 +32,6 @@ use crate::{
     ErrorKind, Interface, InterfaceIdentifier, InterfaceType, MergedInterface,
     MergedNetworkState, NmstateError, OvsBridgePortConfig,
 };
-
-pub(crate) const NM_SETTING_BRIDGE_SETTING_NAME: &str = "bridge";
-pub(crate) const NM_SETTING_WIRED_SETTING_NAME: &str = "802-3-ethernet";
-pub(crate) const NM_SETTING_OVS_BRIDGE_SETTING_NAME: &str = "ovs-bridge";
-pub(crate) const NM_SETTING_OVS_PORT_SETTING_NAME: &str = "ovs-port";
-pub(crate) const NM_SETTING_OVS_IFACE_SETTING_NAME: &str = "ovs-interface";
-pub(crate) const NM_SETTING_VETH_SETTING_NAME: &str = "veth";
-pub(crate) const NM_SETTING_BOND_SETTING_NAME: &str = "bond";
-pub(crate) const NM_SETTING_DUMMY_SETTING_NAME: &str = "dummy";
-pub(crate) const NM_SETTING_MACSEC_SETTING_NAME: &str = "macsec";
-pub(crate) const NM_SETTING_MACVLAN_SETTING_NAME: &str = "macvlan";
-pub(crate) const NM_SETTING_VRF_SETTING_NAME: &str = "vrf";
-pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
-pub(crate) const NM_SETTING_VXLAN_SETTING_NAME: &str = "vxlan";
-pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
-pub(crate) const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
-pub(crate) const NM_SETTING_HSR_SETTING_NAME: &str = "hsr";
-pub(crate) const NM_SETTING_VPN_SETTING_NAME: &str = "vpn";
-
-pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 14] = [
-    NM_SETTING_WIRED_SETTING_NAME,
-    NM_SETTING_VETH_SETTING_NAME,
-    NM_SETTING_BOND_SETTING_NAME,
-    NM_SETTING_DUMMY_SETTING_NAME,
-    NM_SETTING_BRIDGE_SETTING_NAME,
-    NM_SETTING_OVS_IFACE_SETTING_NAME,
-    NM_SETTING_VRF_SETTING_NAME,
-    NM_SETTING_VLAN_SETTING_NAME,
-    NM_SETTING_VXLAN_SETTING_NAME,
-    NM_SETTING_MACVLAN_SETTING_NAME,
-    NM_SETTING_LOOPBACK_SETTING_NAME,
-    NM_SETTING_INFINIBAND_SETTING_NAME,
-    NM_SETTING_MACSEC_SETTING_NAME,
-    NM_SETTING_HSR_SETTING_NAME,
-];
 
 pub(crate) fn iface_to_nm_connections(
     merged_iface: &MergedInterface,
@@ -261,15 +226,15 @@ pub(crate) fn iface_to_nm_connections(
         _ => (),
     };
 
-    if nm_conn.controller_type() != Some(NM_SETTING_BOND_SETTING_NAME) {
+    if nm_conn.controller_type() != Some(&NmIfaceType::Bond) {
         nm_conn.bond_port = None;
     }
 
-    if nm_conn.controller_type() != Some(NM_SETTING_BRIDGE_SETTING_NAME) {
+    if nm_conn.controller_type() != Some(&NmIfaceType::Bridge) {
         nm_conn.bridge_port = None;
     }
 
-    if nm_conn.controller_type() != Some(NM_SETTING_OVS_PORT_SETTING_NAME) {
+    if nm_conn.controller_type() != Some(&NmIfaceType::OvsPort) {
         nm_conn.ovs_iface = None;
     }
 
@@ -349,38 +314,26 @@ pub(crate) fn iface_to_nm_connections(
 
 pub(crate) fn iface_type_to_nm(
     iface_type: &InterfaceType,
-) -> Result<String, NmstateError> {
+) -> Result<NmIfaceType, NmstateError> {
     match iface_type {
-        InterfaceType::LinuxBridge => Ok(NM_SETTING_BRIDGE_SETTING_NAME.into()),
-        InterfaceType::Bond => Ok(NM_SETTING_BOND_SETTING_NAME.into()),
-        InterfaceType::Ethernet => Ok(NM_SETTING_WIRED_SETTING_NAME.into()),
-        InterfaceType::OvsBridge => {
-            Ok(NM_SETTING_OVS_BRIDGE_SETTING_NAME.into())
-        }
-        InterfaceType::OvsInterface => {
-            Ok(NM_SETTING_OVS_IFACE_SETTING_NAME.into())
-        }
-        InterfaceType::Vlan => Ok(NM_SETTING_VLAN_SETTING_NAME.to_string()),
-        InterfaceType::Vxlan => Ok(NM_SETTING_VXLAN_SETTING_NAME.to_string()),
-        InterfaceType::Dummy => Ok(NM_SETTING_DUMMY_SETTING_NAME.to_string()),
-        InterfaceType::MacVlan => {
-            Ok(NM_SETTING_MACVLAN_SETTING_NAME.to_string())
-        }
-        InterfaceType::MacVtap => {
-            Ok(NM_SETTING_MACVLAN_SETTING_NAME.to_string())
-        }
-        InterfaceType::Vrf => Ok(NM_SETTING_VRF_SETTING_NAME.to_string()),
-        InterfaceType::Veth => Ok(NM_SETTING_VETH_SETTING_NAME.to_string()),
-        InterfaceType::InfiniBand => {
-            Ok(NM_SETTING_INFINIBAND_SETTING_NAME.to_string())
-        }
-        InterfaceType::Loopback => {
-            Ok(NM_SETTING_LOOPBACK_SETTING_NAME.to_string())
-        }
-        InterfaceType::MacSec => Ok(NM_SETTING_MACSEC_SETTING_NAME.to_string()),
-        InterfaceType::Hsr => Ok(NM_SETTING_HSR_SETTING_NAME.to_string()),
-        InterfaceType::Ipsec => Ok(NM_SETTING_VPN_SETTING_NAME.to_string()),
-        InterfaceType::Other(s) => Ok(s.to_string()),
+        InterfaceType::LinuxBridge => Ok(NmIfaceType::Bridge),
+        InterfaceType::Bond => Ok(NmIfaceType::Bond),
+        InterfaceType::Ethernet => Ok(NmIfaceType::Ethernet),
+        InterfaceType::OvsBridge => Ok(NmIfaceType::OvsBridge),
+        InterfaceType::OvsInterface => Ok(NmIfaceType::OvsIface),
+        InterfaceType::Vlan => Ok(NmIfaceType::Vlan),
+        InterfaceType::Vxlan => Ok(NmIfaceType::Vxlan),
+        InterfaceType::Dummy => Ok(NmIfaceType::Dummy),
+        InterfaceType::MacVlan => Ok(NmIfaceType::Macvlan),
+        InterfaceType::MacVtap => Ok(NmIfaceType::Macvlan),
+        InterfaceType::Vrf => Ok(NmIfaceType::Vrf),
+        InterfaceType::Veth => Ok(NmIfaceType::Veth),
+        InterfaceType::InfiniBand => Ok(NmIfaceType::Infiniband),
+        InterfaceType::Loopback => Ok(NmIfaceType::Loopback),
+        InterfaceType::MacSec => Ok(NmIfaceType::Macsec),
+        InterfaceType::Hsr => Ok(NmIfaceType::Hsr),
+        InterfaceType::Ipsec => Ok(NmIfaceType::Vpn),
+        InterfaceType::Other(s) => Ok(NmIfaceType::from(s.as_str())),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,
             format!("Does not support iface type: {iface_type:?} yet"),
@@ -428,8 +381,7 @@ pub(crate) fn gen_nm_conn_setting(
             Some(iface_type_to_nm(&iface.iface_type())?);
         if let Interface::Ethernet(eth_iface) = iface {
             if eth_iface.veth.is_some() {
-                new_nm_conn_set.iface_type =
-                    Some(NM_SETTING_VETH_SETTING_NAME.to_string());
+                new_nm_conn_set.iface_type = Some(NmIfaceType::Veth);
             }
         }
         new_nm_conn_set
@@ -456,7 +408,6 @@ pub(crate) fn gen_nm_conn_setting(
         .as_ref()
         .map(iface_type_to_nm)
         .transpose()?;
-    let nm_ctrl_type = nm_ctrl_type.as_deref();
     let ctrl_name = iface.base_iface().controller.as_deref();
     if let Some(ctrl_name) = ctrl_name {
         if ctrl_name.is_empty() {
@@ -464,13 +415,14 @@ pub(crate) fn gen_nm_conn_setting(
             nm_conn_set.controller_type = None;
         } else if let Some(nm_ctrl_type) = nm_ctrl_type {
             nm_conn_set.controller = Some(ctrl_name.to_string());
-            nm_conn_set.controller_type = if nm_ctrl_type == "ovs-bridge"
+            nm_conn_set.controller_type = if nm_ctrl_type
+                == NmIfaceType::OvsBridge
                 && iface.iface_type()
                     != InterfaceType::Other("ovs-port".to_string())
             {
-                Some("ovs-port".to_string())
+                Some(NmIfaceType::OvsPort)
             } else {
-                Some(nm_ctrl_type.to_string())
+                Some(nm_ctrl_type)
             };
         }
     }
@@ -506,13 +458,13 @@ pub(crate) fn get_exist_profile<'a>(
     nm_ac_uuids: &[&str],
 ) -> Option<&'a NmConnection> {
     let mut found_nm_conns: Vec<&NmConnection> = Vec::new();
+    let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
+        t
+    } else {
+        return None;
+    };
     for exist_nm_conn in exist_nm_conns {
-        let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
-            t
-        } else {
-            continue;
-        };
-        if nm_iface_type == NM_SETTING_VPN_SETTING_NAME {
+        if nm_iface_type == NmIfaceType::Vpn {
             if exist_nm_conn.id() == Some(iface_name) {
                 if let Some(uuid) = exist_nm_conn.uuid() {
                     // Prefer activated connection
@@ -524,9 +476,8 @@ pub(crate) fn get_exist_profile<'a>(
             }
         } else if exist_nm_conn.iface_name() == Some(iface_name)
             && (exist_nm_conn.iface_type() == Some(&nm_iface_type)
-                || (nm_iface_type == NM_SETTING_WIRED_SETTING_NAME
-                    && exist_nm_conn.iface_type()
-                        == Some(NM_SETTING_VETH_SETTING_NAME)))
+                || (nm_iface_type == NmIfaceType::Ethernet
+                    && exist_nm_conn.iface_type() == Some(&NmIfaceType::Veth)))
         {
             if let Some(uuid) = exist_nm_conn.uuid() {
                 // Prefer activated connection

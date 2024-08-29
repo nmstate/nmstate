@@ -5,7 +5,7 @@ PROJECT_DIR="$(dirname $EXEC_DIR)"
 TEST_CMD="${EXEC_DIR}/run-tests.sh"
 
 options=$(getopt --options "" \
-    --long "copr:,rpm-dir:,help,debug-shell,el8,el9,fed,rawhide" \
+    --long "copr:,rpm-dir:,help,debug-shell,el8,el9,el10,fed,rawhide" \
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -14,6 +14,9 @@ while true; do
         use_el8="1"
         ;;
     --el9)
+        ;;
+    --el10)
+        use_el10="1"
         ;;
     --fed)
         use_fed="1"
@@ -35,7 +38,7 @@ while true; do
     --help)
         set +x
         echo -n "$0 [--copr=...] [--rpm-dir=...] [--debug-shell] "
-        echo -n "[--el8] [--el9] [--fed] [--rawhide]"
+        echo -n "[--el8] [--el9] [--el10] [--fed] [--rawhide]"
         echo
         exit
         ;;
@@ -50,7 +53,7 @@ done
 echo $NM_COPR
 echo $NM_RPM_DIR
 
-ARGS="--test-type integ_tier1"
+ARGS="--test-type integ_tier1 --nolog"
 if [[ -v NM_COPR ]];then
     ARGS="$ARGS --copr $NM_COPR"
 fi
@@ -65,6 +68,8 @@ fi
 
 if [[ -v use_el8 ]];then
     ARGS="$ARGS --el8"
+elif [[ -v use_el10 ]];then
+    ARGS="$ARGS --el10"
 elif [[ -v use_fed ]];then
     ARGS="$ARGS --fed"
 elif [[ -v use_rawhide ]];then

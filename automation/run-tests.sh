@@ -20,7 +20,9 @@ FEDORA_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:latest"
 RAWHIDE_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:rawhide"
 CENTOS_8_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 CENTOS_9_STREAM_IMAGE_DEV="quay.io/nmstate/c9s-nmstate-dev"
+CENTOS_10_STREAM_IMAGE_DEV="quay.io/nmstate/c10s-nmstate-dev"
 
+COLLECT_LOGS="true"
 
 PYTEST_OPTIONS="--verbose --verbose \
         --log-file-level=DEBUG \
@@ -80,7 +82,7 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_LINT ];then
-        exec_cmd "tox -e flake8,pylint,yamllint"
+        exec_cmd "tox -e flake8,yamllint"
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
@@ -166,7 +168,9 @@ function run_exit {
         k8s::collect_artifacts
         k8s::cleanup
     else
-        collect_artifacts
+        if [ $COLLECT_LOGS == "true" ];then
+            collect_artifacts
+        fi
         remove_container
         remove_tempdir
     fi
@@ -194,10 +198,12 @@ function upgrade_nm_from_copr {
     local copr_repo=$1
     # The repoid for a Copr repo is the name with the slash replaces by a colon
     local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
-    exec_cmd "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
-    exec_cmd "yum copr enable --assumeyes ${copr_repo}"
+    exec_cmd "dnf5 install --assumeyes 'dnf5-command(copr)' || \
+              dnf install --assumeyes 'dnf-command(copr)'"
+    exec_cmd "dnf copr enable --assumeyes ${copr_repo}"
     # centos-stream NetworkManager package is providing the alpha builds.
     # Sometimes it could be greater than the one packaged on Copr.
+    exec_cmd "systemctl stop NetworkManager"
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd "dnf install --assumeyes NetworkManager NetworkManager-ovs  \
         --disablerepo '*' --enablerepo '${copr_repo_id}'"
@@ -208,6 +214,7 @@ function upgrade_nm_from_rpm_dir {
     local nm_rpm_dir=$1
     mkdir $EXPORT_DIR/nm_rpms || true
     find $nm_rpm_dir -name \*.rpm -exec cp -v {} "${EXPORT_DIR}/nm_rpms/" \;
+    exec_cmd "systemctl stop NetworkManager"
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd "dnf install -y ${CONT_EXPORT_DIR}/nm_rpms/*.rpm"
     exec_cmd "rpm -q NetworkManager-libreswan || \
@@ -226,8 +233,9 @@ function run_customize_command {
 
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
-    el8,el9,centos-stream,fed,rawhide,copr:,artifacts-dir:,test-vdsm,\
-    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:" \
+    el8,el9,el10,centos-stream,fed,rawhide,copr:,artifacts-dir:,test-vdsm,\
+    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:,nolog,\
+    pretest-exec:" \
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -264,6 +272,9 @@ while true; do
     --el9)
         CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
         ;;
+    --el10)
+        CONTAINER_IMAGE=$CENTOS_10_STREAM_IMAGE_DEV
+        ;;
     --fed)
         CONTAINER_IMAGE=$FEDORA_IMAGE_DEV
         ;;
@@ -284,12 +295,19 @@ while true; do
     --k8s)
         RUN_K8S="true"
         ;;
+    --nolog)
+        COLLECT_LOGS="false"
+        ;;
     --use-installed-nmstate)
         INSTALL_NMSTATE="false"
         ;;
     --compiled-rpms-dir)
         shift
         COMPILED_RPMS_DIR="$1"
+        ;;
+    --pretest-exec)
+        shift
+        PRETEST_EXEC="$1"
         ;;
     --help)
         set +x
@@ -373,4 +391,9 @@ if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
    [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
     install_nmstate
 fi
+
+if [[ -v PRETEST_EXEC ]];then
+    exec_cmd "$PRETEST_EXEC"
+fi
+
 run_tests

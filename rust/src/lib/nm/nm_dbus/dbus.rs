@@ -263,15 +263,6 @@ impl<'a> NmDbus<'a> {
         Ok(())
     }
 
-    pub(crate) fn nm_dev_obj_path_get(
-        &self,
-        iface_name: &str,
-    ) -> Result<String, NmError> {
-        Ok(obj_path_to_string(
-            self.proxy.get_device_by_ip_iface(iface_name)?,
-        ))
-    }
-
     pub(crate) fn nm_dev_obj_paths_get(&self) -> Result<Vec<String>, NmError> {
         Ok(self
             .proxy

@@ -1,0 +1,7 @@
+---
+interfaces:
+- name: vlan0
+  type: vlan
+  state: up
+  vlan:
+    id: 4

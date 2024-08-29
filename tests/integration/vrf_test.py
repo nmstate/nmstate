@@ -15,6 +15,7 @@ from libnmstate.schema import VRF
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib.apply import apply_with_description
 
 
 TEST_VRF0 = "test-vrf0"
@@ -42,9 +43,14 @@ def vrf0_with_port0(port1_up):
             VRF.ROUTE_TABLE_ID: TEST_ROUTE_TABLE_ID0,
         },
     }
-    libnmstate.apply({Interface.KEY: [vrf_iface_info]})
+    apply_with_description(
+        "Create the vrf interface test-vrf0 with vrf port eth1 and vrf route "
+        "table ID 100",
+        {Interface.KEY: [vrf_iface_info]},
+    )
     yield vrf_iface_info
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the vrf interface test-vrf0",
         {
             Interface.KEY: [
                 {
@@ -52,8 +58,9 @@ def vrf0_with_port0(port1_up):
                     Interface.STATE: InterfaceState.ABSENT,
                 }
             ]
-        }
+        },
     )
+
     assertlib.assert_absent(TEST_VRF0)
 
 
@@ -67,9 +74,14 @@ def vrf1_with_port1(port1_up):
             VRF.ROUTE_TABLE_ID: TEST_ROUTE_TABLE_ID1,
         },
     }
-    libnmstate.apply({Interface.KEY: [vrf_iface_info]})
+    apply_with_description(
+        "Create the vrf interface test-vrf1 with vrf port eth2 and vrf route "
+        "table ID 101",
+        {Interface.KEY: [vrf_iface_info]},
+    )
     yield vrf_iface_info
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the vrf interface test-vrf1",
         {
             Interface.KEY: [
                 {
@@ -77,8 +89,9 @@ def vrf1_with_port1(port1_up):
                     Interface.STATE: InterfaceState.ABSENT,
                 }
             ]
-        }
+        },
     )
+
     assertlib.assert_absent(TEST_VRF1)
 
 
@@ -92,9 +105,14 @@ def vrf1_with_eth1_and_eth2(eth1_up, eth2_up):
             VRF.ROUTE_TABLE_ID: TEST_ROUTE_TABLE_ID1,
         },
     }
-    libnmstate.apply({Interface.KEY: [vrf_iface_info]})
+    apply_with_description(
+        "Create the vrf interface test-vrf1, attach ports eth1 and eth2 to "
+        "it, configure the vrf route table ID 101",
+        {Interface.KEY: [vrf_iface_info]},
+    )
     yield vrf_iface_info
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the vrf interface test-vrf1",
         {
             Interface.KEY: [
                 {
@@ -102,8 +120,9 @@ def vrf1_with_eth1_and_eth2(eth1_up, eth2_up):
                     Interface.STATE: InterfaceState.ABSENT,
                 }
             ]
-        }
+        },
     )
+
     assertlib.assert_absent(TEST_VRF1)
 
 
@@ -116,7 +135,8 @@ def unmanaged_port_up():
     cmdlib.exec_cmd(f"ip link set {TEST_VRF_VETH1} up".split())
     yield TEST_VRF_VETH0
     cmdlib.exec_cmd(f"ip link del {TEST_VRF_VETH0}".split())
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the vrf interface test-vrf0 and veth device veth0",
         {
             Interface.KEY: [
                 {
@@ -130,7 +150,7 @@ def unmanaged_port_up():
                     Interface.STATE: InterfaceState.ABSENT,
                 },
             ]
-        }
+        },
     )
 
 
@@ -149,11 +169,16 @@ def vrf1_with_unmanaged_port(unmanaged_port_up):
         Interface.TYPE: InterfaceType.ETHERNET,
         Interface.STATE: InterfaceState.UP,
     }
-    libnmstate.apply({Interface.KEY: [vrf_iface_info, veth_iface_info]})
+    apply_with_description(
+        f"Attach ethernet {unmanaged_port_up} to the vrf interface test-vrf1 "
+        "and set vrf route table ID to 101",
+        {Interface.KEY: [vrf_iface_info, veth_iface_info]},
+    )
     try:
         yield vrf_iface_info
     finally:
-        libnmstate.apply(
+        apply_with_description(
+            "Delete the test-vrf1 interface",
             {
                 Interface.KEY: [
                     {
@@ -161,7 +186,7 @@ def vrf1_with_unmanaged_port(unmanaged_port_up):
                         Interface.STATE: InterfaceState.ABSENT,
                     }
                 ]
-            }
+            },
         )
 
 
@@ -190,9 +215,18 @@ def vrf_over_bond_vlan(eth1_up, eth2_up):
         """,
         Loader=yaml.SafeLoader,
     )
-    libnmstate.apply(desired)
+    apply_with_description(
+        "Create the vlan device over test-bond0 with ID 100, "
+        "create the bond interface test-bond0 with bonding mode "
+        "balance-rr, create the vrf interface test-vrf0 "
+        "with ports test-bond0, test-bond0.100, and the vrf route table "
+        "id 100",
+        desired,
+    )
     yield desired
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the vlan interface test-bond0.100, delete the bond interface "
+        "test-bond0, delete the vrf interface test-vrf0",
         yaml.load(
             """---
             interfaces:
@@ -207,7 +241,7 @@ def vrf_over_bond_vlan(eth1_up, eth2_up):
               state: absent
             """,
             Loader=yaml.SafeLoader,
-        )
+        ),
     )
 
 
@@ -227,7 +261,11 @@ class TestVrf:
         iface_info = vrf0_with_port0
         iface_info[VRF.CONFIG_SUBTREE][VRF.ROUTE_TABLE_ID] += 1
         desired_state = {Interface.KEY: [iface_info]}
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Configure the vrf device test-vrf0 with vrf "
+            "route table ID 101",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
     def test_create_with_empty_ports(self):
@@ -243,33 +281,61 @@ class TestVrf:
                 }
             ]
         }
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Create the vrf interface test-vrf0 with the empty ports and the "
+            "vrf route table ID 100",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
+        apply_with_description(
+            "Delete the vrf interface test-vrf0",
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_VRF0,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            },
+        )
+        assertlib.assert_absent(TEST_VRF0)
 
     def test_add_and_remove_port(self, vrf0_with_port0, port1_up):
         iface_info = vrf0_with_port0
         iface_info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE].append(TEST_VRF_PORT1)
         desired_state = {Interface.KEY: [iface_info]}
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Attach ethernet eth1 and eth2 to the vrf interface test-vrf0",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
         iface_info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE].remove(TEST_VRF_PORT1)
         desired_state = {Interface.KEY: [iface_info]}
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Attach ethernet eth1 to the vrf interface test-vrf0",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
     def test_remove_port(self, vrf0_with_port0):
         iface_info = vrf0_with_port0
         iface_info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = []
         desired_state = {Interface.KEY: [iface_info]}
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Set the empty port for the vrf interface test-vrf0",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
     def test_remove_all_ports(self, vrf0_with_port0):
         iface_info = vrf0_with_port0
         iface_info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = []
         desired_state = {Interface.KEY: [iface_info]}
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Set the empty port for the vrf interface test-vrf0",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
     def test_moving_port_from_other_vrf(
@@ -284,7 +350,12 @@ class TestVrf:
         ]
 
         desired_state = {Interface.KEY: [vrf0_iface, vrf1_iface]}
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Configure the vrf interface test-vrf0 with empty port, "
+            "configure the vrf interface test-vrf1 with the vrf "
+            "port eth1 and eth2",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
     def test_swaping_port(self, vrf0_with_port0, vrf1_with_port1):
@@ -293,7 +364,11 @@ class TestVrf:
         vrf0_iface[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = [TEST_VRF_PORT1]
         vrf1_iface[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = [TEST_VRF_PORT0]
         desired_state = {Interface.KEY: [vrf0_iface, vrf1_iface]}
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Attach ethernet eth2 to the vrf interface test-vrf0, "
+            "attach ethernet eth1 to the vrf interface test-vrf1",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
     def test_port_holding_ip(self, vrf0_with_port0):
@@ -325,14 +400,20 @@ class TestVrf:
                 }
             ]
         }
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Create the eth1 interface with address 192.0.2.251/24 and "
+            "2001:db8:1::1/64 configured",
+            desired_state,
+        )
         assertlib.assert_state_match(desired_state)
 
     def test_takes_over_unmanaged_vrf(self, vrf1_with_unmanaged_port):
         pass
 
     def test_vrf_ignore_mac_address(self, vrf0_with_port0):
-        libnmstate.apply(
+        apply_with_description(
+            "Create the test-vrf0 with the MAC address 00:00:5E:00:53:01 "
+            "configured",
             {
                 Interface.KEY: [
                     {
@@ -340,11 +421,12 @@ class TestVrf:
                         Interface.MAC: TEST_MAC_ADDRESS,
                     }
                 ]
-            }
+            },
         )
 
     def test_vrf_ignore_accept_all_mac_addresses_false(self, vrf0_with_port0):
-        libnmstate.apply(
+        apply_with_description(
+            "Create the test-vrf0 with accepting all MAC address disabled",
             {
                 Interface.KEY: [
                     {
@@ -352,11 +434,12 @@ class TestVrf:
                         Interface.ACCEPT_ALL_MAC_ADDRESSES: False,
                     }
                 ]
-            }
+            },
         )
 
     def test_change_vrf_without_table_id(self, vrf0_with_port0):
-        libnmstate.apply(
+        apply_with_description(
+            "Create the test-vrf0 with port eth1 attached",
             {
                 Interface.KEY: [
                     {
@@ -366,7 +449,7 @@ class TestVrf:
                         },
                     }
                 ]
-            }
+            },
         )
 
     def test_new_vrf_without_table_id(self):
@@ -390,7 +473,8 @@ class TestVrf:
     def test_vrf_over_bond_vlan_got_auto_remove_by_parent(
         self, vrf_over_bond_vlan
     ):
-        libnmstate.apply(
+        apply_with_description(
+            "Remove the vrf device test-vrf0 and the bond device test-bond0",
             {
                 Interface.KEY: [
                     {
@@ -402,7 +486,7 @@ class TestVrf:
                         Interface.STATE: InterfaceState.ABSENT,
                     },
                 ]
-            }
+            },
         )
         assertlib.assert_absent(TEST_VRF0)
         assertlib.assert_absent(TEST_BOND0)

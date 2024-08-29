@@ -218,12 +218,12 @@ impl MergedInterfaces {
                     self.kernel_ifaces.insert(
                         iface_name.to_string(),
                         MergedInterface::new(
-                            Some(Interface::OvsInterface(
+                            Some(Interface::OvsInterface(Box::new(
                                 OvsInterface::new_with_name_and_ctrl(
                                     &iface_name,
                                     &ctrl_name,
                                 ),
-                            )),
+                            ))),
                             None,
                         )?,
                     );

@@ -7,6 +7,7 @@ use super::super::{
     dbus::{NM_DBUS_INTERFACE_DEV, NM_DBUS_INTERFACE_ROOT},
     lldp::NmLldpNeighbor,
     ErrorKind, NmDevice, NmDeviceState, NmDeviceStateReason, NmError,
+    NmIfaceType,
 };
 
 const NM_DEVICE_TYPE_UNKNOWN: u32 = 0;
@@ -16,7 +17,8 @@ const NM_DEVICE_TYPE_WIFI: u32 = 2;
 // const NM_DEVICE_TYPE_UNUSED2: u32 = 4;
 const NM_DEVICE_TYPE_BT: u32 = 5;
 const NM_DEVICE_TYPE_OLPC_MESH: u32 = 6;
-const NM_DEVICE_TYPE_WIMAX: u32 = 7;
+// WIMAX is not supported by NM
+// const NM_DEVICE_TYPE_WIMAX: u32 = 7;
 const NM_DEVICE_TYPE_MODEM: u32 = 8;
 const NM_DEVICE_TYPE_INFINIBAND: u32 = 9;
 const NM_DEVICE_TYPE_BOND: u32 = 10;
@@ -24,7 +26,8 @@ const NM_DEVICE_TYPE_VLAN: u32 = 11;
 const NM_DEVICE_TYPE_ADSL: u32 = 12;
 const NM_DEVICE_TYPE_BRIDGE: u32 = 13;
 const NM_DEVICE_TYPE_GENERIC: u32 = 14;
-const NM_DEVICE_TYPE_TEAM: u32 = 15;
+// Team is not supported by nmstate
+// const NM_DEVICE_TYPE_TEAM: u32 = 15;
 const NM_DEVICE_TYPE_TUN: u32 = 16;
 const NM_DEVICE_TYPE_IP_TUNNEL: u32 = 17;
 const NM_DEVICE_TYPE_MACVLAN: u32 = 18;
@@ -67,7 +70,7 @@ fn nm_dev_name_get(
 fn nm_dev_iface_type_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
-) -> Result<String, NmError> {
+) -> Result<NmIfaceType, NmError> {
     let proxy = zbus::Proxy::new(
         dbus_conn,
         NM_DBUS_INTERFACE_ROOT,
@@ -77,38 +80,36 @@ fn nm_dev_iface_type_get(
     match proxy.get_property::<u32>("DeviceType") {
         Ok(i) => Ok(match i {
             // Using the NM_SETTING_*_NAME string
-            NM_DEVICE_TYPE_UNKNOWN => "unknown".to_string(),
-            NM_DEVICE_TYPE_ETHERNET => "802-3-ethernet".to_string(),
-            NM_DEVICE_TYPE_WIFI => "802-11-wireless".to_string(),
-            NM_DEVICE_TYPE_BT => "bluetooth".to_string(),
-            NM_DEVICE_TYPE_OLPC_MESH => "802-11-olpc-mesh".to_string(),
-            NM_DEVICE_TYPE_WIMAX => "wimax".to_string(),
-            NM_DEVICE_TYPE_MODEM => "modem".to_string(),
-            NM_DEVICE_TYPE_INFINIBAND => "infiniband".to_string(),
-            NM_DEVICE_TYPE_BOND => "bond".to_string(),
-            NM_DEVICE_TYPE_VLAN => "vlan".to_string(),
-            NM_DEVICE_TYPE_ADSL => "adsl".to_string(),
-            NM_DEVICE_TYPE_BRIDGE => "bridge".to_string(),
-            NM_DEVICE_TYPE_GENERIC => "generic".to_string(),
-            NM_DEVICE_TYPE_TEAM => "team".to_string(),
-            NM_DEVICE_TYPE_TUN => "tun".to_string(),
-            NM_DEVICE_TYPE_IP_TUNNEL => "ip-tunnel".to_string(),
-            NM_DEVICE_TYPE_MACVLAN => "macvlan".to_string(),
-            NM_DEVICE_TYPE_VXLAN => "vxlan".to_string(),
-            NM_DEVICE_TYPE_VETH => "veth".to_string(),
-            NM_DEVICE_TYPE_MACSEC => "macsec".to_string(),
-            NM_DEVICE_TYPE_DUMMY => "dummy".to_string(),
-            NM_DEVICE_TYPE_PPP => "ppp".to_string(),
-            NM_DEVICE_TYPE_OVS_INTERFACE => "ovs-interface".to_string(),
-            NM_DEVICE_TYPE_OVS_PORT => "ovs-port".to_string(),
-            NM_DEVICE_TYPE_OVS_BRIDGE => "ovs-bridge".to_string(),
-            NM_DEVICE_TYPE_WPAN => "wpan".to_string(),
-            NM_DEVICE_TYPE_6LOWPAN => "6lowpan".to_string(),
-            NM_DEVICE_TYPE_WIREGUARD => "wireguard".to_string(),
-            NM_DEVICE_TYPE_WIFI_P2P => "wifi-p2p".to_string(),
-            NM_DEVICE_TYPE_VRF => "vrf".to_string(),
-            NM_DEVICE_TYPE_LOOPBACK => "loopback".to_string(),
-            _ => format!("unknown({i})"),
+            NM_DEVICE_TYPE_UNKNOWN => NmIfaceType::Other("unknown".to_string()),
+            NM_DEVICE_TYPE_ETHERNET => NmIfaceType::Ethernet,
+            NM_DEVICE_TYPE_WIFI => NmIfaceType::Wireless,
+            NM_DEVICE_TYPE_BT => NmIfaceType::Bluetooth,
+            NM_DEVICE_TYPE_OLPC_MESH => NmIfaceType::OlpcMesh,
+            NM_DEVICE_TYPE_MODEM => NmIfaceType::Other("modem".to_string()),
+            NM_DEVICE_TYPE_INFINIBAND => NmIfaceType::Infiniband,
+            NM_DEVICE_TYPE_BOND => NmIfaceType::Bond,
+            NM_DEVICE_TYPE_VLAN => NmIfaceType::Vlan,
+            NM_DEVICE_TYPE_ADSL => NmIfaceType::Other("adsl".to_string()),
+            NM_DEVICE_TYPE_BRIDGE => NmIfaceType::Bridge,
+            NM_DEVICE_TYPE_GENERIC => NmIfaceType::Generic,
+            NM_DEVICE_TYPE_TUN => NmIfaceType::Tun,
+            NM_DEVICE_TYPE_IP_TUNNEL => NmIfaceType::IpTunnel,
+            NM_DEVICE_TYPE_MACVLAN => NmIfaceType::Macvlan,
+            NM_DEVICE_TYPE_VXLAN => NmIfaceType::Vxlan,
+            NM_DEVICE_TYPE_VETH => NmIfaceType::Veth,
+            NM_DEVICE_TYPE_MACSEC => NmIfaceType::Macsec,
+            NM_DEVICE_TYPE_DUMMY => NmIfaceType::Dummy,
+            NM_DEVICE_TYPE_PPP => NmIfaceType::Ppp,
+            NM_DEVICE_TYPE_OVS_INTERFACE => NmIfaceType::OvsIface,
+            NM_DEVICE_TYPE_OVS_PORT => NmIfaceType::OvsPort,
+            NM_DEVICE_TYPE_OVS_BRIDGE => NmIfaceType::OvsBridge,
+            NM_DEVICE_TYPE_WPAN => NmIfaceType::Wpan,
+            NM_DEVICE_TYPE_6LOWPAN => NmIfaceType::SixLowPan,
+            NM_DEVICE_TYPE_WIREGUARD => NmIfaceType::Wireguard,
+            NM_DEVICE_TYPE_WIFI_P2P => NmIfaceType::WifiP2p,
+            NM_DEVICE_TYPE_VRF => NmIfaceType::Vrf,
+            NM_DEVICE_TYPE_LOOPBACK => NmIfaceType::Loopback,
+            _ => NmIfaceType::Other(format!("unknown({i})")),
         }),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
@@ -195,7 +196,7 @@ pub(crate) fn nm_dev_from_obj_path(
         real,
         mac_address: nm_dev_get_mac_address(dbus_conn, obj_path)?,
     };
-    if dev.iface_type == "macvlan" {
+    if dev.iface_type == NmIfaceType::Macvlan {
         dev.is_mac_vtap = nm_dev_is_mac_vtap_get(dbus_conn, obj_path)?;
     }
     Ok(dev)

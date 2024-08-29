@@ -134,6 +134,7 @@ jobs:
           - job_type: "c9s-nm_1.42-integ_tier2"
           - job_type: "c9s-nm_1.42-integ_slow"
           - job_type: "fed-nm_main-integ_tier1"
+          - job_type: "c10s-nm_stable-integ_tier1"
     steps:
       - uses: actions/checkout@v4
 
@@ -196,6 +197,16 @@ jobs:
 
     - name: Install Rust 1.66
       run: rustup install 1.66
+
+    - name: Use rust vendoring
+      run: |
+        cd rust
+        wget -qO- https://github.com/nmstate/nmstate/releases/download/v2.2.33/nmstate-vendor-2.2.33.tar.xz | tar xJ
+        mkdir .cargo
+        echo '[source.crates-io]' > .cargo/config.toml
+        echo 'replace-with = "vendored-sources"' >> .cargo/config.toml
+        echo '[source.vendored-sources]' >> .cargo/config.toml
+        echo 'directory = "vendor"' >> .cargo/config.toml
 
     - name: Build on rust 1.66
       run: cd rust && cargo +1.66 build --ignore-rust-version

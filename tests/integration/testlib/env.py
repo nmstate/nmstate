@@ -2,18 +2,7 @@
 
 import os
 
-import gi
-
 from .cmdlib import exec_cmd
-
-gi.require_version("NM", "1.0")
-# It is required to state the NM version before importing it
-# But this break the flak8 rule: https://www.flake8rules.com/rules/E402.html
-# Use NOQA: E402 to suppress it.
-# pylint: disable=no-name-in-module
-from gi.repository import NM  # NOQA: E402
-
-# pylint: enable=no-name-in-module
 
 
 def is_fedora():
@@ -24,12 +13,12 @@ def is_ubuntu_kernel():
     return "Ubuntu" in os.uname().version
 
 
-def nm_major_minor_version():
-    return float(f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}")
-
-
 def nm_minor_version():
-    return int(f"{NM.MINOR_VERSION}")
+    version_str = exec_cmd(
+        "rpm -q NetworkManager --qf %{VERSION}".split(),
+        check=True,
+    )[1]
+    return int(version_str.split(".")[1])
 
 
 def is_k8s():
@@ -41,10 +30,11 @@ def is_el8():
 
 
 def nm_libreswan_version_int():
-    version_str = exec_cmd(
-        "rpm -q NetworkManager-libreswan --qf %{VERSION}".split(),
-        check=True,
-    )[1]
+    ret_code, version_str, _ = exec_cmd(
+        "rpm -q NetworkManager-libreswan --qf %{VERSION}".split()
+    )
+    if ret_code != 0:
+        return 0
     return version_str_to_int(version_str)
 
 

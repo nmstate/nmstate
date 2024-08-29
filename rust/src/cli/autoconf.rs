@@ -158,7 +158,7 @@ fn gen_bond_iface(bond_name: &str, ifaces: &[&str]) -> Interface {
     let mut bond_iface = BondInterface::new();
     bond_iface.base = base_iface;
     bond_iface.bond = Some(bond_conf);
-    Interface::Bond(bond_iface)
+    Interface::Bond(Box::new(bond_iface))
 }
 
 fn gen_vlan_iface(vlan_name: &str, id: u32, parent: &str) -> Interface {
@@ -167,10 +167,10 @@ fn gen_vlan_iface(vlan_name: &str, id: u32, parent: &str) -> Interface {
     base_iface.iface_type = InterfaceType::Vlan;
     base_iface.state = InterfaceState::Up;
     let mut vlan_conf = VlanConfig::default();
-    vlan_conf.base_iface = parent.to_string();
+    vlan_conf.base_iface = Some(parent.to_string());
     vlan_conf.id = id.try_into().unwrap();
     let mut vlan_iface = VlanInterface::new();
     vlan_iface.base = base_iface;
     vlan_iface.vlan = Some(vlan_conf);
-    Interface::Vlan(vlan_iface)
+    Interface::Vlan(Box::new(vlan_iface))
 }

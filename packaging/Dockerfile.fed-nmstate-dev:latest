@@ -8,8 +8,8 @@ RUN dnf update -y && \
         openvswitch systemd-udev python3-devel python3-pyyaml \
         python3-setuptools dnsmasq git iproute rpm-build python3-pytest \
         python3-virtualenv python3-tox tcpreplay wpa_supplicant hostapd \
-        libndp procps-ng dpdk nispor rust-packaging \
-        python3-gobject-base NetworkManager-libreswan libreswan \
+        libndp procps-ng dpdk rust-packaging \
+        NetworkManager-libreswan libreswan \
         && dnf clean all
 
 COPY network_manager_enable_trace.conf \

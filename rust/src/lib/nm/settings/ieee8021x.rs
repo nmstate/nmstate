@@ -39,6 +39,20 @@ pub(crate) fn gen_nm_802_1x_setting(
                 .private_key_password
                 .clone_from(&conf.private_key_password);
         }
+        nm_setting.phase2_auth.clone_from(&conf.phase2_auth);
+        if conf.password.as_deref()
+            == Some(NetworkState::PASSWORD_HID_BY_NMSTATE)
+        {
+            if let Some(cur_pass) = nm_conn
+                .ieee8021x
+                .as_ref()
+                .and_then(|c| c.password.as_deref())
+            {
+                nm_setting.password = Some(cur_pass.to_string());
+            }
+        } else {
+            nm_setting.password.clone_from(&conf.password);
+        }
         nm_conn.ieee8021x = Some(nm_setting);
     }
 }

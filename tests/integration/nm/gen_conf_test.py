@@ -11,6 +11,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
+from libnmstate.schema import LLDP
 
 from ..testlib import iprule
 from ..testlib.env import is_k8s
@@ -188,3 +189,26 @@ def test_gen_conf_ecmp_routes():
         desired_routes = desired_state[Route.KEY][Route.CONFIG]
         cur_state = libnmstate.show()
         assert_routes(desired_routes, cur_state)
+
+
+def test_gen_conf_lldp():
+    desired_state = load_yaml(
+        """---
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            lldp:
+              enabled: true
+        """
+    )
+    with gen_conf_apply(desired_state):
+        cur_state = show_only(["eth1"])
+        assert cur_state[Interface.KEY][0][LLDP.CONFIG_SUBTREE][LLDP.ENABLED]
+
+    desired_state[Interface.KEY][0][LLDP.CONFIG_SUBTREE][LLDP.ENABLED] = False
+    with gen_conf_apply(desired_state):
+        cur_state = show_only(["eth1"])
+        assert not cur_state[Interface.KEY][0][LLDP.CONFIG_SUBTREE][
+            LLDP.ENABLED
+        ]

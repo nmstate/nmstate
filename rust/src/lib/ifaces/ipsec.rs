@@ -4,12 +4,11 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{BaseInterface, InterfaceType, NetworkState};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[non_exhaustive]
-/// The libreswan Ipsec interface. This interface does not exist in kernel
-/// space but only exist in user space tools.
-/// This is the example yaml output of [crate::NetworkState] with a libreswan
-/// ipsec connection:
+/// The libreswan Ipsec interface.
+///
+/// This interface does not exist in kernel space but only exist in user space
+/// tools.  This is the example yaml output of [crate::NetworkState] with a
+/// libreswan ipsec connection:
 /// ```yaml
 /// ---
 /// interfaces:
@@ -26,6 +25,8 @@ use crate::{BaseInterface, InterfaceType, NetworkState};
 ///     leftcert: hosta.example.org
 ///     ikev2: insist
 /// ```
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct IpsecInterface {
     #[serde(flatten)]
     pub base: BaseInterface,

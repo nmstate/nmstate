@@ -9,7 +9,7 @@ use super::super::{
         store_dns_search_or_option_to_iface,
     },
     error::nm_error_to_nmstate,
-    nm_dbus::{NmApi, NmConnection},
+    nm_dbus::{NmApi, NmConnection, NmIfaceType},
     profile::{perpare_nm_conns, PerparedNmConnections},
     query_apply::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
@@ -27,11 +27,7 @@ use super::super::{
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
-    settings::{
-        iface_type_to_nm, NM_SETTING_BOND_SETTING_NAME,
-        NM_SETTING_BRIDGE_SETTING_NAME, NM_SETTING_OVS_PORT_SETTING_NAME,
-        NM_SETTING_VPN_SETTING_NAME,
-    },
+    settings::iface_type_to_nm,
 };
 
 use crate::{
@@ -229,7 +225,7 @@ fn delete_ifaces(
             } else {
                 let nm_iface_type = iface_type_to_nm(&iface.iface_type())?;
                 nm_conns_name_type_index
-                    .get(&(iface.name(), &nm_iface_type))
+                    .get(&(iface.name(), nm_iface_type))
                     .cloned()
                     .unwrap_or_default()
             };
@@ -284,7 +280,7 @@ fn delete_ifaces(
             }
             // Delete OVS port profile along with OVS system and internal
             // Interface
-            if nm_conn.controller_type() == Some("ovs-port") {
+            if nm_conn.controller_type() == Some(&NmIfaceType::OvsPort) {
                 if let Some(ctrl) = nm_conn.controller() {
                     if is_uuid(ctrl) {
                         if !uuids_to_delete.contains(ctrl) {
@@ -296,8 +292,8 @@ fn delete_ifaces(
                             );
                             uuids_to_delete.insert(ctrl);
                         }
-                    } else if let Some(nm_conns) =
-                        nm_conns_name_type_index.get(&(ctrl, "ovs-port"))
+                    } else if let Some(nm_conns) = nm_conns_name_type_index
+                        .get(&(ctrl, NmIfaceType::OvsPort))
                     {
                         for nm_conn in nm_conns {
                             if let Some(uuid) = nm_conn.uuid() {
@@ -376,7 +372,7 @@ fn delete_orphan_ports(
     let mut uuids_to_delete = Vec::new();
     let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
     for nm_conn in &all_nm_conns {
-        if nm_conn.iface_type() != Some(NM_SETTING_OVS_PORT_SETTING_NAME) {
+        if nm_conn.iface_type() != Some(&NmIfaceType::OvsPort) {
             continue;
         }
         if let Some(ctrl_uuid) = nm_conn.controller() {
@@ -385,7 +381,7 @@ fn delete_orphan_ports(
                     log::info!(
                         "Deleting NM orphan profile {}/{}: {}",
                         nm_conn.iface_name().unwrap_or(""),
-                        nm_conn.iface_type().unwrap_or(""),
+                        nm_conn.iface_type().cloned().unwrap_or_default(),
                         uuid
                     );
                     uuids_to_delete.push(uuid);
@@ -440,7 +436,7 @@ fn gen_nm_conn_need_to_deactivate_first(
                     || is_vxlan_changed(nm_conn, activated_nm_con)
                     || is_veth_peer_changed(nm_conn, activated_nm_con)
                     || is_mptcp_flags_changed(nm_conn, activated_nm_con)
-                    || nm_conn.iface_type() == Some(NM_SETTING_VPN_SETTING_NAME)
+                    || nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
                     || is_bridge_port_changed_default_pvid(
                         nm_conn,
                         &default_pvid_changed_brs,
@@ -495,7 +491,7 @@ fn is_bridge_port_changed_default_pvid(
     nm_conn: &NmConnection,
     default_pvid_changed_brs: &[&str],
 ) -> bool {
-    if nm_conn.controller_type() == Some(NM_SETTING_BRIDGE_SETTING_NAME) {
+    if nm_conn.controller_type() == Some(&NmIfaceType::Bridge) {
         if let Some(ctrl_name) = nm_conn.controller() {
             if default_pvid_changed_brs.contains(&ctrl_name) {
                 log::info!(
@@ -526,7 +522,7 @@ fn is_bond_port_queue_id_changed(
     nm_conn: &NmConnection,
     changed_ports: &[&str],
 ) -> bool {
-    if nm_conn.controller_type() == Some(NM_SETTING_BOND_SETTING_NAME) {
+    if nm_conn.controller_type() == Some(&NmIfaceType::Bond) {
         if let Some(iface_name) = nm_conn.iface_name() {
             if changed_ports.contains(&iface_name) {
                 log::info!(

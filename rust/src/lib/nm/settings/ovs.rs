@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use super::super::nm_dbus::{
-    NmConnection, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,
+    NmConnection, NmIfaceType, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,
     NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
 };
 use super::super::settings::connection::gen_nm_conn_setting;
@@ -28,7 +28,11 @@ pub(crate) fn create_ovs_port_nm_conn(
     base_iface.controller_type = Some(InterfaceType::OvsBridge);
     let mut iface = UnknownInterface::new();
     iface.base = base_iface;
-    gen_nm_conn_setting(&Interface::Unknown(iface), &mut nm_conn, stable_uuid)?;
+    gen_nm_conn_setting(
+        &Interface::Unknown(Box::new(iface)),
+        &mut nm_conn,
+        stable_uuid,
+    )?;
 
     let mut nm_ovs_port_set =
         nm_conn.ovs_port.as_ref().cloned().unwrap_or_default();
@@ -235,7 +239,7 @@ pub(crate) fn fix_ovs_iface_controller_setting(
         .unwrap_or_else(|| iface.name().to_string());
 
     if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
-        nm_conn_set.controller_type = Some("ovs-port".to_string());
+        nm_conn_set.controller_type = Some(NmIfaceType::OvsPort);
         nm_conn_set.controller = Some(ovs_port_name);
     }
 }
