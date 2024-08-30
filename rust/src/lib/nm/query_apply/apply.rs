@@ -4,10 +4,7 @@ use std::collections::HashSet;
 
 use super::super::{
     device::create_index_for_nm_devs,
-    dns::{
-        cur_dns_ifaces_still_valid_for_dns, store_dns_config_to_iface,
-        store_dns_search_or_option_to_iface,
-    },
+    dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection, NmIfaceType},
     profile::{perpare_nm_conns, PerparedNmConnections},
@@ -16,8 +13,8 @@ use super::super::{
         deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
         dispatch::apply_dispatch_script,
         dns::{
-            is_iface_dns_desired, purge_global_dns_config,
-            store_dns_config_via_global_api,
+            cur_dns_ifaces_still_valid_for_dns, is_iface_dns_desired,
+            purge_global_dns_config, store_dns_config_via_global_api,
         },
         is_mptcp_flags_changed, is_route_removed, is_veth_peer_changed,
         is_vlan_changed, is_vrf_table_id_changed, is_vxlan_changed,
@@ -84,12 +81,16 @@ pub(crate) fn nm_apply(
     store_route_rule_config(&mut merged_state)?;
 
     if merged_state.dns.is_changed()
+        || merged_state.dns.is_desired()
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
     {
         purge_global_dns_config(&mut nm_api)?;
 
         if merged_state.dns.is_search_or_option_only() {
-            // When user desire static DNS search and dynamic DNS nameserver,
+            log::info!(
+                "Using interface level DNS for special use case: \
+                only static DNS search and/or DNS option desired"
+            );
             // we cannot use global DNS in this case because global DNS suppress
             // DNS nameserver learn from DHCP/autoconf.
             store_dns_search_or_option_to_iface(

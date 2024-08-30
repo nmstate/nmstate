@@ -35,42 +35,38 @@ pub(crate) fn store_dns_config_to_iface(
     nm_acs: &[NmActiveConnection],
     nm_devs: &[NmDevice],
 ) -> Result<(), NmstateError> {
-    if merged_state.dns.is_changed()
-        || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
-    {
-        let srvs = merged_state.dns.servers.as_slice();
+    let srvs = merged_state.dns.servers.as_slice();
 
-        if srvs.len() > 2 && is_mixed_dns_servers(srvs) {
-            return Err(NmstateError::new(
-                ErrorKind::NotImplementedError,
-                "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 \
+    if srvs.len() > 2 && is_mixed_dns_servers(srvs) {
+        return Err(NmstateError::new(
+            ErrorKind::NotImplementedError,
+            "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 \
                 nameservers is not supported yet"
-                    .to_string(),
-            ));
-        }
-
-        let (cur_v4_ifaces, cur_v6_ifaces) =
-            get_cur_dns_ifaces(&merged_state.interfaces);
-        log::debug!(
-            "Current DNS interface is \
-            v4 {cur_v4_ifaces:?} v6 {cur_v6_ifaces:?}"
-        );
-        let (v4_iface_name, v6_iface_name) = reselect_dns_ifaces(
-            merged_state,
-            cur_v4_ifaces.as_slice(),
-            cur_v6_ifaces.as_slice(),
-            nm_acs,
-            nm_devs,
-        );
-        log::debug!(
-            "Re-selected DNS interfaces are v4 {v4_iface_name:?}, \
-            v6 {v6_iface_name:?}"
-        );
-
-        purge_dns_config(false, cur_v4_ifaces.as_slice(), merged_state)?;
-        purge_dns_config(true, cur_v6_ifaces.as_slice(), merged_state)?;
-        save_dns_to_iface(&v4_iface_name, &v6_iface_name, merged_state)?;
+                .to_string(),
+        ));
     }
+
+    let (cur_v4_ifaces, cur_v6_ifaces) =
+        get_cur_dns_ifaces(&merged_state.interfaces);
+    log::debug!(
+        "Current DNS interface is \
+            v4 {cur_v4_ifaces:?} v6 {cur_v6_ifaces:?}"
+    );
+    let (v4_iface_name, v6_iface_name) = reselect_dns_ifaces(
+        merged_state,
+        cur_v4_ifaces.as_slice(),
+        cur_v6_ifaces.as_slice(),
+        nm_acs,
+        nm_devs,
+    );
+    log::debug!(
+        "Re-selected DNS interfaces are v4 {v4_iface_name:?}, \
+            v6 {v6_iface_name:?}"
+    );
+
+    purge_dns_config(false, cur_v4_ifaces.as_slice(), merged_state)?;
+    purge_dns_config(true, cur_v6_ifaces.as_slice(), merged_state)?;
+    save_dns_to_iface(&v4_iface_name, &v6_iface_name, merged_state)?;
     Ok(())
 }
 
@@ -441,7 +437,7 @@ fn set_iface_dns_conf(
     Ok(())
 }
 
-fn get_cur_dns_ifaces(
+pub(crate) fn get_cur_dns_ifaces(
     merged_ifaces: &MergedInterfaces,
 ) -> (Vec<String>, Vec<String>) {
     let mut v4_ifaces: Vec<String> = Vec::new();
@@ -481,27 +477,6 @@ fn get_cur_dns_ifaces(
         }
     }
     (v4_ifaces, v6_ifaces)
-}
-
-pub(crate) fn cur_dns_ifaces_still_valid_for_dns(
-    merged_ifaces: &MergedInterfaces,
-) -> bool {
-    let (cur_v4_ifaces, cur_v6_ifaces) = get_cur_dns_ifaces(merged_ifaces);
-    for iface_name in &cur_v4_ifaces {
-        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-            if iface.is_changed() && !iface.is_iface_valid_for_dns(false) {
-                return false;
-            }
-        }
-    }
-    for iface_name in &cur_v6_ifaces {
-        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-            if iface.is_changed() && !iface.is_iface_valid_for_dns(true) {
-                return false;
-            }
-        }
-    }
-    true
 }
 
 fn is_mixed_dns_servers(srvs: &[String]) -> bool {

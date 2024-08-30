@@ -3,14 +3,14 @@
 use std::str::FromStr;
 
 use super::super::{
-    dns::extract_ipv6_link_local_iface_from_dns_srv,
+    dns::{extract_ipv6_link_local_iface_from_dns_srv, get_cur_dns_ifaces},
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmDnsEntry, NmGlobalDnsConfig, NmSettingIp},
 };
 
 use crate::{
     ip::is_ipv6_unicast_link_local, DnsClientState, DnsState, Interfaces,
-    MergedNetworkState, NmstateError,
+    MergedInterfaces, MergedNetworkState, NmstateError,
 };
 
 pub(crate) fn nm_dns_to_nmstate(
@@ -174,7 +174,7 @@ pub(crate) fn store_dns_config_via_global_api(
     searches: &[String],
     options: &[String],
 ) -> Result<(), NmstateError> {
-    log::warn!(
+    log::info!(
         "Storing DNS to NetworkManager via global dns API, \
         this will cause __all__ interface level DNS settings been ignored"
     );
@@ -239,46 +239,75 @@ pub(crate) fn nm_global_dns_to_nmstate(
 //     interface. This case, user need to state static DNS config along with
 //     static IP config.
 pub(crate) fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
-    if merged_state.dns.is_changed() {
-        if extract_ipv6_link_local_iface_from_dns_srv(
-            merged_state.dns.servers.as_slice(),
-        )
-        .is_some()
-        {
-            return true;
-        }
+    if extract_ipv6_link_local_iface_from_dns_srv(
+        merged_state.dns.servers.as_slice(),
+    )
+    .is_some()
+    {
+        log::info!(
+            "Using interface level DNS for special use case: \
+            IPv6 link-local address as DNS nameserver"
+        );
+        return true;
+    }
 
-        for iface in merged_state
-            .interfaces
-            .kernel_ifaces
-            .values()
-            .filter_map(|i| i.for_apply.as_ref())
-        {
-            if iface
+    for iface in merged_state
+        .interfaces
+        .kernel_ifaces
+        .values()
+        .filter_map(|i| i.for_apply.as_ref())
+    {
+        if iface
+            .base_iface()
+            .ipv4
+            .as_ref()
+            .map(|i| i.is_auto() && i.auto_dns == Some(true))
+            == Some(true)
+            || iface
                 .base_iface()
-                .ipv4
+                .ipv6
                 .as_ref()
                 .map(|i| i.is_auto() && i.auto_dns == Some(true))
                 == Some(true)
-                || iface
-                    .base_iface()
-                    .ipv6
-                    .as_ref()
-                    .map(|i| i.is_auto() && i.auto_dns == Some(true))
-                    == Some(true)
-            {
-                return true;
-            }
-            if iface.base_iface().ipv4.as_ref().map(|i| i.is_static())
+        {
+            log::info!(
+                "Using interface level DNS for special use case: \
+                appending static DNS nameserver before dynamic ones."
+            );
+            return true;
+        }
+        if iface.base_iface().ipv4.as_ref().map(|i| i.is_static()) == Some(true)
+            || iface.base_iface().ipv6.as_ref().map(|i| i.is_static())
                 == Some(true)
-                || iface.base_iface().ipv6.as_ref().map(|i| i.is_static())
-                    == Some(true)
-            {
-                return true;
+        {
+            log::info!(
+                "Using interface level DNS for special use case: \
+                explicitly requested interface level DNS via \
+                defining static IP and static DNS nameserver."
+            );
+            return true;
+        }
+    }
+    false
+}
+
+pub(crate) fn cur_dns_ifaces_still_valid_for_dns(
+    merged_ifaces: &MergedInterfaces,
+) -> bool {
+    let (cur_v4_ifaces, cur_v6_ifaces) = get_cur_dns_ifaces(merged_ifaces);
+    for iface_name in &cur_v4_ifaces {
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+            if iface.is_changed() && !iface.is_iface_valid_for_dns(false) {
+                return false;
             }
         }
-        false
-    } else {
-        false
     }
+    for iface_name in &cur_v6_ifaces {
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+            if iface.is_changed() && !iface.is_iface_valid_for_dns(true) {
+                return false;
+            }
+        }
+    }
+    true
 }
