@@ -212,3 +212,25 @@ def test_gen_conf_lldp():
         assert not cur_state[Interface.KEY][0][LLDP.CONFIG_SUBTREE][
             LLDP.ENABLED
         ]
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(is_k8s(), reason="K8S does not support genconf")
+def test_gen_conf_blackhole_routes():
+    desired_state = load_yaml(
+        """---
+        routes:
+          config:
+            - destination: 198.51.200.0/24
+              route-type: blackhole
+            - destination: 2001:db8:f::/64
+              route-type: blackhole
+        """
+    )
+    with gen_conf_apply(desired_state):
+        desired_routes = desired_state[Route.KEY][Route.CONFIG]
+        # Linux kernel will automatically set next-hop-interface to lo for IPv6
+        # blackhole routes.
+        desired_routes[1][Route.NEXT_HOP_INTERFACE] = "lo"
+        cur_state = libnmstate.show()
+        assert_routes(desired_routes, cur_state, nic=None)

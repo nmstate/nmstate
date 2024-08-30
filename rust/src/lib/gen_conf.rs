@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 
-use crate::{nm::nm_gen_conf, MergedNetworkState, NetworkState, NmstateError};
+use crate::{
+    nm::nm_gen_conf, Interface, MergedNetworkState, NetworkState, NmstateError,
+};
 
 impl NetworkState {
     /// Generate offline network configurations.
@@ -17,9 +19,16 @@ impl NetworkState {
         &self,
     ) -> Result<HashMap<String, Vec<(String, String)>>, NmstateError> {
         let mut ret = HashMap::new();
+        // Passing a current state with loopback interface, so special
+        // route(like blackhole) can be stored there.
+        let mut cur_state = NetworkState::new();
+        cur_state
+            .interfaces
+            .push(Interface::Loopback(Default::default()));
+
         let merged_state = MergedNetworkState::new(
             self.clone(),
-            NetworkState::new(),
+            cur_state,
             true,  // gen_conf mode
             false, // memory only
         )?;
