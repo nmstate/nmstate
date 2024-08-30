@@ -9,7 +9,7 @@ KERNEL_DEFAULT_TABLE_ID = 254
 
 
 def assert_routes(routes, state, nic="eth1"):
-    routes = _clone_prepare_routes(routes)
+    routes = _clone_prepare_routes(routes, nic=nic)
     config_routes = _clone_prepare_routes(state[Route.KEY][Route.CONFIG], nic)
     running_routes = _clone_prepare_routes(
         state[Route.KEY][Route.RUNNING], nic

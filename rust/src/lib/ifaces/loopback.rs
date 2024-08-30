@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::net::{Ipv4Addr, Ipv6Addr};
+
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
+use crate::{
+    BaseInterface, ErrorKind, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, InterfaceType, NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -44,6 +49,29 @@ impl Default for LoopbackInterface {
     fn default() -> Self {
         let mut base = BaseInterface::new();
         base.iface_type = InterfaceType::Loopback;
+        base.name = "lo".to_string();
+        base.state = InterfaceState::Up;
+        base.ipv4 = Some(InterfaceIpv4 {
+            enabled: true,
+            enabled_defined: true,
+            addresses: Some(vec![InterfaceIpAddr {
+                ip: Ipv4Addr::LOCALHOST.into(),
+                prefix_length: 8,
+                ..Default::default()
+            }]),
+            ..Default::default()
+        });
+        base.ipv6 = Some(InterfaceIpv6 {
+            enabled: true,
+            enabled_defined: true,
+            addresses: Some(vec![InterfaceIpAddr {
+                ip: Ipv6Addr::LOCALHOST.into(),
+                prefix_length: 128,
+                ..Default::default()
+            }]),
+            ..Default::default()
+        });
+
         Self { base }
     }
 }
