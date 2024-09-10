@@ -172,3 +172,30 @@ def test_invalid_mptcp_flags(eth1_with_static_ip, mptcp_flags):
                 ]
             }
         )
+
+
+# https://issues.redhat.com/browse/RHEL-38607
+def test_purge_mptcp_on_auto_ip_iface_with_dhcp_server(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.MPTCP: {
+                        Mptcp.ADDRESS_FLAGS: [],
+                    },
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                    },
+                }
+            ]
+        }
+    )
