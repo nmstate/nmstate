@@ -18,9 +18,11 @@ impl BaseInterface {
         if self.controller.is_none() {
             self.controller = Some(String::new());
         }
-        if let Some(mptcp_conf) = self.mptcp.as_mut() {
-            mptcp_conf.sanitize_current_for_verify();
-        }
+
+        self.mptcp
+            .get_or_insert(Default::default())
+            .sanitize_current_for_verify();
+
         if let Some(ipv4_conf) = self.ipv4.as_mut() {
             ipv4_conf.sanitize_current_for_verify();
         }
