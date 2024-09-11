@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
+import time
 import yaml
 
 import libnmstate
@@ -883,3 +884,69 @@ def test_ipsec_ipv6_host_to_site_with_dhcpv6_off(
     iface_state = show_only(["ipsec97"])[Interface.KEY][0]
     assert not iface_state[Interface.IPV6].get(InterfaceIPv6.DHCP)
     assert not iface_state[Interface.IPV6].get(InterfaceIPv6.AUTOCONF)
+
+
+@pytest.mark.xfail(
+    nm_libreswan_version_int() < version_str_to_int("1.2.23"),
+    reason="Need NetworkManager-libreswan 1.2.23+ to support "
+    "require-id-on-certificate",
+)
+def test_ipsec_require_id_on_certificate(ipsec_hosta_conn_cleanup):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: hosta_conn
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            left: {IpsecTestEnv.HOSTA_IPV4_CRT}
+            leftid: '%fromcert'
+            leftcert: hosta.example.org
+            right: {IpsecTestEnv.HOSTB_IPV4_CRT}
+            rightid: '%fromcert'
+            rightcert: hostb.example.org
+            require-id-on-certificate: yes
+            ikev2: insist
+            ikelifetime: 24h
+            salifetime: 24h""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        IpsecTestEnv.HOSTA_IPV4_CRT,
+        IpsecTestEnv.HOSTB_IPV4_CRT,
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_ip,
+        IpsecTestEnv.HOSTB_VPN_SUBNET_PREFIX,
+        IpsecTestEnv.HOSTA_NIC,
+    )
+
+    desired_iface = desired_state[Interface.KEY][0]
+
+    desired_iface["libreswan"]["rightid"] = "other.fail"
+    libnmstate.apply(desired_state)
+    time.sleep(5)
+    assert not _check_ipsec(
+        IpsecTestEnv.HOSTA_IPV4_CRT, IpsecTestEnv.HOSTB_IPV4_CRT
+    )
+
+    desired_iface["libreswan"]["require-id-on-certificate"] = False
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        IpsecTestEnv.HOSTA_IPV4_CRT,
+        IpsecTestEnv.HOSTB_IPV4_CRT,
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_ip,
+        IpsecTestEnv.HOSTB_VPN_SUBNET_PREFIX,
+        IpsecTestEnv.HOSTA_NIC,
+    )
