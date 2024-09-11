@@ -88,6 +88,10 @@ pub(crate) fn gen_nm_ipsec_vpn_setting(
         if let Some(v) = conf.hostaddrfamily {
             vpn_data.insert("hostaddrfamily".into(), v.to_string());
         }
+        if let Some(v) = conf.require_id_on_certificate {
+            let v = if v { "yes" } else { "no" };
+            vpn_data.insert("require-id-on-certificate".into(), v.to_string());
+        }
 
         let mut nm_vpn_set = NmSettingVpn::default();
         nm_vpn_set.data = Some(vpn_data);
