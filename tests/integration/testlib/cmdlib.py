@@ -44,7 +44,7 @@ def exec_cmd(cmd, env=None, stdin=None, check=False):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
-        check=check,
+        check=False,
         input=stdin,
     )
 
@@ -52,6 +52,13 @@ def exec_cmd(cmd, env=None, stdin=None, check=False):
     err = p.stderr
 
     logging.debug(_retcode_log_line(p.returncode, err=err))
+
+    if check and p.returncode != 0:
+        raise Exception(
+            "Failed command {0}:\n{1}".format(
+                command_log_line(cmd), format_exec_cmd_result(p)
+            )
+        )
 
     return (p.returncode, out.decode("utf-8"), err.decode("utf-8"))
 
