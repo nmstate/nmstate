@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use crate::{
     policy::{
-        capture::{NetworkCaptureAction, NetworkCaptureCommand},
+        capture::{
+            NetworkCaptureAction, NetworkCaptureCommand, NetworkCaptureRules,
+        },
         token::NetworkCaptureToken,
     },
     NetworkState,
@@ -263,4 +265,19 @@ fn test_policy_capture_route_rule() {
     assert_eq!(rules.len(), 1);
     assert_eq!(rules[0].ip_from, Some("2001:db8:b::/64".to_string()));
     assert_eq!(rules[0].table_id, Some(500));
+}
+
+#[test]
+fn test_policy_rules_unordered() {
+    let result = serde_yaml::from_str::<NetworkCaptureRules>(
+        r#"
+a: interfaces.name=="a"
+c: capture.b | interfaces.name=="c"
+b: capture.a | interfaces.name=="b"
+d: capture.c | interfaces.name=="d"
+dummy: interfaces.name=="dummy"
+  "#,
+    );
+    println!("{:?}", result);
+    assert!(result.is_ok());
 }

@@ -4,7 +4,8 @@ use std::collections::HashMap;
 
 use crate::{
     policy::{
-        capture::NetworkCaptureCommand, token::parse_str_to_template_tokens,
+        capture::{NetworkCaptureCommand, NetworkCaptureRules},
+        token::parse_str_to_template_tokens,
     },
     ErrorKind, NetworkState, NetworkStateTemplate,
 };
@@ -491,5 +492,59 @@ interfaces:
         assert_eq!(e.kind(), ErrorKind::PolicyError);
         assert_eq!(e.line(), "{{ interface.0.name }}");
         assert_eq!(e.position(), "{{ i".len() - 1)
+    }
+}
+
+#[test]
+fn test_policy_rules_loop() {
+    let result = serde_yaml::from_str::<NetworkCaptureRules>(
+        r#"
+a: capture.d | interfaces.name=="a"
+b: capture.a | interfaces.name=="b"
+c: capture.b | interfaces.name=="c"
+d: capture.c | interfaces.name=="d"
+dummy: interfaces.name=="dummy"
+  "#,
+    );
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(
+            e.to_string(),
+            format!("Found cyclic or excessibe capture references")
+        );
+    }
+}
+
+#[test]
+fn test_policy_rules_reference_itself() {
+    let result = serde_yaml::from_str::<NetworkCaptureRules>(
+        r#"
+a: capture.a | interfaces.name=="a"
+dummy: interfaces.name=="dummy"
+  "#,
+    );
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(
+            e.to_string(),
+            format!("Found cyclic or excessibe capture references")
+        );
+    }
+}
+
+#[test]
+fn test_policy_rules_dangling_reference() {
+    let result = serde_yaml::from_str::<NetworkCaptureRules>(
+        r#"
+a: capture.b | interfaces.name=="a"
+dummy: interfaces.name=="dummy"
+  "#,
+    );
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(
+            e.to_string(),
+            format!("PolicyError: Bad capture entry 'a': dangling reference\n| capture.b | interfaces.name==\"a\"\n| ^")
+        );
     }
 }

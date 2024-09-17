@@ -16,6 +16,8 @@ use super::{
     token::{parse_str_to_capture_tokens, NetworkCaptureToken},
 };
 
+pub const CAPTURE_LOOP_LIMIT: u32 = 25;
+
 pub(crate) const PROPERTY_SPLITTER: &str = ".";
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -32,21 +34,65 @@ impl<'de> Deserialize<'de> for NetworkCaptureRules {
         let map = serde_json::Map::<String, serde_json::Value>::deserialize(
             deserializer,
         )?;
-        let mut cmds: Vec<(String, NetworkCaptureCommand)> = Vec::new();
 
+        // parse commands
+        let mut caps_map: HashMap<String, NetworkCaptureCommand> =
+            HashMap::new();
         for (k, v) in map.iter() {
             if let serde_json::Value::String(s) = v {
-                cmds.push((
+                caps_map.insert(
                     k.to_string(),
                     NetworkCaptureCommand::parse(s.as_str())
                         .map_err(serde::de::Error::custom)?,
-                ));
+                );
             } else {
                 return Err(serde::de::Error::custom(format!(
                     "Expecting a string, but got {v}"
                 )));
             }
         }
+
+        for (cap_name, cap_cmd) in caps_map.clone().into_iter() {
+            if let Some(key_capture) = cap_cmd.key_capture.as_ref() {
+                if !caps_map.contains_key(key_capture) {
+                    return Err(serde::de::Error::custom(
+                        NmstateError::new_policy_error(
+                            format!(
+                                "Bad capture entry '{}': dangling reference",
+                                cap_name
+                            ),
+                            &cap_cmd.line,
+                            cap_cmd.key_capture_pos,
+                        )
+                        .to_string(),
+                    ));
+                }
+            }
+        }
+        let mut cmds: Vec<(String, NetworkCaptureCommand)> = Vec::new();
+        for _ in 0..CAPTURE_LOOP_LIMIT {
+            // Use into_iter so we can remove elements from caps_map
+            for (cap_name, cap_cmd) in caps_map.clone().into_iter() {
+                if let Some(key_capture) = cap_cmd.key_capture.as_ref() {
+                    if !caps_map.contains_key(key_capture) {
+                        cmds.push((cap_name.clone(), cap_cmd));
+                        caps_map.remove(&cap_name);
+                    }
+                } else {
+                    cmds.push((cap_name.clone(), cap_cmd));
+                    caps_map.remove(&cap_name);
+                }
+            }
+            if caps_map.is_empty() {
+                break;
+            }
+        }
+        if !caps_map.is_empty() {
+            return Err(serde::de::Error::custom(
+                "Found cyclic or excessibe capture references",
+            ));
+        }
+
         log::debug!("Parsed into commands {:?}", cmds);
         Ok(NetworkCaptureRules { cmds })
     }
