@@ -183,6 +183,22 @@ function modprobe_ovs {
     #TODO: Install ovs on k8s cluster
 }
 
+function add_baseos_mirrorlist {
+    # Sometimes we see gpgcheck metadata checksum issue.
+    # It's very likely caused by an unsynced repo.
+    # Let's add mirror lists to find working repos in every case.
+    if [[ "$CONTAINER_IMAGE" == *"c9s"* ]]; then
+        echo "adding c9s mirror lists"
+        exec_cmd "dnf config-manager --add-repo=http://mirrorlist.centos.org/?release=9-stream&arch=x86_64&repo=BaseOS"
+        exec_cmd "dnf config-manager --add-repo=http://mirrorlist.centos.org/?release=9-stream&arch=x86_64&repo=AppStream"
+    fi
+    if [[ "$CONTAINER_IMAGE" == *"c10s"* ]]; then
+        echo "adding c10s mirror lists"
+        exec_cmd "dnf config-manager --add-repo=http://mirrorlist.centos.org/?release=10-stream&arch=x86_64&repo=BaseOS"
+        exec_cmd "dnf config-manager --add-repo=http://mirrorlist.centos.org/?release=10-stream&arch=x86_64&repo=AppStream"
+    fi
+}
+
 function check_services {
     exec_cmd 'while ! systemctl is-active dbus; do sleep 1; done'
     exec_cmd 'systemctl start systemd-udevd
@@ -360,6 +376,7 @@ elif [ -n "${RUN_K8S}" ]; then
     run_customize_command
 else
     container_pre_test_setup
+    add_baseos_mirrorlist
     run_customize_command
 fi
 
