@@ -9,10 +9,6 @@ def is_fedora():
     return os.path.exists("/etc/fedora-release")
 
 
-def is_ubuntu_kernel():
-    return "Ubuntu" in os.uname().version
-
-
 def nm_minor_version():
     version_str = exec_cmd(
         "rpm -q NetworkManager --qf %{VERSION}".split(),
