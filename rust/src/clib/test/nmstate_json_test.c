@@ -19,12 +19,12 @@ int main(void) {
 	if (nmstate_net_state_retrieve(flag, &state, &log, &err_kind, &err_msg)
 	    == NMSTATE_PASS) {
 		printf("%s\n", state);
+		assert(state[0] == '{');
 	} else {
-		printf("%s: %s\n", err_kind, err_msg);
+		fprintf(stderr, "%s: %s\n", err_kind, err_msg);
 		rc = EXIT_FAILURE;
 	}
 
-	assert(state[0] == '{');
 
 	nmstate_cstring_free(state);
 	nmstate_cstring_free(err_kind);
