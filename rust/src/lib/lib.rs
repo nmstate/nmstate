@@ -32,7 +32,7 @@
 //!
 //! To retrieve current network state:
 //!
-//! ```rust
+//! ```no_run
 //! use nmstate::NetworkState;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
