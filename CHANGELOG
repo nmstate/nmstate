@@ -1,4 +1,18 @@
 # Changelog
+## [2.2.36] - 2024-09-19
+### Breaking changes
+ - N/A
+
+### New features
+ - ipsec: support require-id-on-certificate. (90a56cc0)
+ - route: Add support for route source. (d4487de1)
+ - gen_conf: Support special route type. (2207c40b)
+
+### Bug fixes
+ - mptcp: Treat none as empty MPTCP flags in current state when verifying. (755333cb)
+ - nm dns: Re-evaluate DNS settings if desired even not changed. (9fe7836c)
+ - vrf: Skip serializing if port is undefined. (fa013cc3)
+
 ## [2.2.35] - 2024-08-20
 ### Breaking changes
  - Rust API: `VrfConfig.table_id` changed `u32` to `Option<u32>`.(2900bf5e)
