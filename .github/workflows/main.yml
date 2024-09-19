@@ -78,6 +78,14 @@ jobs:
         sudo apt-get update;
         sudo apt-get -y install valgrind
 
+    - name: Disable MPTCP
+      # Nmstate query will fail due to permission deny when MPTCP is enabled
+      # due to kernel limitation(bug),
+      # once https://github.com/nispor/nispor/pull/276 is released, we
+      # can remove this workaround
+      run: |
+        sudo sysctl -w net.mptcp.enabled=0
+
     - name: Unit test
       run: cd rust && cargo test -- --show-output
 
