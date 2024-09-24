@@ -29,13 +29,13 @@ pub use self::connection::{
     NmRange, NmSetting8021X, NmSettingBond, NmSettingBondPort, NmSettingBridge,
     NmSettingBridgePort, NmSettingBridgeVlanRange, NmSettingConnection,
     NmSettingEthtool, NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod,
-    NmSettingLoopback, NmSettingMacSec, NmSettingMacVlan, NmSettingOvsBridge,
-    NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsIface,
-    NmSettingOvsOtherConfig, NmSettingOvsPatch, NmSettingOvsPort,
-    NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser,
-    NmSettingVeth, NmSettingVlan, NmSettingVlanFlag, NmSettingVpn,
-    NmSettingVrf, NmSettingVxlan, NmSettingWired, NmSettingsConnectionFlag,
-    NmVlanProtocol,
+    NmSettingIpVlan, NmSettingLoopback, NmSettingMacSec, NmSettingMacVlan,
+    NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
+    NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+    NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
+    NmSettingUser, NmSettingVeth, NmSettingVlan, NmSettingVlanFlag,
+    NmSettingVpn, NmSettingVrf, NmSettingVxlan, NmSettingWired,
+    NmSettingsConnectionFlag, NmVlanProtocol,
 };
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 #[cfg(feature = "query_apply")]

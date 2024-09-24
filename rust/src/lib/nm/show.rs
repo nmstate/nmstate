@@ -24,11 +24,11 @@ use super::{
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
     EthernetInterface, HsrInterface, InfiniBandInterface, Interface,
-    InterfaceIdentifier, InterfaceState, InterfaceType, LinuxBridgeInterface,
-    LoopbackInterface, MacSecConfig, MacSecInterface, MacVlanInterface,
-    MacVtapInterface, NetworkState, NmstateError, OvsBridgeInterface,
-    OvsInterface, UnknownInterface, VlanInterface, VrfInterface,
-    VxlanInterface,
+    InterfaceIdentifier, InterfaceState, InterfaceType, IpVlanInterface,
+    LinuxBridgeInterface, LoopbackInterface, MacSecConfig, MacSecInterface,
+    MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
+    OvsBridgeInterface, OvsInterface, UnknownInterface, VlanInterface,
+    VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -364,6 +364,11 @@ fn iface_get(
                 iface.base = base_iface;
                 Box::new(iface)
             }),
+            InterfaceType::IpVlan => Interface::IpVlan({
+                let mut iface = IpVlanInterface::new();
+                iface.base = base_iface;
+                Box::new(iface)
+            }),
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);
                 return None;
@@ -517,6 +522,11 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
                 ..Default::default()
             }
         })),
+        InterfaceType::IpVlan => Interface::IpVlan({
+            let mut iface = IpVlanInterface::new();
+            iface.base = base_iface;
+            Box::new(iface)
+        }),
         iface_type
             if iface_type == &InterfaceType::Other("ovs-port".to_string()) =>
         {

@@ -11,6 +11,7 @@ mod hostname;
 mod hsr;
 mod infiniband;
 mod ip;
+mod ipvlan;
 mod linux_bridge;
 mod linux_bridge_port_vlan;
 mod mac_vlan;

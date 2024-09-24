@@ -9,6 +9,7 @@ mod ethtool;
 mod hsr;
 pub(crate) mod inter_ifaces;
 mod ipsec;
+mod ipvlan;
 mod loopback;
 mod vrf;
 mod vxlan;
@@ -51,6 +52,7 @@ pub use ipsec::{
     IpsecInterface, LibreswanAddressFamily, LibreswanConfig,
     LibreswanConnectionType,
 };
+pub use ipvlan::{IpVlanConfig, IpVlanInterface, IpVlanMode};
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
     LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,

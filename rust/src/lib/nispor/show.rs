@@ -12,6 +12,7 @@ use crate::{
         hostname::get_hostname_state,
         hsr::np_hsr_to_nmstate,
         infiniband::np_ib_to_nmstate,
+        ipvlan::np_ipvlan_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
         macsec::np_macsec_to_nmstate,
@@ -146,6 +147,9 @@ pub(crate) async fn nispor_retrieve(
                 iface.base = base_iface;
                 Interface::Xfrm(Box::new(iface))
             }
+            InterfaceType::IpVlan => Interface::IpVlan(Box::new(
+                np_ipvlan_to_nmstate(np_iface, base_iface),
+            )),
             _ => {
                 log::info!(
                     "Got unsupported interface {} type {:?}",

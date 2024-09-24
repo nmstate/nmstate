@@ -12,6 +12,7 @@ mod infiniband;
 mod inter_ifaces;
 mod ip;
 mod ipsec;
+mod ipvlan;
 mod linux_bridge;
 mod mac_vlan;
 mod mac_vtap;

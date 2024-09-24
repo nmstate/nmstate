@@ -244,6 +244,17 @@ impl Interface {
                     );
                 }
             }
+            Self::IpVlan(iface) => {
+                if let Self::IpVlan(other_iface) = other {
+                    iface.update_ipvlan(other_iface);
+                } else {
+                    log::warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface,
+                        other
+                    );
+                }
+            }
             _ => (),
         }
     }
@@ -255,7 +266,7 @@ impl Interface {
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 18] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 19] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -274,5 +285,6 @@ impl InterfaceType {
         InterfaceType::Hsr,
         InterfaceType::Ipsec,
         InterfaceType::Xfrm,
+        InterfaceType::IpVlan,
     ];
 }

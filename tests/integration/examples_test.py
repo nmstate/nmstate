@@ -293,3 +293,16 @@ def test_static_hostname_for_examples():
     ) as desired_state:
         cur_hostname = libnmstate.show()[HostNameState.KEY]
         assert cur_hostname == desired_state[HostNameState.KEY]
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 51,
+    reason="IPVLAN is only supported on NetworkManager 1.51+",
+)
+def test_add_ipvlan_and_remove_example(eth1_up):
+    with example_state(
+        "ipvlan0_create.yml", cleanup="ipvlan0_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("ipvlan0")

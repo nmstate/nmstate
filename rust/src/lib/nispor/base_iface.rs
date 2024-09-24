@@ -28,6 +28,7 @@ fn np_iface_type_to_nmstate(
         nispor::IfaceType::Ipoib => InterfaceType::InfiniBand,
         nispor::IfaceType::Tun => InterfaceType::Tun,
         nispor::IfaceType::Xfrm => InterfaceType::Xfrm,
+        nispor::IfaceType::IpVlan => InterfaceType::IpVlan,
         nispor::IfaceType::Other(v) => InterfaceType::Other(v.to_lowercase()),
         _ => InterfaceType::Other(format!("{np_iface_type:?}").to_lowercase()),
     }
