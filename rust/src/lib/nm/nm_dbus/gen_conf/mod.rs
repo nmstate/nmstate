@@ -7,6 +7,7 @@ mod ethtool;
 mod ieee8021x;
 mod infiniband;
 mod ip;
+mod ipvlan;
 mod keyfile;
 mod mac_vlan;
 mod ovs;

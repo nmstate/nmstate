@@ -121,6 +121,7 @@ class InterfaceType:
     OTHER = "other"
     LOOPBACK = "loopback"
     IPSEC = "ipsec"
+    IPVLAN = "ipvlan"
 
     VIRT_TYPES = (
         BOND,
@@ -135,6 +136,7 @@ class InterfaceType:
         VLAN,
         VXLAN,
         IPSEC,
+        IPVLAN,
     )
 
 
@@ -485,6 +487,19 @@ class Hsr:
     SUPERVISION_ADDRESS = "supervision-address"
     MULTICAST_SPEC = "multicast-spec"
     PROTOCOL = "protocol"
+
+
+class IpVlan:
+    CONFIG_SUBTREE = "ipvlan"
+    BASE_IFACE = "base-iface"
+    MODE = "mode"
+    PRIVATE = "private"
+    VEPA = "vepa"
+
+    class Mode:
+        L2 = "l2"
+        L3 = "l3"
+        L3S = "l3s"
 
 
 class Ieee8021X:

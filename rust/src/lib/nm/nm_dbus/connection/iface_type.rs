@@ -32,6 +32,7 @@ pub(crate) const NM_SETTING_WPAN_SETTING_NAME: &str = "wpan";
 pub(crate) const NM_SETTING_6LOWPAN_SETTING_NAME: &str = "6lowpan";
 pub(crate) const NM_SETTING_WIREGUARD_SETTING_NAME: &str = "wireguard";
 pub(crate) const NM_SETTING_WIFI_P2P_SETTING_NAME: &str = "wifi-p2p";
+pub(crate) const NM_SETTING_IPVLAN_SETTING_NAME: &str = "ipvlan";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize)]
 #[non_exhaustive]
@@ -66,6 +67,7 @@ pub enum NmIfaceType {
     SixLowPan,
     Wireguard,
     WifiP2p,
+    Ipvlan,
     Other(String),
 }
 
@@ -100,6 +102,7 @@ impl std::fmt::Display for NmIfaceType {
             Self::SixLowPan => NM_SETTING_6LOWPAN_SETTING_NAME,
             Self::Wireguard => NM_SETTING_WIREGUARD_SETTING_NAME,
             Self::WifiP2p => NM_SETTING_WIFI_P2P_SETTING_NAME,
+            Self::Ipvlan => NM_SETTING_IPVLAN_SETTING_NAME,
             Self::Unknown => "unknown",
             Self::Other(s) => s.as_str(),
         };
@@ -138,6 +141,7 @@ impl From<&str> for NmIfaceType {
             NM_SETTING_6LOWPAN_SETTING_NAME => Self::SixLowPan,
             NM_SETTING_WIREGUARD_SETTING_NAME => Self::Wireguard,
             NM_SETTING_WIFI_P2P_SETTING_NAME => Self::WifiP2p,
+            NM_SETTING_IPVLAN_SETTING_NAME => Self::Ipvlan,
             _ => {
                 log::debug!("Unknown interface type {s}");
                 Self::Other(s.to_string())

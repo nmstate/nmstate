@@ -12,6 +12,7 @@ use super::{
     ieee8021x::gen_nm_802_1x_setting,
     infiniband::gen_nm_ib_setting,
     ip::gen_nm_ip_setting,
+    ipvlan::gen_nm_ipvlan_setting,
     loopback::gen_nm_loopback_setting,
     macsec::gen_nm_macsec_setting,
     mptcp::apply_mptcp_conf,
@@ -223,6 +224,9 @@ pub(crate) fn iface_to_nm_connections(
         Interface::Ipsec(iface) => {
             gen_nm_ipsec_vpn_setting(iface, &mut nm_conn);
         }
+        Interface::IpVlan(iface) => {
+            gen_nm_ipvlan_setting(iface, &mut nm_conn);
+        }
         _ => (),
     };
 
@@ -333,6 +337,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::MacSec => Ok(NmIfaceType::Macsec),
         InterfaceType::Hsr => Ok(NmIfaceType::Hsr),
         InterfaceType::Ipsec => Ok(NmIfaceType::Vpn),
+        InterfaceType::IpVlan => Ok(NmIfaceType::Ipvlan),
         InterfaceType::Other(s) => Ok(NmIfaceType::from(s.as_str())),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,

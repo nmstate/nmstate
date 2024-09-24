@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: ipvlan0
+    type: ipvlan
+    state: absent

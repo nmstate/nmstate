@@ -6,6 +6,7 @@ pub(crate) mod dispatch;
 pub(crate) mod dns;
 mod ieee8021x;
 mod ip;
+mod ipvlan;
 mod lldp;
 mod mptcp;
 pub(crate) mod ovs;
@@ -24,6 +25,7 @@ pub(crate) use self::ieee8021x::nm_802_1x_to_nmstate;
 pub(crate) use self::ip::{
     nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6, query_nmstate_wait_ip,
 };
+pub(crate) use self::ipvlan::is_ipvlan_changed;
 pub(crate) use self::lldp::{get_lldp, is_lldp_enabled};
 pub(crate) use self::mptcp::is_mptcp_flags_changed;
 pub(crate) use self::ovs::delete_orphan_ovs_ports;

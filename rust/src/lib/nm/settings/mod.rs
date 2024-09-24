@@ -9,6 +9,7 @@ mod hsr;
 mod ieee8021x;
 mod infiniband;
 mod ip;
+mod ipvlan;
 mod loopback;
 mod mac_vlan;
 mod macsec;

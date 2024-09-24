@@ -16,8 +16,9 @@ use super::super::{
             cur_dns_ifaces_still_valid_for_dns, is_iface_dns_desired,
             purge_global_dns_config, store_dns_config_via_global_api,
         },
-        is_mptcp_flags_changed, is_route_removed, is_veth_peer_changed,
-        is_vlan_changed, is_vrf_table_id_changed, is_vxlan_changed,
+        is_ipvlan_changed, is_mptcp_flags_changed, is_route_removed,
+        is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
+        is_vxlan_changed,
         profile::is_uuid,
         save_nm_profiles,
         vpn::get_match_ipsec_nm_conn,
@@ -446,6 +447,7 @@ fn gen_nm_conn_need_to_deactivate_first(
                         nm_conn,
                         &bond_queue_id_changed_ports,
                     )
+                    || is_ipvlan_changed(nm_conn, activated_nm_con)
                 {
                     ret.push((*activated_nm_con).clone());
                 }

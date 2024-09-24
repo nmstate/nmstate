@@ -13,7 +13,7 @@ use super::nm_dbus::{
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
 
-const SUPPORT_NM_KERNEL_IFACES: [NmIfaceType; 14] = [
+const SUPPORT_NM_KERNEL_IFACES: [NmIfaceType; 15] = [
     NmIfaceType::Ethernet,
     NmIfaceType::Veth,
     NmIfaceType::Bond,
@@ -28,6 +28,7 @@ const SUPPORT_NM_KERNEL_IFACES: [NmIfaceType; 14] = [
     NmIfaceType::Infiniband,
     NmIfaceType::Macsec,
     NmIfaceType::Hsr,
+    NmIfaceType::Ipvlan,
 ];
 
 pub(crate) fn store_dns_config_to_iface(

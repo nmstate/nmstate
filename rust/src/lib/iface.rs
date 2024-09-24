@@ -6,10 +6,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
-    HsrInterface, InfiniBandInterface, IpsecInterface, LinuxBridgeInterface,
-    LoopbackInterface, MacSecInterface, MacVlanInterface, MacVtapInterface,
-    NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
-    VrfInterface, VxlanInterface, XfrmInterface,
+    HsrInterface, InfiniBandInterface, IpVlanInterface, IpsecInterface,
+    LinuxBridgeInterface, LoopbackInterface, MacSecInterface, MacVlanInterface,
+    MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
+    VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
 };
 
 use crate::state::merge_json_value;
@@ -78,6 +78,9 @@ pub enum InterfaceType {
     Ipsec,
     /// Linux Xfrm kernel interface
     Xfrm,
+    /// IPVLAN kernel interface
+    #[serde(rename = "ipvlan")]
+    IpVlan,
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
@@ -118,6 +121,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::MacSec => "macsec",
                 InterfaceType::Ipsec => "ipsec",
                 InterfaceType::Xfrm => "xfrm",
+                InterfaceType::IpVlan => "ipvlan",
                 InterfaceType::Other(ref s) => s,
             }
         )
@@ -278,6 +282,8 @@ pub enum Interface {
     Ipsec(Box<IpsecInterface>),
     /// Linux xfrm interface
     Xfrm(Box<XfrmInterface>),
+    /// Linux IPVLAN interface
+    IpVlan(Box<IpVlanInterface>),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -398,6 +404,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = XfrmInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Xfrm(Box::new(inner)))
+            }
+            Some(InterfaceType::IpVlan) => {
+                let inner = IpVlanInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::IpVlan(Box::new(inner)))
             }
             Some(iface_type) => {
                 log::warn!("Unsupported interface type {}", iface_type);
@@ -524,6 +535,11 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Xfrm(Box::new(new_iface))
             }
+            Self::IpVlan(iface) => {
+                let mut new_iface = IpVlanInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::IpVlan(Box::new(new_iface))
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -622,6 +638,7 @@ impl Interface {
             Self::MacSec(iface) => &iface.base,
             Self::Ipsec(iface) => &iface.base,
             Self::Xfrm(iface) => &iface.base,
+            Self::IpVlan(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -645,6 +662,7 @@ impl Interface {
             Self::MacSec(iface) => &mut iface.base,
             Self::Ipsec(iface) => &mut iface.base,
             Self::Xfrm(iface) => &mut iface.base,
+            Self::IpVlan(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -697,6 +715,7 @@ impl Interface {
             Interface::MacSec(iface) => iface.sanitize(is_desired)?,
             Interface::Ipsec(iface) => iface.sanitize(is_desired),
             Interface::Vlan(iface) => iface.sanitize(is_desired)?,
+            Interface::IpVlan(iface) => iface.sanitize(is_desired)?,
             _ => (),
         }
         Ok(())

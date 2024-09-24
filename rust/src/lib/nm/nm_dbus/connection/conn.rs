@@ -16,6 +16,7 @@ use super::super::{
     connection::ieee8021x::NmSetting8021X,
     connection::infiniband::NmSettingInfiniBand,
     connection::ip::NmSettingIp,
+    connection::ipvlan::NmSettingIpVlan,
     connection::loopback::NmSettingLoopback,
     connection::mac_vlan::NmSettingMacVlan,
     connection::macsec::NmSettingMacSec,
@@ -109,6 +110,7 @@ pub struct NmConnection {
     pub macsec: Option<NmSettingMacSec>,
     pub hsr: Option<NmSettingHsr>,
     pub vpn: Option<NmSettingVpn>,
+    pub ipvlan: Option<NmSettingIpVlan>,
     #[serde(skip)]
     pub obj_path: String,
     #[serde(skip)]
@@ -187,6 +189,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             loopback: _from_map!(v, "loopback", NmSettingLoopback::try_from)?,
             hsr: _from_map!(v, "hsr", NmSettingHsr::try_from)?,
             vpn: _from_map!(v, "vpn", NmSettingVpn::try_from)?,
+            ipvlan: _from_map!(v, "ipvlan", NmSettingIpVlan::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -306,6 +309,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.vpn {
             ret.insert("vpn", v.to_value()?);
+        }
+        if let Some(ipvlan) = &self.ipvlan {
+            ret.insert("ipvlan", ipvlan.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =
