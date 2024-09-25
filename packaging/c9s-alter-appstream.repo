@@ -1,0 +1,7 @@
+[9-stream-alter-appstream]
+name=CentOS Stream 9 - Alter AppStream
+baseurl=https://mirror.stream.centos.org/9-stream/AppStream/$basearch/os/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+enabled=1
+gpgcheck=1
+priority=1000
