@@ -1,0 +1,20 @@
+---
+capture:
+  des-iface: interfaces.type=="ethernet"
+  des-iface-mac: capture.des-iface.interfaces.mac-address=="00:00:51:00:00:0B"
+  des-routes: >-
+    routes.running.next-hop-interface == capture.des-iface-mac.interfaces.0.name
+  dns: dns-resolver.running
+desiredState:
+  interfaces:
+    - name: "{{ capture.des-iface-mac.interfaces.0.name }}"
+      type: ethernet
+      state: up
+      ipv4:
+        address: "{{ capture.des-iface-mac.interfaces.0.ipv4.address }}"
+        dhcp: false
+        enabled: true
+  routes:
+    config: "{{ capture.des-routes.routes.running }}"
+  dns-resolver:
+    config: "{{ capture.dns.dns-resolver.running }}"

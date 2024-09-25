@@ -28,7 +28,6 @@ fn test_policy_examples() {
         .unwrap();
 
         policy.current = Some(current_state);
-        println!("HAHA {:?}", policy.current);
         let state =
             serde_yaml::to_string(&NetworkState::try_from(policy).unwrap())
                 .unwrap();
