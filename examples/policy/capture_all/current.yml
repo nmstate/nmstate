@@ -1,0 +1,21 @@
+---
+routes:
+  running:
+    - destination: 0.0.0.0/0
+      next-hop-interface: eth1
+      next-hop-address: 192.0.2.1
+  config:
+    - destination: 0.0.0.0/0
+      next-hop-interface: eth1
+      next-hop-address: 192.0.2.1
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: 1c:c1:0c:32:3b:ff
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: 192.0.2.251
+          prefix-length: 24
