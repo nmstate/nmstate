@@ -13,6 +13,7 @@ from libnmstate.schema import InterfaceState
 
 from .testlib import assertlib
 from .testlib import statelib
+from .testlib.apply import apply_with_description
 from .testlib.env import nm_minor_version
 from .testlib.retry import retry_till_true_or_timeout
 
@@ -25,7 +26,8 @@ RETRY_TIMEOUT = 10
 @pytest.fixture
 def loopback_cleanup():
     yield
-    libnmstate.apply(
+    apply_with_description(
+        "Delete the loopback interface",
         {
             Interface.KEY: [
                 {
@@ -75,9 +77,12 @@ class TestLoopback:
                 }
             ]
         }
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Set the mtu of the lookback to 12800", desired_state
+        )
         assertlib.assert_state_match(desired_state)
-        libnmstate.apply(
+        apply_with_description(
+            "Remove the lookback device",
             {
                 Interface.KEY: [
                     {
@@ -126,7 +131,11 @@ class TestLoopback:
                 }
             ]
         }
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Set the address to 192.0.2.251/24 and 2001:db8:1::1/64 for "
+            "loopback device",
+            desired_state,
+        )
         desired_state[Interface.KEY][0][Interface.IPV4][
             InterfaceIPv4.ADDRESS
         ].append(
