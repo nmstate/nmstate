@@ -192,7 +192,8 @@ impl NetworkCaptureCommand {
                     )
                 });
             } else {
-                return Ok(NetworkState::new());
+                // User just want to store full state to a new name
+                return Ok(input);
             }
         }
 
