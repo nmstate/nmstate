@@ -1,0 +1,7 @@
+[9-stream-alter-baseos]
+name=CentOS Stream 9 - Alter BaseOS
+baseurl=https://mirror.stream.centos.org/9-stream/BaseOS/$basearch/os/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+enabled=1
+gpgcheck=1
+priority=100
