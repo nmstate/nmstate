@@ -196,8 +196,21 @@ impl NetworkCaptureCommand {
             }
         }
 
+        let value_input = if let Some(cap_name) = self.value_capture.as_ref() {
+            if let Some(cap) = captures.get(cap_name) {
+                cap.clone()
+            } else {
+                return Err(NmstateError::new_policy_error(
+                    format!("Capture {cap_name} not found"),
+                    self.line.as_str(),
+                    self.key_capture_pos,
+                ));
+            }
+        } else {
+            current.clone()
+        };
         let matching_value =
-            match get_value(&self.value, &input, self.line.as_str())? {
+            match get_value(&self.value, &value_input, self.line.as_str())? {
                 serde_json::Value::Null => None,
                 v => Some(value_to_string(&v)),
             };
