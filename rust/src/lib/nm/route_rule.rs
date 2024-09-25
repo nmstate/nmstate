@@ -229,8 +229,9 @@ fn append_route_rule(
     Ok(())
 }
 
-// * If rule has `iif`, we use that
-// * If rule has table id, we find a interface configured for that route table
+// * If rule has `iif`, we use that interface.
+// * If rule has table id, we find a interface in desire state configured for
+//   that route table
 // * fallback to first desired interface with ip stack enabled.
 // * fallback to use loop interface.
 fn find_interface_for_rule<'a>(
@@ -283,34 +284,6 @@ fn find_interface_for_rule<'a>(
 
     // Try interfaces in desire state
     for iface_name in des_iface_names {
-        if iface_has_route_for_table_id(
-            iface_name,
-            merged_state,
-            rule.is_ipv6(),
-            table_id,
-        ) {
-            return Ok(iface_name);
-        }
-    }
-
-    let mut cur_iface_names: Vec<&str> = merged_state
-        .interfaces
-        .kernel_ifaces
-        .iter()
-        .filter_map(|(n, i)| {
-            if !i.is_changed() {
-                Some(n.as_str())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    // we should be persistent on choice, hence sort the iface names.
-    cur_iface_names.sort_unstable();
-
-    // Try interfaces in current state
-    for iface_name in cur_iface_names {
         if iface_has_route_for_table_id(
             iface_name,
             merged_state,
