@@ -6,10 +6,12 @@ import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
 from ..testlib import cmdlib
 from ..testlib import assertlib
+from ..testlib.statelib import show_only
 
 
 IPV4_ADDRESS1 = "192.0.2.251"
@@ -223,3 +225,34 @@ def test_fix_dhcp_timeout_even_not_desired(dummy1_with_small_dhcp_timeout):
         )
         == I32_MAX
     )
+
+
+@pytest.fixture
+def eth1_up_ipv6_flushed_with_method_ignore(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: False,
+                    },
+                }
+            ],
+        }
+    )
+
+    cmdlib.exec_cmd(
+        "nmcli c modify eth1 ipv6.method ignore".split(), check=True
+    )
+    cmdlib.exec_cmd("nmcli c up eth1".split(), check=True)
+    cmdlib.exec_cmd("ip -6 addr flush dev eth1".split(), check=True)
+
+
+def test_delegate_nm_ipv6_method_ignore_to_nispor(
+    eth1_up_ipv6_flushed_with_method_ignore,
+):
+    state = show_only(("eth1",))
+
+    assert not state[Interface.KEY][0][Interface.IPV6][InterfaceIPv6.ENABLED]
