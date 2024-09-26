@@ -1138,7 +1138,6 @@ pub struct BondOptions {
     /// is 0.
     pub arp_interval: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-
     /// Specifies the IP addresses to use as ARP monitoring peers when
     /// arp_interval is > 0. These are the targets of the ARP request sent to
     /// determine the health of the link to the targets. Specify these values
