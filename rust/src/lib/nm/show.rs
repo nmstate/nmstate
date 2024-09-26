@@ -239,7 +239,7 @@ pub(crate) fn nm_conn_to_base_iface(
             query_nmstate_wait_ip(nm_conn.ipv4.as_ref(), nm_conn.ipv6.as_ref());
         base_iface.description = get_description(nm_conn);
         base_iface.identifier = Some(get_identifier(nm_conn));
-        base_iface.profile_name = get_connection_name(nm_conn);
+        base_iface.profile_name = get_connection_name(nm_conn, nm_saved_conn);
         if base_iface.profile_name.as_ref() == Some(&base_iface.name) {
             base_iface.profile_name = None;
         }
@@ -572,7 +572,21 @@ fn get_identifier(nm_conn: &NmConnection) -> InterfaceIdentifier {
     InterfaceIdentifier::Name
 }
 
-fn get_connection_name(nm_conn: &NmConnection) -> Option<String> {
+// The applied connection will not update `connection.id` when reapply due to
+// bug: https://issues.redhat.com/browse/RHEL-59548
+// Hence we prefer saved NmConnection over active when they are pointing to the
+// same UUID.
+fn get_connection_name(
+    nm_conn: &NmConnection,
+    saved_nm_conn: Option<&NmConnection>,
+) -> Option<String> {
+    if let Some(saved_nm_conn) = saved_nm_conn.as_ref() {
+        if saved_nm_conn.uuid() == nm_conn.uuid() {
+            if let Some(nm_set) = saved_nm_conn.connection.as_ref() {
+                return nm_set.id.clone();
+            }
+        }
+    }
     if let Some(nm_set) = nm_conn.connection.as_ref() {
         return nm_set.id.clone();
     }

@@ -347,7 +347,12 @@ pub(crate) fn gen_nm_conn_setting(
     stable_uuid: bool,
 ) -> Result<(), NmstateError> {
     let mut nm_conn_set = if let Some(cur_nm_conn_set) = &nm_conn.connection {
-        cur_nm_conn_set.clone()
+        let mut new_nm_conn_set = cur_nm_conn_set.clone();
+        // Change existing connection's profile_name if desired explicitly
+        if let Some(n) = iface.base_iface().profile_name.as_deref() {
+            new_nm_conn_set.id = Some(n.to_string());
+        }
+        new_nm_conn_set
     } else {
         let mut new_nm_conn_set = NmSettingConnection::default();
         let conn_name =
