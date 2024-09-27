@@ -17,6 +17,7 @@ use super::{
 };
 
 pub(crate) const PROPERTY_SPLITTER: &str = ".";
+const SORT_CAPTURE_MAX_ROUND: usize = 10;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
@@ -70,8 +71,10 @@ impl NetworkCaptureRules {
         &self,
         current: &NetworkState,
     ) -> Result<HashMap<String, NetworkState>, NmstateError> {
+        let mut cmds = self.cmds.clone();
+        sort_captures(&mut cmds)?;
         let mut ret = HashMap::new();
-        for (var_name, cmd) in self.cmds.as_slice() {
+        for (var_name, cmd) in cmds.as_slice() {
             let matched_state = cmd.execute(current, &ret)?;
             log::debug!(
                 "Found match state for {}: {:?}",
@@ -98,9 +101,16 @@ pub struct NetworkCaptureCommand {
     pub(crate) value_capture: Option<String>,
     pub(crate) value_capture_pos: usize,
     pub(crate) line: String,
+    pub(crate) capture_priority: usize,
 }
 
 impl NetworkCaptureCommand {
+    pub(crate) fn parent_capture(&self) -> Option<&str> {
+        self.key_capture
+            .as_deref()
+            .or(self.value_capture.as_deref())
+    }
+
     pub(crate) fn parse(line: &str) -> Result<Self, NmstateError> {
         let line = line
             .trim()
@@ -591,4 +601,66 @@ fn process_tokens_without_pipe(
         ret.key = tokens[0].clone()
     }
     Ok(())
+}
+
+fn sort_captures(
+    cmds: &mut [(String, NetworkCaptureCommand)],
+) -> Result<(), NmstateError> {
+    for _ in 0..SORT_CAPTURE_MAX_ROUND {
+        if set_capture_priority(cmds) {
+            cmds.sort_unstable_by_key(|(_, cmd)| cmd.capture_priority);
+            return Ok(());
+        }
+    }
+    Err(NmstateError::new(
+        ErrorKind::InvalidArgument,
+        format!(
+            "Failed to sort the policy capture in \
+                {SORT_CAPTURE_MAX_ROUND} round of rotation, \
+                please order the capture in desire \
+                policy by placing capture before its consumer"
+        ),
+    ))
+}
+
+// Return True if we have all capture_priority are set (not 0).
+// The capture_priority value should be its depend captures' + 1.
+// For independent capture, they are set to 1.
+fn set_capture_priority(cmds: &mut [(String, NetworkCaptureCommand)]) -> bool {
+    let mut ret = true;
+
+    // Vec<(index, (capture_name, capture_priority))>
+    let mut pending_changes: Vec<(usize, (String, usize))> = Vec::new();
+
+    for (index, (cap_name, cmd)) in cmds.iter().enumerate() {
+        let cur_capture_priorities: HashMap<String, usize> = cmds
+            .iter()
+            .filter_map(|(cap_name, cmd)| {
+                if cmd.capture_priority != 0 {
+                    Some((cap_name.to_string(), cmd.capture_priority))
+                } else {
+                    None
+                }
+            })
+            .chain(pending_changes.iter().map(|(_, (cap_name, priority))| {
+                (cap_name.to_string(), *priority)
+            }))
+            .collect();
+        if let Some(dep_name) = cmd.parent_capture() {
+            if let Some(parent_priority) = cur_capture_priorities.get(dep_name)
+            {
+                pending_changes
+                    .push((index, (cap_name.to_string(), parent_priority + 1)))
+            } else {
+                ret = false;
+            }
+        } else {
+            pending_changes.push((index, (cap_name.to_string(), 1)));
+        }
+    }
+
+    for (index, (_, capture_priority)) in pending_changes {
+        cmds[index].1.capture_priority = capture_priority;
+    }
+    ret
 }
