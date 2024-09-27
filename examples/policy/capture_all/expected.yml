@@ -1,0 +1,23 @@
+---
+routes:
+  config:
+    - destination: 0.0.0.0/0
+      next-hop-interface: br1
+      next-hop-address: 192.0.2.1
+interfaces:
+  - name: br1
+    description: Linux bridge with base interface as a port
+    type: linux-bridge
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: 192.0.2.251
+          prefix-length: 24
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port:
+        - name: eth1

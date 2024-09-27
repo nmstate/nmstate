@@ -200,6 +200,9 @@ route-rules:
     - route-table: 500
       priority: 3200
       ip-from: 192.0.3.0/24
+interfaces:
+  - name: br0
+    type: ovs-interface
 ",
     )
     .unwrap();
@@ -258,15 +261,15 @@ interfaces:
     .unwrap();
 
     let desired: NetworkState = serde_yaml::from_str(
-        r"
----
-route-rules:
-  config:
-    - priority: 3200
-      ip-to: 192.0.3.0/24
-    - priority: 3200
-      ip-from: 192.0.3.0/24
-",
+        r"---
+        route-rules:
+          config:
+            - priority: 3200
+              ip-to: 192.0.3.0/24
+            - priority: 3200
+              ip-from: 192.0.3.0/24
+        interfaces:
+          - name: eth1",
     )
     .unwrap();
 
@@ -304,24 +307,22 @@ route-rules:
 #[test]
 fn test_route_rule_use_loopback() {
     let current: NetworkState = serde_yaml::from_str(
-        r"
----
-interfaces:
-  - name: lo
-    type: loopback
-    state: up
-    mtu: 65536
-    ipv4:
-      enabled: true
-      address:
-      - ip: 127.0.0.1
-        prefix-length: 8
-    ipv6:
-      enabled: true
-      address:
-      - ip: ::1
-        prefix-length: 128
-",
+        r"---
+        interfaces:
+          - name: lo
+            type: loopback
+            state: up
+            mtu: 65536
+            ipv4:
+              enabled: true
+              address:
+              - ip: 127.0.0.1
+                prefix-length: 8
+            ipv6:
+              enabled: true
+              address:
+              - ip: ::1
+                prefix-length: 128",
     )
     .unwrap();
 

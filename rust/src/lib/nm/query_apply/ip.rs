@@ -93,7 +93,16 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             | NmSettingIpMethod::Shared => (true, Some(false), Some(false)),
             NmSettingIpMethod::Auto => (true, Some(true), Some(true)),
             NmSettingIpMethod::Dhcp => (true, Some(true), Some(false)),
-            NmSettingIpMethod::Ignore => (true, Some(false), Some(false)),
+            NmSettingIpMethod::Ignore => {
+                log::debug!(
+                    "Found NmSettingIpMethod::Ignore for ipv6, \
+                    reply on nispor for setting IPv6 query"
+                );
+                return InterfaceIpv6 {
+                    enabled_defined: false,
+                    ..Default::default()
+                };
+            }
         };
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
             parse_dhcp_opts(nm_ip_setting);

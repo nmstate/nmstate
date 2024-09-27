@@ -654,3 +654,25 @@ def test_delete_mac_based_profile_using_profile_name(mac_based_profile_eth1):
         )[0]
         != 0
     )
+
+
+# https://issues.redhat.com/browse/RHEL-59239
+@pytest.mark.tier1
+def test_change_profile_name(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.PROFILE_NAME: "eth1-new",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assert (
+        cmdlib.exec_cmd("nmcli -g connection.id c show eth1-new".split())[
+            1
+        ].strip()
+        == "eth1-new"
+    )
