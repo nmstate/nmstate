@@ -1,0 +1,36 @@
+---
+capture:
+  cap10: >-
+    routes.running.destination==
+    capture.cap9.routes.running.0.destination
+  cap9: >-
+    routes.running.destination==
+    capture.cap8.routes.running.0.destination
+  cap8: >-
+    routes.running.destination==
+    capture.cap7.routes.running.0.destination
+  cap7: >-
+    routes.running.destination==
+    capture.cap6.routes.running.0.destination
+  cap6: >-
+    routes.running.destination==
+    capture.cap5.routes.running.0.destination
+  cap5: >-
+    routes.running.destination==
+    capture.cap4.routes.running.0.destination
+  cap4: >-
+    routes.running.destination==
+    capture.cap3.routes.running.0.destination
+  cap3: >-
+    routes.running.destination==
+    capture.cap2.routes.running.0.destination
+  cap2: >-
+    routes.running.destination==
+    capture.cap1.routes.running.0.destination
+  cap0: routes.running.destination=="0.0.0.0/0"
+  cap1: >-
+    routes.running.destination==
+    capture.cap0.routes.running.0.destination
+desiredState:
+  routes:
+    config: "{{ capture.cap10.routes.running }}"
