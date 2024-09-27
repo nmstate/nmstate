@@ -35,7 +35,7 @@ use crate::{
 // There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
 // `cur_net_state`, `des_net_state` into single struct. Suppress the clippy
 // warning for now
-pub(crate) fn nm_apply(
+pub(crate) async fn nm_apply(
     merged_state: &MergedNetworkState,
     checkpoint: &str,
     timeout: u32,
@@ -178,7 +178,7 @@ pub(crate) fn nm_apply(
         )?;
     }
 
-    activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice())?;
+    activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice()).await?;
 
     deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
 

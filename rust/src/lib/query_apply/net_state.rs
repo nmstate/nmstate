@@ -100,6 +100,7 @@ impl NetworkState {
     pub fn apply(&self) -> Result<(), NmstateError> {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_io()
+            .enable_time()
             .build()
             .map_err(|e| {
                 NmstateError::new(
@@ -147,9 +148,10 @@ impl NetworkState {
         if let Err(e) = cur_net_state.retrieve_async().await {
             if e.kind().can_retry() {
                 log::info!("Retrying on: {}", e);
-                std::thread::sleep(std::time::Duration::from_millis(
+                tokio::time::sleep(std::time::Duration::from_millis(
                     RETRY_NM_INTERVAL_MILLISECONDS,
-                ));
+                ))
+                .await;
                 cur_net_state.retrieve_async().await?;
             } else {
                 return Err(e);
@@ -189,9 +191,10 @@ impl NetworkState {
             Err(e) => {
                 if e.kind().can_retry() {
                     log::info!("Retrying on: {}", e);
-                    std::thread::sleep(std::time::Duration::from_millis(
+                    tokio::time::sleep(std::time::Duration::from_millis(
                         RETRY_NM_INTERVAL_MILLISECONDS,
-                    ));
+                    ))
+                    .await;
                     nm_checkpoint_create(timeout)?
                 } else {
                     return Err(e);
@@ -268,7 +271,7 @@ impl NetworkState {
         // we try to apply the state again if so.
         with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || async {
             nm_checkpoint_timeout_extend(checkpoint, timeout)?;
-            nm_apply(merged_state, checkpoint, timeout)?;
+            nm_apply(merged_state, checkpoint, timeout).await?;
             if merged_state.ovsdb.is_changed && ovsdb_is_running() {
                 ovsdb_apply(merged_state)?;
             }
@@ -440,9 +443,10 @@ where
                 }
             } else {
                 log::info!("Retrying on: {}", e);
-                std::thread::sleep(std::time::Duration::from_millis(
+                tokio::time::sleep(std::time::Duration::from_millis(
                     interval_ms,
-                ));
+                ))
+                .await;
                 cur_count += 1;
                 continue;
             }
