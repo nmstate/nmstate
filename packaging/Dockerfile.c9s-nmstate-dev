@@ -2,6 +2,16 @@ FROM quay.io/centos/centos:stream9
 
 RUN echo "2024-04-09" > /build_time
 
+# Add alter-baseos and alter-appstream repositories with lower priority
+COPY c9s-alter-baseos.repo \
+     /etc/yum.repos.d/c9s-alter-baseos.repo
+COPY c9s-alter-appstream.repo \
+     /etc/yum.repos.d/c9s-alter-appstream.repo
+
+RUN grep -q "^skip_if_unavailable=" /etc/dnf/dnf.conf && \
+    sed -i 's/^skip_if_unavailable=.*/skip_if_unavailable=True/' /etc/dnf/dnf.conf || \
+    echo "skip_if_unavailable=True" >> /etc/dnf/dnf.conf
+
 RUN dnf update -y && \
     dnf -y install dnf-plugins-core epel-release \
         centos-release-nfv-openvswitch && \
