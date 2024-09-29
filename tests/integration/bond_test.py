@@ -1457,3 +1457,41 @@ def test_change_mtu_of_bond_port(bond99_with_2_port):
             ]
         },
     )
+
+
+def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up):
+    eth1_mac = get_mac_address(ETH1)
+    eth2_mac = get_mac_address(ETH2)
+
+    state = yaml.load(
+        f"""---
+        interfaces:
+         - name: port1
+           type: ethernet
+           state: up
+           identifier: mac-address
+           mac-address: {eth1_mac}
+         - name: port2
+           type: ethernet
+           state: up
+           identifier: mac-address
+           mac-address: {eth2_mac}
+         - name: bond0
+           type: bond
+           state: up
+           link-aggregation:
+             mode: balance-rr
+             port:
+               - eth1
+               - eth2""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
+    assert (
+        statelib.show_only((ETH1,))[Interface.KEY][0][Interface.MAC]
+        == eth1_mac
+    )
+    assert (
+        statelib.show_only((ETH2,))[Interface.KEY][0][Interface.MAC]
+        == eth2_mac
+    )
