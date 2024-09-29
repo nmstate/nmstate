@@ -238,7 +238,9 @@ pub(crate) fn nm_conn_to_base_iface(
         base_iface.wait_ip =
             query_nmstate_wait_ip(nm_conn.ipv4.as_ref(), nm_conn.ipv6.as_ref());
         base_iface.description = get_description(nm_conn);
-        base_iface.identifier = Some(get_identifier(nm_conn));
+        (base_iface.identifier, base_iface.mac_address) =
+            get_identifier_and_mac(nm_conn);
+
         base_iface.profile_name = get_connection_name(nm_conn, nm_saved_conn);
         if base_iface.profile_name.as_ref() == Some(&base_iface.name) {
             base_iface.profile_name = None;
@@ -567,19 +569,28 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
     Some(iface)
 }
 
-fn get_identifier(nm_conn: &NmConnection) -> InterfaceIdentifier {
+// If identifier is mac-address, we should override MAC address
+// queried by nispor, otherwise applying back the queried state will
+// be different for bond ports as their MAC address will change after
+// attached to bond.
+// For InterfaceIdentifier::Name, we set mac address to None.
+// TODO: Once we have dedicate section for `identifier`, we should
+//       not override runtime MAC address.
+fn get_identifier_and_mac(
+    nm_conn: &NmConnection,
+) -> (Option<InterfaceIdentifier>, Option<String>) {
     if let Some(nm_set) = nm_conn.wired.as_ref() {
-        if nm_set
-            .mac_address
-            .as_ref()
-            .map(|a| !a.is_empty())
-            .unwrap_or_default()
-        {
-            return InterfaceIdentifier::MacAddress;
+        if let Some(mac) = nm_set.mac_address.as_deref() {
+            if !mac.is_empty() {
+                return (
+                    Some(InterfaceIdentifier::MacAddress),
+                    Some(mac.to_string()),
+                );
+            }
         }
     }
 
-    InterfaceIdentifier::Name
+    (Some(InterfaceIdentifier::Name), None)
 }
 
 // The applied connection will not update `connection.id` when reapply due to
