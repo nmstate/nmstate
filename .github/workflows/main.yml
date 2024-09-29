@@ -180,7 +180,7 @@ jobs:
             sudo apt-get install -y fdupes
             fdupes -d -N tests/integration/.states/
           fi
-      
+
       - uses: actions/upload-artifact@v4
         with:
           name: nmstate-test-apply-show-dump-artifact-${{ matrix.job_type }}
@@ -209,7 +209,7 @@ jobs:
     - name: Use rust vendoring
       run: |
         cd rust
-        wget -qO- https://github.com/nmstate/nmstate/releases/download/v2.2.33/nmstate-vendor-2.2.33.tar.xz | tar xJ
+        wget -qO- https://github.com/nmstate/nmstate/releases/download/v2.2.36/nmstate-vendor-2.2.36-rust-1.66.tar.xz | tar xJ
         mkdir .cargo
         echo '[source.crates-io]' > .cargo/config.toml
         echo 'replace-with = "vendored-sources"' >> .cargo/config.toml
