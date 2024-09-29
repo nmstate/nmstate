@@ -301,7 +301,7 @@ def test_static_hostname_for_examples():
 )
 def test_add_ipvlan_and_remove_example(eth1_up):
     with example_state(
-        "ipvlan0_create.yml", cleanup="ipvlan0_absent.yml"
+        "ipvlan_create.yml", cleanup="ipvlan_absent.yml"
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
