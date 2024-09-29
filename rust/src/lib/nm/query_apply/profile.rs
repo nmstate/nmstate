@@ -115,8 +115,8 @@ pub(crate) fn save_nm_profiles(
     Ok(())
 }
 
-pub(crate) fn activate_nm_profiles(
-    nm_api: &mut NmApi,
+pub(crate) async fn activate_nm_profiles(
+    nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
 ) -> Result<(), NmstateError> {
     let mut nm_conns = nm_conns.to_vec();
@@ -150,7 +150,7 @@ pub(crate) fn activate_nm_profiles(
                 nm_api
                     .extend_timeout_if_required()
                     .map_err(nm_error_to_nmstate)?;
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
         } else {
             break;

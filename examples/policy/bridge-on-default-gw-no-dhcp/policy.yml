@@ -1,12 +1,12 @@
 ---
 capture:
   default-gw: routes.running.destination=="0.0.0.0/0"
-  base-iface: >-
-    interfaces.name==capture.default-gw.routes.running.0.next-hop-interface
-  base-iface-routes: >-
-    routes.running.next-hop-interface==capture.base-iface.interfaces.0.name
   bridge-routes: >-
     capture.base-iface-routes | routes.running.next-hop-interface:="br1"
+  base-iface-routes: >-
+    routes.running.next-hop-interface==capture.base-iface.interfaces.0.name
+  base-iface: >-
+    interfaces.name==capture.default-gw.routes.running.0.next-hop-interface
 desiredState:
   interfaces:
     - name: br1
