@@ -1,4 +1,22 @@
 # Changelog
+## [2.2.37] - 2024-09-30
+### Breaking changes
+ - N/A
+
+### New features
+ - IPVLAN interface support. (50c267c9)
+
+### Bug fixes
+ - mac identifier: Fix error when attaching mac-based iface to bond. (0ebf1078)
+ - packaging: Generate vendor tarbal for Rust 1.66 also. (2ef57297)
+ - async: Use tokio::time::sleep in stead of std::thread::sleep. (b6e7adec)
+ - policy: Sort the capture base on dependent relationship. (71ea2399)
+ - nm: Handle `ipv6.method: ignore`. (3456e97b)
+ - nm: Fix profile name changing. (a44f555a)
+ - nm route rule: Only search desired interface for storing route rule. (36af0f85)
+ - policy: Fix capture full state with simple line. (58389eee)
+ - policy: Fix error when capture is mentioned in the right. (245fcb16)
+
 ## [2.2.36] - 2024-09-19
 ### Breaking changes
  - N/A
