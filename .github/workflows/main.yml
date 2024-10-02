@@ -186,6 +186,7 @@ jobs:
           name: nmstate-test-apply-show-dump-artifact-${{ matrix.job_type }}
           path: tests/integration/.states/*
           retention-days: 5
+          include-hidden-files: true
 
       - name: Set artifacts permissions
         if: ${{ failure() }}
