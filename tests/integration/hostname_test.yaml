@@ -1,0 +1,38 @@
+description: Set the running hostname to nmstate-test2.example.org
+hostname:
+  running: nmstate-test2.example.org
+  config: ''
+interfaces: []
+description: Set the config hostname to nmstate-test1.example.org
+hostname:
+  config: nmstate-test1.example.org
+interfaces: []
+description: Set the running hostname to beaker-networkmanager-custom-upstream-4145, set the config hostname to beaker-networkmanager-custom-upstream-4145
+hostname:
+  running: beaker-networkmanager-custom-upstream-4145
+  config: beaker-networkmanager-custom-upstream-4145
+interfaces: []
+description: Set the running hostname to beaker-networkmanager-custom-upstream-4145, set the config hostname to beaker-networkmanager-custom-upstream-4145
+hostname:
+  running: beaker-networkmanager-custom-upstream-4145
+  config: beaker-networkmanager-custom-upstream-4145
+interfaces: []
+description: Set the running hostname to nmstate-test1.example.org and set the config hostname to nmstate-test2.example.org
+hostname:
+  running: nmstate-test1.example.org
+  config: nmstate-test2.example.org
+interfaces: []
+description: Set the running hostname to beaker-networkmanager-custom-upstream-4145, set the config hostname to beaker-networkmanager-custom-upstream-4145
+hostname:
+  running: beaker-networkmanager-custom-upstream-4145
+  config: beaker-networkmanager-custom-upstream-4145
+interfaces: []
+description: Set the running hostname to beaker-networkmanager-custom-upstream-4145, set the config hostname to beaker-networkmanager-custom-upstream-4145
+hostname:
+  running: beaker-networkmanager-custom-upstream-4145
+  config: beaker-networkmanager-custom-upstream-4145
+interfaces: []
+description: Set the running hostname to nmstate-test2.example.org
+hostname:
+  running: nmstate-test2.example.org
+interfaces: []

@@ -25,6 +25,7 @@ import libnmstate
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import HostNameState
 
+from .testlib.apply import apply_with_description
 from .testlib import cmdlib
 
 TEST_HOSTNAME1 = "nmstate-test1.example.org"
@@ -35,7 +36,14 @@ TEST_HOSTNAME2 = "nmstate-test2.example.org"
 def restore_hostname():
     cur_hostname_conf = libnmstate.show()[HostNameState.KEY]
     yield
-    libnmstate.apply({HostNameState.KEY: cur_hostname_conf})
+    apply_with_description(
+        "Set the running hostname to {}, set the config hostname "
+        "to {}".format(
+            cur_hostname_conf["running"],
+            cur_hostname_conf["config"],
+        ),
+        {HostNameState.KEY: cur_hostname_conf},
+    )
 
 
 @pytest.mark.tier1
@@ -44,23 +52,25 @@ def restore_hostname():
     reason="NM cannot change hostname in container",
 )
 def test_hostname_set_chg_and_clear(restore_hostname):
-    libnmstate.apply(
+    apply_with_description(
+        "Set the config hostname to nmstate-test1.example.org",
         {
             HostNameState.KEY: {
                 HostNameState.CONFIG: TEST_HOSTNAME1,
             }
-        }
+        },
     )
     cur_host_name = cmdlib.exec_cmd(["hostname"], check=True)[1]
     assert os.path.exists("/etc/hostname")
     assert cur_host_name.strip() == TEST_HOSTNAME1
-    libnmstate.apply(
+    apply_with_description(
+        "Set the running hostname to nmstate-test2.example.org",
         {
             HostNameState.KEY: {
                 HostNameState.RUNNING: TEST_HOSTNAME2,
                 HostNameState.CONFIG: "",
             }
-        }
+        },
     )
     cur_host_name = cmdlib.exec_cmd(["hostname"], check=True)[1]
     assert cur_host_name.strip() == TEST_HOSTNAME2
@@ -89,7 +99,8 @@ def test_hostname_set_config_in_memory_only(restore_hostname):
     reason="NM cannot change hostname in container",
 )
 def test_hostname_set_in_memory_only(restore_hostname):
-    libnmstate.apply(
+    apply_with_description(
+        "Set the running hostname to nmstate-test2.example.org",
         {
             HostNameState.KEY: {
                 HostNameState.RUNNING: TEST_HOSTNAME2,
@@ -105,7 +116,9 @@ def test_hostname_set_in_memory_only(restore_hostname):
     reason="NM cannot change hostname in container",
 )
 def test_hostname_set_different_running_and_config(restore_hostname):
-    libnmstate.apply(
+    apply_with_description(
+        "Set the running hostname to nmstate-test1.example.org and set the "
+        "config hostname to nmstate-test2.example.org",
         {
             HostNameState.KEY: {
                 HostNameState.RUNNING: TEST_HOSTNAME1,
