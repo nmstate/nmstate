@@ -12,7 +12,7 @@ serde_yaml = "0.9"
 serde = {version = "1.0.137", default-features = false, features = ["derive"]}
 serde_json = { version = "1.0.75", default-features = false }
 nmstate = { path = "src/lib", version = "2.2", default-features = false }
-nispor = "1.2"
+nispor = "1.2.21"
 uuid = { version = "1.1 ", default-features = false, features = ["v4"] }
 nix = { version = "0.26.2", default-features = false, features = ["feature", "hostname"] }
 zbus = { version = "1.9.2", default-features = false}
