@@ -90,6 +90,10 @@ jobs:
       run: cd rust && cargo test -- --show-output
 
     - name: C library test
+      # As https://github.com/tokio-rs/tokio/issues/6889 mentioned
+      # rust nightly might lead to valgrind warnings, this project
+      # has no intention to spend time on testing rust nightly for memory leak.
+      if: matrix.rust_version == 'stable'
       run: make clib_check
 
   rpm_build:
