@@ -23,7 +23,7 @@ env_logger = "0.10.0"
 clap = { version = "3.1", features = ["cargo"] }
 chrono = "0.4"
 toml = "0.8.10"
-tokio = { version = "1.30", features = ["rt", "net"] }
+tokio = { version = "1.30", features = ["rt", "net", "time"] }
 
 [workspace.metadata.vendor-filter]
 # For now we only care about tier 1+2 Linux
