@@ -781,7 +781,7 @@ where
         PhantomData<fn() -> Option<LinuxBridgeMulticastRouterType>>,
     );
 
-    impl<'de> Visitor<'de> for IntegerOrString {
+    impl Visitor<'_> for IntegerOrString {
         type Value = Option<LinuxBridgeMulticastRouterType>;
 
         fn expecting(

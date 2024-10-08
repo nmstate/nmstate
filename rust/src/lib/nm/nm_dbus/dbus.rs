@@ -45,7 +45,7 @@ pub(crate) struct NmDbus<'a> {
     dns_proxy: NetworkManagerDnsProxy<'a>,
 }
 
-impl<'a> NmDbus<'a> {
+impl NmDbus<'_> {
     pub(crate) fn new() -> Result<Self, NmError> {
         let connection = zbus::Connection::new_system()?;
         let proxy = NetworkManagerProxy::new(&connection)?;

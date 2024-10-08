@@ -29,7 +29,7 @@ pub struct NmApi<'a> {
     auto_cp_refresh: bool,
 }
 
-impl<'a> NmApi<'a> {
+impl NmApi<'_> {
     pub fn new() -> Result<Self, NmError> {
         Ok(Self {
             dbus: NmDbus::new()?,

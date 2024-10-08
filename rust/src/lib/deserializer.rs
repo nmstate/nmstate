@@ -67,7 +67,7 @@ where
 {
     struct IntegerOrString(PhantomData<fn() -> Option<bool>>);
 
-    impl<'de> Visitor<'de> for IntegerOrString {
+    impl Visitor<'_> for IntegerOrString {
         type Value = Option<bool>;
 
         fn expecting(
@@ -179,7 +179,7 @@ where
 {
     struct IntegerOrString(PhantomData<fn() -> Option<u64>>);
 
-    impl<'de> Visitor<'de> for IntegerOrString {
+    impl Visitor<'_> for IntegerOrString {
         type Value = Option<u64>;
 
         fn expecting(
@@ -241,7 +241,7 @@ where
 {
     struct IntegerOrString(PhantomData<fn() -> Option<i64>>);
 
-    impl<'de> Visitor<'de> for IntegerOrString {
+    impl Visitor<'_> for IntegerOrString {
         type Value = Option<i64>;
 
         fn expecting(
