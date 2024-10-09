@@ -676,3 +676,39 @@ def test_change_profile_name(eth1_up):
         ].strip()
         == "eth1-new"
     )
+
+
+@pytest.fixture
+def multiconnect_profile_with_ip_enabled(eth1_up):
+    cmdlib.exec_cmd("nmcli c del eth1".split(), check=True)
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet connection.id nmstate-test-default "
+        "connection.multi-connect multiple "
+        "ipv4.method auto ipv6.method auto".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd("nmcli c del nmstate-test-default".split(), check=False)
+
+
+def test_preserve_ip_settings_from_multiconnect(
+    multiconnect_profile_with_ip_enabled,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv4.method c show eth1".split())[1].strip()
+        == "auto"
+    )
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv6.method c show eth1".split())[1].strip()
+        == "auto"
+    )
