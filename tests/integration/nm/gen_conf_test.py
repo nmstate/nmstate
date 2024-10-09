@@ -13,6 +13,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from libnmstate.schema import LLDP
 
+from ..testlib import assertlib
 from ..testlib import iprule
 from ..testlib.env import is_k8s
 from ..testlib.env import nm_minor_version
@@ -65,6 +66,42 @@ interfaces:
 
     with gen_conf_apply(desired_state):
         retry_verify_ovs_ports("br0", sorted(["eth1", "br0"]))
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(is_k8s(), reason="K8S does not support genconf")
+def test_gen_conf_ovs_trunk_vlan():
+    desired_state = load_yaml(
+        """
+interfaces:
+  - name: ovs0
+    type: ovs-interface
+    state: up
+  - name: ovs1
+    type: ovs-interface
+    state: up
+  - name: ovs-br0
+    type: ovs-bridge
+    state: up
+    bridge:
+      port:
+        - name: ovs0
+          vlan:
+            mode: access
+            tag: 10
+        - name: ovs1
+          vlan:
+            mode: trunk
+            trunk-tags:
+              - id: 1
+              - id-range:
+                  min: 10
+                  max: 20
+"""
+    )
+
+    with gen_conf_apply(desired_state):
+        assertlib.assert_state_match(desired_state)
 
 
 @pytest.mark.tier1
