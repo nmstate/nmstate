@@ -43,31 +43,33 @@ pub(crate) fn iface_to_nm_connections(
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut ret: Vec<NmConnection> = Vec::new();
 
-    let iface = if let Some(i) = merged_iface.for_apply.as_ref() {
-        i
+    let mut iface = if let Some(i) = merged_iface.for_apply.as_ref() {
+        i.clone()
     } else {
         return Ok(ret);
     };
 
-    let base_iface = iface.base_iface();
-    let exist_nm_conn =
-        if base_iface.identifier == Some(InterfaceIdentifier::MacAddress) {
-            get_exist_profile_by_profile_name(
-                exist_nm_conns,
-                base_iface
-                    .profile_name
-                    .as_deref()
-                    .unwrap_or(base_iface.name.as_str()),
-                &base_iface.iface_type,
-            )
-        } else {
-            get_exist_profile(
-                exist_nm_conns,
-                &base_iface.name,
-                &base_iface.iface_type,
-                nm_ac_uuids,
-            )
-        };
+    let exist_nm_conn = if iface.base_iface().identifier
+        == Some(InterfaceIdentifier::MacAddress)
+    {
+        get_exist_profile_by_profile_name(
+            exist_nm_conns,
+            iface
+                .base_iface()
+                .profile_name
+                .as_deref()
+                .unwrap_or(iface.base_iface().name.as_str()),
+            &iface.base_iface().iface_type,
+        )
+    } else {
+        get_exist_profile(
+            exist_nm_conns,
+            &iface.base_iface().name,
+            &iface.base_iface().iface_type,
+            nm_ac_uuids,
+        )
+    };
+
     if iface.is_up_exist_config() {
         if let Some(nm_conn) = exist_nm_conn {
             if !iface.is_userspace()
@@ -102,6 +104,16 @@ pub(crate) fn iface_to_nm_connections(
             }
         }
     }
+
+    // If exist_nm_conn is None and desired state did not mention IP settings,
+    // we are supported to preserve current IP state instead of setting ipv4 and
+    // ipv6 disabled.
+    if exist_nm_conn.is_none() {
+        preserve_current_ip(&mut iface, merged_iface.current.as_ref());
+    }
+
+    let iface = &iface;
+
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
     nm_conn.flags = Vec::new();
 
@@ -243,8 +255,8 @@ pub(crate) fn iface_to_nm_connections(
     }
 
     if let (Some(ctrl), Some(ctrl_type)) = (
-        base_iface.controller.as_ref(),
-        base_iface.controller_type.as_ref(),
+        iface.base_iface().controller.as_ref(),
+        iface.base_iface().controller_type.as_ref(),
     ) {
         if let Some(ctrl_iface) =
             merged_state.interfaces.get_iface(ctrl, ctrl_type.clone())
@@ -307,7 +319,7 @@ pub(crate) fn iface_to_nm_connections(
 
     // When detaching a OVS system interface from OVS bridge, we should remove
     // its NmSettingOvsIface setting
-    if base_iface.controller.as_deref() == Some("") {
+    if iface.base_iface().controller.as_deref() == Some("") {
         nm_conn.ovs_iface = None;
     }
 
@@ -544,4 +556,15 @@ fn persisten_iface_cur_conf(
         nm_ac_uuids,
         gen_conf_mode,
     )
+}
+
+fn preserve_current_ip(iface: &mut Interface, cur_iface: Option<&Interface>) {
+    if iface.base_iface().ipv4.is_none() {
+        iface.base_iface_mut().ipv4 =
+            cur_iface.as_ref().and_then(|i| i.base_iface().ipv4.clone());
+    }
+    if iface.base_iface().ipv6.is_none() {
+        iface.base_iface_mut().ipv6 =
+            cur_iface.as_ref().and_then(|i| i.base_iface().ipv6.clone());
+    }
 }
