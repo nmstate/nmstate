@@ -3,6 +3,9 @@ interfaces:
   - name: ovs0
     type: ovs-interface
     state: up
+  - name: ovs1
+    type: ovs-interface
+    state: up
   - name: ovs-br0
     type: ovs-bridge
     state: up
@@ -12,3 +15,11 @@ interfaces:
           vlan:
             mode: access
             tag: 2
+        - name: ovs1
+          vlan:
+            mode: trunk
+            trunk-tags:
+              - id: 1
+              - id-range:
+                  min: 10
+                  max: 20
