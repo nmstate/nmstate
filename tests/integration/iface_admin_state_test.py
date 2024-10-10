@@ -25,6 +25,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from .testlib import assertlib
+from .testlib.apply import apply_with_description
 
 
 def test_set_a_down_iface_down(eth1_up):
@@ -37,7 +38,9 @@ def test_set_a_down_iface_down(eth1_up):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Bring down the ethernet interface eth1", desired_state
+    )
     assertlib.assert_state(desired_state)
 
     libnmstate.apply(desired_state)
@@ -60,8 +63,7 @@ def test_removing_a_non_removable_iface(eth1_up):
             }
         ]
     }
-
-    libnmstate.apply(desired_state)
+    apply_with_description("Delete the ethernet interface eth1", desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -72,7 +74,7 @@ def test_set_iface_down_without_type(eth1_up):
             {Interface.NAME: "eth1", Interface.STATE: InterfaceState.DOWN}
         ]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description("Bring down the eth1 interface", desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -81,6 +83,8 @@ def test_change_iface_without_type(eth1_up):
     desired_state = {
         Interface.KEY: [{Interface.NAME: "eth1", Interface.MTU: 1400}]
     }
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set the mtu of the ethernet device eth1 to 1400", desired_state
+    )
 
     assertlib.assert_state(desired_state)
