@@ -1,0 +1,441 @@
+description: Remove the macsec0 device
+interfaces:
+- name: macsec0
+  type: macsec
+  state: absent
+description: 'Configure the macsec0 device with the macsec config: base interface eth1, set encript to true, set mka-cak to 50b71a8ef0bd5751ea76de6d6c98c03a, set mka-ckn to f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550, set port to 0, set validation to strict, set send-sci to true'
+interfaces:
+- name: macsec0
+  type: macsec
+  state: up
+  macsec:
+    encrypt: true
+    base-iface: eth1
+    mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+    mka-ckn: f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
+    port: 0
+    validation: strict
+    send-sci: true
+description: Delete the macsec0 device
+interfaces:
+- name: macsec0
+  type: macsec
+  state: absent
+description: 'Configure the macsec0 device with the macsec config: base interface eth1, set encript to true, set mka-cak to 50b71a8ef0bd5751ea76de6d6c98c03a, set mka-ckn to f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550, set port to 0, set validation to strict, set send-sci to true'
+interfaces:
+- name: macsec0
+  type: macsec
+  state: up
+  macsec:
+    encrypt: true
+    base-iface: eth1
+    mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+    mka-ckn: f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
+    port: 0
+    validation: strict
+    send-sci: true
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['backup']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - backup
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['fullmesh', 'subflow', 'backup']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - fullmesh
+    - subflow
+    - backup
+description: Configure eth1 to have the mptcp address flag ['fullmesh']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - fullmesh
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['signal', 'backup']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - signal
+    - backup
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['signal', 'subflow']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - signal
+    - subflow
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['signal', 'subflow', 'backup']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - signal
+    - subflow
+    - backup
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['signal']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - signal
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['subflow', 'backup', 'fullmesh']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - subflow
+    - backup
+    - fullmesh
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['subflow', 'backup']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - subflow
+    - backup
+description: Configure eth1 to have the mptcp address flag ['subflow', 'fullmesh']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - subflow
+    - fullmesh
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure eth1 to have the mptcp address flag ['subflow']
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mptcp:
+    address-flags:
+    - subflow
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Configure the eth1 interface with the address 192.0.2.251/24 and 2001:db8:1::1/64
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+description: Delete the macsec0 device
+interfaces:
+- name: macsec0
+  type: macsec
+  state: absent
+description: 'Configure the macsec0 device with the macsec config: base interface eth1, set encript to true, set mka-cak to 50b71a8ef0bd5751ea76de6d6c98c03a, set mka-ckn to f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550, set port to 0, set validation to strict, set send-sci to true, set the macsec offload to off'
+interfaces:
+- name: macsec0
+  type: macsec
+  state: up
+  macsec:
+    encrypt: true
+    base-iface: eth1
+    mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+    mka-ckn: f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
+    port: 0
+    validation: strict
+    send-sci: true
+    offload: off
