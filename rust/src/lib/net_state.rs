@@ -74,7 +74,7 @@ use crate::{
 ///     system-id: 176866c7-6dc8-400f-98ac-c658509ec09f
 ///   other_config: {}
 /// ```
-#[derive(Clone, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
@@ -124,6 +124,26 @@ pub struct NetworkState {
     pub(crate) running_config_only: bool,
     #[serde(skip)]
     pub(crate) memory_only: bool,
+}
+
+impl std::fmt::Debug for NetworkState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("NetworkState");
+        debug_struct.field("hostname", &self.hostname);
+        debug_struct.field("dns", &self.dns);
+        debug_struct.field("rules", &self.rules);
+        debug_struct.field("routes", &self.routes);
+        debug_struct.field("interfaces", &self.interfaces);
+        debug_struct.field("ovsdb", &self.ovsdb);
+        debug_struct.field("timeout", &"<_password_hid_by_nmstate>");
+        debug_struct.field("no_verify", &"<_password_hid_by_nmstate>");
+        debug_struct.field("no_commit", &"<_password_hid_by_nmstate>");
+        debug_struct.field("include_secrets", &self.include_secrets);
+        debug_struct.field("include_status_data", &self.include_status_data);
+        debug_struct.field("running_config_only", &self.running_config_only);
+        debug_struct.field("memory_only", &self.memory_only);
+        debug_struct.finish()
+    }
 }
 
 impl NetworkState {
