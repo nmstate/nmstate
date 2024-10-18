@@ -22,6 +22,7 @@ from libnmstate.schema import LinuxBridge
 from libnmstate.schema import VLAN
 
 from .testlib import assertlib
+from .testlib.apply import apply_with_description
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
@@ -202,7 +203,11 @@ def test_remove_bridge_and_keep_port_up(bridge0_with_port0, port0_up):
         ]
     }
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        f"Remove the linux bridge {TEST_BRIDGE0} and keep the ethernet port "
+        f"{port_name} up",
+        desired_state,
+    )
 
     current_state = show_only((bridge_name, port_name))
 
@@ -237,7 +242,14 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     port1_name = port1_up[Interface.KEY][0][Interface.NAME]
     _add_port_to_bridge(bridge_state, port1_name)
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        f"Create the linux bridge {TEST_BRIDGE0} with the ethernet port eth1 "
+        "and eth2. For both ethernet port eth1 and eth2, do not allow "
+        "traffic to be sent back to the same port on which it was received, "
+        "configure the stp path cost to 100, configure the stp priority to "
+        "32",
+        desired_state,
+    )
 
     assertlib.assert_state(desired_state)
 
@@ -318,7 +330,13 @@ def test_linux_bridge_add_port_with_name_only(bridge0_with_port0, port1_up):
         {LinuxBridge.Port.NAME: port1_name}
     )
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Create bridge linux-br0, add the ethernet port eth1 and eth2 to the "
+        "linux bridge. In ethernet port eth1, do not allow traffic to be "
+        "sent back to the same port on which it was received, "
+        "set stp path cost to 100, set stp priority to 32.",
+        desired_state,
+    )
 
     assertlib.assert_state_match(desired_state)
 
@@ -334,7 +352,11 @@ def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
         brconf_state[LinuxBridge.PORT_SUBTREE] = [
             {LinuxBridge.Port.NAME: port1_name}
         ]
-        libnmstate.apply(state)
+        apply_with_description(
+            "Create the linux bridge linux-br0 with the ethernet port eth2 "
+            "attached",
+            state,
+        )
 
         br_state = show_only((bridge_name,))
         brconf_state = br_state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
@@ -358,7 +380,14 @@ def test_linux_bridge_over_bond_over_port_in_one_transaction(bond0):
         desired_state = bond0
         bridge_state = bridge0[Interface.KEY][0]
         desired_state[Interface.KEY].append(bridge_state)
-        libnmstate.apply(desired_state)
+
+        apply_with_description(
+            "Create the linux-bridge linux-br0 with the IPv4 disabled and "
+            "IPv6 disabled, and the bridge port testbond0 attached. Create "
+            "the bond testbond0 with the controller linux-br0, the bonding "
+            "mode balance-rr and the bonding port eth1",
+            desired_state,
+        )
 
         assertlib.assert_state_match(desired_state)
 
@@ -615,7 +644,12 @@ class TestVlanFiltering:
                     LinuxBridge.CONFIG_SUBTREE: {LinuxBridge.PORT_SUBTREE: []},
                 }
             )
-            libnmstate.apply(desired_state)
+            apply_with_description(
+                "Bring up the linux bridge linux-br0 with the empty port, "
+                "configure the bonding interface test-bond0 with the bonding "
+                "mode balance-rr and ethernet port eth1",
+                desired_state,
+            )
 
     def test_linux_bridge_option_vlan_default_pvid_on_trunk_mode(
         self,
@@ -628,7 +662,11 @@ class TestVlanFiltering:
             LinuxBridge.Options.VLAN_DEFAULT_PVID
         ] = 5
 
-        libnmstate.apply({Interface.KEY: [bridge_state]})
+        apply_with_description(
+            "Create the linux bridge linux-br0 with vlan default pvid set "
+            "to 5",
+            {Interface.KEY: [bridge_state]},
+        )
         assertlib.assert_state_match({Interface.KEY: [bridge_state]})
 
 
@@ -704,7 +742,11 @@ def test_change_linux_bridge_group_addr(bridge0_with_port0):
 
     desired_state = {Interface.KEY: [iface_state]}
 
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the linux bridge linux-br0 with the group address "
+        "01:80:C2:00:00:04",
+        desired_state,
+    )
 
     assertlib.assert_state_match(desired_state)
 
@@ -743,7 +785,8 @@ def test_moving_ports_from_absent_interface(bridge0_with_port0):
     assertlib.assert_state_match({Interface.KEY: [iface_state]})
     assertlib.assert_absent(TEST_BRIDGE0)
 
-    libnmstate.apply(
+    apply_with_description(
+        "Remove the bridge linux-br1",
         {
             Interface.KEY: [
                 {
@@ -751,7 +794,7 @@ def test_moving_ports_from_absent_interface(bridge0_with_port0):
                     Interface.STATE: InterfaceState.ABSENT,
                 },
             ]
-        }
+        },
     )
 
 
@@ -761,7 +804,10 @@ def test_linux_bridge_replace_unmanaged_port(bridge_unmanaged_port, eth1_up):
     iface_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE] = [
         {LinuxBridge.Port.NAME: "eth1"}
     ]
-    libnmstate.apply({Interface.KEY: [iface_state]})
+    apply_with_description(
+        "Create the bridge linux-br0 with the ethernet port eth1",
+        {Interface.KEY: [iface_state]},
+    )
 
 
 @pytest.fixture
@@ -819,8 +865,13 @@ def test_explicitly_ignore_a_bridge_port(bridge0_with_port0, port1_up):
             },
         ]
     }
-    print(desired_state)
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Configure the linux bridge linux-br0 with port "
+        "eth2 attached, do not allow traffic to be sent back to the same "
+        "port on which it was received, set the stp path "
+        "cost to 100, set the stp priority to 32",
+        desired_state,
+    )
     state = show_only((TEST_BRIDGE0,))
     cur_port_config = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
         LinuxBridge.PORT_SUBTREE
@@ -846,7 +897,11 @@ def test_change_multicast_snooping_from_false_to_true(port0_up, port1_up):
         bridge[LinuxBridge.OPTIONS_SUBTREE][
             LinuxBridge.Options.MULTICAST_SNOOPING
         ] = True
-        libnmstate.apply(lb_state)
+        apply_with_description(
+            "Configure the linux bridge linux-br0 with multicast-snooping "
+            "set to true",
+            lb_state,
+        )
 
 
 def test_empty_state_does_not_change_bridge_options(bridge0_with_port0):
@@ -940,11 +995,17 @@ def test_linux_bridge_enable_and_disable_accept_all_mac_addresses(
 ):
     desired_state = bridge0_with_port0
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set accepting all mac to true for linux bridge linux-br0",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Set accepting all mac to false for linux bridge linux-br0",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
 
 
@@ -1000,7 +1061,11 @@ def test_linux_bridge_multicast_router(bridge0_with_port0, mcast_router_value):
             }
         },
     }
-    libnmstate.apply({Interface.KEY: [iface_state]})
+    apply_with_description(
+        "Configure the linux bridge linux-br0 with the multi-cast "
+        f"router {mcast_router_value}",
+        {Interface.KEY: [iface_state]},
+    )
 
 
 @pytest.mark.tier1
@@ -1032,7 +1097,10 @@ def test_linux_bridge_set_vlan_protocol(bridge0_with_port0, vlan_protocol):
             }
         },
     }
-    libnmstate.apply({Interface.KEY: [iface_state]})
+    apply_with_description(
+        "Create the linux bridge linux-br0 with the vlan protocol 802.1ad",
+        {Interface.KEY: [iface_state]},
+    )
 
 
 def test_create_and_remove_linux_bridge_kernel_mode():
@@ -1045,7 +1113,11 @@ def test_create_and_remove_linux_bridge_kernel_mode():
     ) as desired_state:
         desired_state[Interface.KEY][0].pop(Interface.IPV4)
         desired_state[Interface.KEY][0].pop(Interface.IPV6)
-        libnmstate.apply(desired_state, kernel_only=True)
+        apply_with_description(
+            "bring up the linux bridge linux-br0",
+            desired_state,
+            kernel_only=True,
+        )
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)
@@ -1060,7 +1132,9 @@ def test_delete_bridge_created_by_iproute():
 
 @pytest.fixture
 def eth1_eth2_up_with_description(eth1_up, eth2_up):
-    libnmstate.apply(
+    apply_with_description(
+        "Set the description 'secondary' for the eth1 interface, set the "
+        "description 'primary' for the eth2 interface",
         {
             Interface.KEY: [
                 {
@@ -1072,7 +1146,7 @@ def eth1_eth2_up_with_description(eth1_up, eth2_up):
                     Interface.DESCRIPTION: "primary",
                 },
             ]
-        }
+        },
     )
     yield
 
@@ -1109,7 +1183,12 @@ def test_policy_create_bridge_by_description_of_port(
     desired_state = libnmstate.gen_net_state_from_policy(policy, cur_state)
     print(desired_state)
     try:
-        libnmstate.apply(desired_state)
+        apply_with_description(
+            "Create the linux bridge linux-br0 with the MAC address "
+            "36:30:DB:60:75:A0, DHCP4 enabled, bridge stp option disabled, "
+            "port eth1 and eth2 attached",
+            desired_state,
+        )
         current_state = show_only([TEST_BRIDGE0])
         br_iface = current_state[Interface.KEY][0]
         br_ports = br_iface[LinuxBridge.CONFIG_SUBTREE][
@@ -1121,7 +1200,8 @@ def test_policy_create_bridge_by_description_of_port(
         assert br_ports[1][LinuxBridge.Port.NAME] == "eth2"
         assert get_mac_address(TEST_BRIDGE0) == eth2_mac
     finally:
-        libnmstate.apply(
+        apply_with_description(
+            "Delete bridge linux-br0",
             load_yaml(
                 """---
                 interfaces:
@@ -1135,7 +1215,8 @@ def test_policy_create_bridge_by_description_of_port(
 
 
 def test_add_port_to_br_with_controller_property(bridge0_with_port0, eth2_up):
-    libnmstate.apply(
+    apply_with_description(
+        "Configure eth2 with the controller linux-br0",
         {
             Interface.KEY: [
                 {
@@ -1144,7 +1225,7 @@ def test_add_port_to_br_with_controller_property(bridge0_with_port0, eth2_up):
                     Interface.CONTROLLER: TEST_BRIDGE0,
                 }
             ]
-        }
+        },
     )
     current_state = show_only([TEST_BRIDGE0])
     br_iface = current_state[Interface.KEY][0]
@@ -1237,7 +1318,8 @@ def test_controller_detach_but_in_port_list():
 
 
 def test_controller_detach_from_linux_bridge(bridge0_with_port0):
-    libnmstate.apply(
+    apply_with_description(
+        "Bring up ethernet device eth1 with empty controller",
         {
             Interface.KEY: [
                 {
@@ -1246,7 +1328,7 @@ def test_controller_detach_from_linux_bridge(bridge0_with_port0):
                     Interface.CONTROLLER: "",
                 },
             ]
-        }
+        },
     )
     state = show_only([TEST_BRIDGE0])
     assert (
@@ -1270,5 +1352,10 @@ def test_attach_bond_to_empty_bridge(empty_bridge, bond0):
     bond0[Interface.KEY][0][Interface.CONTROLLER] = TEST_BRIDGE0
     desired_state = bond0
     desired_state[Interface.KEY].append(empty_bridge[Interface.KEY][0])
-    libnmstate.apply(desired_state)
+    apply_with_description(
+        "Create the bond interface testbond0 with the controller "
+        f"{TEST_BRIDGE0}, the bonding mode balance-rr, and ethernet port "
+        "eth1",
+        desired_state,
+    )
     assertlib.assert_state_match(desired_state)
