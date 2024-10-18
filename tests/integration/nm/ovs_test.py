@@ -2,7 +2,6 @@
 
 import pytest
 
-import yaml
 
 import libnmstate
 from libnmstate.schema import Interface
@@ -18,6 +17,7 @@ from ..testlib import statelib
 from ..testlib.ovslib import Bridge
 from ..testlib.retry import retry_till_true_or_timeout
 from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.yaml import load_yaml
 
 
 BRIDGE0 = "brtest0"
@@ -526,7 +526,7 @@ def test_do_not_touch_ovs_port_when_not_desired_internal_iface(
 
 
 def test_gc_on_ovs_dpdk():
-    desired_state = yaml.load(
+    desired_state = load_yaml(
         """---
         interfaces:
         - name: ovs0
@@ -545,8 +545,7 @@ def test_gc_on_ovs_dpdk():
               datapath: "netdev"
             port:
             - name: ovs0
-        """,
-        Loader=yaml.SafeLoader,
+        """
     )
     confs = libnmstate.generate_configurations(desired_state)["NetworkManager"]
     ovs_iface_conf = [conf for conf in confs if conf[0].startswith("ovs0-if")][
@@ -567,7 +566,7 @@ def unmaaged_dummy1():
 
 
 def test_ovs_bond_auto_managed_ignored_port(unmaaged_dummy1, eth1_up):
-    desired_state = yaml.load(
+    desired_state = load_yaml(
         f"""---
         interfaces:
         - name: br0
@@ -582,20 +581,55 @@ def test_ovs_bond_auto_managed_ignored_port(unmaaged_dummy1, eth1_up):
                   - name: {DUMMY1}
                   - name: eth1
         """,
-        Loader=yaml.SafeLoader,
     )
     try:
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
     finally:
         libnmstate.apply(
-            yaml.load(
+            load_yaml(
                 """---
                 interfaces:
                 - name: br0
                   type: ovs-bridge
                   state: absent
                 """,
-                Loader=yaml.SafeLoader,
+            )
+        )
+
+
+def test_ovs_port_has_autoconnect_ports(eth1_up):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: ovs0
+          type: ovs-interface
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs0
+            - name: eth1
+        """,
+    )
+    try:
+        libnmstate.apply(desired_state)
+        assert (
+            cmdlib.exec_cmd(
+                "nmcli -g connection.autoconnect-slaves "
+                "c show ovs0-port".split(),
+            )[1].strip()
+            == "1"
+        )
+    finally:
+        libnmstate.apply(
+            load_yaml(
+                """---
+                interfaces:
+                - name: br0
+                  type: ovs-bridge
+                  state: absent
+                """,
             )
         )
