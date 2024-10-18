@@ -146,6 +146,18 @@ impl OvsBridgeBondConfig {
     }
 }
 impl MergedInterfaces {
+    pub(crate) fn has_ovs(&self) -> bool {
+        self.kernel_ifaces
+            .values()
+            .chain(self.user_ifaces.values())
+            .any(|i| {
+                i.for_apply.as_ref().map(|i| {
+                    i.iface_type() == InterfaceType::OvsBridge
+                        || i.iface_type() == InterfaceType::OvsInterface
+                }) == Some(true)
+            })
+    }
+
     // This function remove extra(undesired) ovs patch port from post-apply
     // current, so it will not interfere with verification
     pub(crate) fn process_allow_extra_ovs_patch_ports_for_verify(
