@@ -340,7 +340,9 @@ fn delete_remain_virtual_interface_as_desired(
         .kernel_ifaces
         .values()
         .filter(|i| {
-            i.is_changed() && (i.merged.is_absent() || i.merged.is_down())
+            i.merged.iface_type() != InterfaceType::OvsInterface
+                && i.is_changed()
+                && (i.merged.is_absent() || i.merged.is_down())
         })
         .map(|i| &i.merged)
     {

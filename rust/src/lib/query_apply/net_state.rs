@@ -19,6 +19,7 @@ use crate::{
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT_DEFAULT: usize = 5;
+const VERIFY_RETRY_COUNT_OVS: usize = 10;
 const VERIFY_RETRY_COUNT_SRIOV_MIN: usize = 30;
 const VERIFY_RETRY_COUNT_SRIOV_MAX: usize = 300;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
@@ -486,7 +487,13 @@ impl MergedNetworkState {
 
 fn get_proper_verify_retry_count(merged_ifaces: &MergedInterfaces) -> usize {
     match merged_ifaces.get_sriov_vf_count() {
-        0 => VERIFY_RETRY_COUNT_DEFAULT,
+        0 => {
+            if merged_ifaces.has_ovs() {
+                VERIFY_RETRY_COUNT_OVS
+            } else {
+                VERIFY_RETRY_COUNT_DEFAULT
+            }
+        }
         v if v >= 64 => VERIFY_RETRY_COUNT_SRIOV_MAX,
         v if v <= 16 => VERIFY_RETRY_COUNT_SRIOV_MIN,
         v => v as usize / 64 * VERIFY_RETRY_COUNT_SRIOV_MAX,
