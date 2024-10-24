@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.38] - 2024-10-24
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - nm ovs: Enable connection.autoconnect-ports for OVS port. (4c996abd)
+ - gc: Fix trunk vlans for ovs port in gen_conf. (614c66dc)
+ - nm: Preserve current IP setting for multiconnect profile. (23247afb)
+
 ## [2.2.37] - 2024-09-30
 ### Breaking changes
  - N/A
