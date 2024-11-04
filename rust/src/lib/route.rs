@@ -321,14 +321,20 @@ impl RouteEntry {
             }
         }
         if let Some(via) = self.next_hop_addr.as_ref() {
-            let new_via = format!("{}", via.parse::<std::net::IpAddr>()?);
-            if via != &new_via {
-                log::warn!(
-                    "Route next-hop-address {} sanitized to {}",
-                    via,
-                    new_via
-                );
-                self.next_hop_addr = Some(new_via);
+            // Linux kernel is discarding all zero `next_hop_addr`.
+            let via_addr = via.parse::<std::net::IpAddr>()?;
+            if via_addr.is_unspecified() {
+                self.next_hop_addr = None;
+            } else {
+                let new_via = format!("{}", via_addr);
+                if via != &new_via {
+                    log::warn!(
+                        "Route next-hop-address {} sanitized to {}",
+                        via,
+                        new_via
+                    );
+                    self.next_hop_addr = Some(new_via);
+                }
             }
         }
         if let Some(src) = self.source.as_ref() {

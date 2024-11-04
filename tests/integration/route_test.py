@@ -21,6 +21,7 @@ from .testlib import iprule
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
+from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.route import assert_routes
 from .testlib.route import assert_routes_missing
 from .testlib.servicelib import disable_service
@@ -140,6 +141,11 @@ def test_add_static_route_without_next_hop_address(eth1_up):
         }
     )
     cur_state = libnmstate.show()
+    # Both linux kernel and iproute are discarding all-zero IP address for
+    # `next-hop-address`, hence the nmstate query should not include these
+    # all zero IP address.
+    routes[0].pop(Route.NEXT_HOP_ADDRESS)
+    routes[1].pop(Route.NEXT_HOP_ADDRESS)
     assert_routes(routes, cur_state)
 
 
@@ -2189,3 +2195,55 @@ def test_kernel_mode_static_route_and_remove(cleanup_veth1_kernel_mode):
     assert_routes_missing(
         desired_state[Route.KEY][Route.CONFIG], cur_state, nic="veth1"
     )
+
+
+# https://issues.redhat.com/browse/RHEL-64707
+@pytest.fixture
+@pytest.mark.tier1
+def eth1_route_to_external_next_hop_address(eth1_up):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        routes:
+         config:
+           - destination: 203.0.113.0/24
+             next-hop-address: 198.51.100.1
+             next-hop-interface: veth1
+             state: absent
+           - destination: 203.0.113.0/24
+             next-hop-address: 198.51.100.1
+             next-hop-interface: veth1
+             metric: 109
+        """
+    )
+    libnmstate.apply(desired_state)
+    # applying twice so nmstate persist the direct route
+    # to 198.51.100.1 into config.
+    libnmstate.apply(desired_state)
+    yield desired_state
+
+
+@ip_monitor_assert_stable_link_up("eth1")
+def test_route_link_stable_for_external_next_hop_address(
+    eth1_route_to_external_next_hop_address,
+):
+    state = eth1_route_to_external_next_hop_address
+    libnmstate.apply(state)

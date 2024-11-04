@@ -24,8 +24,6 @@ const SUPPORTED_STATIC_ROUTE_PROTOCOL: [nispor::RouteProtocol; 2] =
 
 const IPV4_DEFAULT_GATEWAY: &str = "0.0.0.0/0";
 const IPV6_DEFAULT_GATEWAY: &str = "::/0";
-const IPV4_EMPTY_NEXT_HOP_ADDRESS: &str = "0.0.0.0";
-const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 
 // kernel values
 const RTAX_CWND: u32 = 7;
@@ -174,24 +172,8 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
 
     let next_hop_addr = if let Some(via) = &np_route.via {
         Some(via.to_string())
-    } else if let Some(gateway) = &np_route.gateway {
-        Some(gateway.to_string())
     } else {
-        match np_route.address_family {
-            nispor::AddressFamily::IPv4 => {
-                Some(IPV4_EMPTY_NEXT_HOP_ADDRESS.to_string())
-            }
-            nispor::AddressFamily::IPv6 => {
-                Some(IPV6_EMPTY_NEXT_HOP_ADDRESS.to_string())
-            }
-            _ => {
-                warn!(
-                    "Route {:?} is holding unknown IP family {:?}",
-                    np_route, np_route.address_family
-                );
-                None
-            }
-        }
+        np_route.gateway.as_ref().map(|gateway| gateway.to_string())
     };
 
     let source = np_route.prefered_src.as_ref().map(|src| src.to_string());
