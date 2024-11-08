@@ -7,9 +7,11 @@ use std::str::FromStr;
 use serde::{de, de::Visitor, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType,
-    NmstateError, VlanProtocol,
+    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceMatchRule,
+    InterfaceType, NmstateError, VlanProtocol,
 };
+
+use super::IfaceMatchCache;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -92,7 +94,17 @@ impl LinuxBridgeInterface {
             .as_ref()
             .and_then(|br_conf| br_conf.port.as_ref())
             .map(|ports| {
-                ports.as_slice().iter().map(|p| p.name.as_str()).collect()
+                ports
+                    .as_slice()
+                    .iter()
+                    .filter_map(|p| {
+                        if !p.name.is_empty() {
+                            Some(p.name.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
             })
     }
 
@@ -127,10 +139,13 @@ impl LinuxBridgeInterface {
         self.remove_runtime_only_timers();
         if let Some(port_confs) = self
             .bridge
-            .as_ref()
-            .and_then(|br_conf| br_conf.port.as_ref())
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
         {
             for port_conf in port_confs {
+                if let Some(iface_match) = port_conf.iface_match.as_mut() {
+                    iface_match.sanitize();
+                }
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
                     vlan_conf.sanitize(is_desired)?;
                 }
@@ -340,6 +355,64 @@ impl LinuxBridgeInterface {
             }
         }
     }
+
+    pub(crate) fn resolve_iface_match(
+        &mut self,
+        cache: &IfaceMatchCache,
+    ) -> Result<(), NmstateError> {
+        if let Some(ports_conf) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_deref_mut())
+        {
+            for port_conf in ports_conf.iter_mut() {
+                if let Some(iface_match) = port_conf.iface_match.as_ref() {
+                    log::info!(
+                        "Searching linux bridge port by rule {iface_match}"
+                    );
+                    let new_name = iface_match.resolve(cache)?;
+                    if port_conf.name.is_empty() {
+                        log::info!(
+                            "Linux bridge port for rule {iface_match} \
+                            is {new_name}",
+                        );
+                        port_conf.name = new_name;
+                    } else if port_conf.name != new_name {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Linux bridge interface {} has port holding \
+                                both name {} and match {}, but the \
+                                matched interface is {}",
+                                self.base.name.as_str(),
+                                port_conf.name,
+                                iface_match,
+                                new_name
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn port_iface_matches(
+        &self,
+    ) -> HashMap<String, InterfaceMatchRule> {
+        let mut ret: HashMap<String, InterfaceMatchRule> = HashMap::new();
+        if let Some(ports_config) =
+            self.bridge.as_ref().and_then(|b| b.port.as_ref())
+        {
+            for port_config in ports_config.as_slice() {
+                if let Some(iface_match) = port_config.iface_match.as_ref() {
+                    ret.insert(port_config.name.clone(), iface_match.clone());
+                }
+            }
+        }
+        ret
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -351,7 +424,11 @@ pub struct LinuxBridgeConfig {
     /// Linux bridge options. When applying, existing options will merged into
     /// desired.
     pub options: Option<LinuxBridgeOptions>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "ports")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "ports",
+        alias = "ports-config"
+    )]
     /// Linux bridge ports. When applying, desired port list will __override__
     /// current port list.
     pub port: Option<Vec<LinuxBridgePortConfig>>,
@@ -368,7 +445,15 @@ impl LinuxBridgeConfig {
 #[non_exhaustive]
 pub struct LinuxBridgePortConfig {
     /// The kernel interface name of this bridge port.
+    /// When applying with both `name` and `match` section defined,
+    /// pre-apply validation will raise if they are not pointing to the same
+    /// interface, and the `name` will not stored into persistent configuration
+    /// storage.
+    #[serde(skip_serializing_if = "String::is_empty", default)]
     pub name: String,
+    /// Rule to matching interface as bridge port.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "match")]
+    pub iface_match: Option<InterfaceMatchRule>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,

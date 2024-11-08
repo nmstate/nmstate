@@ -157,19 +157,3 @@ impl TryFrom<zvariant::OwnedValue> for NmIfaceType {
         Ok(String::try_from(v).map(|v| NmIfaceType::from(v.as_str()))?)
     }
 }
-
-#[cfg(feature = "query_apply")]
-const CONTROLLER_IFACE_TYPES: [NmIfaceType; 5] = [
-    NmIfaceType::Bond,
-    NmIfaceType::Bridge,
-    NmIfaceType::OvsBridge,
-    NmIfaceType::OvsPort,
-    NmIfaceType::Vrf,
-];
-
-#[cfg(feature = "query_apply")]
-impl NmIfaceType {
-    pub fn is_controller(&self) -> bool {
-        CONTROLLER_IFACE_TYPES.contains(self)
-    }
-}

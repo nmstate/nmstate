@@ -218,6 +218,8 @@ impl NmApi<'_> {
 
     pub fn connection_reapply(
         &mut self,
+        iface_name: &str,
+        nm_iface_type: &NmIfaceType,
         nm_conn: &NmConnection,
     ) -> Result<(), NmError> {
         debug!("connection_reapply: {:?}", nm_conn);
@@ -226,21 +228,9 @@ impl NmApi<'_> {
         // We cannot use `org.freedesktop.NetworkManager.GetDeviceByIpIface`
         // because OVS bridge/port/iface might hold identical device name.
         // Need to check interface type also.
-        if let (Some(iface_name), Some(nm_iface_type)) =
-            (nm_conn.iface_name(), nm_conn.iface_type())
-        {
-            let nm_dev_obj_path =
-                self.get_disk_obj_path(iface_name, nm_iface_type)?;
-            self.dbus.nm_dev_reapply(nm_dev_obj_path.as_str(), nm_conn)
-        } else {
-            Err(NmError::new(
-                ErrorKind::Bug,
-                format!(
-                    "Failed to extract interface name and type from \
-                    connection {nm_conn:?}"
-                ),
-            ))
-        }
+        let nm_dev_obj_path =
+            self.get_disk_obj_path(iface_name, nm_iface_type)?;
+        self.dbus.nm_dev_reapply(nm_dev_obj_path.as_str(), nm_conn)
     }
 
     pub fn active_connections_get(

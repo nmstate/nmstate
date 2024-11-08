@@ -34,6 +34,7 @@ from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.vlan import vlan_interface
+from .testlib.yaml import load_yaml
 
 BOND99 = "bond99"
 ETH1 = "eth1"
@@ -1459,7 +1460,7 @@ def test_change_mtu_of_bond_port(bond99_with_2_port):
     )
 
 
-def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up):
+def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up, cleanup_bond99):
     eth1_mac = get_mac_address(ETH1)
     eth2_mac = get_mac_address(ETH2)
 
@@ -1476,7 +1477,7 @@ def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up):
            state: up
            identifier: mac-address
            mac-address: {eth2_mac}
-         - name: bond0
+         - name: bond99
            type: bond
            state: up
            link-aggregation:
@@ -1495,3 +1496,47 @@ def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up):
         statelib.show_only((ETH2,))[Interface.KEY][0][Interface.MAC]
         == eth2_mac
     )
+
+
+@pytest.fixture
+def cleanup_bond99():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND99,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_create_bond_with_port_refered_by_mac(
+    eth1_up, eth2_up, cleanup_bond99
+):
+    eth1_mac = get_mac_address("eth1").lower()
+    eth2_mac = get_mac_address("eth2").upper()
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: bond99
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            ports-config:
+              - match:
+                  mac-address: {eth2_mac}
+                  iface-type: ethernet
+              - match:
+                  mac-address: {eth1_mac}
+                  iface-type: ethernet
+        """
+    )
+    libnmstate.apply(desired_state)
+    cur_iface = statelib.show_only((BOND99,))[Interface.KEY][0]
+
+    assert cur_iface[Bond.CONFIG_SUBTREE][Bond.PORT] == ["eth1", "eth2"]

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use serde::{de, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceState,
-    InterfaceType, LinuxBridgeStpOptions, MergedInterface, MergedInterfaces,
-    NmstateError, OvsDbIfaceConfig,
+    BaseInterface, BridgePortVlanConfig, ErrorKind, Interface,
+    InterfaceMatchRule, InterfaceState, InterfaceType, LinuxBridgeStpOptions,
+    MergedInterface, MergedInterfaces, NmstateError, OvsDbIfaceConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,13 +144,11 @@ impl OvsBridgeInterface {
 
         if let Some(port_confs) = self
             .bridge
-            .as_ref()
-            .and_then(|br_conf| br_conf.ports.as_ref())
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_mut())
         {
             for port_conf in port_confs {
-                if let Some(vlan_conf) = port_conf.vlan.as_ref() {
-                    vlan_conf.sanitize(is_desired)?;
-                }
+                port_conf.sanitize(is_desired)?;
             }
         }
         Ok(())
@@ -253,6 +251,124 @@ impl OvsBridgeInterface {
             }
         }
     }
+
+    pub(crate) fn resolve_iface_match(
+        &mut self,
+        cache: &crate::ifaces::IfaceMatchCache,
+    ) -> Result<(), NmstateError> {
+        if let Some(ports_conf) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_deref_mut())
+        {
+            for port_conf in
+                ports_conf.iter_mut().filter(|p| p.iface_match.is_some())
+            {
+                if let Some(iface_match) = port_conf.iface_match.as_ref() {
+                    log::info!(
+                        "Searching OVS bridge port by rule {}",
+                        iface_match
+                    );
+                    let new_name = iface_match.resolve(cache)?;
+                    if port_conf.name.is_empty() {
+                        log::info!(
+                            "OVS bridge port for rule {iface_match} \
+                            is {new_name}",
+                        );
+                        port_conf.name = new_name;
+                    } else if port_conf.name != new_name {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "OVS bridge interface {} has port holding \
+                                both name {} and match {}, but the \
+                                matched interface is {}",
+                                self.base.name.as_str(),
+                                port_conf.name,
+                                iface_match,
+                                new_name
+                            ),
+                        ));
+                    }
+                }
+            }
+
+            for bond_conf in
+                ports_conf.iter_mut().filter_map(|p| p.bond.as_mut())
+            {
+                if let Some(bond_ports) = bond_conf.ports.as_mut() {
+                    for bond_port_conf in bond_ports
+                        .iter_mut()
+                        .filter(|p| p.iface_match.is_some())
+                    {
+                        if let Some(iface_match) =
+                            bond_port_conf.iface_match.as_ref()
+                        {
+                            log::info!(
+                                "Searching OVS bridge bond port by rule {}",
+                                iface_match
+                            );
+                            let new_name = iface_match.resolve(cache)?;
+                            if bond_port_conf.name.is_empty() {
+                                log::info!(
+                                    "OVS bridge bond port for rule \
+                                    {iface_match} is {new_name}",
+                                );
+                                bond_port_conf.name = new_name;
+                            } else if bond_port_conf.name != new_name {
+                                return Err(NmstateError::new(
+                                    ErrorKind::InvalidArgument,
+                                    format!(
+                                        "OVS bridge interface {} has \
+                                        port holding \
+                                        both name {} and match {}, but the \
+                                        matched interface is {}",
+                                        self.base.name.as_str(),
+                                        bond_port_conf.name,
+                                        iface_match,
+                                        new_name
+                                    ),
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn port_iface_matches(
+        &self,
+    ) -> HashMap<String, InterfaceMatchRule> {
+        let mut ret: HashMap<String, InterfaceMatchRule> = HashMap::new();
+        if let Some(ports_config) =
+            self.bridge.as_ref().and_then(|b| b.ports.as_ref())
+        {
+            for port_config in ports_config.as_slice() {
+                if let Some(bond_config) = port_config.bond.as_ref() {
+                    if let Some(bond_ports_config) = bond_config.ports.as_ref()
+                    {
+                        for bond_port_config in bond_ports_config.as_slice() {
+                            if let Some(iface_match) =
+                                bond_port_config.iface_match.as_ref()
+                            {
+                                ret.insert(
+                                    bond_port_config.name.clone(),
+                                    iface_match.clone(),
+                                );
+                            }
+                        }
+                    }
+                } else if let Some(iface_match) =
+                    port_config.iface_match.as_ref()
+                {
+                    ret.insert(port_config.name.clone(), iface_match.clone());
+                }
+            }
+        }
+        ret
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -272,7 +388,8 @@ pub struct OvsBridgeConfig {
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "port",
-        alias = "ports"
+        alias = "ports",
+        alias = "ports-config"
     )]
     /// Serialize to 'port'. Deserialize from `port` or `ports`.
     pub ports: Option<Vec<OvsBridgePortConfig>>,
@@ -326,7 +443,16 @@ impl OvsBridgeOptions {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgePortConfig {
+    /// The kernel interface name of this OVS bridge port.
+    /// When applying with both `name` and `match` section defined,
+    /// pre-apply validation will raise if they are not pointing to the same
+    /// interface, and the `name` will not stored into persistent configuration
+    /// storage.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    /// Rule to matching interface as bridge port.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "match")]
+    pub iface_match: Option<InterfaceMatchRule>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "link-aggregation"
@@ -339,6 +465,22 @@ pub struct OvsBridgePortConfig {
 impl OvsBridgePortConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if let Some(iface_match) = self.iface_match.as_mut() {
+            iface_match.sanitize();
+        }
+        if let Some(vlan_conf) = self.vlan.as_ref() {
+            vlan_conf.sanitize(is_desired)?;
+        }
+        if let Some(bond_conf) = self.bond.as_mut() {
+            bond_conf.sanitize();
+        }
+        Ok(())
     }
 }
 
@@ -518,7 +660,8 @@ pub struct OvsBridgeBondConfig {
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "port",
-        alias = "ports"
+        alias = "ports",
+        alias = "ports-config"
     )]
     /// Serialize to 'port'. Deserialize from `port` or `ports`.
     pub ports: Option<Vec<OvsBridgeBondPortConfig>>,
@@ -552,6 +695,14 @@ impl OvsBridgeBondConfig {
         Self::default()
     }
 
+    pub(crate) fn sanitize(&mut self) {
+        if let Some(ports) = self.ports.as_mut() {
+            for port in ports {
+                port.sanitize();
+            }
+        }
+    }
+
     pub(crate) fn ports(&self) -> Vec<&str> {
         let mut port_names: Vec<&str> = Vec::new();
         if let Some(ports) = &self.ports {
@@ -573,12 +724,27 @@ impl OvsBridgeBondConfig {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct OvsBridgeBondPortConfig {
+    /// The kernel interface name of this OVS bridge bond port.
+    /// When applying with both `name` and `match` section defined,
+    /// pre-apply validation will raise if they are not pointing to the same
+    /// interface, and the `name` will not stored into persistent configuration
+    /// storage.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    /// Rule to matching interface as bridge port.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "match")]
+    pub iface_match: Option<InterfaceMatchRule>,
 }
 
 impl OvsBridgeBondPortConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn sanitize(&mut self) {
+        if let Some(iface_match) = self.iface_match.as_mut() {
+            iface_match.sanitize();
+        }
     }
 }
 

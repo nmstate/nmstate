@@ -1371,3 +1371,54 @@ def test_attach_bond_to_empty_bridge(empty_bridge, bond0):
         desired_state,
     )
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.fixture
+def cleanup_br0():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "br0",
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_create_linux_bridge_with_port_refered_by_mac(
+    eth1_up, eth2_up, cleanup_br0
+):
+    eth1_mac = get_mac_address("eth1").upper()
+    eth2_mac = get_mac_address("eth2").lower()
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            ports-config:
+            - match:
+                mac-address: {eth2_mac}
+                iface-type: ethernet
+            - match:
+                mac-address: {eth1_mac}
+                iface-type: ethernet
+        """
+    )
+    libnmstate.apply(desired_state)
+    cur_iface = show_only(("br0",))[Interface.KEY][0]
+
+    assert [
+        p[LinuxBridge.Port.NAME]
+        for p in cur_iface[LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ]
+    ] == [
+        "eth1",
+        "eth2",
+    ]

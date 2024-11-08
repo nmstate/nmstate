@@ -2,11 +2,14 @@
 
 use super::super::nm_dbus::{NmConnection, NmIfaceType, NmSettingVeth};
 
-use super::{connection::gen_nm_conn_setting, ip::gen_nm_ip_setting};
+use super::{
+    super::profile::NmProfile, connection::gen_nm_conn_setting,
+    ip::gen_nm_ip_setting,
+};
 
 use crate::{
     BaseInterface, EthernetInterface, Interface, InterfaceIpv4, InterfaceIpv6,
-    InterfaceState, InterfaceType, NmstateError, VethConfig,
+    InterfaceState, InterfaceType, MergedInterface, NmstateError, VethConfig,
 };
 
 impl From<&VethConfig> for NmSettingVeth {
@@ -22,18 +25,7 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
     end_name: &str,
     exist_nm_conns: &[NmConnection],
     stable_uuid: bool,
-) -> Result<NmConnection, NmstateError> {
-    for nm_conn in exist_nm_conns {
-        if let Some(iface_type) = nm_conn.iface_type() {
-            if nm_conn.iface_name() == Some(peer_name)
-                && [NmIfaceType::Ethernet, NmIfaceType::Veth]
-                    .contains(iface_type)
-            {
-                return Ok(nm_conn.clone());
-            }
-        }
-    }
-    // Create new connection
+) -> Result<NmProfile, NmstateError> {
     let mut eth_iface = EthernetInterface::new();
     eth_iface.base = BaseInterface {
         name: peer_name.to_string(),
@@ -44,11 +36,32 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
         ..Default::default()
     };
     let iface = Interface::Ethernet(Box::new(eth_iface));
+    let merged_iface = MergedInterface::new(Some(iface.clone()), None)?;
+
+    for nm_conn in exist_nm_conns {
+        if let Some(iface_type) = nm_conn.iface_type() {
+            if nm_conn.iface_name() == Some(peer_name)
+                && [NmIfaceType::Ethernet, NmIfaceType::Veth]
+                    .contains(iface_type)
+            {
+                return Ok(NmProfile {
+                    merged_iface: merged_iface.clone(),
+                    conn: nm_conn.clone(),
+                    ..Default::default()
+                });
+            }
+        }
+    }
+    // Create new connection
     let mut nm_conn = NmConnection::default();
     gen_nm_conn_setting(&iface, &mut nm_conn, stable_uuid)?;
     gen_nm_ip_setting(&iface, None, &mut nm_conn)?;
     nm_conn.veth = Some(NmSettingVeth::from(&VethConfig {
         peer: end_name.to_string(),
     }));
-    Ok(nm_conn)
+    Ok(NmProfile {
+        merged_iface,
+        conn: nm_conn.clone(),
+        ..Default::default()
+    })
 }

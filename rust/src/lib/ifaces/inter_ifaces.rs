@@ -659,12 +659,14 @@ impl MergedInterfaces {
 
         if gen_conf_mode {
             desired.set_unknown_iface_to_eth()?;
+            desired.resolve_iface_match(&current)?;
             desired.set_missing_port_to_eth();
         } else {
             desired.resolve_sriov_reference(&current)?;
             desired.resolve_mac_identifider_in_current(&current)?;
             desired.resolve_unknown_ifaces(&current)?;
             desired.resolve_mac_identifider_in_desired(&current)?;
+            desired.resolve_iface_match(&current)?;
         }
 
         desired.auto_managed_controller_ports(&current);
@@ -788,6 +790,7 @@ impl MergedInterfaces {
         self.mark_orphan_interface_as_absent()?;
         self.process_veth_peer_changes()?;
         self.validate_dispatch_script_has_no_checkpoint()?;
+        self.sync_iface_match_from_port_to_iface()?;
         for iface in self
             .kernel_ifaces
             .values_mut()

@@ -24,6 +24,7 @@ from libnmstate.schema import VXLAN
 from libnmstate.schema import Veth
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -34,6 +35,7 @@ from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
 from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
+from .testlib.ifacelib import get_mac_address
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.retry import retry_till_true_or_timeout
@@ -41,6 +43,7 @@ from .testlib.servicelib import disable_service
 from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
+from .testlib.yaml import load_yaml
 
 
 BOND1 = "bond1"
@@ -2226,3 +2229,107 @@ def ovs_bridge1_with_bond_as_system_iface(eth1_up, eth2_up):
 def test_ovs_system_iface_link_stable(ovs_bridge1_with_bond_as_system_iface):
     desired_state = ovs_bridge1_with_bond_as_system_iface
     libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def cleanup_br0():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "br0",
+                    Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+@pytest.mark.xfail(
+    nm_minor_version() < 49,
+    strict=True,
+    raises=NmstateVerificationError,
+    reason="https://issues.redhat.com/browse/RHEL-34617",
+)
+def test_create_ovs_bridge_with_port_refered_by_mac(
+    eth1_up, eth2_up, cleanup_br0
+):
+    eth1_mac = get_mac_address("eth1").upper()
+    eth2_mac = get_mac_address("eth2").lower()
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            ports-config:
+              - match:
+                  mac-address: {eth2_mac}
+                  iface-type: ethernet
+              - match:
+                  mac-address: {eth1_mac}
+                  iface-type: ethernet
+        """
+    )
+    libnmstate.apply(desired_state)
+    cur_iface = statelib.show_only(("br0",))[Interface.KEY][0]
+
+    assert [
+        p[LinuxBridge.Port.NAME]
+        for p in cur_iface[LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ]
+    ] == [
+        "eth1",
+        "eth2",
+    ]
+
+
+@pytest.mark.xfail(
+    nm_minor_version() < 49,
+    strict=True,
+    raises=NmstateVerificationError,
+    reason="https://issues.redhat.com/browse/RHEL-34617",
+)
+def test_create_ovs_bridge_with_bond_port_refered_by_mac(
+    eth1_up, eth2_up, cleanup_br0
+):
+    eth1_mac = get_mac_address("eth1").lower()
+    eth2_mac = get_mac_address("eth2").upper()
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            ports:
+              - name: br0-bond0
+                link-aggregation:
+                  mode: balance-slb
+                  ports-config:
+                  - match:
+                      mac-address: {eth2_mac}
+                      iface-type: ethernet
+                  - match:
+                      mac-address: {eth1_mac}
+                      iface-type: ethernet
+        """
+    )
+    libnmstate.apply(desired_state)
+    cur_iface = statelib.show_only(("br0",))[Interface.KEY][0]
+
+    assert [
+        p[LinuxBridge.Port.NAME]
+        for p in cur_iface[LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ][0][OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
+            OVSBridge.Port.LinkAggregation.PORT_SUBTREE
+        ]
+    ] == [
+        "eth1",
+        "eth2",
+    ]

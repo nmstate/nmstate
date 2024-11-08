@@ -6,33 +6,41 @@ use super::super::nm_dbus::{
     NmConnection, NmIfaceType, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,
     NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
 };
-use super::super::settings::connection::gen_nm_conn_setting;
+use super::super::{
+    profile::NmProfile, settings::connection::gen_nm_conn_setting,
+};
 
 use crate::{
     BaseInterface, BridgePortTrunkTag, Interface, InterfaceType,
-    MergedInterfaces, NmstateError, OvsBridgeBondMode, OvsBridgeInterface,
-    OvsBridgePortConfig, OvsDbIfaceConfig, OvsInterface, UnknownInterface,
+    MergedInterface, MergedInterfaces, NmstateError, OvsBridgeBondMode,
+    OvsBridgeInterface, OvsBridgePortConfig, OvsDbIfaceConfig, OvsInterface,
+    UnknownInterface,
 };
 
-pub(crate) fn create_ovs_port_nm_conn(
+pub(crate) fn gen_nmstate_iface_for_ovs_port(
+    iface_name: &str,
+    br_iface_name: Option<&str>,
+) -> Interface {
+    let mut base_iface = BaseInterface::new();
+    base_iface.name = iface_name.to_string();
+    base_iface.iface_type = InterfaceType::Other("ovs-port".to_string());
+    base_iface.controller = br_iface_name.map(|s| s.to_string());
+    base_iface.controller_type = Some(InterfaceType::OvsBridge);
+    let mut iface = UnknownInterface::new();
+    iface.base = base_iface;
+    Interface::Unknown(Box::new(iface))
+}
+
+pub(crate) fn create_ovs_port_nm_profile(
     br_name: &str,
     port_conf: &OvsBridgePortConfig,
     exist_nm_conn: Option<&NmConnection>,
     stable_uuid: bool,
-) -> Result<NmConnection, NmstateError> {
+) -> Result<NmProfile, NmstateError> {
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
-    let mut base_iface = BaseInterface::new();
-    base_iface.name.clone_from(&port_conf.name);
-    base_iface.iface_type = InterfaceType::Other("ovs-port".to_string());
-    base_iface.controller = Some(br_name.to_string());
-    base_iface.controller_type = Some(InterfaceType::OvsBridge);
-    let mut iface = UnknownInterface::new();
-    iface.base = base_iface;
-    gen_nm_conn_setting(
-        &Interface::Unknown(Box::new(iface)),
-        &mut nm_conn,
-        stable_uuid,
-    )?;
+
+    let iface = gen_nmstate_iface_for_ovs_port(&port_conf.name, Some(br_name));
+    gen_nm_conn_setting(&iface, &mut nm_conn, stable_uuid)?;
 
     let mut nm_ovs_port_set =
         nm_conn.ovs_port.as_ref().cloned().unwrap_or_default();
@@ -83,7 +91,12 @@ pub(crate) fn create_ovs_port_nm_conn(
     }
 
     nm_conn.ovs_port = Some(nm_ovs_port_set);
-    Ok(nm_conn)
+    Ok(NmProfile {
+        merged_iface: MergedInterface::new(Some(iface), None)?,
+        conn: nm_conn,
+        exist_conn: exist_nm_conn.cloned(),
+        ..Default::default()
+    })
 }
 
 fn trunk_tag_to_nm_range(trunk_tag: &BridgePortTrunkTag) -> NmRange {

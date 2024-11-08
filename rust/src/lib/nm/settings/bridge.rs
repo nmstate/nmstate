@@ -130,14 +130,16 @@ fn apply_stp_setting(
 pub(crate) fn gen_nm_br_port_setting(
     br_iface: &LinuxBridgeInterface,
     nm_conn: &mut NmConnection,
+    port_name: &str,
 ) {
     let mut nm_set = nm_conn.bridge_port.as_ref().cloned().unwrap_or_default();
-    let br_port_conf = if let Some(i) = nm_conn
-        .iface_name()
-        .and_then(|iface_name| br_iface.get_port_conf(iface_name))
-    {
+    let br_port_conf = if let Some(i) = br_iface.get_port_conf(port_name) {
         i
     } else {
+        log::warn!(
+            "Failed to find bridge port config for {port_name} of {:?}",
+            br_iface
+        );
         return;
     };
 

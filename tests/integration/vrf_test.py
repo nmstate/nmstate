@@ -16,6 +16,9 @@ from libnmstate.schema import VRF
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib.apply import apply_with_description
+from .testlib.ifacelib import get_mac_address
+from .testlib.statelib import show_only
+from .testlib.yaml import load_yaml
 
 
 TEST_VRF0 = "test-vrf0"
@@ -491,3 +494,48 @@ class TestVrf:
         assertlib.assert_absent(TEST_VRF0)
         assertlib.assert_absent(TEST_BOND0)
         assertlib.assert_absent(TEST_BOND0_VLAN)
+
+
+@pytest.fixture
+def cleanup_vrf0():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "vrf0",
+                    Interface.TYPE: InterfaceType.VRF,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_create_vrf_with_port_refered_by_mac(eth1_up, eth2_up, cleanup_vrf0):
+    eth1_mac = get_mac_address("eth1").lower()
+    eth2_mac = get_mac_address("eth2").upper()
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+            ports-config:
+              - match:
+                  mac-address: {eth2_mac}
+                  iface-type: ethernet
+              - match:
+                  mac-address: {eth1_mac}
+                  iface-type: ethernet
+        """
+    )
+    libnmstate.apply(desired_state)
+    cur_iface = show_only(("vrf0",))[Interface.KEY][0]
+
+    assert cur_iface[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] == [
+        "eth1",
+        "eth2",
+    ]

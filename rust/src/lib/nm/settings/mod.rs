@@ -27,9 +27,13 @@ mod vxlan;
 mod wired;
 
 #[cfg(feature = "query_apply")]
+pub(crate) use self::connection::get_exist_profile;
+pub(crate) use self::connection::iface_to_nm_profiles;
+#[cfg(feature = "query_apply")]
 pub(crate) use self::connection::iface_type_to_nm;
-pub(crate) use self::connection::{get_exist_profile, iface_to_nm_connections};
 pub(crate) use self::ip::fix_ip_dhcp_timeout;
+#[cfg(feature = "query_apply")]
+pub(crate) use self::ovs::gen_nmstate_iface_for_ovs_port;
 
 #[cfg(feature = "query_apply")]
 pub(crate) use self::bond::get_bond_balance_slb;

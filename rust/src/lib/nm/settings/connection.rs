@@ -5,6 +5,7 @@ use super::super::nm_dbus::{
     NmSettingVeth, NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
 };
 use super::{
+    super::profile::NmProfile,
     bond::{gen_nm_bond_port_setting, gen_nm_bond_setting},
     bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     ethtool::gen_ethtool_setting,
@@ -17,9 +18,10 @@ use super::{
     macsec::gen_nm_macsec_setting,
     mptcp::apply_mptcp_conf,
     ovs::{
-        create_ovs_port_nm_conn, fix_ovs_iface_controller_setting,
+        create_ovs_port_nm_profile, fix_ovs_iface_controller_setting,
         gen_nm_iface_ovs_db_setting, gen_nm_ovs_br_setting,
-        gen_nm_ovs_iface_setting, get_ovs_port_name,
+        gen_nm_ovs_iface_setting, gen_nmstate_iface_for_ovs_port,
+        get_ovs_port_name,
     },
     sriov::gen_nm_sriov_setting,
     user::gen_nm_user_setting,
@@ -34,14 +36,14 @@ use crate::{
     MergedNetworkState, NmstateError, OvsBridgePortConfig,
 };
 
-pub(crate) fn iface_to_nm_connections(
+pub(crate) fn iface_to_nm_profiles(
     merged_iface: &MergedInterface,
     merged_state: &MergedNetworkState,
     exist_nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
     gen_conf_mode: bool,
-) -> Result<Vec<NmConnection>, NmstateError> {
-    let mut ret: Vec<NmConnection> = Vec::new();
+) -> Result<Vec<NmProfile>, NmstateError> {
+    let mut ret: Vec<NmProfile> = Vec::new();
 
     let mut iface = if let Some(i) = merged_iface.for_apply.as_ref() {
         i.clone()
@@ -49,26 +51,7 @@ pub(crate) fn iface_to_nm_connections(
         return Ok(ret);
     };
 
-    let exist_nm_conn = if iface.base_iface().identifier
-        == Some(InterfaceIdentifier::MacAddress)
-    {
-        get_exist_profile_by_profile_name(
-            exist_nm_conns,
-            iface
-                .base_iface()
-                .profile_name
-                .as_deref()
-                .unwrap_or(iface.base_iface().name.as_str()),
-            &iface.base_iface().iface_type,
-        )
-    } else {
-        get_exist_profile(
-            exist_nm_conns,
-            &iface.base_iface().name,
-            &iface.base_iface().iface_type,
-            nm_ac_uuids,
-        )
-    };
+    let exist_nm_conn = get_exist_profile(exist_nm_conns, &iface, nm_ac_uuids);
 
     if iface.is_up_exist_config() {
         if let Some(nm_conn) = exist_nm_conn {
@@ -88,7 +71,13 @@ pub(crate) fn iface_to_nm_connections(
                     );
                 }
             }
-            return Ok(vec![nm_conn.clone()]);
+            ret.push(NmProfile {
+                conn: nm_conn.clone(),
+                exist_conn: Some(nm_conn.clone()),
+                merged_iface: merged_iface.clone(),
+                ..Default::default()
+            });
+            return Ok(ret);
         } else if !iface.is_userspace() {
             // User want to convert unmanaged interface to managed
             if let Some(cur_iface) = merged_iface.current.as_ref() {
@@ -146,11 +135,13 @@ pub(crate) fn iface_to_nm_connections(
             for ovs_port_conf in ovs_br_iface.port_confs() {
                 let exist_nm_ovs_port_conn = get_exist_profile(
                     exist_nm_conns,
-                    &ovs_port_conf.name,
-                    &InterfaceType::Other("ovs-port".to_string()),
+                    &gen_nmstate_iface_for_ovs_port(
+                        &ovs_port_conf.name,
+                        Some(ovs_br_iface.base.name.as_str()),
+                    ),
                     nm_ac_uuids,
                 );
-                ret.push(create_ovs_port_nm_conn(
+                ret.push(create_ovs_port_nm_profile(
                     &ovs_br_iface.base.name,
                     ovs_port_conf,
                     exist_nm_ovs_port_conn,
@@ -263,10 +254,18 @@ pub(crate) fn iface_to_nm_connections(
         {
             match &ctrl_iface.merged {
                 Interface::Bond(bond_iface) => {
-                    gen_nm_bond_port_setting(bond_iface, &mut nm_conn);
+                    gen_nm_bond_port_setting(
+                        bond_iface,
+                        &mut nm_conn,
+                        iface.name(),
+                    );
                 }
                 Interface::LinuxBridge(br_iface) => {
-                    gen_nm_br_port_setting(br_iface, &mut nm_conn);
+                    gen_nm_br_port_setting(
+                        br_iface,
+                        &mut nm_conn,
+                        iface.name(),
+                    );
                 }
                 Interface::OvsBridge(ovs_br_iface) => {
                     fix_ovs_iface_controller_setting(
@@ -297,11 +296,13 @@ pub(crate) fn iface_to_nm_connections(
                     {
                         let exist_nm_ovs_port_conn = get_exist_profile(
                             exist_nm_conns,
-                            &ovs_port_name,
-                            &InterfaceType::Other("ovs-port".to_string()),
+                            &gen_nmstate_iface_for_ovs_port(
+                                &ovs_port_name,
+                                Some(ovs_br_iface.base.name.as_str()),
+                            ),
                             nm_ac_uuids,
                         );
-                        ret.push(create_ovs_port_nm_conn(
+                        ret.push(create_ovs_port_nm_profile(
                             ctrl,
                             &OvsBridgePortConfig {
                                 name: ovs_port_name,
@@ -323,7 +324,20 @@ pub(crate) fn iface_to_nm_connections(
         nm_conn.ovs_iface = None;
     }
 
-    ret.insert(0, nm_conn);
+    ret.insert(
+        0,
+        NmProfile {
+            merged_iface: merged_iface.clone(),
+            conn: nm_conn,
+            exist_conn: exist_nm_conn.cloned(),
+            is_activated: exist_nm_conn
+                .as_ref()
+                .and_then(|c| c.uuid())
+                .map(|uuid| nm_ac_uuids.contains(&uuid))
+                .unwrap_or_default(),
+            ..Default::default()
+        },
+    );
 
     Ok(ret)
 }
@@ -477,62 +491,76 @@ fn uuid_from_name_and_type(
 // Found existing profile, prefer the activated one
 pub(crate) fn get_exist_profile<'a>(
     exist_nm_conns: &'a [NmConnection],
-    iface_name: &str,
-    iface_type: &InterfaceType,
+    iface: &Interface,
     nm_ac_uuids: &[&str],
 ) -> Option<&'a NmConnection> {
     let mut found_nm_conns: Vec<&NmConnection> = Vec::new();
-    let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
+    let nm_iface_type = if let Ok(t) = iface_type_to_nm(&iface.iface_type()) {
         t
     } else {
         return None;
     };
     for exist_nm_conn in exist_nm_conns {
-        if nm_iface_type == NmIfaceType::Vpn {
-            if exist_nm_conn.id() == Some(iface_name) {
-                if let Some(uuid) = exist_nm_conn.uuid() {
-                    // Prefer activated connection
-                    if nm_ac_uuids.contains(&uuid) {
-                        return Some(exist_nm_conn);
-                    }
+        let cur_iface_name = exist_nm_conn.iface_name();
+        let cur_iface_type =
+            if let Some(iface_type) = exist_nm_conn.iface_type() {
+                // Treating veth and ethernet as the same
+                if iface_type == &NmIfaceType::Veth {
+                    NmIfaceType::Ethernet
+                } else {
+                    iface_type.clone()
                 }
+            } else {
+                continue;
+            };
+
+        if nm_iface_type != cur_iface_type {
+            continue;
+        }
+
+        // VPN connection is using connection ID instead of interface name
+        // because ipsec connection can has no interface name for xfrm policy
+        // mode instead of ipsec interface mode.
+        if nm_iface_type == NmIfaceType::Vpn {
+            if exist_nm_conn.id() == Some(iface.name()) {
                 found_nm_conns.push(exist_nm_conn);
             }
-        } else if exist_nm_conn.iface_name() == Some(iface_name)
-            && (exist_nm_conn.iface_type() == Some(&nm_iface_type)
-                || (nm_iface_type == NmIfaceType::Ethernet
-                    && exist_nm_conn.iface_type() == Some(&NmIfaceType::Veth)))
+            continue;
+        }
+
+        if cur_iface_name == Some(iface.name()) {
+            found_nm_conns.push(exist_nm_conn);
+            continue;
+        }
+
+        if cur_iface_name.is_none()
+            && iface.base_iface().identifier.as_ref()
+                == Some(&InterfaceIdentifier::MacAddress)
+            && iface
+                .base_iface()
+                .mac_address
+                .as_deref()
+                .map(|m| !m.is_empty())
+                == Some(true)
+            && exist_nm_conn
+                .wired
+                .as_ref()
+                .and_then(|w| w.mac_address.as_deref())
+                == iface.base_iface().mac_address.as_deref()
         {
-            if let Some(uuid) = exist_nm_conn.uuid() {
-                // Prefer activated connection
-                if nm_ac_uuids.contains(&uuid) {
-                    return Some(exist_nm_conn);
-                }
-            }
             found_nm_conns.push(exist_nm_conn);
         }
     }
-    found_nm_conns.pop()
-}
-
-fn get_exist_profile_by_profile_name<'a>(
-    exist_nm_conns: &'a [NmConnection],
-    profile_name: &str,
-    iface_type: &InterfaceType,
-) -> Option<&'a NmConnection> {
-    for exist_nm_conn in exist_nm_conns {
-        let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
-            t
-        } else {
-            continue;
-        };
-        if exist_nm_conn.id() == Some(profile_name)
-            && exist_nm_conn.iface_type() == Some(&nm_iface_type)
-        {
-            return Some(exist_nm_conn);
+    // Prefer activated connection
+    for nm_conn in found_nm_conns.as_slice() {
+        if let Some(uuid) = nm_conn.uuid() {
+            if nm_ac_uuids.contains(&uuid) {
+                return Some(nm_conn);
+            }
         }
     }
-    None
+    // Use first found
+    found_nm_conns.pop()
 }
 
 fn persisten_iface_cur_conf(
@@ -541,7 +569,7 @@ fn persisten_iface_cur_conf(
     exist_nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
     gen_conf_mode: bool,
-) -> Result<Vec<NmConnection>, NmstateError> {
+) -> Result<Vec<NmProfile>, NmstateError> {
     let mut iface = cur_iface.clone();
     iface.base_iface_mut().routes =
         merged_state.routes.merged.get(iface.name()).cloned();
@@ -551,7 +579,7 @@ fn persisten_iface_cur_conf(
     }
     let merged_iface = MergedInterface::new(Some(iface), None)?;
 
-    iface_to_nm_connections(
+    iface_to_nm_profiles(
         &merged_iface,
         merged_state,
         exist_nm_conns,

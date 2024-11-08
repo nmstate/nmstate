@@ -3,9 +3,12 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    BondMode, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
-    MergedInterface, MergedInterfaces, NmstateError, OvsInterface,
+    BondMode, ErrorKind, Interface, InterfaceMatchRule, InterfaceState,
+    InterfaceType, Interfaces, MergedInterface, MergedInterfaces, NmstateError,
+    OvsInterface,
 };
+
+use super::IfaceMatchCache;
 
 fn is_port_overbook(
     port_to_ctrl: &mut HashMap<String, String>,
@@ -236,7 +239,7 @@ impl MergedInterfaces {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Controller interface {ctrl_name} is \
-                                holding unknown port {iface_name}"
+                            holding unknown port {iface_name}"
                         ),
                     ));
                 }
@@ -507,9 +510,62 @@ impl MergedInterfaces {
         }
         Ok(())
     }
+
+    // When port has InterfaceMatchRule defined, sync it to Interface level
+    // and raise error is conflict.
+    pub(crate) fn sync_iface_match_from_port_to_iface(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        let mut pending_changes: HashMap<String, (InterfaceMatchRule, usize)> =
+            HashMap::new();
+        for iface in self
+            .iter()
+            .filter(|i| i.is_changed() && i.merged.is_controller())
+        {
+            if let Some(for_apply) = iface.for_apply.as_ref() {
+                let mut ports: Vec<(String, InterfaceMatchRule)> =
+                    for_apply.port_iface_matches().drain().collect();
+                ports.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
+                for (port_index, (port_name, iface_match)) in
+                    ports.into_iter().enumerate()
+                {
+                    pending_changes
+                        .insert(port_name, (iface_match, port_index));
+                }
+            }
+        }
+
+        for (port_name, (iface_match, port_index)) in pending_changes.drain() {
+            if let Some(iface) = self.kernel_ifaces.get_mut(&port_name) {
+                if iface.is_changed() {
+                    iface_match.apply_port_match_to_iface(iface, port_index)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl Interfaces {
+    pub(crate) fn resolve_iface_match(
+        &mut self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        let cache = IfaceMatchCache::new(self, current);
+
+        for iface in self
+            .user_ifaces
+            .values_mut()
+            .chain(self.kernel_ifaces.values_mut())
+            .filter(|i| i.is_up() && i.is_controller())
+        {
+            iface.resolve_iface_match(&cache)?;
+        }
+        Ok(())
+    }
+
     // Automatically convert ignored interface to `state: up` when all below
     // conditions met:
     //  1. Not mentioned in desire state.

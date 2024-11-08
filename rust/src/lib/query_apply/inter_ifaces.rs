@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use crate::{
     state::{gen_diff_json_value, merge_json_value},
-    ErrorKind, Interface, InterfaceType, Interfaces, MergedInterfaces,
-    NmstateError,
+    ErrorKind, Interface, InterfaceIdentifier, InterfaceMatchRule,
+    InterfaceType, Interfaces, MergedInterfaces, NmstateError,
 };
 
 impl Interfaces {
@@ -92,6 +94,63 @@ impl Interfaces {
                 }
             } else if let Some(iface) = self.kernel_ifaces.get_mut(&ctrl_name) {
                 iface.remove_port(&port_name)
+            }
+        }
+    }
+
+    pub(crate) fn tidy_up_for_retreive(&mut self) {
+        // Purge user space ignored interfaces
+        self.user_ifaces.retain(|_, iface| !iface.is_ignore());
+
+        // When certain port is using `identifier: mac`, we should reflect so
+        // in its controller setting also
+        self.include_iface_match_in_controller();
+    }
+
+    fn include_iface_match_in_controller(&mut self) {
+        let mut port_name_to_match: HashMap<String, InterfaceMatchRule> =
+            HashMap::new();
+
+        for iface in self.kernel_ifaces.values().filter(|i| {
+            i.base_iface().identifier.as_ref()
+                == Some(&InterfaceIdentifier::MacAddress)
+                && i.base_iface().controller.is_some()
+        }) {
+            if let Some(mac) = iface
+                .base_iface()
+                .permanent_mac_address
+                .as_deref()
+                .or_else(|| iface.base_iface().mac_address.as_deref())
+            {
+                port_name_to_match.insert(
+                    iface.name().to_string(),
+                    InterfaceMatchRule {
+                        name: None,
+                        mac_address: Some(mac.to_uppercase()),
+                        iface_type: Some(iface.iface_type()),
+                    },
+                );
+            }
+        }
+
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .chain(self.user_ifaces.values_mut())
+            .filter(|i| i.is_controller())
+        {
+            let port_names: Vec<String> = iface
+                .ports()
+                .unwrap_or_default()
+                .iter()
+                .map(|s| s.to_string())
+                .collect();
+            for port_name in port_names {
+                if let Some(iface_match) =
+                    port_name_to_match.get(port_name.as_str())
+                {
+                    iface.set_port_iface_match(port_name.as_str(), iface_match);
+                }
             }
         }
     }

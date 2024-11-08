@@ -221,14 +221,13 @@ fn apply_bond_options(
 pub(crate) fn gen_nm_bond_port_setting(
     bond_iface: &BondInterface,
     nm_conn: &mut NmConnection,
+    port_name: &str,
 ) {
     let mut nm_set = nm_conn.bond_port.as_ref().cloned().unwrap_or_default();
-    let bond_port_conf = if let Some(i) = nm_conn
-        .iface_name()
-        .and_then(|iface_name| bond_iface.get_port_conf(iface_name))
-    {
+    let bond_port_conf = if let Some(i) = bond_iface.get_port_conf(port_name) {
         i
     } else {
+        // desired state has no setting for this port
         return;
     };
 

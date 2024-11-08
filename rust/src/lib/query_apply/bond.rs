@@ -3,7 +3,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    BondConfig, BondInterface, BondOptions, Interface, MergedInterface,
+    BondConfig, BondInterface, BondOptions, Interface, InterfaceMatchRule,
+    MergedInterface,
 };
 
 impl BondInterface {
@@ -13,6 +14,38 @@ impl BondInterface {
         } else {
             self.bond.clone_from(&other.bond);
         }
+    }
+
+    pub(crate) fn set_port_iface_match(
+        &mut self,
+        port_name: &str,
+        iface_match: &InterfaceMatchRule,
+    ) {
+        if let Some(ports_config) = self
+            .bond
+            .as_mut()
+            .and_then(|b| b.ports_config.as_deref_mut())
+        {
+            if ports_config
+                .iter_mut()
+                .find_map(|p| {
+                    if p.name == port_name {
+                        p.iface_match = Some(iface_match.clone());
+                        Some(())
+                    } else {
+                        None
+                    }
+                })
+                .is_some()
+            {
+                return;
+            }
+        }
+
+        log::error!(
+            "BUG: BondInterface::set_port_iface_match() failed to find \
+             port {port_name}: {self:?}",
+        );
     }
 }
 

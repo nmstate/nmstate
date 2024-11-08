@@ -57,6 +57,12 @@ impl BaseInterface {
         if self.profile_name.as_deref() == Some(self.name.as_str()) {
             self.profile_name = None;
         }
+
+        // The MAC address might change when port assigned to controller,
+        // hence we ignore MAC address check when `identifier: mac-address`
+        if self.identifier == Some(InterfaceIdentifier::MacAddress) {
+            self.mac_address = None;
+        }
     }
 
     pub(crate) fn update(&mut self, other: &BaseInterface) {

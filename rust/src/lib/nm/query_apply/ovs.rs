@@ -2,8 +2,9 @@
 
 use super::super::nm_dbus::{NmApi, NmConnection, NmDevice, NmIfaceType};
 use super::super::{
+    profile::NmProfile,
     query_apply::profile::{delete_profiles, is_uuid},
-    settings::get_exist_profile,
+    settings::{gen_nmstate_iface_for_ovs_port, get_exist_profile},
     show::nm_conn_to_base_iface,
 };
 
@@ -18,75 +19,37 @@ pub(crate) fn delete_orphan_ovs_ports(
     nm_api: &mut NmApi,
     merged_ifaces: &MergedInterfaces,
     exist_nm_conns: &[NmConnection],
-    nm_conns_to_activate: &[NmConnection],
+    nm_profiles: &[NmProfile],
 ) -> Result<(), NmstateError> {
+    let uuids_to_activate: Vec<&str> =
+        nm_profiles.iter().filter_map(|p| p.conn.uuid()).collect();
     let mut orphan_ovs_port_uuids: Vec<&str> = Vec::new();
-    for iface in merged_ifaces
-        .kernel_ifaces
-        .values()
-        .filter(|i| i.is_changed())
-    {
-        if iface
-            .for_apply
-            .as_ref()
-            .and_then(|i| i.base_iface().controller_type.as_ref())
-            != Some(&InterfaceType::OvsBridge)
-            && iface_was_ovs_sys_iface(iface)
-        {
-            if let Some(exist_profile) = get_exist_profile(
-                exist_nm_conns,
-                iface.merged.name(),
-                &iface.merged.iface_type(),
-                &Vec::new(),
-            ) {
-                if exist_profile
-                    .connection
-                    .as_ref()
-                    .and_then(|c| c.controller_type.as_ref())
-                    == Some(&NmIfaceType::OvsPort)
-                {
-                    if let Some(ovs_port_name) = exist_profile
-                        .connection
-                        .as_ref()
-                        .and_then(|c| c.controller.as_ref())
-                    {
-                        let ovs_port_uuid = if is_uuid(ovs_port_name) {
-                            ovs_port_name
-                        } else if let Some(uuid) = get_exist_profile(
-                            exist_nm_conns,
-                            ovs_port_name,
-                            &InterfaceType::Other("ovs-port".to_string()),
-                            &[],
-                        )
-                        .and_then(|c| c.uuid())
-                        {
-                            uuid
-                        } else {
-                            continue;
-                        };
-                        // The OVS bond might still have ports even
-                        // specified interface detached, this OVS bond will
-                        // be included in `nm_conns_to_activate()`, we just
-                        // do not remove connection pending for activation.
-                        if nm_conns_to_activate.iter().any(|nm_conn| {
-                            nm_conn.uuid() == Some(ovs_port_uuid)
-                        }) {
-                            continue;
-                        }
 
-                        log::info!(
-                            "Deleting orphan OVS port connection {} \
-                            as interface {}({}) detached from OVS bridge",
-                            ovs_port_uuid,
-                            iface.merged.name(),
-                            iface.merged.iface_type()
-                        );
-                        orphan_ovs_port_uuids.push(ovs_port_uuid)
-                    }
+    for iface in merged_ifaces.kernel_ifaces.values().filter_map(|i| {
+        if i.is_changed() && iface_was_ovs_sys_iface(i) {
+            i.current.as_ref()
+        } else {
+            None
+        }
+    }) {
+        if let Some(ovs_port_conn) =
+            get_ovs_port_profile_for_ovs_sys_iface(exist_nm_conns, iface)
+        {
+            if let Some(uuid) = ovs_port_conn.uuid() {
+                if !uuids_to_activate.contains(&uuid) {
+                    log::info!(
+                        "Deleting orphan OVS port connection {} \
+                         as interface {}({}) is detaching from OVS bridge",
+                        uuid,
+                        iface.name(),
+                        iface.iface_type()
+                    );
+                    orphan_ovs_port_uuids.push(uuid);
                 }
             }
         }
     }
+
     delete_profiles(nm_api, orphan_ovs_port_uuids.as_slice())
 }
 
@@ -96,6 +59,11 @@ fn iface_was_ovs_sys_iface(iface: &MergedInterface) -> bool {
         .as_ref()
         .and_then(|i| i.base_iface().controller_type.as_ref())
         == Some(&InterfaceType::OvsBridge)
+        && iface
+            .for_apply
+            .as_ref()
+            .and_then(|i| i.base_iface().controller_type.as_ref())
+            != Some(&InterfaceType::OvsBridge)
 }
 
 pub(crate) fn merge_ovs_netdev_tun_iface(
@@ -136,4 +104,37 @@ pub(crate) fn merge_ovs_netdev_tun_iface(
             }
         }
     }
+}
+
+fn get_ovs_port_profile_for_ovs_sys_iface<'a>(
+    exist_nm_conns: &'a [NmConnection],
+    iface: &Interface,
+) -> Option<&'a NmConnection> {
+    if let Some(ovs_iface_conn) = get_exist_profile(exist_nm_conns, iface, &[])
+    {
+        if ovs_iface_conn
+            .connection
+            .as_ref()
+            .and_then(|c| c.controller_type.as_ref())
+            == Some(&NmIfaceType::OvsPort)
+        {
+            let ovs_port_name = ovs_iface_conn
+                .connection
+                .as_ref()
+                .and_then(|c| c.controller.as_ref())?;
+
+            if is_uuid(ovs_port_name) {
+                return exist_nm_conns
+                    .iter()
+                    .find(|nm_conn| nm_conn.uuid() == Some(ovs_port_name));
+            } else {
+                return get_exist_profile(
+                    exist_nm_conns,
+                    &gen_nmstate_iface_for_ovs_port(ovs_port_name, None),
+                    &[],
+                );
+            }
+        }
+    }
+    None
 }

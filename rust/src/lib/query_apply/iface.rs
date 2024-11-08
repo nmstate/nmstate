@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    state::get_json_value_difference, ErrorKind, Interface, InterfaceType,
-    LinuxBridgeInterface, NmstateError,
+    state::get_json_value_difference, ErrorKind, Interface, InterfaceMatchRule,
+    InterfaceType, LinuxBridgeInterface, NmstateError,
 };
 
 impl Interface {
@@ -262,6 +262,39 @@ impl Interface {
     pub(crate) fn include_diff_context(&mut self, current: &Self) {
         self.base_iface_mut()
             .include_diff_context(current.base_iface());
+    }
+
+    pub(crate) fn set_port_iface_match(
+        &mut self,
+        port_name: &str,
+        iface_match: &InterfaceMatchRule,
+    ) {
+        match self {
+            Interface::Bond(iface) => {
+                iface.set_port_iface_match(port_name, iface_match)
+            }
+            Interface::OvsBridge(iface) => {
+                iface.set_port_iface_match(port_name, iface_match)
+            }
+            Interface::LinuxBridge(iface) => {
+                iface.set_port_iface_match(port_name, iface_match)
+            }
+            Interface::Vrf(iface) => {
+                iface.set_port_iface_match(port_name, iface_match)
+            }
+            _ => {
+                log::error!(
+                    "BUG: Interface::set_port_iface_match() \
+                    been invoked on interface {} with type {} , \
+                    but only support vrf, bond, ovs and linux bridge. \
+                    Arguments: {} {}",
+                    self.name(),
+                    self.iface_type(),
+                    port_name,
+                    iface_match,
+                );
+            }
+        }
     }
 }
 

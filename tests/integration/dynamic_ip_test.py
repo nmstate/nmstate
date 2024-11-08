@@ -1796,7 +1796,7 @@ def test_switch_auto_to_static_with_dynamic_ips(dhcpcli_up):
     )
 
     libnmstate.apply(desired_state)
-    assertlib.assert_state(desired_state)
+    assertlib.assert_state_match(desired_state)
     assert _poll(_has_dhcpv4_addr)
     assert _poll(_has_dhcpv6_addr)
 

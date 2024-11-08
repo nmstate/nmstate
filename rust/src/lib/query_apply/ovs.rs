@@ -3,10 +3,11 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    state::get_json_value_difference, ErrorKind, Interface, InterfaceState,
-    InterfaceType, Interfaces, MergedInterfaces, MergedOvsDbGlobalConfig,
-    NetworkState, NmstateError, OvsBridgeBondConfig, OvsBridgeConfig,
-    OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig, OvsInterface,
+    state::get_json_value_difference, ErrorKind, Interface, InterfaceMatchRule,
+    InterfaceState, InterfaceType, Interfaces, MergedInterfaces,
+    MergedOvsDbGlobalConfig, NetworkState, NmstateError, OvsBridgeBondConfig,
+    OvsBridgeConfig, OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig,
+    OvsInterface,
 };
 
 impl MergedOvsDbGlobalConfig {
@@ -114,6 +115,38 @@ impl OvsBridgeInterface {
         } else {
             self.bridge.clone_from(&other.bridge);
         }
+    }
+
+    pub(crate) fn set_port_iface_match(
+        &mut self,
+        port_name: &str,
+        iface_match: &InterfaceMatchRule,
+    ) {
+        if let Some(ports_config) =
+            self.bridge.as_mut().and_then(|b| b.ports.as_deref_mut())
+        {
+            for port_config in ports_config.iter_mut() {
+                if port_config.name == port_name {
+                    port_config.iface_match = Some(iface_match.clone());
+                    return;
+                }
+                if let Some(bond_ports_conf) =
+                    port_config.bond.as_mut().and_then(|b| b.ports.as_mut())
+                {
+                    for bond_port in bond_ports_conf.iter_mut() {
+                        if bond_port.name == port_name {
+                            bond_port.iface_match = Some(iface_match.clone());
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        log::error!(
+            "BUG: OvsBridgeInterface::set_port_iface_match() failed to find \
+             port {port_name}: {self:?}"
+        );
     }
 }
 

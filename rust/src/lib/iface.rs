@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
-    HsrInterface, InfiniBandInterface, IpVlanInterface, IpsecInterface,
-    LinuxBridgeInterface, LoopbackInterface, MacSecInterface, MacVlanInterface,
-    MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
-    VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
+    HsrInterface, InfiniBandInterface, InterfaceMatchRule, IpVlanInterface,
+    IpsecInterface, LinuxBridgeInterface, LoopbackInterface, MacSecInterface,
+    MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
+    OvsInterface, VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
 };
 
 use crate::state::merge_json_value;
@@ -689,6 +689,22 @@ impl Interface {
         }
     }
 
+    pub(crate) fn port_iface_matches(
+        &self,
+    ) -> HashMap<String, InterfaceMatchRule> {
+        if self.is_absent() {
+            HashMap::new()
+        } else {
+            match self {
+                Self::LinuxBridge(iface) => iface.port_iface_matches(),
+                Self::OvsBridge(iface) => iface.port_iface_matches(),
+                Self::Bond(iface) => iface.port_iface_matches(),
+                Self::Vrf(iface) => iface.port_iface_matches(),
+                _ => HashMap::new(),
+            }
+        }
+    }
+
     // This function is for pre-edit clean up and check on current, `for_apply`,
     // `for_verify` states.
     //
@@ -755,6 +771,28 @@ impl Interface {
             iface.change_port_name(org_port_name, new_port_name);
         } else if let Interface::Bond(iface) = self {
             iface.change_port_name(org_port_name, new_port_name);
+        }
+    }
+
+    pub(crate) fn resolve_iface_match(
+        &mut self,
+        cache: &crate::ifaces::IfaceMatchCache,
+    ) -> Result<(), NmstateError> {
+        match self {
+            Interface::Bond(iface) => iface.resolve_iface_match(cache),
+            Interface::OvsBridge(iface) => iface.resolve_iface_match(cache),
+            Interface::LinuxBridge(iface) => iface.resolve_iface_match(cache),
+            Interface::Vrf(iface) => iface.resolve_iface_match(cache),
+            _ => Err(NmstateError::new(
+                ErrorKind::Bug,
+                format!(
+                    "BUG: Interface::resolve_iface_match() \
+                    been invoked on interface {} with type {} , \
+                    but only support vrf, bond, ovs and linux bridge",
+                    self.name(),
+                    self.iface_type()
+                ),
+            )),
         }
     }
 }
@@ -1168,5 +1206,18 @@ impl Default for InterfaceIdentifier {
 impl InterfaceIdentifier {
     pub fn is_default(&self) -> bool {
         self == &InterfaceIdentifier::default()
+    }
+}
+
+impl std::fmt::Display for InterfaceIdentifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "identifier:{}",
+            match self {
+                Self::Name => "name",
+                Self::MacAddress => "mac-address",
+            }
+        )
     }
 }

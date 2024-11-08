@@ -4,7 +4,7 @@ use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 use super::{
     dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
-    profile::perpare_nm_conns,
+    profile::perpare_nm_profiles,
     route::store_route_config,
     route_rule::store_route_rule_config,
 };
@@ -34,16 +34,16 @@ pub(crate) fn nm_gen_conf(
         store_dns_config_to_iface(&mut merged_state, &[], &[])?;
     }
 
-    let nm_conns = perpare_nm_conns(
+    let nm_profiles = perpare_nm_profiles(
         &merged_state,
-        &Vec::new(),
-        &Vec::new(),
+        &[],
+        &[],
         true, // gen_conf mode
-    )?
-    .to_store;
+    )?;
 
     let mut ret = Vec::new();
-    for nm_conn in nm_conns {
+    for nm_profile in nm_profiles {
+        let nm_conn = &nm_profile.conn;
         match nm_conn.to_keyfile() {
             Ok(s) => {
                 if let Some(id) = nm_conn.id() {

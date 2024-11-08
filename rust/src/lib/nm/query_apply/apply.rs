@@ -7,7 +7,7 @@ use super::super::{
     dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection, NmIfaceType},
-    profile::{perpare_nm_conns, PerparedNmConnections},
+    profile::{perpare_nm_profiles, NmProfile},
     query_apply::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
         deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
@@ -73,6 +73,8 @@ pub(crate) async fn nm_apply(
     let nm_acs = nm_api
         .active_connections_get()
         .map_err(nm_error_to_nmstate)?;
+    let nm_ac_uuids: Vec<&str> =
+        nm_acs.iter().map(|a| a.uuid.as_str()).collect();
     let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
 
     let mut merged_state = merged_state.clone();
@@ -127,61 +129,66 @@ pub(crate) async fn nm_apply(
             )?;
         }
     }
-    let PerparedNmConnections {
-        to_store: nm_conns_to_store,
-        to_activate: nm_conns_to_activate,
-        to_deactivate: nm_conns_to_deactivate,
-    } = perpare_nm_conns(
+    let mut nm_profiles = perpare_nm_profiles(
         &merged_state,
         exist_nm_conns.as_slice(),
-        nm_acs.as_slice(),
+        &nm_ac_uuids,
         false,
     )?;
 
-    let nm_ac_uuids: Vec<&str> =
-        nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
-    let activated_nm_conns: Vec<&NmConnection> = exist_nm_conns
-        .iter()
-        .filter(|c| {
-            if let Some(uuid) = c.uuid() {
-                nm_ac_uuids.contains(&uuid)
-            } else {
-                false
-            }
-        })
-        .collect();
-    let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
+    set_profile_need_deactivation_first(
         &merged_state.interfaces,
-        nm_conns_to_activate.as_slice(),
-        activated_nm_conns.as_slice(),
+        &mut nm_profiles,
     );
+
     deactivate_nm_profiles(
         &mut nm_api,
-        nm_conns_to_deactivate_first.as_slice(),
+        nm_profiles.iter().filter_map(|nm_profile| {
+            if nm_profile.need_deactivation {
+                Some(&nm_profile.conn)
+            } else {
+                None
+            }
+        }),
     )?;
 
     save_nm_profiles(
         &mut nm_api,
-        nm_conns_to_store.as_slice(),
+        nm_profiles.iter().map(|p| &p.conn),
         merged_state.memory_only,
     )?;
     if !merged_state.memory_only {
         delete_exist_profiles(
             &mut nm_api,
             &exist_nm_conns,
-            &nm_conns_to_store,
+            nm_profiles.as_slice(),
         )?;
         delete_orphan_ovs_ports(
             &mut nm_api,
             &merged_state.interfaces,
             &exist_nm_conns,
-            &nm_conns_to_activate,
+            nm_profiles.as_slice(),
         )?;
     }
 
-    activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice()).await?;
+    activate_nm_profiles(
+        &mut nm_api,
+        nm_profiles.iter().filter(|nm_profile| {
+            nm_profile.is_up() || nm_profile.need_activation
+        }),
+    )
+    .await?;
 
-    deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
+    deactivate_nm_profiles(
+        &mut nm_api,
+        nm_profiles.iter().filter_map(|nm_profile| {
+            if nm_profile.is_down() {
+                Some(&nm_profile.conn)
+            } else {
+                None
+            }
+        }),
+    )?;
 
     apply_dispatch_script(&merged_state.interfaces)?;
 
@@ -401,6 +408,7 @@ fn delete_orphan_ports(
     Ok(())
 }
 
+// Set NmProfile.need_deactivation to True when any of below conditions met:
 // * NM has problem on remove routes, we need to deactivate it first
 //  https://bugzilla.redhat.com/1837254
 // * NM cannot change VRF table ID, so we deactivate first
@@ -411,52 +419,51 @@ fn delete_orphan_ports(
 // * All linux bridge ports should be deactivate if its controller has
 //   default-pvid changes:
 //      https://issues.redhat.com/browse/RHEL-26750
-fn gen_nm_conn_need_to_deactivate_first(
+fn set_profile_need_deactivation_first(
     merged_iface: &MergedInterfaces,
-    nm_conns_to_activate: &[NmConnection],
-    activated_nm_conns: &[&NmConnection],
-) -> Vec<NmConnection> {
-    let mut ret: Vec<NmConnection> = Vec::new();
+    nm_profiles: &mut [NmProfile],
+) {
+    let mut pending_changes: Vec<usize> = Vec::new();
 
     let default_pvid_changed_brs: Vec<&str> =
         get_default_pvid_changed_brs(merged_iface);
     let bond_queue_id_changed_ports =
         get_bond_ports_with_queue_id_changed(merged_iface);
 
-    for nm_conn in nm_conns_to_activate {
-        if let Some(uuid) = nm_conn.uuid() {
-            if let Some(activated_nm_con) =
-                activated_nm_conns.iter().find(|c| {
-                    if let Some(cur_uuid) = c.uuid() {
-                        cur_uuid == uuid
-                    } else {
-                        false
-                    }
-                })
-            {
-                if is_route_removed(nm_conn, activated_nm_con)
-                    || is_vrf_table_id_changed(nm_conn, activated_nm_con)
-                    || is_vlan_changed(nm_conn, activated_nm_con)
-                    || is_vxlan_changed(nm_conn, activated_nm_con)
-                    || is_veth_peer_changed(nm_conn, activated_nm_con)
-                    || is_mptcp_flags_changed(nm_conn, activated_nm_con)
-                    || nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
-                    || is_bridge_port_changed_default_pvid(
-                        nm_conn,
-                        &default_pvid_changed_brs,
-                    )
-                    || is_bond_port_queue_id_changed(
-                        nm_conn,
-                        &bond_queue_id_changed_ports,
-                    )
-                    || is_ipvlan_changed(nm_conn, activated_nm_con)
-                {
-                    ret.push((*activated_nm_con).clone());
-                }
-            }
+    for (index, nm_profile) in nm_profiles.iter().enumerate() {
+        if !nm_profile.is_activated {
+            continue;
+        }
+        let activated_nm_con = if let Some(c) = nm_profile.exist_conn.as_ref() {
+            c
+        } else {
+            continue;
+        };
+
+        let nm_conn = &nm_profile.conn;
+        if is_route_removed(nm_conn, activated_nm_con)
+            || is_vrf_table_id_changed(nm_conn, activated_nm_con)
+            || is_vlan_changed(nm_conn, activated_nm_con)
+            || is_vxlan_changed(nm_conn, activated_nm_con)
+            || is_veth_peer_changed(nm_conn, activated_nm_con)
+            || is_mptcp_flags_changed(nm_conn, activated_nm_con)
+            || nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
+            || is_bridge_port_changed_default_pvid(
+                nm_conn,
+                &default_pvid_changed_brs,
+            )
+            || is_bond_port_queue_id_changed(
+                nm_conn,
+                &bond_queue_id_changed_ports,
+            )
+            || is_ipvlan_changed(nm_conn, activated_nm_con)
+        {
+            pending_changes.push(index);
         }
     }
-    ret
+    for index in pending_changes {
+        nm_profiles[index].need_deactivation = true;
+    }
 }
 
 fn check_nm_version(nm_api: &NmApi) {

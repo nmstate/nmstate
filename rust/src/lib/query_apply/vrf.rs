@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{VrfConfig, VrfInterface};
+use crate::{InterfaceMatchRule, VrfConfig, VrfInterface};
 
 impl VrfInterface {
     pub(crate) fn update_vrf(&mut self, other: &VrfInterface) {
@@ -10,6 +10,38 @@ impl VrfInterface {
         } else {
             self.vrf.clone_from(&other.vrf);
         }
+    }
+
+    pub(crate) fn set_port_iface_match(
+        &mut self,
+        port_name: &str,
+        iface_match: &InterfaceMatchRule,
+    ) {
+        if let Some(ports_config) = self
+            .vrf
+            .as_mut()
+            .and_then(|b| b.ports_config.as_deref_mut())
+        {
+            if ports_config
+                .iter_mut()
+                .find_map(|p| {
+                    if p.name.as_str() == port_name {
+                        p.iface_match = Some(iface_match.clone());
+                        Some(())
+                    } else {
+                        None
+                    }
+                })
+                .is_some()
+            {
+                return;
+            }
+        }
+
+        log::error!(
+            "BUG: VrfInterface::set_port_iface_match() failed to find \
+            port with name {port_name}: {self:?}",
+        );
     }
 }
 

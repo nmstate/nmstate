@@ -8,8 +8,11 @@ use serde::{
 
 use crate::{
     deserializer::NumberAsString, BaseInterface, ErrorKind, Interface,
-    InterfaceState, InterfaceType, MergedInterface, NmstateError,
+    InterfaceMatchRule, InterfaceState, InterfaceType, MergedInterface,
+    NmstateError,
 };
+
+use super::IfaceMatchCache;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -51,8 +54,13 @@ use crate::{
 ///       updelay: 0
 ///       use_carrier: true
 ///     port:
-///     - eth1
-///     - eth2
+///       - eth1
+///       - eth2
+///     ports-config:
+///       - name: eth1
+///         priority: 10
+///       - name: eth2
+///         priority: 20
 /// ```
 pub struct BondInterface {
     #[serde(flatten)]
@@ -122,6 +130,13 @@ impl BondInterface {
         self.drop_empty_arp_ip_target();
         self.make_ad_actor_system_mac_upper_case();
         self.check_overlap_queue_id()?;
+        if let Some(ports_config) =
+            self.bond.as_mut().and_then(|b| b.ports_config.as_mut())
+        {
+            for port_config in ports_config {
+                port_config.sanitize();
+            }
+        }
         Ok(())
     }
 
@@ -162,21 +177,22 @@ impl BondInterface {
 
     // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
-        let config = self.bond.clone().unwrap_or_default();
-        if config.port.is_some() {
-            self.bond
-                .as_ref()
-                .and_then(|bond_conf| bond_conf.port.as_ref())
-                .map(|ports| {
-                    ports.as_slice().iter().map(|p| p.as_str()).collect()
+        if let Some(bond_conf) = self.bond.as_ref() {
+            if let Some(ports_config) = bond_conf.ports_config.as_ref() {
+                Some(
+                    ports_config
+                        .as_slice()
+                        .iter()
+                        .map(|p| p.name.as_str())
+                        .collect(),
+                )
+            } else {
+                bond_conf.port.as_ref().map(|ports| {
+                    ports.as_slice().iter().map(|n| n.as_str()).collect()
                 })
+            }
         } else {
-            self.bond
-                .as_ref()
-                .and_then(|bond_conf| bond_conf.ports_config.as_ref())
-                .map(|ports| {
-                    ports.as_slice().iter().map(|p| p.name.as_str()).collect()
-                })
+            None
         }
     }
 
@@ -409,6 +425,60 @@ impl BondInterface {
             if let Some(cur_port_conf) = cur_ports_index.get(port_name) {
                 if port_conf.is_changed(cur_port_conf) {
                     ret.push(port_name);
+                }
+            }
+        }
+        ret
+    }
+
+    pub(crate) fn resolve_iface_match(
+        &mut self,
+        cache: &IfaceMatchCache,
+    ) -> Result<(), NmstateError> {
+        if let Some(ports_config) = self
+            .bond
+            .as_mut()
+            .and_then(|b| b.ports_config.as_deref_mut())
+        {
+            for port_conf in ports_config.iter_mut() {
+                if let Some(iface_match) = port_conf.iface_match.as_ref() {
+                    log::info!("Searching bond port by rule {iface_match}",);
+                    let new_name = iface_match.resolve(cache)?;
+                    if port_conf.name.is_empty() {
+                        log::info!(
+                            "Bond port for rule {iface_match} is {new_name}",
+                        );
+                        port_conf.name = new_name;
+                    } else if port_conf.name != new_name {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Bond interface {} has port holding \
+                                both name {} and match {}, but the \
+                                matched interface is {}",
+                                self.base.name.as_str(),
+                                port_conf.name,
+                                iface_match,
+                                new_name
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn port_iface_matches(
+        &self,
+    ) -> HashMap<String, InterfaceMatchRule> {
+        let mut ret: HashMap<String, InterfaceMatchRule> = HashMap::new();
+        if let Some(ports_config) =
+            self.bond.as_ref().and_then(|b| b.ports_config.as_ref())
+        {
+            for port_config in ports_config.as_slice() {
+                if let Some(iface_match) = port_config.iface_match.as_ref() {
+                    ret.insert(port_config.name.clone(), iface_match.clone());
                 }
             }
         }
@@ -1475,11 +1545,19 @@ impl MergedInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct BondPortConfig {
-    /// name is mandatory when specifying the ports configuration.
+    /// The kernel interface name of bond port.
+    /// When applying with both `name` and `match` section defined,
+    /// pre-apply validation will raise if they are not pointing to the same
+    /// interface, and the `name` will not stored into persistent configuration
+    /// storage.
+    #[serde(skip_serializing_if = "String::is_empty", default)]
     pub name: String,
+    /// Rule to matching interface as bond port.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "match")]
+    pub iface_match: Option<InterfaceMatchRule>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
@@ -1519,5 +1597,11 @@ impl BondPortConfig {
     fn is_changed(&self, current: &Self) -> bool {
         (self.priority.is_some() && self.priority != current.priority)
             || (self.queue_id.is_some() && self.queue_id != current.queue_id)
+    }
+
+    pub(crate) fn sanitize(&mut self) {
+        if let Some(iface_match) = self.iface_match.as_mut() {
+            iface_match.sanitize();
+        }
     }
 }

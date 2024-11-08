@@ -1,33 +1,36 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::nm_dbus::{NmActiveConnection, NmConnection, NmIfaceType};
-use super::settings::{
-    fix_ip_dhcp_timeout, get_exist_profile, iface_to_nm_connections,
-};
+use super::nm_dbus::{NmConnection, NmIfaceType};
+use super::{settings::fix_ip_dhcp_timeout, settings::iface_to_nm_profiles};
 
 use crate::{
     InterfaceType, MergedInterface, MergedInterfaces, MergedNetworkState,
     NmstateError,
 };
 
-#[allow(dead_code)]
-pub(crate) struct PerparedNmConnections {
-    pub(crate) to_store: Vec<NmConnection>,
-    pub(crate) to_activate: Vec<NmConnection>,
-    pub(crate) to_deactivate: Vec<NmConnection>,
+#[derive(Debug, Clone, PartialEq, Default)]
+pub(crate) struct NmProfile {
+    pub(crate) merged_iface: MergedInterface,
+    pub(crate) conn: NmConnection,
+    pub(crate) exist_conn: Option<NmConnection>,
+    pub(crate) is_activated: bool,
+    /// NM connection need to be deactivated before activation
+    pub(crate) need_deactivation: bool,
+    /// NM connection will be auto activated by its controller, hence
+    /// no need to activate it in the first round. Will try normal activation
+    /// in follow up retry
+    pub(crate) skip_first_activation: bool,
+    /// NM connection need to be activated even its iface is in down state
+    pub(crate) need_activation: bool,
 }
 
-pub(crate) fn perpare_nm_conns(
+pub(crate) fn perpare_nm_profiles(
     merged_state: &MergedNetworkState,
     exist_nm_conns: &[NmConnection],
-    nm_acs: &[NmActiveConnection],
+    nm_ac_uuids: &[&str],
     gen_conf_mode: bool,
-) -> Result<PerparedNmConnections, NmstateError> {
-    let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
-    let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
-
-    let nm_ac_uuids: Vec<&str> =
-        nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
+) -> Result<Vec<NmProfile>, NmstateError> {
+    let mut ret: Vec<NmProfile> = Vec::new();
 
     let mut ifaces: Vec<&MergedInterface> = merged_state
         .interfaces
@@ -46,82 +49,65 @@ pub(crate) fn perpare_nm_conns(
         }
     });
 
-    let mut nm_conns_to_deactivate: Vec<NmConnection> = ifaces
-        .as_slice()
-        .iter()
-        .filter(|iface| iface.merged.is_down())
-        .filter_map(|iface| {
-            get_exist_profile(
-                exist_nm_conns,
-                &iface.merged.base_iface().name,
-                &iface.merged.base_iface().iface_type,
-                &nm_ac_uuids,
-            )
-        })
-        .cloned()
-        .collect();
-
-    for merged_iface in ifaces.iter().filter(|i| {
-        i.merged.iface_type() != InterfaceType::Unknown && !i.merged.is_absent()
-    }) {
+    for merged_iface in ifaces.as_slice() {
         let iface = if let Some(i) = merged_iface.for_apply.as_ref() {
             i
         } else {
             continue;
         };
 
-        for mut nm_conn in iface_to_nm_connections(
+        if iface.is_absent() || iface.iface_type() == InterfaceType::Unknown {
+            continue;
+        }
+
+        for mut nm_profile in iface_to_nm_profiles(
             merged_iface,
             merged_state,
             exist_nm_conns,
-            &nm_ac_uuids,
+            nm_ac_uuids,
             gen_conf_mode,
         )? {
             if iface.is_up()
-                && !can_skip_activation(
-                    merged_iface,
+                && can_skip_first_activation(
+                    &nm_profile,
                     &merged_state.interfaces,
-                    &nm_conn,
-                    exist_nm_conns,
                 )
             {
-                nm_conns_to_activate.push(nm_conn.clone());
+                nm_profile.skip_first_activation = true;
             }
-            // User try to bring a unmanaged interface down, we activate it and
-            // deactivate it again.
-            if iface.is_down()
-                && merged_iface.current.as_ref().map(|i| i.is_ignore())
+            if iface.is_down() {
+                // User try to bring a unmanaged interface down, we activate it
+                // and deactivate it again.
+                if merged_iface.current.as_ref().map(|i| i.is_ignore())
                     == Some(true)
-            {
-                nm_conns_to_activate.push(nm_conn.clone());
-                nm_conns_to_deactivate.push(nm_conn.clone());
-            }
-            if iface.is_down() && gen_conf_mode {
-                if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
-                    nm_conn_set.autoconnect = Some(false);
+                {
+                    nm_profile.need_activation = true;
+                }
+                if gen_conf_mode {
+                    if let Some(nm_conn_set) =
+                        nm_profile.conn.connection.as_mut()
+                    {
+                        nm_conn_set.autoconnect = Some(false);
+                    }
                 }
             }
-            nm_conns_to_update.push(nm_conn);
+            ret.push(nm_profile);
         }
     }
 
-    fix_ip_dhcp_timeout(&mut nm_conns_to_update);
+    fix_ip_dhcp_timeout(&mut ret);
 
-    Ok(PerparedNmConnections {
-        to_store: nm_conns_to_update,
-        to_activate: nm_conns_to_activate,
-        to_deactivate: nm_conns_to_deactivate,
-    })
+    Ok(ret)
 }
 
 // When a new virtual interface is desired, if its controller is also newly
 // created, in NetworkManager, there is no need to activate the subordinates.
-fn can_skip_activation(
-    merged_iface: &MergedInterface,
+fn can_skip_first_activation(
+    nm_profile: &NmProfile,
     merged_ifaces: &MergedInterfaces,
-    nm_conn: &NmConnection,
-    exist_nm_conns: &[NmConnection],
 ) -> bool {
+    let merged_iface = &nm_profile.merged_iface;
+    let nm_con = &nm_profile.conn;
     // if the controller is desired to be down or absent, activating the
     // connection on the port will risk making the controller activate again,
     // therefore skip the activation on the port
@@ -148,12 +134,11 @@ fn can_skip_activation(
             }
         }
     }
+
     // Reapply of connection never reactivate its subordinates, hence we do not
     // skip activation when modifying the connection.
-    if let Some(uuid) = nm_conn.uuid() {
-        if exist_nm_conns.iter().any(|c| c.uuid() == Some(uuid)) {
-            return false;
-        }
+    if nm_profile.exist_conn.is_some() {
+        return false;
     }
 
     if merged_iface.current.is_none()
@@ -184,7 +169,7 @@ fn can_skip_activation(
             }
 
             // new OVS port on new OVS bridge can skip activation
-            if nm_conn.iface_type() == Some(&NmIfaceType::OvsPort) {
+            if nm_con.iface_type() == Some(&NmIfaceType::OvsPort) {
                 return true;
             }
         }

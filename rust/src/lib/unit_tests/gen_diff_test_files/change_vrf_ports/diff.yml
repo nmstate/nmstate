@@ -7,3 +7,6 @@ interfaces:
     ports:
       - eth2
       - eth3
+    ports-config:
+      - name: eth2
+      - name: eth3
