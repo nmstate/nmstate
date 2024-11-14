@@ -39,12 +39,12 @@ DUMMY1 = "dummy1"
 
 
 @pytest.fixture
-def setup_eth1_ipv4(eth1_up):
+def setup_dummy1_ipv4():
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
                     InterfaceIPv4.ENABLED: True,
@@ -59,20 +59,30 @@ def setup_eth1_ipv4(eth1_up):
         ]
     }
     apply_with_description(
-        "Configure the eth1 ethernet device with the address "
+        f"Configure the {DUMMY1} dummy device with the address "
         "192.0.2.251/24 and dhcp4 disabled",
         desired_state,
     )
     yield desired_state
-
-
-@pytest.fixture
-def setup_eth1_ipv6(eth1_up):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
+                Interface.STATE: InterfaceState.ABSENT,
+            }
+        ]
+    }
+    apply_with_description(f"Remove {DUMMY1} device", desired_state)
+
+
+@pytest.fixture
+def setup_dummy1_ipv6():
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV6: {
                     InterfaceIPv6.ENABLED: True,
@@ -87,12 +97,21 @@ def setup_eth1_ipv6(eth1_up):
         ]
     }
     apply_with_description(
-        "Configure the eth1 ethernet device with the address "
+        f"Configure the {DUMMY1} dummy device with the address "
         "2001:db8:1::1/64, dhcp6 disabled, autoconf disabled",
         desired_state,
     )
-
-    return desired_state
+    yield desired_state
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
+                Interface.STATE: InterfaceState.ABSENT,
+            }
+        ]
+    }
+    apply_with_description(f"Remove {DUMMY1} device", desired_state)
 
 
 @pytest.fixture
@@ -135,19 +154,19 @@ def setup_eth1_static_ip(eth1_up):
 
 
 @pytest.fixture
-def setup_eth1_ipv6_disable(eth1_up):
+def setup_dummy1_ipv6_disable(eth1_up):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
     apply_with_description(
-        "Configure the eth1 ethernet device with IPv6 disabled", desired_state
+        "Configure the dummy1 dummy device with IPv6 disabled", desired_state
     )
 
     return desired_state
@@ -204,31 +223,32 @@ def test_add_static_ipv4_with_min_state(eth2_up):
 
 
 @pytest.mark.tier1
-def test_remove_static_ipv4(setup_eth1_ipv4):
+def test_remove_static_ipv4(setup_dummy1_ipv4):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.IPV4: {InterfaceIPv4.ENABLED: False},
             }
         ]
     }
 
     apply_with_description(
-        "Configure the eth1 ethernet device with IPv4 disabled", desired_state
+        f"Configure the {DUMMY1} dummy device with IPv4 disabled",
+        desired_state,
     )
 
     assertlib.assert_state(desired_state)
 
 
 @pytest.mark.tier1
-def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
+def test_edit_static_ipv4_address_and_prefix(setup_dummy1_ipv4):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
                     InterfaceIPv4.ENABLED: True,
@@ -244,7 +264,7 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
     }
 
     apply_with_description(
-        "Configure the eth1 ethernet device with address 192.0.2.252/30",
+        f"Configure the {DUMMY1} dummy device with address 192.0.2.252/30",
         desired_state,
     )
 
@@ -298,7 +318,7 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
 
 
 def test_add_iface_with_same_static_ipv4_address_to_existing(
-    setup_eth1_ipv4, eth2_up
+    setup_dummy1_ipv4, eth2_up
 ):
     desired_state = {
         Interface.KEY: [
@@ -471,31 +491,32 @@ def test_add_static_ipv6_with_min_state(eth2_up):
 
 
 @pytest.mark.tier1
-def test_disable_static_ipv6(setup_eth1_ipv6):
+def test_disable_static_ipv6(setup_dummy1_ipv6):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
 
     apply_with_description(
-        "Configure the eth1 ethernet device with IPv6 disabled", desired_state
+        f"Configure the {DUMMY1} dummy device with IPv6 disabled",
+        desired_state,
     )
 
     assertlib.assert_state(desired_state)
 
 
 @pytest.mark.tier1
-def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
+def test_disable_static_ipv6_and_rollback(setup_dummy1_ipv6):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.IPV6: {InterfaceIPv6.ENABLED: False},
                 "foo": "bad_value",
             }
@@ -510,16 +531,16 @@ def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
     ):
         libnmstate.apply(desired_state)
 
-    assertlib.assert_state(setup_eth1_ipv6)
+    assertlib.assert_state(setup_dummy1_ipv6)
 
 
 @pytest.mark.tier1
-def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
+def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_dummy1_ipv6_disable):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.IPV6: {
                     InterfaceIPv6.ENABLED: True,
                     InterfaceIPv6.ADDRESS: [
@@ -542,17 +563,17 @@ def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
     ):
         libnmstate.apply(desired_state)
 
-    assertlib.assert_state(setup_eth1_ipv6_disable)
+    assertlib.assert_state(setup_dummy1_ipv6_disable)
 
 
 @pytest.mark.tier1
-def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
-    eth1_setup = setup_eth1_ipv6[Interface.KEY][0]
+def test_edit_static_ipv6_address_and_prefix(setup_dummy1_ipv6):
+    dummy1_setup = setup_dummy1_ipv6[Interface.KEY][0]
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "eth1",
-                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.NAME: DUMMY1,
+                Interface.TYPE: InterfaceType.DUMMY,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV6: {
                     InterfaceIPv6.ENABLED: True,
@@ -568,23 +589,23 @@ def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
     }
 
     apply_with_description(
-        "Configure the ethernet device eth1 with the address "
+        f"Configure the dummy device {DUMMY1} with the address "
         "2001:db8:2::1/64",
         desired_state,
     )
-    eth1_desired_state = desired_state[Interface.KEY][0]
-    current_state = statelib.show_only(("eth1",))
+    dummy1_desired_state = desired_state[Interface.KEY][0]
+    current_state = statelib.show_only((DUMMY1,))
 
-    eth1_current_state = current_state[Interface.KEY][0]
+    dummy1_current_state = current_state[Interface.KEY][0]
 
     assert (
-        eth1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
-        in eth1_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+        dummy1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
+        in dummy1_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
     )
 
     assert (
-        eth1_setup[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
-        not in eth1_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+        dummy1_setup[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
+        not in dummy1_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
     )
 
 
@@ -636,7 +657,7 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(
 
 
 def test_add_iface_with_same_static_ipv6_address_to_existing(
-    setup_eth1_ipv6, eth2_up
+    setup_dummy1_ipv6, eth2_up
 ):
     desired_state = {
         Interface.KEY: [
@@ -694,33 +715,33 @@ def test_add_iface_with_static_ipv6_expanded_format(eth1_up):
 
 
 @pytest.mark.tier1
-@ip_monitor_assert_stable_link_up("eth1")
-def test_modify_ipv4_with_reapply(setup_eth1_ipv4):
+@ip_monitor_assert_stable_link_up(DUMMY1)
+def test_modify_ipv4_with_reapply(setup_dummy1_ipv4):
     ipv4_addr = IPV4_ADDRESS2
-    ipv4_state = setup_eth1_ipv4[Interface.KEY][0][Interface.IPV4]
+    ipv4_state = setup_dummy1_ipv4[Interface.KEY][0][Interface.IPV4]
     ipv4_state[InterfaceIPv4.ADDRESS][0][InterfaceIPv4.ADDRESS_IP] = ipv4_addr
     apply_with_description(
-        "Configure the ethernet device eth1 to have the address "
+        f"Configure the dummy device {DUMMY1} to have the address "
         "192.0.2.252/24",
-        setup_eth1_ipv4,
+        setup_dummy1_ipv4,
     )
 
-    assertlib.assert_state(setup_eth1_ipv4)
+    assertlib.assert_state(setup_dummy1_ipv4)
 
 
 @pytest.mark.tier1
-@ip_monitor_assert_stable_link_up("eth1")
-def test_modify_ipv6_with_reapply(setup_eth1_ipv6):
+@ip_monitor_assert_stable_link_up(DUMMY1)
+def test_modify_ipv6_with_reapply(setup_dummy1_ipv6):
     ipv6_addr = IPV6_ADDRESS2
-    ipv6_state = setup_eth1_ipv6[Interface.KEY][0][Interface.IPV6]
+    ipv6_state = setup_dummy1_ipv6[Interface.KEY][0][Interface.IPV6]
     ipv6_state[InterfaceIPv6.ADDRESS][0][InterfaceIPv6.ADDRESS_IP] = ipv6_addr
     apply_with_description(
-        "Configure the ethernet device eth1 to have the address "
+        f"Configure the dummy device {DUMMY1} to have the address "
         "2001:db8:2::1/64",
-        setup_eth1_ipv6,
+        setup_dummy1_ipv6,
     )
 
-    assertlib.assert_state(setup_eth1_ipv6)
+    assertlib.assert_state(setup_dummy1_ipv6)
 
 
 @pytest.mark.tier1

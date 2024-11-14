@@ -12,7 +12,6 @@ from libnmstate.error import NmstateValueError
 from .testlib.apply import apply_with_description
 from .testlib import assertlib
 from .testlib import statelib
-from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.vlan import vlan_interface
 
 
@@ -125,18 +124,6 @@ def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
         )
 
         assertlib.assert_state(desired_state)
-
-
-@pytest.mark.tier1
-@ip_monitor_assert_stable_link_up("eth1")
-def test_change_mtu_with_stable_link_up(eth1_up):
-    desired_state = statelib.show_only(("eth1",))
-    eth1_desired_state = desired_state[Interface.KEY][0]
-    eth1_desired_state[Interface.MTU] = 1900
-
-    apply_with_description("Change MTU of eth1 to 1900", desired_state)
-
-    assertlib.assert_state(desired_state)
 
 
 @pytest.fixture(scope="function")

@@ -1371,3 +1371,18 @@ def test_attach_bond_to_empty_bridge(empty_bridge, bond0):
         desired_state,
     )
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.tier1
+@ip_monitor_assert_stable_link_up(TEST_BRIDGE0)
+def test_change_mtu_with_stable_link_up(bridge0_with_port0):
+    desired_state = {
+        Interface.KEY: [
+            {Interface.NAME: TEST_BRIDGE0, Interface.MTU: 1900},
+        ]
+    }
+    apply_with_description(
+        f"Change MTU of {TEST_BRIDGE0} to 1900", desired_state
+    )
+
+    assertlib.assert_state(desired_state)
