@@ -916,12 +916,9 @@ impl MergedInterface {
                 // lists
                 if let Some(cur_iface) = self.current.as_ref() {
                     if cur_iface.is_ignore() {
-                        match cur_iface.ports().map(|ports| {
+                        cur_iface.ports().map(|ports| {
                             HashSet::<&str>::from_iter(ports.iter().cloned())
-                        }) {
-                            Some(p) => p,
-                            None => return None,
-                        }
+                        })?
                     } else {
                         return None;
                     }
