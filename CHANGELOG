@@ -1,4 +1,15 @@
 # Changelog
+## [2.2.39] - 2024-11-20
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - route: correctly compare the route's table and metric. (2ce6cb15)
+ - route: correctly compare the route's next-hop. (b4f1aa61)
+
 ## [2.2.38] - 2024-10-24
 ### Breaking changes
  - N/A
