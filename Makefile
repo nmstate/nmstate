@@ -43,6 +43,14 @@ SPEC_FILE=packaging/nmstate.spec
 RPM_DATA=$(shell date +"%a %b %d %Y")
 RUST_SOURCES := $(shell find rust/ -name "*.rs" -print)
 
+# Due to tokio bug https://github.com/tokio-rs/tokio/issues/6889
+# We only check for definite memory leak
+define VALGRIND_OPTS
+--errors-for-leak-kinds=definite --trace-children=yes \
+--leak-check=full --error-exitcode=1
+endef
+
+
 #outdir is used by COPR as well: https://docs.pagure.org/copr.copr/user_documentation.html
 outdir ?= $(ROOT_DIR)
 
@@ -209,28 +217,22 @@ clib_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 		-o $(TMPDIR)/nmstate_fmt_test \
 		rust/src/clib/test/nmstate_fmt_test.c -lnmstate
 	LD_LIBRARY_PATH=$(TMPDIR) \
-		valgrind --trace-children=yes --leak-check=full \
-		--error-exitcode=1 \
+		valgrind $(VALGRIND_OPTS) \
 		$(TMPDIR)/nmstate_json_test 1>/dev/null
 	LD_LIBRARY_PATH=$(TMPDIR) \
-		valgrind --trace-children=yes --leak-check=full \
-		--error-exitcode=1 \
+		valgrind $(VALGRIND_OPTS) \
 		$(TMPDIR)/nmpolicy_json_test 1>/dev/null
 	LD_LIBRARY_PATH=$(TMPDIR) \
-		valgrind --trace-children=yes --leak-check=full \
-		--error-exitcode=1 \
+		valgrind $(VALGRIND_OPTS) \
 		$(TMPDIR)/nmstate_yaml_test 1>/dev/null
 	LD_LIBRARY_PATH=$(TMPDIR) \
-		valgrind --trace-children=yes --leak-check=full \
-		--error-exitcode=1 \
+		valgrind $(VALGRIND_OPTS) \
 		$(TMPDIR)/nmpolicy_yaml_test 1>/dev/null
 	LD_LIBRARY_PATH=$(TMPDIR) \
-		valgrind --trace-children=yes --leak-check=full \
-		--error-exitcode=1 \
+		valgrind $(VALGRIND_OPTS) \
 		$(TMPDIR)/nmstate_gen_diff_test 1>/dev/null
 	LD_LIBRARY_PATH=$(TMPDIR) \
-		valgrind --trace-children=yes --leak-check=full \
-		--error-exitcode=1 \
+		valgrind $(VALGRIND_OPTS) \
 		$(TMPDIR)/nmstate_fmt_test 1>/dev/null
 	rm -rf $(TMPDIR)
 
