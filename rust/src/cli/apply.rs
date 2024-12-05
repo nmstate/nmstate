@@ -5,9 +5,9 @@ use std::io::{stdin, stdout, Read, Write};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 
-use nmstate::{NetworkPolicy, NetworkState};
+use nmstate::NetworkState;
 
-use crate::error::CliError;
+use crate::{error::CliError, state::state_from_fd};
 
 const DEFAULT_TIMEOUT: u32 = 60;
 
@@ -60,36 +60,7 @@ where
     } else {
         DEFAULT_TIMEOUT
     };
-    let mut content = String::new();
-    // Replace non-breaking space '\u{A0}'  to normal space
-    reader.read_to_string(&mut content)?;
-    let content = content.replace('\u{A0}', " ");
-
-    let mut net_state: NetworkState = match serde_yaml::from_str(&content) {
-        Ok(s) => s,
-        Err(state_error) => {
-            // Try NetworkPolicy
-            let net_policy: NetworkPolicy = match serde_yaml::from_str(&content)
-            {
-                Ok(p) => p,
-                Err(policy_error) => {
-                    let e = if content.contains("desiredState")
-                        || content.contains("desired")
-                    {
-                        policy_error
-                    } else {
-                        state_error
-                    };
-                    return Err(CliError::from(format!(
-                        "Provide file is not valid NetworkState or \
-                        NetworkPolicy: {e}"
-                    )));
-                }
-            };
-            NetworkState::try_from(net_policy)?
-        }
-    };
-
+    let mut net_state = state_from_fd(reader)?;
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
@@ -97,6 +68,16 @@ where
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );
+    apply_state(
+        &net_state,
+        matches.try_contains_id("SHOW_SECRETS").unwrap_or_default(),
+    )
+}
+
+pub(crate) fn apply_state(
+    state: &NetworkState,
+    show_secrets: bool,
+) -> Result<String, CliError> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .enable_time()
@@ -104,8 +85,8 @@ where
         .map_err(|e| {
             CliError::from(format!("tokio::runtime::Builder failed with {e}"))
         })?;
-    let mut diff_state = rt.block_on(apply_state_async(net_state))?;
-    if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
+    let mut diff_state = rt.block_on(apply_state_async(state))?;
+    if !show_secrets {
         diff_state.hide_secrets();
     }
     let sorted_net_state = crate::query::sort_netstate(diff_state)?;
@@ -169,7 +150,7 @@ pub(crate) fn state_edit(
         .map_err(|e| {
             CliError::from(format!("tokio::runtime::Builder failed with {e}"))
         })?;
-    let mut diff_state = rt.block_on(apply_state_async(desire_state))?;
+    let mut diff_state = rt.block_on(apply_state_async(&desire_state))?;
     if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
         diff_state.hide_secrets();
     }
@@ -264,7 +245,7 @@ fn ask_for_retry() -> bool {
 }
 
 async fn apply_state_async(
-    net_state: NetworkState,
+    net_state: &NetworkState,
 ) -> Result<NetworkState, CliError> {
     let mut cur_state = NetworkState::new();
     cur_state.set_kernel_only(net_state.kernel_only());

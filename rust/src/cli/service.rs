@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::{apply::apply, error::CliError};
+use crate::{apply::apply_state, error::CliError, state::state_from_fd};
 
 const CONFIG_FILE_EXTENTION: &str = "yml";
 const APPLIED_FILE_EXTENTION: &str = "applied";
@@ -85,7 +85,9 @@ pub(crate) fn ncl_service(
                 continue;
             }
         };
-        match apply(&mut fd, matches) {
+        let state = state_from_fd(&mut fd)?;
+
+        match apply_state(&state, false) {
             Ok(_) => {
                 log::info!(
                     "Applied nmstate config: {}",
