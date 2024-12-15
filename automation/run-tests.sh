@@ -15,6 +15,7 @@ TEST_TYPE_INTEG="integ"
 TEST_TYPE_INTEG_TIER1="integ_tier1"
 TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
+TEST_TYPE_INTEG_YAMLSMITH="integ_yamlsmith"
 
 FEDORA_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:latest"
 RAWHIDE_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:rawhide"
@@ -142,6 +143,35 @@ function run_tests {
             -m slow --runslow \
             tests/integration \
             ${nmstate_pytest_extra_args}"
+    fi
+
+    if [ $TEST_TYPE == $TEST_TYPE_INTEG_YAMLSMITH ]; then
+        exec_cmd "cd $CONTAINER_WORKSPACE"
+        allowed_tests=("bond_test.py" "dynamic_ip_test.py" "ethernet_mtu_test.py" \
+                    "linux_bridge_test.py" "static_ip_address_test.py" \
+                    "veth_test.py" "vlan_test.py" "vrf_test.py" "vxlan_test.py")
+        for test_file in tests/integration/*.py; do
+            test_file_name=$(basename "$test_file")
+            if ! printf "%s\n" "${allowed_tests[@]}" | grep -q "^${test_file_name}$"; then
+                continue
+            fi
+            test_base=$(basename "$test_file" .py)
+            exec_cmd "mkdir -p tests/integration/.states/$test_base"
+            exec_cmd "
+            pytest \
+                $PYTEST_OPTIONS \
+                --junitxml=junit.integ_tier1.xml \
+                --dump-ai-train-yaml \
+                $test_file \
+                ${nmstate_pytest_extra_args}"
+            for yaml_file in tests/integration/.states/*.yml; do
+                file_name=$(basename "$yaml_file")
+                test_name=$(echo "$file_name" | cut -d'-' -f1)
+                sed -i "1i test_name: $test_name" "$yaml_file"
+            done
+            exec_cmd "mv tests/integration/.states/*.yml tests/integration/.states/$test_base/"
+            exec_cmd "cat tests/integration/.states/$test_base/*"
+        done
     fi
 }
 
@@ -322,6 +352,7 @@ while true; do
         echo "     * $TEST_TYPE_INTEG_TIER1"
         echo "     * $TEST_TYPE_INTEG_TIER2"
         echo "     * $TEST_TYPE_INTEG_SLOW"
+        echo "     * $TEST_TYPE_INTEG_YAMLSMITH"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY38"
         echo "     * $TEST_TYPE_RUST_GO"
