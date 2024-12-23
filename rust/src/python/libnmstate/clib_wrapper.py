@@ -315,15 +315,16 @@ def parse_log(logs):
         log_entries = json.loads(logs.decode("utf-8"))
     except Exception:
         pass
+    logger = logging.getLogger("libnmstate")
     for log_entry in log_entries:
         msg = f"{log_entry['time']}:{log_entry['file']}: {log_entry['msg']}"
         level = log_entry["level"]
 
         if level == "ERROR":
-            logging.error(msg)
+            logger.error(msg)
         elif level == "WARN":
-            logging.warning(msg)
+            logger.warning(msg)
         elif level == "INFO":
-            logging.info(msg)
+            logger.info(msg)
         else:
-            logging.debug(msg)
+            logger.debug(msg)
