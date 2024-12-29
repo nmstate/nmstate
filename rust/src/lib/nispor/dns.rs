@@ -34,13 +34,13 @@ pub(crate) fn get_dns() -> Option<DnsState> {
                     line.strip_prefix("options ").map(|s| s.trim())
                 {
                     conf.options =
-                        Some(opts.split(" ").map(|s| s.to_string()).collect());
+                        Some(opts.split(' ').map(|s| s.to_string()).collect());
                 }
                 if let Some(searches) =
                     line.strip_prefix("search ").map(|s| s.trim())
                 {
                     conf.search = Some(
-                        searches.split(" ").map(|s| s.to_string()).collect(),
+                        searches.split(' ').map(|s| s.to_string()).collect(),
                     );
                 }
             }
