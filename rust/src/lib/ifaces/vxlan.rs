@@ -81,7 +81,8 @@ pub struct VxlanConfig {
     #[serde(
         rename = "destination-port",
         default,
-        deserialize_with = "crate::deserializer::option_u16_or_string"
+        deserialize_with = "crate::deserializer::option_u16_or_string",
+        skip_serializing_if = "Option::is_none"
     )]
     /// Deserialize and serialize from/to `destination-port`.
     pub dst_port: Option<u16>,
