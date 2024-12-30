@@ -47,3 +47,22 @@ vxlan:
         Some(std::net::IpAddr::V4("1.2.3.4".parse().unwrap()))
     );
 }
+
+#[test]
+fn test_vxlan_serialization_skips_none_destination_port() {
+    let iface: VxlanInterface = serde_yaml::from_str(
+        r#"---
+name: vxlan1
+type: vxlan
+state: up
+vxlan:
+  id: "101"
+  base-iface: "eth1"
+"#,
+    )
+    .unwrap();
+    let new: VxlanInterface =
+        serde_yaml::from_str(&serde_yaml::to_string(&iface).unwrap()).unwrap();
+
+    assert_eq!(iface, new);
+}
