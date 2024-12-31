@@ -352,11 +352,7 @@ def test_change_vlan_protocol(vlan_on_eth1):
     )
     assertlib.assert_state_match(qinq_state)
 
-    apply_with_description(
-        "Create the vlan interface eth1.101 with ID 102, "
-        "using vlan protocol 802.1q",
-        dot1q_state,
-    )
+    libnmstate.apply(dot1q_state)
     assertlib.assert_state_match(dot1q_state)
 
 
@@ -399,11 +395,7 @@ def test_configure_vlan_with_reaorder_headers(vlan_on_eth1):
     flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
         VLAN.REORDER_HEADERS
     ] = False
-    apply_with_description(
-        "Configure the interface eth1.101 with ID 102, "
-        "reorder headers flag disabled",
-        flags_state,
-    )
+    libnmstate.apply(flags_state)
     assertlib.assert_state_match(flags_state)
 
 
@@ -432,11 +424,7 @@ def test_configure_vlan_with_loose_binding(vlan_on_eth1):
     flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
         VLAN.LOOSE_BINDING
     ] = False
-    apply_with_description(
-        "Configure the interface eth1.101 with ID 102, "
-        "loose binding flag disabled",
-        flags_state,
-    )
+    libnmstate.apply(flags_state)
     assertlib.assert_state_match(flags_state)
 
 
@@ -466,11 +454,7 @@ def test_configure_vlan_with_gvrp(vlan_on_eth1):
     flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
         VLAN.REGISTRATION_PROTOCOL
     ] = VLAN.REGISTRATION_PROTOCOL_NONE
-    apply_with_description(
-        "Configure the interface eth1.101 with ID 102, "
-        "registration protocol set to none",
-        flags_state,
-    )
+    libnmstate.apply(flags_state)
     assertlib.assert_state_match(flags_state)
 
 
@@ -500,11 +484,7 @@ def test_configure_vlan_with_mvrp(vlan_on_eth1):
     flags_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
         VLAN.REGISTRATION_PROTOCOL
     ] = VLAN.REGISTRATION_PROTOCOL_NONE
-    apply_with_description(
-        "Configure the interface eth1.101 with ID 102, "
-        "registration protocol set to none",
-        flags_state,
-    )
+    libnmstate.apply(flags_state)
     assertlib.assert_state_match(flags_state)
 
 
