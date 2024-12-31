@@ -234,8 +234,11 @@ def _custom_apply_with_dump_state(
     *args,
     **kwargs,
 ):
+    kernel_only = kwargs.get("kernel_only", False)
+
     if DUMP_AI_TRAIN_YAML:
-        cur_state = libnmstate.show()
+        cur_state = libnmstate.show(kernel_only=kernel_only)
+
     result = LIBNMSTATE_APPLY(
         desired_state,
         *args,
