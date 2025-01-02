@@ -117,7 +117,7 @@ impl From<serde_json::Error> for NmstateError {
     fn from(e: serde_json::Error) -> Self {
         NmstateError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid propriety: {e}"),
+            format!("Invalid property : {e}"),
         )
     }
 }
