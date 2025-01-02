@@ -400,11 +400,7 @@ class TestVrf:
                 }
             ]
         }
-        apply_with_description(
-            "Create the eth1 interface with address 192.0.2.251/24 and "
-            "2001:db8:1::1/64 configured",
-            desired_state,
-        )
+        libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
 
     def test_takes_over_unmanaged_vrf(self, vrf1_with_unmanaged_port):
