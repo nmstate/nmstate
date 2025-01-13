@@ -282,7 +282,7 @@ class TestVrf:
             ]
         }
         apply_with_description(
-            "Create the vrf interface test-vrf0 with the empty ports and the "
+            "Create the vrf interface test-vrf0 without ports and the "
             "vrf route table ID 100",
             desired_state,
         )
