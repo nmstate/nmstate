@@ -362,7 +362,7 @@ fn ovsdb_iface_to_nmstate(
             Interface::OvsInterface(Box::new(ovs_iface))
         }
         i => {
-            log::warn!("Unknown OVS interface type {i}");
+            log::debug!("Unknown OVS interface type '{i}'");
             return None;
         }
     };
