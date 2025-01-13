@@ -124,7 +124,7 @@ pub(crate) async fn nispor_retrieve(
                 // We don't support HFI interface which contains PKEY but no
                 // parent.
                 if base_iface.name.starts_with("hfi1") {
-                    log::info!(
+                    log::debug!(
                         "Ignoring unsupported HFI interface {}",
                         base_iface.name
                     );
@@ -151,7 +151,7 @@ pub(crate) async fn nispor_retrieve(
                 np_ipvlan_to_nmstate(np_iface, base_iface),
             )),
             _ => {
-                log::info!(
+                log::debug!(
                     "Got unsupported interface {} type {:?}",
                     np_iface.name,
                     np_iface.iface_type
