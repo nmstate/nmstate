@@ -254,37 +254,37 @@ impl LldpSystemCapabilities {
 impl From<u16> for LldpSystemCapabilities {
     fn from(caps: u16) -> Self {
         let mut ret = Vec::new();
-        if (caps & 1 << (LLDP_SYS_CAP_OTHER - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_OTHER - 1))) > 0 {
             ret.push(LldpSystemCapability::Other);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_REPEATER - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_REPEATER - 1))) > 0 {
             ret.push(LldpSystemCapability::Repeater);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_MAC_BRIDGE - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_MAC_BRIDGE - 1))) > 0 {
             ret.push(LldpSystemCapability::MacBridgeComponent);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_AP - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_AP - 1))) > 0 {
             ret.push(LldpSystemCapability::AccessPoint);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_ROUTER - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_ROUTER - 1))) > 0 {
             ret.push(LldpSystemCapability::Router);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_TELEPHONE - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_TELEPHONE - 1))) > 0 {
             ret.push(LldpSystemCapability::Telephone);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_DOCSIS - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_DOCSIS - 1))) > 0 {
             ret.push(LldpSystemCapability::DocsisCableDevice);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_STATION_ONLY - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_STATION_ONLY - 1))) > 0 {
             ret.push(LldpSystemCapability::StationOnly);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_CVLAN - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_CVLAN - 1))) > 0 {
             ret.push(LldpSystemCapability::CVlanComponent);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_SVLAN - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_SVLAN - 1))) > 0 {
             ret.push(LldpSystemCapability::SVlanComponent);
         }
-        if (caps & 1 << (LLDP_SYS_CAP_TWO_PORT_MAC_RELAY - 1)) > 0 {
+        if (caps & (1 << (LLDP_SYS_CAP_TWO_PORT_MAC_RELAY - 1))) > 0 {
             ret.push(LldpSystemCapability::TwoPortMacRelayComponent);
         }
         Self::new(ret)
