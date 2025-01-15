@@ -1,4 +1,4 @@
-SRPM_DEPENDENCIES=python3-setuptools git
+SRPM_DEPENDENCIES=python3-setuptools git cargo
 PROJECT_DIR:=$(realpath $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/../)
 
 srpm:
