@@ -24,6 +24,8 @@ struct Config {
 struct ServiceConfig {
     #[serde(default)]
     keep_state_file_after_apply: bool,
+    #[serde(default)]
+    override_iface: bool,
 }
 
 #[derive(Eq, Hash, PartialEq, Clone, PartialOrd, Ord)]
@@ -85,7 +87,11 @@ pub(crate) fn ncl_service(
                 continue;
             }
         };
-        let state = state_from_fd(&mut fd)?;
+        let mut state = state_from_fd(&mut fd)?;
+
+        if config.service.override_iface {
+            state.set_override_iface(true);
+        }
 
         match apply_state(&state, false) {
             Ok(_) => {

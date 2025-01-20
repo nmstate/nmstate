@@ -9,19 +9,47 @@ nmstate\&.service
 nmstate\&.service invokes \fBnmstatectl service\fR command which
 apply all network state files ending with \fB.yml\fR in
 \fB/etc/nmstate\fR folder.
+
+.PP
 By default, the network state file will be renamed with the suffix
 \fB.applied\fR after applying it. This is to prevent it being applied again
 when the service runs next.
 
 With \fB/etc/nmstate/nmstate.conf\fR holding below content:
 
+.EX
 \fB
-[service]
+[service]\n
 keep_state_file_after_apply = true
 \fR
+.EE
 
 The nmstate.service will not remove network state file, just copy applied
 network stata to file with the suffix \fB.applied\fR after applying it.
+
+.PP
+By default, nmstate merge network state file with current network state,
+if you want to override interface settings without merging, please set
+`override_iface = true` in `[service]` section in
+\fB/etc/nmstate/nmstate.conf\fR:
+
+.EX
+\fB
+[service]\n
+override_iface = true
+\fR
+.EE
+
+If `override_iface = true`, for network state to apply, nmstate.service will:
+
+ * For `interfaces` section, any defined interface will be configured by
+   desired state information only, undefined properties of this interface will
+   use default value instead of merging from current state.
+
+ * For other sections, no changes to their original behavior.
+
+For example, if desired interface has no IPv4 section defined, nmstate
+will treat it as disabled regardless current network status.
 
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.

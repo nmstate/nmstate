@@ -166,6 +166,18 @@ rebooting.
 .IP \fB--timeout\fR=<\fITIMEOUT\fR>
 the user must commit the changes within \fItimeout\fR, or they will be
 automatically rolled back. Default: 60 seconds.
+.IP \fB--override-iface\fR
+If defined when applying network state:
+
+ * For `interfaces` section, any defined interface will be configured by
+   desired state information only, undefined properties of this interface will
+   use default value instead of merging from current state.
+
+ * For other sections, no changes to their original behavior.
+
+For example, if desired interface has no IPv4 section defined, nmstate
+will treat it as disabled regardless current network status.
+
 .IP \fB--version
 displays nmstate version.
 .SH LIMITATIONS

@@ -15,6 +15,8 @@ use crate::{
     NMSTATE_FAIL, NMSTATE_PASS,
 };
 
+const NMSTATE_FLAG_OVERRIDE_IFACE: u32 = 1 << 9;
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn nmstate_net_state_apply(
@@ -73,6 +75,10 @@ pub extern "C" fn nmstate_net_state_apply(
 
     if (flags & NMSTATE_FLAG_MEMORY_ONLY) > 0 {
         net_state.set_memory_only(true);
+    }
+
+    if (flags & NMSTATE_FLAG_OVERRIDE_IFACE) > 0 {
+        net_state.set_override_iface(true);
     }
 
     net_state.set_timeout(rollback_timeout);

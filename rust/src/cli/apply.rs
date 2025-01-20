@@ -38,6 +38,9 @@ where
     let kernel_only = matches.try_contains_id("KERNEL").unwrap_or_default();
     let no_verify = matches.try_contains_id("NO_VERIFY").unwrap_or_default();
     let no_commit = matches.try_contains_id("NO_COMMIT").unwrap_or_default();
+    let override_iface = matches
+        .try_contains_id("OVERRIDE_IFACE")
+        .unwrap_or_default();
     let timeout = if matches.try_contains_id("TIMEOUT").unwrap_or_default() {
         match matches.try_get_one::<String>("TIMEOUT") {
             Ok(Some(t)) => match u32::from_str(t) {
@@ -65,6 +68,7 @@ where
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
+    net_state.set_override_iface(override_iface);
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );

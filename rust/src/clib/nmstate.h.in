@@ -30,6 +30,7 @@ extern "C" {
 #define NMSTATE_FLAG_MEMORY_ONLY            1 << 6
 #define NMSTATE_FLAG_RUNNING_CONFIG_ONLY    1 << 7
 #define NMSTATE_FLAG_YAML_OUTPUT            1 << 8
+#define NMSTATE_FLAG_OVERRIDE_IFACE         1 << 9
 
 /**
  * nmstate_net_state_retrieve - Retrieve network state
@@ -97,6 +98,8 @@ int nmstate_net_state_retrieve(uint32_t flags, char **state, char **log,
  *              Do not commit new state after verification
  *          * NMSTATE_FLAG_MEMORY_ONLY
  *              No not store network state to persistent.
+ *          * NMSTATE_FLAG_OVERRIDE_IFACE
+ *              Override interface configuration without merging from current.
  * @state:
  *      Pointer of char array for network state in json format.
  * @log:

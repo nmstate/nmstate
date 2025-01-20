@@ -11,9 +11,12 @@ import libnmstate
 from libnmstate import __version__
 from libnmstate.error import NmstateConflictError
 from libnmstate.schema import Constants
+from libnmstate.schema import DNS
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
-from libnmstate.schema import DNS
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -21,6 +24,7 @@ from .testlib.examplelib import example_state
 from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
 from .testlib.statelib import state_match
+from .testlib.statelib import show_only
 
 
 APPLY_CMD = ["nmstatectl", "apply"]
@@ -401,3 +405,23 @@ def test_format_command():
   state: up"""
             in output
         )
+
+
+def test_cli_apply_with_override_iface(eth1_with_static_route_and_rule):
+    with NamedTemporaryFile() as fd:
+        fd.write(
+            """---
+            interfaces:
+            - type: ethernet
+              name: eth1
+            """.encode(
+                "utf-8"
+            )
+        )
+        fd.flush()
+        cmdlib.exec_cmd(
+            f"nmstatectl apply --override-iface {fd.name}".split(), check=True
+        )
+    iface_state = show_only(("eth1",))[Interface.KEY][0]
+    assert not iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
+    assert not iface_state[Interface.IPV6][InterfaceIPv6.ENABLED]

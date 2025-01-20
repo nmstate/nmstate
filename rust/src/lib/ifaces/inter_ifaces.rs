@@ -604,6 +604,15 @@ impl Interfaces {
         }
         Ok(())
     }
+
+    pub(crate) fn clone_name_type_only(&self) -> Self {
+        let mut ret = Self::new();
+
+        for iface in self.to_vec() {
+            ret.push(iface.clone_name_type_only())
+        }
+        ret
+    }
 }
 
 fn is_opt_str_empty(opt_string: &Option<String>) -> bool {

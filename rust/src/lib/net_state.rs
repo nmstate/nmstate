@@ -124,6 +124,8 @@ pub struct NetworkState {
     pub(crate) running_config_only: bool,
     #[serde(skip)]
     pub(crate) memory_only: bool,
+    #[serde(skip)]
+    pub(crate) override_iface: bool,
 }
 
 impl NetworkState {
@@ -209,6 +211,22 @@ impl NetworkState {
     /// which will be purged after system reboot.
     pub fn set_memory_only(&mut self, value: bool) -> &mut Self {
         self.memory_only = value;
+        self
+    }
+
+    /// Nmstate by default will merge information from current state.
+    /// When set to true, for network state to apply, nmstate will:
+    ///
+    /// * For `interfaces` section, any defined interface will be configured by
+    ///   desired state information only, undefined properties of this interface
+    ///   will use default value instead of merging from current state.
+    ///
+    /// * For other sections, no changes to their original behavior.
+    ///
+    /// For example, if desired interface has no IPv4 section defined, nmstate
+    /// will treat it as disabled regardless current network status.
+    pub fn set_override_iface(&mut self, value: bool) -> &mut Self {
+        self.override_iface = value;
         self
     }
 
@@ -326,6 +344,7 @@ pub(crate) struct MergedNetworkState {
     pub(crate) routes: MergedRoutes,
     pub(crate) rules: MergedRouteRules,
     pub(crate) memory_only: bool,
+    pub(crate) override_iface: bool,
 }
 
 impl MergedNetworkState {
@@ -335,6 +354,11 @@ impl MergedNetworkState {
         gen_conf_mode: bool,
         memory_only: bool,
     ) -> Result<Self, NmstateError> {
+        let mut current = current;
+        if desired.override_iface {
+            current.interfaces = current.interfaces.clone_name_type_only();
+        };
+
         let interfaces = MergedInterfaces::new(
             desired.interfaces,
             current.interfaces,
@@ -373,6 +397,7 @@ impl MergedNetworkState {
             ovsdb,
             hostname,
             memory_only,
+            override_iface: desired.override_iface,
         };
         ret.validate_ipv6_link_local_address_dns_srv()?;
 

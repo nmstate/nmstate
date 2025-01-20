@@ -193,6 +193,15 @@ fn main() {
                         .takes_value(false)
                         .help("Do not make the state persistent"),
                 )
+                .arg(
+                    clap::Arg::new("OVERRIDE_IFACE")
+                        .long("override-iface")
+                        .takes_value(false)
+                        .help(
+                            "Override interface settings \
+                            without merge current network state"
+                        ),
+                )
         )
         .subcommand(
             clap::Command::new(SUB_CMD_GEN_CONF)

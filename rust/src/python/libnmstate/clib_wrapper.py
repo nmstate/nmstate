@@ -40,6 +40,7 @@ NMSTATE_FLAG_INCLUDE_SECRETS = 1 << 4
 NMSTATE_FLAG_NO_COMMIT = 1 << 5
 NMSTATE_FLAG_MEMORY_ONLY = 1 << 6
 NMSTATE_FLAG_RUNNING_CONFIG_ONLY = 1 << 7
+NMSTATE_FLAG_OVERRIDE_IFACE = 1 << 9
 NMSTATE_PASS = 0
 
 
@@ -91,6 +92,7 @@ def apply_net_state(
     verify_change=True,
     save_to_disk=True,
     commit=True,
+    override_iface=False,
     rollback_timeout=60,
 ):
     c_err_msg = c_char_p()
@@ -109,6 +111,9 @@ def apply_net_state(
 
     if not save_to_disk:
         flags |= NMSTATE_FLAG_MEMORY_ONLY
+
+    if override_iface:
+        flags |= NMSTATE_FLAG_OVERRIDE_IFACE
 
     rc = lib.nmstate_net_state_apply(
         flags,

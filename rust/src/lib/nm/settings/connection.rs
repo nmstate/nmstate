@@ -49,7 +49,9 @@ pub(crate) fn iface_to_nm_connections(
         return Ok(ret);
     };
 
-    let exist_nm_conn = if iface.base_iface().identifier
+    let exist_nm_conn = if merged_state.override_iface {
+        None
+    } else if iface.base_iface().identifier
         == Some(InterfaceIdentifier::MacAddress)
     {
         get_exist_profile_by_profile_name(
