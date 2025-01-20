@@ -2,11 +2,14 @@
 
 use std::convert::TryFrom;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use super::super::{connection::DbusDictionary, NmError};
+use super::super::{
+    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
+    NmError,
+};
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmIpRoute {
@@ -51,8 +54,8 @@ impl TryFrom<DbusDictionary> for NmIpRoute {
 impl NmIpRoute {
     fn to_value(&self) -> Result<zvariant::Value, NmError> {
         let mut ret = zvariant::Dict::new(
-            zvariant::Signature::from_str_unchecked("s"),
-            zvariant::Signature::from_str_unchecked("v"),
+            &zvariant::Signature::Str,
+            &zvariant::Signature::Variant,
         );
         if let Some(v) = &self.dest {
             ret.append(
@@ -137,8 +140,8 @@ pub(crate) fn parse_nm_ip_route_data(
 pub(crate) fn nm_ip_routes_to_value(
     nm_routes: &[NmIpRoute],
 ) -> Result<zvariant::Value, NmError> {
-    let mut route_values =
-        zvariant::Array::new(zvariant::Signature::from_str_unchecked("a{sv}"));
+    let mut route_values = zvariant::Array::new(DBUS_ASV_SIGNATURE);
+
     for nm_route in nm_routes {
         route_values.append(nm_route.to_value()?)?;
     }

@@ -31,20 +31,24 @@ use crate::{
     VrfInterface, VxlanInterface,
 };
 
-pub(crate) fn nm_retrieve(
+pub(crate) async fn nm_retrieve(
     running_config_only: bool,
 ) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
-    let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
     let nm_conns = nm_api
         .applied_connections_get()
+        .await
         .map_err(nm_error_to_nmstate)?;
-    let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
+    let nm_devs = nm_api.devices_get().await.map_err(nm_error_to_nmstate)?;
 
-    let nm_saved_conns =
-        nm_api.connections_get().map_err(nm_error_to_nmstate)?;
+    let nm_saved_conns = nm_api
+        .connections_get()
+        .await
+        .map_err(nm_error_to_nmstate)?;
     let nm_acs = nm_api
         .active_connections_get()
+        .await
         .map_err(nm_error_to_nmstate)?;
 
     let nm_conns_name_type_index =
@@ -140,6 +144,7 @@ pub(crate) fn nm_retrieve(
                         Some(
                             nm_api
                                 .device_lldp_neighbor_get(&nm_dev.obj_path)
+                                .await
                                 .map_err(nm_error_to_nmstate)?,
                         )
                     }
@@ -176,15 +181,16 @@ pub(crate) fn nm_retrieve(
     }
     let mut dns_config = if let Ok(nm_global_dns_conf) = nm_api
         .get_global_dns_configuration()
+        .await
         .map_err(nm_error_to_nmstate)
     {
         if nm_global_dns_conf.is_empty() {
-            retrieve_dns_info(&mut nm_api, &net_state.interfaces)?
+            retrieve_dns_info(&mut nm_api, &net_state.interfaces).await?
         } else {
             nm_global_dns_to_nmstate(&nm_global_dns_conf)
         }
     } else {
-        retrieve_dns_info(&mut nm_api, &net_state.interfaces)?
+        retrieve_dns_info(&mut nm_api, &net_state.interfaces).await?
     };
     dns_config.sanitize().ok();
     if running_config_only {

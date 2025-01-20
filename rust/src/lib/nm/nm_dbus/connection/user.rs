@@ -18,11 +18,11 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::super::{connection::DbusDictionary, NmError, ToDbusValue};
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingUser {
@@ -45,8 +45,8 @@ impl ToDbusValue for NmSettingUser {
         let mut ret = HashMap::new();
         if let Some(v) = &self.data {
             let mut dict_value = zvariant::Dict::new(
-                zvariant::Signature::from_str_unchecked("s"),
-                zvariant::Signature::from_str_unchecked("s"),
+                &zvariant::Signature::Str,
+                &zvariant::Signature::Str,
             );
             for (k, v) in v.iter() {
                 dict_value

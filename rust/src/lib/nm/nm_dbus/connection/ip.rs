@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 
 use log::warn;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::super::{
     connection::dns::{
@@ -19,11 +19,11 @@ use super::super::{
     connection::route_rule::{
         nm_ip_rules_to_value, parse_nm_ip_rule_data, NmIpRouteRule,
     },
-    connection::DbusDictionary,
+    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
     ErrorKind, NmError, ToDbusValue,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "zvariant::OwnedValue")]
 #[non_exhaustive]
 pub enum NmSettingIpMethod {
@@ -80,7 +80,7 @@ impl TryFrom<zvariant::OwnedValue> for NmSettingIpMethod {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingIp {
@@ -182,9 +182,7 @@ impl ToDbusValue for NmSettingIp {
         if let Some(v) = &self.method {
             ret.insert("method", zvariant::Value::new(format!("{v}")));
         }
-        let mut addresss_data = zvariant::Array::new(
-            zvariant::Signature::from_str_unchecked("a{sv}"),
-        );
+        let mut addresss_data = zvariant::Array::new(DBUS_ASV_SIGNATURE);
         for addr_str in &self.addresses {
             let addr_str_split: Vec<&str> = addr_str.split('/').collect();
             if addr_str_split.len() != 2 {
@@ -203,8 +201,8 @@ impl ToDbusValue for NmSettingIp {
                 )
             })?;
             let mut addr_dict = zvariant::Dict::new(
-                zvariant::Signature::from_str_unchecked("s"),
-                zvariant::Signature::from_str_unchecked("v"),
+                &zvariant::Signature::Str,
+                &zvariant::Signature::Variant,
             );
             addr_dict.append(
                 zvariant::Value::new("address".to_string()),

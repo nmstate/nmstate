@@ -44,12 +44,13 @@ pub(crate) fn nm_dns_to_nmstate(
     }
 }
 
-pub(crate) fn retrieve_dns_info(
-    nm_api: &mut NmApi,
+pub(crate) async fn retrieve_dns_info(
+    nm_api: &mut NmApi<'_>,
     ifaces: &Interfaces,
 ) -> Result<DnsState, NmstateError> {
     let mut nm_dns_entires = nm_api
         .get_dns_configuration()
+        .await
         .map_err(nm_error_to_nmstate)?;
     nm_dns_entires.sort_unstable_by_key(|d| d.priority);
     let mut running_srvs: Vec<String> = Vec::new();
@@ -92,6 +93,7 @@ pub(crate) fn retrieve_dns_info(
 
     let nm_conns = nm_api
         .applied_connections_get()
+        .await
         .map_err(nm_error_to_nmstate)?;
     for nm_conn in &nm_conns {
         if let Some(opts) =
@@ -168,8 +170,8 @@ fn nm_dns_srvs_to_nmstate(nm_dns_entry: &NmDnsEntry) -> Vec<String> {
     srvs
 }
 
-pub(crate) fn store_dns_config_via_global_api(
-    nm_api: &mut NmApi,
+pub(crate) async fn store_dns_config_via_global_api(
+    nm_api: &mut NmApi<'_>,
     servers: &[String],
     searches: &[String],
     options: &[String],
@@ -187,20 +189,23 @@ pub(crate) fn store_dns_config_via_global_api(
     log::debug!("Applying NM global DNS config {:?}", nm_config);
     nm_api
         .set_global_dns_configuration(&nm_config)
+        .await
         .map_err(nm_error_to_nmstate)?;
     Ok(())
 }
 
-pub(crate) fn purge_global_dns_config(
-    nm_api: &mut NmApi,
+pub(crate) async fn purge_global_dns_config(
+    nm_api: &mut NmApi<'_>,
 ) -> Result<(), NmstateError> {
     let cur_dns = nm_api
         .get_global_dns_configuration()
+        .await
         .map_err(nm_error_to_nmstate)?;
     if !cur_dns.is_empty() {
         log::debug!("Purging NM Global DNS config");
         nm_api
             .set_global_dns_configuration(&NmGlobalDnsConfig::default())
+            .await
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())

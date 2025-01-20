@@ -3,11 +3,14 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use super::super::{connection::DbusDictionary, NmError, NmRange, ToDbusValue};
+use super::super::{
+    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
+    NmError, NmRange, ToDbusValue,
+};
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingOvsBridge {
@@ -62,7 +65,7 @@ impl ToDbusValue for NmSettingOvsBridge {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingOvsPort {
@@ -125,9 +128,7 @@ impl ToDbusValue for NmSettingOvsPort {
             ret.insert("lacp", zvariant::Value::new(v));
         }
         if let Some(v) = self.trunks.as_ref() {
-            let mut trunk_values = zvariant::Array::new(
-                zvariant::Signature::from_str_unchecked("a{sv}"),
-            );
+            let mut trunk_values = zvariant::Array::new(DBUS_ASV_SIGNATURE);
             for range in v {
                 trunk_values.append(range.to_value()?)?;
             }
@@ -140,7 +141,7 @@ impl ToDbusValue for NmSettingOvsPort {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingOvsIface {
@@ -171,7 +172,7 @@ impl ToDbusValue for NmSettingOvsIface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingOvsExtIds {
@@ -194,8 +195,8 @@ impl ToDbusValue for NmSettingOvsExtIds {
         let mut ret = HashMap::new();
         if let Some(v) = &self.data {
             let mut dict_value = zvariant::Dict::new(
-                zvariant::Signature::from_str_unchecked("s"),
-                zvariant::Signature::from_str_unchecked("s"),
+                &zvariant::Signature::Str,
+                &zvariant::Signature::Str,
             );
             for (k, v) in v.iter() {
                 dict_value
@@ -210,7 +211,7 @@ impl ToDbusValue for NmSettingOvsExtIds {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingOvsOtherConfig {
@@ -233,8 +234,8 @@ impl ToDbusValue for NmSettingOvsOtherConfig {
         let mut ret = HashMap::new();
         if let Some(v) = &self.data {
             let mut dict_value = zvariant::Dict::new(
-                zvariant::Signature::from_str_unchecked("s"),
-                zvariant::Signature::from_str_unchecked("s"),
+                &zvariant::Signature::Str,
+                &zvariant::Signature::Str,
             );
             for (k, v) in v.iter() {
                 dict_value
@@ -249,7 +250,7 @@ impl ToDbusValue for NmSettingOvsOtherConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingOvsPatch {
@@ -280,7 +281,7 @@ impl ToDbusValue for NmSettingOvsPatch {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingOvsDpdk {

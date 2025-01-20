@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::super::{
     connection::DbusDictionary, ErrorKind, NmError, ToDbusValue,
@@ -11,7 +11,7 @@ use super::super::{
 
 const GLIB_FILE_PATH_PREFIX: &str = "file://";
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSetting8021X {

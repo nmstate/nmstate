@@ -17,11 +17,14 @@
 
 use std::convert::TryFrom;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use super::super::{connection::DbusDictionary, error::NmError};
+use super::super::{
+    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
+    error::NmError,
+};
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmIpRouteRule {
@@ -69,8 +72,8 @@ impl TryFrom<DbusDictionary> for NmIpRouteRule {
 impl NmIpRouteRule {
     pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
         let mut ret = zvariant::Dict::new(
-            zvariant::Signature::from_str_unchecked("s"),
-            zvariant::Signature::from_str_unchecked("v"),
+            &zvariant::Signature::Str,
+            &zvariant::Signature::Variant,
         );
         if let Some(v) = &self.family {
             ret.append(
@@ -168,8 +171,8 @@ pub(crate) fn parse_nm_ip_rule_data(
 pub(crate) fn nm_ip_rules_to_value(
     nm_rules: &[NmIpRouteRule],
 ) -> Result<zvariant::Value, NmError> {
-    let mut rule_values =
-        zvariant::Array::new(zvariant::Signature::from_str_unchecked("a{sv}"));
+    let mut rule_values = zvariant::Array::new(DBUS_ASV_SIGNATURE);
+
     for nm_rule in nm_rules {
         rule_values.append(nm_rule.to_value()?)?;
     }
@@ -180,7 +183,7 @@ const RTN_BLACKHOLE: u8 = 6;
 const RTN_UNREACHABLE: u8 = 7;
 const RTN_PROHIBIT: u8 = 8;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum NmIpRouteRuleAction {
     Blackhole,

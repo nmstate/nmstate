@@ -18,17 +18,17 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::DbusDictionary,
+    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
     convert::{
         mac_str_to_u8_array, own_value_to_bytes_array, u8_array_to_mac_string,
     },
     NmError, NmVlanProtocol, ToDbusValue,
 };
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingBridge {
@@ -273,9 +273,8 @@ impl ToDbusValue for NmSettingBridge {
             ret.insert("vlan-stats-enabled", zvariant::Value::new(v));
         }
         if let Some(vlans) = &self.vlans {
-            let mut vlan_values = zvariant::Array::new(
-                zvariant::Signature::from_str_unchecked("a{sv}"),
-            );
+            let mut vlan_values = zvariant::Array::new(DBUS_ASV_SIGNATURE);
+
             for vlan in vlans {
                 vlan_values.append(vlan.to_value()?)?;
             }
@@ -288,7 +287,7 @@ impl ToDbusValue for NmSettingBridge {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingBridgeVlanRange {
@@ -318,8 +317,8 @@ impl TryFrom<DbusDictionary> for NmSettingBridgeVlanRange {
 impl NmSettingBridgeVlanRange {
     fn to_value(&self) -> Result<zvariant::Value, NmError> {
         let mut ret = zvariant::Dict::new(
-            zvariant::Signature::from_str_unchecked("s"),
-            zvariant::Signature::from_str_unchecked("v"),
+            &zvariant::Signature::Str,
+            &zvariant::Signature::Variant,
         );
         ret.append(
             zvariant::Value::new("vid-start"),
@@ -341,7 +340,7 @@ impl NmSettingBridgeVlanRange {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct NmSettingBridgePort {
     pub hairpin_mode: Option<bool>,
@@ -376,9 +375,7 @@ impl ToDbusValue for NmSettingBridgePort {
             .map(|v| ret.insert("priority", zvariant::Value::new(v)));
 
         if let Some(vlans) = self.vlans.as_ref() {
-            let mut vlan_values = zvariant::Array::new(
-                zvariant::Signature::from_str_unchecked("a{sv}"),
-            );
+            let mut vlan_values = zvariant::Array::new(DBUS_ASV_SIGNATURE);
             for vlan in vlans {
                 vlan_values.append(vlan.to_value()?)?;
             }

@@ -5,8 +5,6 @@ mod connection;
 mod convert;
 #[cfg(feature = "query_apply")]
 mod dbus;
-#[cfg(feature = "query_apply")]
-mod dbus_proxy;
 mod device;
 #[cfg(feature = "query_apply")]
 mod dns;

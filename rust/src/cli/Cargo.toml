@@ -10,7 +10,7 @@ repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
 categories = ["network-programming"]
 edition = "2021"
-rust-version = "1.66"
+rust-version.workspace = true
 
 [[bin]]
 name = "nmstatectl"

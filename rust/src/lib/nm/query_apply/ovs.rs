@@ -14,8 +14,8 @@ use crate::{
 
 // When OVS system interface got detached from OVS bridge, we should remove its
 // ovs port also.
-pub(crate) fn delete_orphan_ovs_ports(
-    nm_api: &mut NmApi,
+pub(crate) async fn delete_orphan_ovs_ports(
+    nm_api: &mut NmApi<'_>,
     merged_ifaces: &MergedInterfaces,
     exist_nm_conns: &[NmConnection],
     nm_conns_to_activate: &[NmConnection],
@@ -87,7 +87,7 @@ pub(crate) fn delete_orphan_ovs_ports(
             }
         }
     }
-    delete_profiles(nm_api, orphan_ovs_port_uuids.as_slice())
+    delete_profiles(nm_api, orphan_ovs_port_uuids.as_slice()).await
 }
 
 fn iface_was_ovs_sys_iface(iface: &MergedInterface) -> bool {

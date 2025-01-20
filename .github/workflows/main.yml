@@ -204,27 +204,6 @@ jobs:
           path: test_artifacts/
           retention-days: 5
 
-  build_on_rust_1_66:
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Rust 1.66
-      run: rustup install 1.66
-
-    - name: Use rust vendoring
-      run: |
-        cd rust
-        wget -qO- https://github.com/nmstate/nmstate/releases/download/v2.2.36/nmstate-vendor-2.2.36-rust-1.66.tar.xz | tar xJ
-        mkdir .cargo
-        echo '[source.crates-io]' > .cargo/config.toml
-        echo 'replace-with = "vendored-sources"' >> .cargo/config.toml
-        echo '[source.vendored-sources]' >> .cargo/config.toml
-        echo 'directory = "vendor"' >> .cargo/config.toml
-
-    - name: Build on rust 1.66
-      run: cd rust && cargo +1.66 build --ignore-rust-version
-
   macos_gen_conf_build:
     strategy:
       fail-fast: true

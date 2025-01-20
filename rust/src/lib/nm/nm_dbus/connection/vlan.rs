@@ -4,13 +4,13 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 
 use log::error;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::super::{
     connection::DbusDictionary, ErrorKind, NmError, ToDbusValue,
 };
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingVlan {
@@ -21,7 +21,7 @@ pub struct NmSettingVlan {
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum NmSettingVlanFlag {
     ReorderHeaders = 1,
     Gvrp = 2,
@@ -106,7 +106,7 @@ impl ToDbusValue for NmSettingVlan {
 const NM_VLAN_PROTOCOL_802_1Q: &str = "802.1Q";
 const NM_VLAN_PROTOCOL_802_1AD: &str = "802.1ad";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum NmVlanProtocol {
     Dot1Q,

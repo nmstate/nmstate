@@ -13,7 +13,7 @@ pub(crate) fn parse_nm_dns(
 ) -> Result<Vec<String>, NmError> {
     let mut dns_srvs = Vec::new();
     for nm_dns_srv in Vec::<zvariant::OwnedValue>::try_from(value)? {
-        match nm_dns_srv.value_signature().as_str() {
+        match nm_dns_srv.value_signature().to_string().as_str() {
             "u" => match u32::try_from(nm_dns_srv) {
                 Ok(i) => {
                     dns_srvs.push(Ipv4Addr::from(u32::from_be(i)).to_string())
@@ -110,9 +110,11 @@ pub(crate) fn nm_ip_dns_to_value(
         if dns_srv.contains(':') {
             // is IPv6
             is_ipv6 = true;
-            zvariant::Array::new(zvariant::Signature::from_str_unchecked("ay"))
+            zvariant::Array::new(&zvariant::Signature::array(
+                &zvariant::Signature::U8,
+            ))
         } else {
-            zvariant::Array::new(zvariant::Signature::from_str_unchecked("u"))
+            zvariant::Array::new(&zvariant::Signature::U32)
         }
     } else {
         let e = NmError::new(
@@ -154,8 +156,7 @@ pub(crate) fn nm_ip_dns_to_value(
 pub(crate) fn nm_ip_dns_search_to_value(
     dns_searches: &[String],
 ) -> Result<zvariant::Value, NmError> {
-    let mut values =
-        zvariant::Array::new(zvariant::Signature::from_str_unchecked("s"));
+    let mut values = zvariant::Array::new(&zvariant::Signature::Str);
     for search in dns_searches {
         values.append(zvariant::Value::new(search))?;
     }
@@ -165,8 +166,7 @@ pub(crate) fn nm_ip_dns_search_to_value(
 pub(crate) fn nm_ip_dns_options_to_value(
     dns_options: &[String],
 ) -> Result<zvariant::Value, NmError> {
-    let mut values =
-        zvariant::Array::new(zvariant::Signature::from_str_unchecked("s"));
+    let mut values = zvariant::Array::new(&zvariant::Signature::Str);
     for option in dns_options {
         values.append(zvariant::Value::new(option))?;
     }

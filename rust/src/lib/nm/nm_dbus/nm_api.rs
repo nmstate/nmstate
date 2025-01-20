@@ -43,9 +43,9 @@ pub struct NmVersion {
 }
 
 impl NmApi<'_> {
-    pub fn new() -> Result<Self, NmError> {
+    pub async fn new() -> Result<Self, NmError> {
         Ok(Self {
-            dbus: NmDbus::new()?,
+            dbus: NmDbus::new().await?,
             checkpoint: None,
             cp_refresh_time: None,
             cp_timeout: 0,
@@ -63,22 +63,23 @@ impl NmApi<'_> {
         self.auto_cp_refresh = value;
     }
 
-    pub fn version(&self) -> Result<NmVersion, NmError> {
-        self.dbus.version().and_then(|ver| ver.parse())
+    pub async fn version(&self) -> Result<NmVersion, NmError> {
+        self.dbus.version().await.and_then(|ver| ver.parse())
     }
 
-    pub fn version_info(&self) -> Result<NmVersionInfo, NmError> {
+    pub async fn version_info(&self) -> Result<NmVersionInfo, NmError> {
         self.dbus
             .version_info()
+            .await
             .map(|version_info_arr| NmVersionInfo::from(&version_info_arr))
     }
 
-    pub fn checkpoint_create(
+    pub async fn checkpoint_create(
         &mut self,
         timeout: u32,
     ) -> Result<String, NmError> {
         debug!("checkpoint_create");
-        let cp = self.dbus.checkpoint_create(timeout)?;
+        let cp = self.dbus.checkpoint_create(timeout).await?;
         debug!("checkpoint created: {}", &cp);
         self.checkpoint = Some(cp.clone());
         self.cp_refresh_time = Some(std::time::Instant::now());
@@ -86,38 +87,41 @@ impl NmApi<'_> {
         Ok(cp)
     }
 
-    pub fn checkpoint_destroy(
+    pub async fn checkpoint_destroy(
         &mut self,
         checkpoint: &str,
     ) -> Result<(), NmError> {
         let mut checkpoint_to_destroy: String = checkpoint.to_string();
         if checkpoint_to_destroy.is_empty() {
-            checkpoint_to_destroy = self.last_active_checkpoint()?
+            checkpoint_to_destroy = self.last_active_checkpoint().await?
         }
         self.checkpoint = None;
         self.cp_refresh_time = None;
         debug!("checkpoint_destroy: {}", checkpoint_to_destroy);
-        self.dbus.checkpoint_destroy(checkpoint_to_destroy.as_str())
+        self.dbus
+            .checkpoint_destroy(checkpoint_to_destroy.as_str())
+            .await
     }
 
-    pub fn checkpoint_rollback(
+    pub async fn checkpoint_rollback(
         &mut self,
         checkpoint: &str,
     ) -> Result<(), NmError> {
         let mut checkpoint_to_rollback: String = checkpoint.to_string();
         if checkpoint_to_rollback.is_empty() {
-            checkpoint_to_rollback = self.last_active_checkpoint()?
+            checkpoint_to_rollback = self.last_active_checkpoint().await?
         }
         self.checkpoint = None;
         self.cp_refresh_time = None;
         debug!("checkpoint_rollback: {}", checkpoint_to_rollback);
         self.dbus
             .checkpoint_rollback(checkpoint_to_rollback.as_str())
+            .await
     }
 
-    fn last_active_checkpoint(&self) -> Result<String, NmError> {
+    async fn last_active_checkpoint(&self) -> Result<String, NmError> {
         debug!("last_active_checkpoint");
-        let mut checkpoints = self.dbus.checkpoints()?;
+        let mut checkpoints = self.dbus.checkpoints().await?;
         if !checkpoints.is_empty() {
             Ok(checkpoints.remove(0))
         } else {
@@ -128,51 +132,65 @@ impl NmApi<'_> {
         }
     }
 
-    pub fn connection_activate(&mut self, uuid: &str) -> Result<(), NmError> {
+    pub async fn connection_activate(
+        &mut self,
+        uuid: &str,
+    ) -> Result<(), NmError> {
         debug!("connection_activate: {}", uuid);
-        self.extend_timeout_if_required()?;
-        let nm_conn = self.dbus.get_conn_obj_path_by_uuid(uuid)?;
-        self.dbus.connection_activate(&nm_conn)
+        self.extend_timeout_if_required().await?;
+        let nm_conn = self.dbus.get_conn_obj_path_by_uuid(uuid).await?;
+        self.dbus.connection_activate(&nm_conn).await
     }
 
-    pub fn connection_deactivate(&mut self, uuid: &str) -> Result<(), NmError> {
+    pub async fn connection_deactivate(
+        &mut self,
+        uuid: &str,
+    ) -> Result<(), NmError> {
         debug!("connection_deactivate: {}", uuid);
-        self.extend_timeout_if_required()?;
-        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid) {
+        self.extend_timeout_if_required().await?;
+        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid).await {
             if !nm_ac.is_empty() {
-                self.dbus.connection_deactivate(&nm_ac)?;
+                self.dbus.connection_deactivate(&nm_ac).await?;
             }
         }
         Ok(())
     }
 
-    pub fn connections_get(&mut self) -> Result<Vec<NmConnection>, NmError> {
+    pub async fn connections_get(
+        &mut self,
+    ) -> Result<Vec<NmConnection>, NmError> {
         debug!("connections_get");
-        self.extend_timeout_if_required()?;
+        self.extend_timeout_if_required().await?;
         let mut nm_conns = Vec::new();
-        for nm_conn_obj_path in self.dbus.nm_conn_obj_paths_get()? {
+        for nm_conn_obj_path in self.dbus.nm_conn_obj_paths_get().await? {
             // Race: Connection might just been deleted, hence we ignore error
             // here
             if let Ok(c) = nm_con_get_from_obj_path(
                 &self.dbus.connection,
                 &nm_conn_obj_path,
-            ) {
+            )
+            .await
+            {
                 nm_conns.push(c);
             }
         }
         Ok(nm_conns)
     }
 
-    pub fn applied_connections_get(
+    pub async fn applied_connections_get(
         &mut self,
     ) -> Result<Vec<NmConnection>, NmError> {
         debug!("applied_connections_get");
-        self.extend_timeout_if_required()?;
-        let nm_dev_obj_paths = self.dbus.nm_dev_obj_paths_get()?;
+        self.extend_timeout_if_required().await?;
+        let nm_dev_obj_paths = self.dbus.nm_dev_obj_paths_get().await?;
         let mut nm_conns: Vec<NmConnection> = Vec::new();
         for nm_dev_obj_path in nm_dev_obj_paths {
-            self.extend_timeout_if_required()?;
-            match self.dbus.nm_dev_applied_connection_get(&nm_dev_obj_path) {
+            self.extend_timeout_if_required().await?;
+            match self
+                .dbus
+                .nm_dev_applied_connection_get(&nm_dev_obj_path)
+                .await
+            {
                 Ok(mut nm_conn) => {
                     // Fill the interface name from NmDevice if empty
                     if nm_conn
@@ -185,7 +203,8 @@ impl NmApi<'_> {
                             nm_dev_from_obj_path(
                                 &self.dbus.connection,
                                 &nm_dev_obj_path,
-                            ),
+                            )
+                            .await,
                             nm_conn.connection.as_mut(),
                         ) {
                             nm_set.iface_name = Some(nm_dev.name.clone());
@@ -205,42 +224,49 @@ impl NmApi<'_> {
         Ok(nm_conns)
     }
 
-    pub fn connection_add(
+    pub async fn connection_add(
         &mut self,
         nm_conn: &NmConnection,
         memory_only: bool,
     ) -> Result<(), NmError> {
         debug!("connection_add: {:?}", nm_conn);
-        self.extend_timeout_if_required()?;
+        self.extend_timeout_if_required().await?;
         if !nm_conn.obj_path.is_empty() {
-            self.dbus.connection_update(
-                nm_conn.obj_path.as_str(),
-                nm_conn,
-                memory_only,
-            )
+            self.dbus
+                .connection_update(
+                    nm_conn.obj_path.as_str(),
+                    nm_conn,
+                    memory_only,
+                )
+                .await
         } else {
-            self.dbus.connection_add(nm_conn, memory_only)
+            self.dbus.connection_add(nm_conn, memory_only).await
         }
     }
 
-    pub fn connection_delete(&mut self, uuid: &str) -> Result<(), NmError> {
+    pub async fn connection_delete(
+        &mut self,
+        uuid: &str,
+    ) -> Result<(), NmError> {
         debug!("connection_delete: {}", uuid);
-        self.extend_timeout_if_required()?;
-        if let Ok(con_obj_path) = self.dbus.get_conn_obj_path_by_uuid(uuid) {
+        self.extend_timeout_if_required().await?;
+        if let Ok(con_obj_path) =
+            self.dbus.get_conn_obj_path_by_uuid(uuid).await
+        {
             debug!("Found nm_connection {} for UUID {}", con_obj_path, uuid);
             if !con_obj_path.is_empty() {
-                self.dbus.connection_delete(&con_obj_path)?;
+                self.dbus.connection_delete(&con_obj_path).await?;
             }
         }
         Ok(())
     }
 
-    pub fn connection_reapply(
+    pub async fn connection_reapply(
         &mut self,
         nm_conn: &NmConnection,
     ) -> Result<(), NmError> {
         debug!("connection_reapply: {:?}", nm_conn);
-        self.extend_timeout_if_required()?;
+        self.extend_timeout_if_required().await?;
 
         // We cannot use `org.freedesktop.NetworkManager.GetDeviceByIpIface`
         // because OVS bridge/port/iface might hold identical device name.
@@ -249,8 +275,10 @@ impl NmApi<'_> {
             (nm_conn.iface_name(), nm_conn.iface_type())
         {
             let nm_dev_obj_path =
-                self.get_disk_obj_path(iface_name, nm_iface_type)?;
-            self.dbus.nm_dev_reapply(nm_dev_obj_path.as_str(), nm_conn)
+                self.get_disk_obj_path(iface_name, nm_iface_type).await?;
+            self.dbus
+                .nm_dev_reapply(nm_dev_obj_path.as_str(), nm_conn)
+                .await
         } else {
             Err(NmError::new(
                 ErrorKind::Bug,
@@ -262,18 +290,19 @@ impl NmApi<'_> {
         }
     }
 
-    pub fn active_connections_get(
+    pub async fn active_connections_get(
         &mut self,
     ) -> Result<Vec<NmActiveConnection>, NmError> {
         debug!("active_connections_get");
-        self.extend_timeout_if_required()?;
+        self.extend_timeout_if_required().await?;
         let mut nm_acs = Vec::new();
-        let nm_ac_obj_paths = self.dbus.active_connections()?;
+        let nm_ac_obj_paths = self.dbus.active_connections().await?;
         for nm_ac_obj_path in nm_ac_obj_paths {
             // Race condition: Active connection might just been deleted,
             // we ignore error here
             if let Ok(Some(nm_ac)) =
                 get_nm_ac_by_obj_path(&self.dbus.connection, &nm_ac_obj_path)
+                    .await
             {
                 debug!("Got active connection {:?}", nm_ac);
                 nm_acs.push(nm_ac);
@@ -282,7 +311,7 @@ impl NmApi<'_> {
         Ok(nm_acs)
     }
 
-    pub fn checkpoint_timeout_extend(
+    pub async fn checkpoint_timeout_extend(
         &self,
         checkpoint: &str,
         added_time_sec: u32,
@@ -293,14 +322,17 @@ impl NmApi<'_> {
         );
         self.dbus
             .checkpoint_timeout_extend(checkpoint, added_time_sec)
+            .await
     }
 
-    pub fn devices_get(&mut self) -> Result<Vec<NmDevice>, NmError> {
+    pub async fn devices_get(&mut self) -> Result<Vec<NmDevice>, NmError> {
         debug!("devices_get");
-        self.extend_timeout_if_required()?;
+        self.extend_timeout_if_required().await?;
         let mut ret = Vec::new();
-        for nm_dev_obj_path in &self.dbus.nm_dev_obj_paths_get()? {
-            match nm_dev_from_obj_path(&self.dbus.connection, nm_dev_obj_path) {
+        for nm_dev_obj_path in &self.dbus.nm_dev_obj_paths_get().await? {
+            match nm_dev_from_obj_path(&self.dbus.connection, nm_dev_obj_path)
+                .await
+            {
                 Ok(nm_dev) => {
                     debug!("Got Device {:?}", nm_dev);
                     ret.push(nm_dev);
@@ -318,25 +350,25 @@ impl NmApi<'_> {
         Ok(ret)
     }
 
-    pub fn device_delete(
+    pub async fn device_delete(
         &mut self,
         nm_dev_obj_path: &str,
     ) -> Result<(), NmError> {
-        self.extend_timeout_if_required()?;
-        nm_dev_delete(&self.dbus.connection, nm_dev_obj_path)
+        self.extend_timeout_if_required().await?;
+        nm_dev_delete(&self.dbus.connection, nm_dev_obj_path).await
     }
 
-    pub fn device_lldp_neighbor_get(
+    pub async fn device_lldp_neighbor_get(
         &mut self,
         nm_dev_obj_path: &str,
     ) -> Result<Vec<NmLldpNeighbor>, NmError> {
-        self.extend_timeout_if_required()?;
-        nm_dev_get_llpd(&self.dbus.connection, nm_dev_obj_path)
+        self.extend_timeout_if_required().await?;
+        nm_dev_get_llpd(&self.dbus.connection, nm_dev_obj_path).await
     }
 
     // If any device is with NewActivation or IpConfig state,
     // we wait its activation.
-    pub fn wait_checkpoint_rollback(
+    pub async fn wait_checkpoint_rollback(
         &mut self,
         // TODO: return error when waiting_nm_dev is not changing for given
         // time.
@@ -346,7 +378,7 @@ impl NmApi<'_> {
         let start = Instant::now();
         while start.elapsed() <= Duration::from_secs(timeout.into()) {
             let mut waiting_nm_dev: Vec<&NmDevice> = Vec::new();
-            let nm_devs = self.devices_get()?;
+            let nm_devs = self.devices_get().await?;
             for nm_dev in &nm_devs {
                 if nm_dev.state_reason == NmDeviceStateReason::NewActivation
                     || nm_dev.state == NmDeviceState::Deactivating
@@ -361,7 +393,7 @@ impl NmApi<'_> {
                     "Waiting rollback on these devices {:?}",
                     waiting_nm_dev
                 );
-                std::thread::sleep(Duration::from_millis(500));
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
         }
         Err(NmError::new(
@@ -370,19 +402,22 @@ impl NmApi<'_> {
         ))
     }
 
-    pub fn get_dns_configuration(
+    pub async fn get_dns_configuration(
         &mut self,
     ) -> Result<Vec<NmDnsEntry>, NmError> {
         let mut ret: Vec<NmDnsEntry> = Vec::new();
-        self.extend_timeout_if_required()?;
-        for dns_value in self.dbus.get_dns_configuration()? {
+        self.extend_timeout_if_required().await?;
+        for dns_value in self.dbus.get_dns_configuration().await? {
             ret.push(NmDnsEntry::try_from(dns_value)?);
         }
         Ok(ret)
     }
 
-    pub fn hostname_set(&mut self, hostname: &str) -> Result<(), NmError> {
-        self.extend_timeout_if_required()?;
+    pub async fn hostname_set(
+        &mut self,
+        hostname: &str,
+    ) -> Result<(), NmError> {
+        self.extend_timeout_if_required().await?;
         if hostname.is_empty() {
             // Due to bug https://bugzilla.redhat.com/2090946
             // NetworkManager daemon cannot remove static hostname, hence we
@@ -394,11 +429,11 @@ impl NmApi<'_> {
             }
             Ok(())
         } else {
-            self.dbus.hostname_set(hostname)
+            self.dbus.hostname_set(hostname).await
         }
     }
 
-    pub fn extend_timeout_if_required(&mut self) -> Result<(), NmError> {
+    pub async fn extend_timeout_if_required(&mut self) -> Result<(), NmError> {
         if let (Some(cp_refresh_time), Some(checkpoint)) =
             (self.cp_refresh_time.as_ref(), self.checkpoint.as_ref())
         {
@@ -408,35 +443,38 @@ impl NmApi<'_> {
                     >= self.cp_timeout as u64 / 2
             {
                 log::debug!("Extending checkpoint timeout");
-                self.checkpoint_timeout_extend(checkpoint, self.cp_timeout)?;
+                self.checkpoint_timeout_extend(checkpoint, self.cp_timeout)
+                    .await?;
                 self.cp_refresh_time = Some(Instant::now());
             }
         }
         Ok(())
     }
 
-    pub fn get_global_dns_configuration(
+    pub async fn get_global_dns_configuration(
         &self,
     ) -> Result<NmGlobalDnsConfig, NmError> {
-        NmGlobalDnsConfig::try_from(self.dbus.global_dns_configuration()?)
+        NmGlobalDnsConfig::try_from(self.dbus.global_dns_configuration().await?)
     }
 
-    pub fn set_global_dns_configuration(
+    pub async fn set_global_dns_configuration(
         &mut self,
         config: &NmGlobalDnsConfig,
     ) -> Result<(), NmError> {
-        self.extend_timeout_if_required()?;
-        self.dbus.set_global_dns_configuration(config.to_value()?)
+        self.extend_timeout_if_required().await?;
+        self.dbus
+            .set_global_dns_configuration(config.to_value()?)
+            .await
     }
 
     // We have to search all NmDevice because OVS port might hold identical
     // interface name as OVS system interface.
-    fn get_disk_obj_path(
+    async fn get_disk_obj_path(
         &mut self,
         iface_name: &str,
         nm_iface_type: &NmIfaceType,
     ) -> Result<String, NmError> {
-        if let Some(nm_dev) = self.devices_get()?.into_iter().find(|d| {
+        if let Some(nm_dev) = self.devices_get().await?.into_iter().find(|d| {
             d.name == iface_name
                 && ((&d.iface_type == nm_iface_type)
                     || ([NmIfaceType::Veth, NmIfaceType::Ethernet]
@@ -541,14 +579,16 @@ impl std::fmt::Display for NmVersion {
     }
 }
 
-fn get_nm_ac_obj_path_by_uuid(
-    dbus: &NmDbus,
+async fn get_nm_ac_obj_path_by_uuid(
+    dbus: &NmDbus<'_>,
     uuid: &str,
 ) -> Result<String, NmError> {
-    let nm_ac_obj_paths = dbus.active_connections()?;
+    let nm_ac_obj_paths = dbus.active_connections().await?;
 
     for nm_ac_obj_path in nm_ac_obj_paths {
-        if nm_ac_obj_path_uuid_get(&dbus.connection, &nm_ac_obj_path)? == uuid {
+        if nm_ac_obj_path_uuid_get(&dbus.connection, &nm_ac_obj_path).await?
+            == uuid
+        {
             return Ok(nm_ac_obj_path);
         }
     }

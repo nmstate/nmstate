@@ -47,7 +47,7 @@ const NM_DEVICE_TYPE_VRF: u32 = 31;
 const NM_DEVICE_TYPE_LOOPBACK: u32 = 32;
 const NM_DEVICE_TYPE_IPVLAN: u32 = 34;
 
-fn nm_dev_name_get(
+async fn nm_dev_name_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<String, NmError> {
@@ -56,8 +56,9 @@ fn nm_dev_name_get(
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
         NM_DBUS_INTERFACE_DEV,
-    )?;
-    match proxy.get_property::<String>("Interface") {
+    )
+    .await?;
+    match proxy.get_property::<String>("Interface").await {
         Ok(n) => Ok(n),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
@@ -68,7 +69,7 @@ fn nm_dev_name_get(
     }
 }
 
-fn nm_dev_iface_type_get(
+async fn nm_dev_iface_type_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<NmIfaceType, NmError> {
@@ -77,8 +78,9 @@ fn nm_dev_iface_type_get(
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
         NM_DBUS_INTERFACE_DEV,
-    )?;
-    match proxy.get_property::<u32>("DeviceType") {
+    )
+    .await?;
+    match proxy.get_property::<u32>("DeviceType").await {
         Ok(i) => Ok(match i {
             // Using the NM_SETTING_*_NAME string
             NM_DEVICE_TYPE_UNKNOWN => NmIfaceType::Other("unknown".to_string()),
@@ -120,7 +122,7 @@ fn nm_dev_iface_type_get(
     }
 }
 
-fn nm_dev_state_reason_get(
+async fn nm_dev_state_reason_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<(NmDeviceState, NmDeviceStateReason), NmError> {
@@ -129,8 +131,9 @@ fn nm_dev_state_reason_get(
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
         NM_DBUS_INTERFACE_DEV,
-    )?;
-    match proxy.get_property::<(u32, u32)>("StateReason") {
+    )
+    .await?;
+    match proxy.get_property::<(u32, u32)>("StateReason").await {
         Ok((state, state_reason)) => Ok((state.into(), state_reason.into())),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
@@ -141,7 +144,7 @@ fn nm_dev_state_reason_get(
     }
 }
 
-fn nm_dev_is_mac_vtap_get(
+async fn nm_dev_is_mac_vtap_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<bool, NmError> {
@@ -150,9 +153,10 @@ fn nm_dev_is_mac_vtap_get(
         dbus_conn,
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
-        &dbus_iface,
-    )?;
-    match proxy.get_property::<bool>("Tab") {
+        dbus_iface.as_str(),
+    )
+    .await?;
+    match proxy.get_property::<bool>("Tab").await {
         Ok(v) => Ok(v),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
@@ -163,7 +167,7 @@ fn nm_dev_is_mac_vtap_get(
     }
 }
 
-fn nm_dev_real_get(
+async fn nm_dev_real_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<bool, NmError> {
@@ -172,8 +176,9 @@ fn nm_dev_real_get(
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
         NM_DBUS_INTERFACE_DEV,
-    )?;
-    match proxy.get_property::<bool>("Real") {
+    )
+    .await?;
+    match proxy.get_property::<bool>("Real").await {
         Ok(r) => Ok(r),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
@@ -182,29 +187,30 @@ fn nm_dev_real_get(
     }
 }
 
-pub(crate) fn nm_dev_from_obj_path(
+pub(crate) async fn nm_dev_from_obj_path(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<NmDevice, NmError> {
-    let real = nm_dev_real_get(dbus_conn, obj_path)?;
-    let (state, state_reason) = nm_dev_state_reason_get(dbus_conn, obj_path)?;
+    let real = nm_dev_real_get(dbus_conn, obj_path).await?;
+    let (state, state_reason) =
+        nm_dev_state_reason_get(dbus_conn, obj_path).await?;
     let mut dev = NmDevice {
-        name: nm_dev_name_get(dbus_conn, obj_path)?,
-        iface_type: nm_dev_iface_type_get(dbus_conn, obj_path)?,
+        name: nm_dev_name_get(dbus_conn, obj_path).await?,
+        iface_type: nm_dev_iface_type_get(dbus_conn, obj_path).await?,
         state,
         state_reason,
         obj_path: obj_path.to_string(),
         is_mac_vtap: false,
         real,
-        mac_address: nm_dev_get_mac_address(dbus_conn, obj_path)?,
+        mac_address: nm_dev_get_mac_address(dbus_conn, obj_path).await?,
     };
     if dev.iface_type == NmIfaceType::Macvlan {
-        dev.is_mac_vtap = nm_dev_is_mac_vtap_get(dbus_conn, obj_path)?;
+        dev.is_mac_vtap = nm_dev_is_mac_vtap_get(dbus_conn, obj_path).await?;
     }
     Ok(dev)
 }
 
-pub(crate) fn nm_dev_delete(
+pub(crate) async fn nm_dev_delete(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<(), NmError> {
@@ -213,8 +219,9 @@ pub(crate) fn nm_dev_delete(
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
         NM_DBUS_INTERFACE_DEV,
-    )?;
-    match proxy.call::<(), ()>("Delete", &()) {
+    )
+    .await?;
+    match proxy.call::<&str, (), ()>("Delete", &()).await {
         Ok(()) => Ok(()),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
@@ -223,7 +230,7 @@ pub(crate) fn nm_dev_delete(
     }
 }
 
-pub(crate) fn nm_dev_get_llpd(
+pub(crate) async fn nm_dev_get_llpd(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<Vec<NmLldpNeighbor>, NmError> {
@@ -232,8 +239,12 @@ pub(crate) fn nm_dev_get_llpd(
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
         NM_DBUS_INTERFACE_DEV,
-    )?;
-    match proxy.get_property::<Vec<DbusDictionary>>("LldpNeighbors") {
+    )
+    .await?;
+    match proxy
+        .get_property::<Vec<DbusDictionary>>("LldpNeighbors")
+        .await
+    {
         Ok(v) => {
             let mut ret = Vec::new();
             for value in v {
@@ -250,7 +261,7 @@ pub(crate) fn nm_dev_get_llpd(
     }
 }
 
-fn nm_dev_get_mac_address(
+async fn nm_dev_get_mac_address(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<String, NmError> {
@@ -259,8 +270,9 @@ fn nm_dev_get_mac_address(
         NM_DBUS_INTERFACE_ROOT,
         obj_path,
         NM_DBUS_INTERFACE_DEV,
-    )?;
-    match proxy.get_property::<String>("HwAddress") {
+    )
+    .await?;
+    match proxy.get_property::<String>("HwAddress").await {
         Ok(v) => Ok(v),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,

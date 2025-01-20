@@ -3,12 +3,12 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use zvariant::Value;
 
 use super::super::{connection::DbusDictionary, NmError, ToDbusValue};
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingBond {
@@ -44,7 +44,7 @@ impl ToDbusValue for NmSettingBond {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct NmSettingBondPort {
     pub priority: Option<i32>,

@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 
 use log::warn;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use zvariant::{Signature, Type};
 
 use super::super::{
@@ -46,6 +46,15 @@ pub(crate) type NmConnectionDbusOwnedValue =
 
 pub(crate) type DbusDictionary = HashMap<String, zvariant::OwnedValue>;
 
+pub(crate) const DBUS_ASV_SIGNATURE: &Signature = &Signature::Dict {
+    key: zvariant::signature::Child::Static {
+        child: &Signature::Str,
+    },
+    value: zvariant::signature::Child::Static {
+        child: &Signature::Variant,
+    },
+};
+
 #[cfg(feature = "query_apply")]
 pub(crate) type NmConnectionDbusValue<'a> =
     HashMap<&'a str, HashMap<&'a str, zvariant::Value<'a>>>;
@@ -77,7 +86,7 @@ fn from_u32_to_vec_nm_conn_flags(i: u32) -> Vec<NmSettingsConnectionFlag> {
     ret
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "NmConnectionDbusOwnedValue")]
 #[non_exhaustive]
 pub struct NmConnection {
@@ -121,9 +130,8 @@ pub struct NmConnection {
 // The signature is the same as the NmConnectionDbusOwnedValue because we are
 // going through the try_from
 impl Type for NmConnection {
-    fn signature() -> Signature<'static> {
-        NmConnectionDbusOwnedValue::signature()
-    }
+    const SIGNATURE: &'static Signature =
+        &Signature::static_dict(&Signature::Str, DBUS_ASV_SIGNATURE);
 }
 
 impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
@@ -337,7 +345,7 @@ impl NmConnection {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingConnection {
@@ -447,7 +455,7 @@ impl NmSettingConnection {
 }
 
 #[cfg(feature = "query_apply")]
-pub(crate) fn nm_con_get_from_obj_path(
+pub(crate) async fn nm_con_get_from_obj_path(
     dbus_con: &zbus::Connection,
     con_obj_path: &str,
 ) -> Result<NmConnection, NmError> {
@@ -456,12 +464,19 @@ pub(crate) fn nm_con_get_from_obj_path(
         super::super::dbus::NM_DBUS_INTERFACE_ROOT,
         con_obj_path,
         super::super::dbus::NM_DBUS_INTERFACE_SETTING,
-    )?;
-    let mut nm_conn = proxy.call::<(), NmConnection>("GetSettings", &())?;
+    )
+    .await?;
+    let mut nm_conn = proxy
+        .call::<&str, (), NmConnection>("GetSettings", &())
+        .await?;
     nm_conn.obj_path = con_obj_path.to_string();
     if let Some(ieee_8021x_conf) = nm_conn.ieee8021x.as_mut() {
         if let Ok(nm_secrets) = proxy
-            .call::<&str, NmConnectionDbusOwnedValue>("GetSecrets", &"802-1x")
+            .call::<&str, &str, NmConnectionDbusOwnedValue>(
+                "GetSecrets",
+                &"802-1x",
+            )
+            .await
         {
             if let Some(nm_secret) = nm_secrets.get("802-1x") {
                 ieee_8021x_conf.fill_secrets(nm_secret);
@@ -470,7 +485,11 @@ pub(crate) fn nm_con_get_from_obj_path(
     }
     if let Some(macsec_conf) = nm_conn.macsec.as_mut() {
         if let Ok(nm_secrets) = proxy
-            .call::<&str, NmConnectionDbusOwnedValue>("GetSecrets", &"macsec")
+            .call::<&str, &str, NmConnectionDbusOwnedValue>(
+                "GetSecrets",
+                &"macsec",
+            )
+            .await
         {
             if let Some(nm_secret) = nm_secrets.get("macsec") {
                 macsec_conf.fill_secrets(nm_secret);
@@ -478,21 +497,25 @@ pub(crate) fn nm_con_get_from_obj_path(
         }
     }
     if let Some(vpn_conf) = nm_conn.vpn.as_mut() {
-        if let Ok(nm_secrets) =
-            proxy.call::<&str, NmConnectionDbusOwnedValue>("GetSecrets", &"vpn")
+        if let Ok(nm_secrets) = proxy
+            .call::<&str, &str, NmConnectionDbusOwnedValue>(
+                "GetSecrets",
+                &"vpn",
+            )
+            .await
         {
             if let Some(nm_secret) = nm_secrets.get("vpn") {
                 vpn_conf.fill_secrets(nm_secret);
             }
         }
     }
-    if let Ok(flags) = proxy.get_property::<u32>("Flags") {
+    if let Ok(flags) = proxy.get_property::<u32>("Flags").await {
         nm_conn.flags = from_u32_to_vec_nm_conn_flags(flags);
     }
     Ok(nm_conn)
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmRange {
@@ -514,10 +537,7 @@ impl TryFrom<DbusDictionary> for NmRange {
 
 impl NmRange {
     pub fn to_value(&self) -> Result<zvariant::Value, NmError> {
-        let mut ret = zvariant::Dict::new(
-            zvariant::Signature::from_str_unchecked("s"),
-            zvariant::Signature::from_str_unchecked("v"),
-        );
+        let mut ret = zvariant::Dict::new(&Signature::Str, &Signature::Variant);
         ret.append(
             zvariant::Value::new("start"),
             zvariant::Value::new(zvariant::Value::U64(self.start)),

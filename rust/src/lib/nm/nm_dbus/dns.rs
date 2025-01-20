@@ -76,8 +76,8 @@ impl NmGlobalDnsConfig {
 
     pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
         let mut ret = zvariant::Dict::new(
-            zvariant::Signature::from_str_unchecked("s"),
-            zvariant::Signature::from_str_unchecked("v"),
+            &zvariant::Signature::Str,
+            &zvariant::Signature::Variant,
         );
         if !self.searches.is_empty() {
             ret.append(
@@ -133,8 +133,8 @@ pub struct NmGlobalDnsDomainConfig {
 impl NmGlobalDnsDomainConfig {
     pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
         let mut ret = zvariant::Dict::new(
-            zvariant::Signature::from_str_unchecked("s"),
-            zvariant::Signature::from_str_unchecked("v"),
+            &zvariant::Signature::Str,
+            &zvariant::Signature::Variant,
         );
         if !self.servers.is_empty() {
             ret.append(
@@ -188,8 +188,8 @@ fn global_dns_domain_configs_to_value(
     configs: &HashMap<String, NmGlobalDnsDomainConfig>,
 ) -> Result<zvariant::Value, NmError> {
     let mut ret = zvariant::Dict::new(
-        zvariant::Signature::from_str_unchecked("s"),
-        zvariant::Signature::from_str_unchecked("v"),
+        &zvariant::Signature::Str,
+        &zvariant::Signature::Variant,
     );
     for (domain, config) in configs.iter() {
         ret.append(

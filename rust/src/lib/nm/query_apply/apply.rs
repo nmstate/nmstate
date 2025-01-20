@@ -41,16 +41,16 @@ pub(crate) async fn nm_apply(
     checkpoint: &str,
     timeout: u32,
 ) -> Result<(), NmstateError> {
-    let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
     let mut nm_route_remove_needs_deactivate = true;
 
-    check_nm_version(&nm_api, &mut nm_route_remove_needs_deactivate);
+    check_nm_version(&nm_api, &mut nm_route_remove_needs_deactivate).await;
 
     nm_api.set_checkpoint(checkpoint, timeout);
     nm_api.set_checkpoint_auto_refresh(true);
 
     if !merged_state.memory_only {
-        delete_ifaces(&mut nm_api, merged_state)?;
+        delete_ifaces(&mut nm_api, merged_state).await?;
     }
 
     if let Some(hostname) = merged_state
@@ -65,16 +65,22 @@ pub(crate) async fn nm_apply(
                 ignoring"
             );
         } else {
-            nm_api.hostname_set(hostname).map_err(nm_error_to_nmstate)?;
+            nm_api
+                .hostname_set(hostname)
+                .await
+                .map_err(nm_error_to_nmstate)?;
         }
     }
 
-    let exist_nm_conns =
-        nm_api.connections_get().map_err(nm_error_to_nmstate)?;
+    let exist_nm_conns = nm_api
+        .connections_get()
+        .await
+        .map_err(nm_error_to_nmstate)?;
     let nm_acs = nm_api
         .active_connections_get()
+        .await
         .map_err(nm_error_to_nmstate)?;
-    let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
+    let nm_devs = nm_api.devices_get().await.map_err(nm_error_to_nmstate)?;
 
     let mut merged_state = merged_state.clone();
 
@@ -86,7 +92,7 @@ pub(crate) async fn nm_apply(
         || merged_state.dns.is_desired()
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
     {
-        purge_global_dns_config(&mut nm_api)?;
+        purge_global_dns_config(&mut nm_api).await?;
 
         if merged_state.dns.is_search_or_option_only() {
             log::info!(
@@ -113,7 +119,8 @@ pub(crate) async fn nm_apply(
                     merged_state.dns.servers.as_slice(),
                     merged_state.dns.searches.as_slice(),
                     merged_state.dns.options.as_slice(),
-                )?;
+                )
+                .await?;
             }
         } else if merged_state.dns.is_purge() {
             // Also need to purge interface level DNS
@@ -125,7 +132,8 @@ pub(crate) async fn nm_apply(
                 merged_state.dns.servers.as_slice(),
                 merged_state.dns.searches.as_slice(),
                 merged_state.dns.options.as_slice(),
-            )?;
+            )
+            .await?;
         }
     }
     let PerparedNmConnections {
@@ -160,41 +168,45 @@ pub(crate) async fn nm_apply(
     deactivate_nm_profiles(
         &mut nm_api,
         nm_conns_to_deactivate_first.as_slice(),
-    )?;
+    )
+    .await?;
 
     save_nm_profiles(
         &mut nm_api,
         nm_conns_to_store.as_slice(),
         merged_state.memory_only,
-    )?;
+    )
+    .await?;
     if !merged_state.memory_only {
-        delete_exist_profiles(
-            &mut nm_api,
-            &exist_nm_conns,
-            &nm_conns_to_store,
-        )?;
+        delete_exist_profiles(&mut nm_api, &exist_nm_conns, &nm_conns_to_store)
+            .await?;
         delete_orphan_ovs_ports(
             &mut nm_api,
             &merged_state.interfaces,
             &exist_nm_conns,
             &nm_conns_to_activate,
-        )?;
+        )
+        .await?;
     }
 
     activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice()).await?;
 
-    deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
+    deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())
+        .await?;
 
     apply_dispatch_script(&merged_state.interfaces)?;
 
     Ok(())
 }
 
-fn delete_ifaces(
-    nm_api: &mut NmApi,
+async fn delete_ifaces(
+    nm_api: &mut NmApi<'_>,
     merged_state: &MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
+    let all_nm_conns = nm_api
+        .connections_get()
+        .await
+        .map_err(nm_error_to_nmstate)?;
 
     let nm_conns_name_type_index =
         create_index_for_nm_conns_by_name_type(&all_nm_conns);
@@ -321,19 +333,20 @@ fn delete_ifaces(
     for uuid in &uuids_to_delete {
         nm_api
             .connection_delete(uuid)
+            .await
             .map_err(nm_error_to_nmstate)?;
     }
 
-    delete_orphan_ports(nm_api, &uuids_to_delete)?;
-    delete_remain_virtual_interface_as_desired(nm_api, merged_state)?;
+    delete_orphan_ports(nm_api, &uuids_to_delete).await?;
+    delete_remain_virtual_interface_as_desired(nm_api, merged_state).await?;
     Ok(())
 }
 
-fn delete_remain_virtual_interface_as_desired(
-    nm_api: &mut NmApi,
+async fn delete_remain_virtual_interface_as_desired(
+    nm_api: &mut NmApi<'_>,
     merged_state: &MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
+    let nm_devs = nm_api.devices_get().await.map_err(nm_error_to_nmstate)?;
     let nm_devs_indexed = create_index_for_nm_devs(&nm_devs);
     // Interfaces created by non-NM tools will not be deleted by connection
     // deletion, remove manually.
@@ -361,7 +374,7 @@ fn delete_remain_virtual_interface_as_desired(
                 );
                 // There might be an race with on-going profile/connection
                 // deletion, verification will raise error for it later.
-                if let Err(e) = nm_api.device_delete(&nm_dev.obj_path) {
+                if let Err(e) = nm_api.device_delete(&nm_dev.obj_path).await {
                     log::debug!("Failed to delete interface {:?}", e);
                 }
             }
@@ -371,12 +384,15 @@ fn delete_remain_virtual_interface_as_desired(
 }
 
 // If any connection still referring to deleted UUID, we should delete it also
-fn delete_orphan_ports(
-    nm_api: &mut NmApi,
+async fn delete_orphan_ports(
+    nm_api: &mut NmApi<'_>,
     uuids_deleted: &HashSet<&str>,
 ) -> Result<(), NmstateError> {
-    let mut uuids_to_delete = Vec::new();
-    let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
+    let mut uuids_to_delete: Vec<&str> = Vec::new();
+    let all_nm_conns = nm_api
+        .connections_get()
+        .await
+        .map_err(nm_error_to_nmstate)?;
     for nm_conn in &all_nm_conns {
         if nm_conn.iface_type() != Some(&NmIfaceType::OvsPort) {
             continue;
@@ -398,6 +414,7 @@ fn delete_orphan_ports(
     for uuid in &uuids_to_delete {
         nm_api
             .connection_delete(uuid)
+            .await
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
@@ -466,8 +483,11 @@ fn gen_nm_conn_need_to_deactivate_first(
     ret
 }
 
-fn check_nm_version(nm_api: &NmApi, route_remove_needs_deactivate: &mut bool) {
-    let version = if let Ok(ver_info) = nm_api.version_info() {
+async fn check_nm_version(
+    nm_api: &NmApi<'_>,
+    route_remove_needs_deactivate: &mut bool,
+) {
+    let version = if let Ok(ver_info) = nm_api.version_info().await {
         *route_remove_needs_deactivate = !ver_info
             .has_capability(NmVersionInfo::CAPABILITY_SYNC_ROUTE_WITH_TABLE);
         Ok(ver_info.version())
@@ -475,14 +495,15 @@ fn check_nm_version(nm_api: &NmApi, route_remove_needs_deactivate: &mut bool) {
         // VersionInfo was added to NM 1.42. As we support 1.40+, fallback to
         // parsing from Version string if VersionInfo is not available.
         *route_remove_needs_deactivate = true;
-        nm_api.version()
+        nm_api.version().await
     };
 
     let min = NmVersion::new(1, 40, 0);
     if let Ok(version) = version {
         if version < min {
             log::warn!(
-                "Unsupported NetworkManager version {version}, expecting >= {min}"
+                "Unsupported NetworkManager version {version}, \
+                expecting >= {min}"
             );
         }
     } else {

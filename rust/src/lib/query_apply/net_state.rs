@@ -33,14 +33,50 @@ impl NetworkState {
     /// Not available for `kernel only` mode.
     /// Only available for feature `query_apply`.
     pub fn checkpoint_rollback(checkpoint: &str) -> Result<(), NmstateError> {
-        nm_checkpoint_rollback(checkpoint)
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .map_err(|e| {
+                NmstateError::new(
+                    ErrorKind::Bug,
+                    format!("tokio::runtime::Builder failed with {e}"),
+                )
+            })?;
+        rt.block_on(Self::checkpoint_rollback_async(checkpoint))
+    }
+
+    /// Rollback a checkpoint.
+    /// Not available for `kernel only` mode.
+    /// Only available for feature `query_apply`.
+    pub async fn checkpoint_rollback_async(
+        checkpoint: &str,
+    ) -> Result<(), NmstateError> {
+        nm_checkpoint_rollback(checkpoint).await
     }
 
     /// Commit a checkpoint.
     /// Not available for `kernel only` mode.
     /// Only available for feature `query_apply`.
     pub fn checkpoint_commit(checkpoint: &str) -> Result<(), NmstateError> {
-        nm_checkpoint_destroy(checkpoint)
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .map_err(|e| {
+                NmstateError::new(
+                    ErrorKind::Bug,
+                    format!("tokio::runtime::Builder failed with {e}"),
+                )
+            })?;
+        rt.block_on(Self::checkpoint_commit_async(checkpoint))
+    }
+
+    /// Commit a checkpoint.
+    /// Not available for `kernel only` mode.
+    /// Only available for feature `query_apply`.
+    pub async fn checkpoint_commit_async(
+        checkpoint: &str,
+    ) -> Result<(), NmstateError> {
+        nm_checkpoint_destroy(checkpoint).await
     }
 
     /// Retrieve the `NetworkState`.
@@ -80,7 +116,7 @@ impl NetworkState {
             }
         }
         if !self.kernel_only {
-            let nm_state = nm_retrieve(self.running_config_only)?;
+            let nm_state = nm_retrieve(self.running_config_only).await?;
             // TODO: Priority handling
             self.update_state(&nm_state);
         }
@@ -187,7 +223,7 @@ impl NetworkState {
             DEFAULT_ROLLBACK_TIMEOUT
         };
 
-        let checkpoint = match nm_checkpoint_create(timeout) {
+        let checkpoint = match nm_checkpoint_create(timeout).await {
             Ok(c) => c,
             Err(e) => {
                 if e.kind().can_retry() {
@@ -196,7 +232,7 @@ impl NetworkState {
                         RETRY_NM_INTERVAL_MILLISECONDS,
                     ))
                     .await;
-                    nm_checkpoint_create(timeout)?
+                    nm_checkpoint_create(timeout).await?
                 } else {
                     return Err(e);
                 }
@@ -271,7 +307,7 @@ impl NetworkState {
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
         with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || async {
-            nm_checkpoint_timeout_extend(checkpoint, timeout)?;
+            nm_checkpoint_timeout_extend(checkpoint, timeout).await?;
             nm_apply(merged_state, checkpoint, timeout).await?;
             if ovsdb_is_running() {
                 ovsdb_apply_global_conf(merged_state)?;
@@ -286,7 +322,8 @@ impl NetworkState {
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,
                     retry_count,
                     || async {
-                        nm_checkpoint_timeout_extend(checkpoint, timeout)?;
+                        nm_checkpoint_timeout_extend(checkpoint, timeout)
+                            .await?;
                         let mut new_cur_net_state = cur_net_state.clone();
                         new_cur_net_state.set_include_secrets(true);
                         new_cur_net_state.retrieve_async().await?;
@@ -405,7 +442,7 @@ where
     match func().await {
         Ok(()) => {
             if !no_commit {
-                nm_checkpoint_destroy(checkpoint)?;
+                nm_checkpoint_destroy(checkpoint).await?;
 
                 log::info!("Destroyed checkpoint {}", checkpoint);
             } else {
@@ -414,7 +451,7 @@ where
             Ok(())
         }
         Err(e) => {
-            if let Err(e) = nm_checkpoint_rollback(checkpoint) {
+            if let Err(e) = nm_checkpoint_rollback(checkpoint).await {
                 log::warn!("nm_checkpoint_rollback() failed: {}", e);
             }
             log::info!("Rollbacked to checkpoint {}", checkpoint);

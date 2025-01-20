@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::super::NmError;
 
@@ -34,7 +34,9 @@ pub(crate) const NM_SETTING_WIREGUARD_SETTING_NAME: &str = "wireguard";
 pub(crate) const NM_SETTING_WIFI_P2P_SETTING_NAME: &str = "wifi-p2p";
 pub(crate) const NM_SETTING_IPVLAN_SETTING_NAME: &str = "ipvlan";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize,
+)]
 #[non_exhaustive]
 pub enum NmIfaceType {
     #[default]

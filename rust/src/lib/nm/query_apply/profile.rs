@@ -12,8 +12,8 @@ use crate::{ErrorKind, NmstateError};
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
 
-pub(crate) fn delete_exist_profiles(
-    nm_api: &mut NmApi,
+pub(crate) async fn delete_exist_profiles(
+    nm_api: &mut NmApi<'_>,
     exist_nm_conns: &[NmConnection],
     nm_conns: &[NmConnection],
 ) -> Result<(), NmstateError> {
@@ -82,11 +82,11 @@ pub(crate) fn delete_exist_profiles(
             }
         }
     }
-    delete_profiles(nm_api, &uuids_to_delete)
+    delete_profiles(nm_api, &uuids_to_delete).await
 }
 
-pub(crate) fn save_nm_profiles(
-    nm_api: &mut NmApi,
+pub(crate) async fn save_nm_profiles(
+    nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
     memory_only: bool,
 ) -> Result<(), NmstateError> {
@@ -110,6 +110,7 @@ pub(crate) fn save_nm_profiles(
         }
         nm_api
             .connection_add(nm_conn, memory_only)
+            .await
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
@@ -122,6 +123,7 @@ pub(crate) async fn activate_nm_profiles(
     let mut nm_conns = nm_conns.to_vec();
     let nm_acs = nm_api
         .active_connections_get()
+        .await
         .map_err(nm_error_to_nmstate)?;
     let nm_ac_uuids: Vec<&str> =
         nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
@@ -132,7 +134,8 @@ pub(crate) async fn activate_nm_profiles(
                 nm_api,
                 nm_conns.as_slice(),
                 nm_ac_uuids.as_slice(),
-            )?;
+            )
+            .await?;
             if remain_nm_conns.is_empty() {
                 break;
             }
@@ -149,6 +152,7 @@ pub(crate) async fn activate_nm_profiles(
             for _ in 0..wait_internal {
                 nm_api
                     .extend_timeout_if_required()
+                    .await
                     .map_err(nm_error_to_nmstate)?;
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
@@ -160,8 +164,8 @@ pub(crate) async fn activate_nm_profiles(
 }
 
 // Return list of activation failed `NmConnection` which we can retry
-fn _activate_nm_profiles(
-    nm_api: &mut NmApi,
+async fn _activate_nm_profiles(
+    nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
 ) -> Result<Vec<(NmConnection, NmstateError)>, NmstateError> {
@@ -174,7 +178,7 @@ fn _activate_nm_profiles(
     {
         if let Some(uuid) = nm_conn.uuid() {
             if nm_ac_uuids.contains(&uuid) {
-                if let Err(e) = reapply_or_activate(nm_api, nm_conn) {
+                if let Err(e) = reapply_or_activate(nm_api, nm_conn).await {
                     if e.kind().can_retry() {
                         failed_nm_conns.push((nm_conn.clone(), e));
                     } else {
@@ -188,6 +192,7 @@ fn _activate_nm_profiles(
                 ));
                 if let Err(e) = nm_api
                     .connection_activate(uuid)
+                    .await
                     .map_err(nm_error_to_nmstate)
                 {
                     if e.kind().can_retry() {
@@ -211,7 +216,7 @@ fn _activate_nm_profiles(
                     nm_conn.iface_name().unwrap_or(""),
                     nm_conn.iface_type().cloned().unwrap_or_default()
                 );
-                if let Err(e) = reapply_or_activate(nm_api, nm_conn) {
+                if let Err(e) = reapply_or_activate(nm_api, nm_conn).await {
                     if e.kind().can_retry() {
                         failed_nm_conns.push((nm_conn.clone(), e));
                     } else {
@@ -251,6 +256,7 @@ fn _activate_nm_profiles(
                 );
                 if let Err(e) = nm_api
                     .connection_activate(uuid)
+                    .await
                     .map_err(nm_error_to_nmstate)
                 {
                     if e.kind().can_retry() {
@@ -265,8 +271,8 @@ fn _activate_nm_profiles(
     Ok(failed_nm_conns)
 }
 
-pub(crate) fn deactivate_nm_profiles(
-    nm_api: &mut NmApi,
+pub(crate) async fn deactivate_nm_profiles(
+    nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
 ) -> Result<(), NmstateError> {
     for nm_conn in nm_conns {
@@ -277,7 +283,7 @@ pub(crate) fn deactivate_nm_profiles(
                 nm_conn.iface_name().unwrap_or(""),
                 nm_conn.iface_type().cloned().unwrap_or_default()
             );
-            if let Err(e) = nm_api.connection_deactivate(uuid) {
+            if let Err(e) = nm_api.connection_deactivate(uuid).await {
                 if e.kind
                     != nm_dbus::ErrorKind::Manager(
                         nm_dbus::NmManagerError::ConnectionNotActive,
@@ -333,20 +339,21 @@ pub(crate) fn create_index_for_nm_conns_by_name_type(
     ret
 }
 
-pub(crate) fn delete_profiles(
-    nm_api: &mut NmApi,
+pub(crate) async fn delete_profiles(
+    nm_api: &mut NmApi<'_>,
     uuids: &[&str],
 ) -> Result<(), NmstateError> {
     for uuid in uuids {
         nm_api
             .connection_delete(uuid)
+            .await
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
 }
 
-fn reapply_or_activate(
-    nm_api: &mut NmApi,
+async fn reapply_or_activate(
+    nm_api: &mut NmApi<'_>,
     nm_conn: &NmConnection,
 ) -> Result<(), NmstateError> {
     let uuid = match nm_conn.uuid() {
@@ -367,7 +374,7 @@ fn reapply_or_activate(
         nm_conn.iface_name().unwrap_or(""),
         nm_conn.iface_type().cloned().unwrap_or_default()
     );
-    if let Err(e) = nm_api.connection_reapply(nm_conn) {
+    if let Err(e) = nm_api.connection_reapply(nm_conn).await {
         log::info!(
             "Reapply operation failed on {} {} {uuid}, \
             reason: {}, retry on normal activation",
@@ -377,6 +384,7 @@ fn reapply_or_activate(
         );
         nm_api
             .connection_activate(uuid)
+            .await
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())

@@ -5,7 +5,7 @@ version = "2.2.41"
 authors = ["Gris Ge <fge@redhat.com>"]
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.66"
+rust-version.workspace = true
 build = "build.rs"
 
 [lib]

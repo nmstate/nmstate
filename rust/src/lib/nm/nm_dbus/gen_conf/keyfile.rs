@@ -60,7 +60,7 @@ fn zvariant_value_to_string(
         }
         zvariant::Value::Array(a) => {
             let mut ret = String::new();
-            for item in a.get() {
+            for item in a.iter() {
                 ret += &zvariant_value_to_string(item)?;
                 ret += DEFAULT_SEPARATOR;
             }
