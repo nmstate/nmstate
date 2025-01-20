@@ -13,7 +13,7 @@ pub(crate) fn is_mptcp_flags_changed(
             .as_ref()
             .and_then(|c| c.mptcp_flags),
     ) {
-        (Some(flags), Some(cur_flags)) => flags == cur_flags,
+        (Some(flags), Some(cur_flags)) => flags != cur_flags,
         _ => false,
     }
 }
