@@ -1,4 +1,15 @@
 # Changelog
+## [2.2.40] - 2024-01-24
+### Breaking changes
+ - N/A
+
+### New features
+ - python: use a dedicated logger for libnmstate called "libnmstate". (c2fdbb9)
+
+### Bug fixes
+ - route: don't bring connection down to remove routes. (d658938)
+ - mptcp: don't bring connection down if mptcp flags didn't change. (bd25001)
+
 ## [2.2.39] - 2024-11-20
 ### Breaking changes
  - N/A
