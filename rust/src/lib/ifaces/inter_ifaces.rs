@@ -789,6 +789,7 @@ impl MergedInterfaces {
         self.process_allow_extra_ovs_patch_ports_for_apply();
         self.apply_copy_mac_from()?;
         self.validate_controller_and_port_list_confliction()?;
+        self.resolve_port_name_ref()?;
         self.handle_changed_ports()?;
         self.resolve_port_iface_controller_type()?;
         self._set_up_priority()?;

@@ -19,6 +19,8 @@ mod gen_diff;
 #[cfg(test)]
 mod gen_revert;
 #[cfg(test)]
+mod identifier;
+#[cfg(test)]
 mod ifaces;
 #[cfg(test)]
 mod ifaces_ctrller;

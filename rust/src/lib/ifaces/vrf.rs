@@ -126,6 +126,25 @@ impl VrfInterface {
         }
         Ok(())
     }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        origin_name: &str,
+        new_name: String,
+    ) {
+        if let Some(port_name) = self
+            .vrf
+            .as_mut()
+            .and_then(|vrf_conf| vrf_conf.port.as_mut())
+            .and_then(|ports| {
+                ports
+                    .iter_mut()
+                    .find(|port_name| port_name.as_str() == origin_name)
+            })
+        {
+            *port_name = new_name;
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

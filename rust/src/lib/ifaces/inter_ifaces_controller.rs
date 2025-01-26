@@ -3,8 +3,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    BondMode, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
-    MergedInterface, MergedInterfaces, NmstateError, OvsInterface,
+    BondMode, ErrorKind, Interface, InterfaceIdentifier, InterfaceState,
+    InterfaceType, Interfaces, MergedInterface, MergedInterfaces, NmstateError,
+    OvsInterface,
 };
 
 fn is_port_overbook(
@@ -150,6 +151,103 @@ impl MergedInterfaces {
                                 ctrl_name
                             ),
                         ));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // If port name reference should be check kernel name first, then fallback
+    // to profile name.
+    // Raise error when referring to a profile name has multiple interfaces.
+    pub(crate) fn resolve_port_name_ref(&mut self) -> Result<(), NmstateError> {
+        let mut kernel_nic_names: HashSet<String> = HashSet::new();
+
+        for iface in self.kernel_ifaces.values().filter(|i| i.merged.is_up()) {
+            if let Some(cur_iface) = iface.current.as_ref() {
+                // Existing kernel interface
+                kernel_nic_names.insert(cur_iface.name().to_string());
+            } else if let Some(des_iface) = iface.desired.as_ref() {
+                // Creating new kernel interface
+                if des_iface.base_iface().identifier.as_ref()
+                    != Some(&InterfaceIdentifier::MacAddress)
+                {
+                    kernel_nic_names.insert(des_iface.name().to_string());
+                }
+            }
+        }
+
+        let mut profile_2_kernel: HashMap<String, Vec<String>> = HashMap::new();
+        for iface in self.kernel_ifaces.values() {
+            let base_iface = iface.merged.base_iface();
+            if let Some(profile_name) = base_iface.profile_name.as_deref() {
+                if profile_name != base_iface.name.as_str() {
+                    profile_2_kernel
+                        .entry(profile_name.to_string())
+                        .or_default()
+                        .push(base_iface.name.to_string());
+                }
+            }
+        }
+
+        for iface in self.iter_mut() {
+            let des_iface = if let Some(d) = iface.desired.as_mut() {
+                d
+            } else {
+                continue;
+            };
+            if !des_iface.is_up() {
+                continue;
+            }
+            let ports: Vec<String> = if let Some(ports) = des_iface.ports() {
+                ports.iter().map(|p| p.to_string()).collect()
+            } else {
+                continue;
+            };
+            let for_apply = if let Some(i) = iface.for_apply.as_mut() {
+                i
+            } else {
+                continue;
+            };
+            let for_verify = if let Some(i) = iface.for_verify.as_mut() {
+                i
+            } else {
+                continue;
+            };
+            for port_name in ports {
+                // Prefer kernel name as port name
+                if kernel_nic_names.contains(&port_name) {
+                    continue;
+                }
+                if let Some(kernel_names) =
+                    profile_2_kernel.get(&port_name.to_string())
+                {
+                    if kernel_names.len() > 1 {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Controller {} ({}) has port with \
+                                profile name {} but multiple interfaces \
+                                are sharing the this profile name",
+                                des_iface.name(),
+                                des_iface.iface_type(),
+                                port_name,
+                            ),
+                        ));
+                    } else if let Some(kernel_name) = kernel_names.first() {
+                        des_iface.change_port_name(
+                            &port_name,
+                            kernel_name.to_string(),
+                        );
+                        for_apply.change_port_name(
+                            &port_name,
+                            kernel_name.to_string(),
+                        );
+                        for_verify.change_port_name(
+                            &port_name,
+                            kernel_name.to_string(),
+                        );
                     }
                 }
             }

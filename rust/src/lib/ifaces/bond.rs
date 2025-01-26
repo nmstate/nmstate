@@ -361,21 +361,30 @@ impl BondInterface {
         origin_name: &str,
         new_name: String,
     ) {
-        if let Some(index) = self
+        if let Some(port_name) = self
             .bond
-            .as_ref()
-            .and_then(|bond_conf| bond_conf.port.as_ref())
+            .as_mut()
+            .and_then(|bond_conf| bond_conf.port.as_mut())
             .and_then(|ports| {
-                ports.iter().position(|port_name| port_name == origin_name)
+                ports
+                    .iter_mut()
+                    .find(|port_name| port_name.as_str() == origin_name)
             })
         {
-            if let Some(ports) = self
-                .bond
-                .as_mut()
-                .and_then(|bond_conf| bond_conf.port.as_mut())
-            {
-                ports[index] = new_name;
-            }
+            *port_name = new_name.clone();
+        }
+
+        if let Some(port_conf) = self
+            .bond
+            .as_mut()
+            .and_then(|bond_conf| bond_conf.ports_config.as_mut())
+            .and_then(|port_confs| {
+                port_confs
+                    .iter_mut()
+                    .find(|port_conf| port_conf.name == origin_name)
+            })
+        {
+            port_conf.name = new_name;
         }
     }
 

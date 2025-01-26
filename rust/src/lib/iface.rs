@@ -755,6 +755,8 @@ impl Interface {
             iface.change_port_name(org_port_name, new_port_name);
         } else if let Interface::Bond(iface) = self {
             iface.change_port_name(org_port_name, new_port_name);
+        } else if let Interface::Vrf(iface) = self {
+            iface.change_port_name(org_port_name, new_port_name);
         }
     }
 }
