@@ -18,6 +18,8 @@ pub struct NmSettingVlan {
     pub id: Option<u32>,
     pub protocol: Option<String>,
     pub flags: Vec<NmSettingVlanFlag>,
+    pub egress_priority_map: Vec<String>,
+    pub ingress_priority_map: Vec<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -73,6 +75,19 @@ impl TryFrom<DbusDictionary> for NmSettingVlan {
             id: _from_map!(v, "id", u32::try_from)?,
             protocol: _from_map!(v, "protocol", String::try_from)?,
             flags: from_dic_to_vec_nm_vlan_flags(&mut v, "flags")?,
+            egress_priority_map: _from_map!(
+                v,
+                "egress-priority-map",
+                Vec::<String>::try_from
+            )?
+            .unwrap_or_default(),
+            ingress_priority_map: _from_map!(
+                v,
+                "ingress-priority-map",
+                Vec::<String>::try_from
+            )?
+            .unwrap_or_default(),
+
             _other: v,
         })
     }
@@ -95,6 +110,15 @@ impl ToDbusValue for NmSettingVlan {
             zvariant::Value::new(from_vec_nm_vlan_flags_u32(
                 self.flags.clone(),
             )),
+        );
+
+        ret.insert(
+            "egress-priority-map",
+            zvariant::Value::new(self.egress_priority_map.as_slice()),
+        );
+        ret.insert(
+            "ingress-priority-map",
+            zvariant::Value::new(self.ingress_priority_map.as_slice()),
         );
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

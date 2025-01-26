@@ -238,3 +238,91 @@ fn test_vlan_base_iface_optional() {
         MergedInterface::new(Some(desired), Some(current)).unwrap();
     merged_iface.post_inter_ifaces_process().unwrap();
 }
+
+#[test]
+fn test_vlan_invalid_egress_qos() {
+    let mut iface: VlanInterface = serde_yaml::from_str(
+        r"---
+        name: vlan1
+        type: vlan
+        vlan:
+          base-iface: eth0
+          id: 100
+          egress-qos-map:
+            - from: 4
+              to: 8
+          ",
+    )
+    .unwrap();
+
+    let result = iface.sanitize(true);
+
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_vlan_invalid_ingress_qos() {
+    let mut iface: VlanInterface = serde_yaml::from_str(
+        r"---
+        name: vlan1
+        type: vlan
+        vlan:
+          base-iface: eth0
+          id: 100
+          ingress-qos-map:
+            - from: 8
+              to: 3
+          ",
+    )
+    .unwrap();
+
+    let result = iface.sanitize(true);
+
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_vlan_valid_egress_qos() {
+    let mut iface: VlanInterface = serde_yaml::from_str(
+        r"---
+        name: vlan1
+        type: vlan
+        vlan:
+          base-iface: eth0
+          id: 100
+          egress-qos-map:
+            - from: 129
+              to: 7
+          ",
+    )
+    .unwrap();
+
+    iface.sanitize(true).unwrap();
+}
+
+#[test]
+fn test_vlan_valid_ingress_qos() {
+    let mut iface: VlanInterface = serde_yaml::from_str(
+        r"---
+        name: vlan1
+        type: vlan
+        vlan:
+          base-iface: eth0
+          id: 100
+          ingress-qos-map:
+            - from: 7
+              to: 254
+          ",
+    )
+    .unwrap();
+
+    iface.sanitize(true).unwrap();
+}

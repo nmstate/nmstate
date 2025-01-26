@@ -18,6 +18,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
 from libnmstate.schema import Mptcp
 from libnmstate.schema import OVSBridge
+from libnmstate.schema import VLAN
 
 
 def show_only(ifnames, include_secrets=False):
@@ -113,6 +114,7 @@ class State:
         self._sort_mptcp_flags()
         self._remove_mptcp_flags_of_ip_addr()
         self._remove_top_descriptions()
+        self._sort_vlan_qos_map()
 
     def match(self, other):
         return state_match(self.state, other.state)
@@ -187,6 +189,20 @@ class State:
             for family in (Interface.IPV4, Interface.IPV6):
                 iface_state.get(family, {}).get(InterfaceIP.ADDRESS, []).sort(
                     key=itemgetter(InterfaceIP.ADDRESS_IP)
+                )
+
+    def _sort_vlan_qos_map(self):
+        for iface_state in self.state[Interface.KEY]:
+            if VLAN.CONFIG_SUBTREE in iface_state:
+                iface_state[VLAN.CONFIG_SUBTREE].get(
+                    VLAN.INGRESS_QOS_MAP, []
+                ).sort(
+                    key=lambda m: (m[VLAN.QOS_MAP_FROM], m[VLAN.QOS_MAP_TO])
+                )
+                iface_state[VLAN.CONFIG_SUBTREE].get(
+                    VLAN.EGRESS_QOS_MAP, []
+                ).sort(
+                    key=lambda m: (m[VLAN.QOS_MAP_FROM], m[VLAN.QOS_MAP_TO])
                 )
 
     def _ignore_addr_with_lifetime(self):

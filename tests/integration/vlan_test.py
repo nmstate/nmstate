@@ -583,3 +583,191 @@ def test_base_iface_optional(vlan_on_eth1):
 
     libnmstate.apply(new_state)
     assertlib.assert_state_match(new_state)
+
+
+@pytest.fixture
+def vlan_with_qos_map(eth1_up):
+    state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.ID: 102,
+                    VLAN.INGRESS_QOS_MAP: [
+                        {
+                            VLAN.QOS_MAP_FROM: 4,
+                            VLAN.QOS_MAP_TO: 4,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 2,
+                            VLAN.QOS_MAP_TO: 2,
+                        },
+                    ],
+                    VLAN.EGRESS_QOS_MAP: [
+                        {
+                            VLAN.QOS_MAP_FROM: 3,
+                            VLAN.QOS_MAP_TO: 3,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 1,
+                            VLAN.QOS_MAP_TO: 1,
+                        },
+                    ],
+                },
+            }
+        ]
+    }
+
+    libnmstate.apply(state)
+    yield state
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: VLAN_IFNAME,
+                    Interface.TYPE: InterfaceType.VLAN,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+# https://issues.redhat.com/browse/RHEL-67631
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 51,
+    reason=("VLAN QoS map is only fixed by NetworkManager 1.51+"),
+)
+def test_create_vlan_with_qos_map(vlan_with_qos_map):
+    state = vlan_with_qos_map
+    assertlib.assert_state_match(state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 51,
+    reason=("VLAN QoS map is only fixed by NetworkManager 1.51+"),
+)
+def test_change_vlan_with_qos_map(eth1_up):
+    state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.ID: 102,
+                    VLAN.INGRESS_QOS_MAP: [
+                        {
+                            VLAN.QOS_MAP_FROM: 6,
+                            VLAN.QOS_MAP_TO: 7,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 2,
+                            VLAN.QOS_MAP_TO: 2,
+                        },
+                    ],
+                    VLAN.EGRESS_QOS_MAP: [
+                        {
+                            VLAN.QOS_MAP_FROM: 7,
+                            VLAN.QOS_MAP_TO: 6,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 2,
+                            VLAN.QOS_MAP_TO: 2,
+                        },
+                    ],
+                },
+            }
+        ]
+    }
+
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 51,
+    reason=("VLAN QoS map is only fixed by NetworkManager 1.51+"),
+)
+def test_vlan_add_qos_map_to_existing(vlan_on_eth1):
+    desired_state = statelib.show_only((VLAN_IFNAME,))
+    iface_state = desired_state[Interface.KEY][0]
+    iface_state[VLAN.CONFIG_SUBTREE][VLAN.INGRESS_QOS_MAP] = [
+        {
+            VLAN.QOS_MAP_FROM: 6,
+            VLAN.QOS_MAP_TO: 7,
+        },
+        {
+            VLAN.QOS_MAP_FROM: 2,
+            VLAN.QOS_MAP_TO: 2,
+        },
+    ]
+    iface_state[VLAN.CONFIG_SUBTREE][VLAN.EGRESS_QOS_MAP] = [
+        {
+            VLAN.QOS_MAP_FROM: 6,
+            VLAN.QOS_MAP_TO: 7,
+        },
+        {
+            VLAN.QOS_MAP_FROM: 2,
+            VLAN.QOS_MAP_TO: 2,
+        },
+    ]
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 51,
+    reason=("VLAN QoS map is only fixed by NetworkManager 1.51+"),
+)
+def test_vlan_add_multiple_qos_map_in_mixed_order(eth1_up):
+    state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.ID: 102,
+                    VLAN.INGRESS_QOS_MAP: [
+                        {
+                            VLAN.QOS_MAP_FROM: 1,
+                            VLAN.QOS_MAP_TO: 1,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 6,
+                            VLAN.QOS_MAP_TO: 7,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 2,
+                            VLAN.QOS_MAP_TO: 2,
+                        },
+                    ],
+                    VLAN.EGRESS_QOS_MAP: [
+                        {
+                            VLAN.QOS_MAP_FROM: 1,
+                            VLAN.QOS_MAP_TO: 1,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 7,
+                            VLAN.QOS_MAP_TO: 6,
+                        },
+                        {
+                            VLAN.QOS_MAP_FROM: 2,
+                            VLAN.QOS_MAP_TO: 2,
+                        },
+                    ],
+                },
+            }
+        ]
+    }
+
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)

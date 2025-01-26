@@ -70,7 +70,8 @@ pub use ovs::{
 };
 pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{
-    VlanConfig, VlanInterface, VlanProtocol, VlanRegistrationProtocol,
+    VlanConfig, VlanInterface, VlanProtocol, VlanQosMapping,
+    VlanRegistrationProtocol,
 };
 pub use vrf::{VrfConfig, VrfInterface};
 pub use vxlan::{VxlanConfig, VxlanInterface};

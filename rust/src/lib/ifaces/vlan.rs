@@ -7,6 +7,10 @@ use crate::{
     NmstateError,
 };
 
+/// The maximum of VLAN priority is 7 according to
+/// 802.1Q-2018 PCP field definition.
+const MAX_VLAN_PRIORITY: u32 = 7;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 /// Linux kernel VLAN interface. The example yaml output of
@@ -64,15 +68,55 @@ impl VlanInterface {
         &mut self,
         is_desired: bool,
     ) -> Result<(), NmstateError> {
-        if let Some(vlan_conf) = &self.vlan {
-            if is_desired && vlan_conf.base_iface.is_none() {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Missing 'vlan.base-iface' for interface '{}'",
-                        &self.base.name
-                    ),
-                ));
+        if let Some(vlan_conf) = self.vlan.as_mut() {
+            if let Some(maps) = vlan_conf.ingress_qos_map.as_mut() {
+                maps.sort_unstable()
+            }
+            if let Some(maps) = vlan_conf.egress_qos_map.as_mut() {
+                maps.sort_unstable()
+            }
+            if is_desired {
+                if vlan_conf.base_iface.is_none() {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Missing 'vlan.base-iface' for interface '{}'",
+                            &self.base.name
+                        ),
+                    ));
+                }
+                if let Some(maps) = vlan_conf.ingress_qos_map.as_ref() {
+                    for in_map in maps.as_slice() {
+                        if in_map.from > MAX_VLAN_PRIORITY {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "The maximum VLAN priority is 7, \
+                                    but got VLAN {} ingress qos map from \
+                                    value set as {}",
+                                    self.base.name.as_str(),
+                                    in_map.from
+                                ),
+                            ));
+                        }
+                    }
+                }
+                if let Some(maps) = vlan_conf.egress_qos_map.as_ref() {
+                    for eg_map in maps.as_slice() {
+                        if eg_map.to > MAX_VLAN_PRIORITY {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "The maximum VLAN priority is 7, \
+                                    but got VLAN {} egress qos map to \
+                                    value set as {}",
+                                    self.base.name.as_str(),
+                                    eg_map.to
+                                ),
+                            ));
+                        }
+                    }
+                }
             }
         }
         Ok(())
@@ -105,6 +149,18 @@ pub struct VlanConfig {
     /// loose binding of the interface to its master device's operating state
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loose_binding: Option<bool>,
+    /// Mapping VLAN header priority to linux internal packet priority for
+    /// incoming packet.
+    /// The maximum of VLAN priority is 7 according to
+    /// 802.1Q-2018 PCP field definition.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ingress_qos_map: Option<Vec<VlanQosMapping>>,
+    /// Mapping linux internal packet priority to VLAN header priority for
+    /// outgoing packet.
+    /// The maximum of VLAN priority is 7 according to
+    /// 802.1Q-2018 PCP field definition.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub egress_qos_map: Option<Vec<VlanQosMapping>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -197,5 +253,38 @@ impl MergedInterface {
                 }
             }
         }
+    }
+}
+
+/// VLAN QoS Mapping
+/// Mapping between linux internal packet priority and VLAN header priority for
+/// incoming or outgoing packet.
+#[derive(
+    Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Default,
+)]
+pub struct VlanQosMapping {
+    #[serde(deserialize_with = "crate::deserializer::u32_or_string")]
+    pub from: u32,
+    #[serde(deserialize_with = "crate::deserializer::u32_or_string")]
+    pub to: u32,
+}
+
+impl std::fmt::Display for VlanQosMapping {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.from, self.to)
+    }
+}
+
+// For Ord
+impl PartialOrd for VlanQosMapping {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+// For Vec::sort_unstable()
+impl Ord for VlanQosMapping {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (self.from, self.to).cmp(&(other.from, other.to))
     }
 }

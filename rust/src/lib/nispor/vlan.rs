@@ -34,6 +34,8 @@ pub(crate) fn np_vlan_to_nmstate(
         } else {
             Some(VlanRegistrationProtocol::None)
         },
+        ingress_qos_map: get_qos_map(&np_vlan_info.ingress_qos_map),
+        egress_qos_map: get_qos_map(&np_vlan_info.egress_qos_map),
     });
 
     VlanInterface {
@@ -53,4 +55,22 @@ pub(crate) fn nms_vlan_conf_to_np(
         }
         np_vlan_conf
     })
+}
+
+fn get_qos_map(
+    np_maps: &[nispor::VlanQosMapping],
+) -> Option<Vec<crate::VlanQosMapping>> {
+    if np_maps.is_empty() {
+        None
+    } else {
+        let mut ret = Vec::new();
+        for np_map in np_maps {
+            ret.push(crate::VlanQosMapping {
+                from: np_map.from,
+                to: np_map.to,
+            });
+        }
+        ret.sort_unstable();
+        Some(ret)
+    }
 }

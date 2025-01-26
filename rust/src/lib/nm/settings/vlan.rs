@@ -75,6 +75,16 @@ pub(crate) fn gen_nm_vlan_setting(
                     .retain(|x| !matches!(x, NmSettingVlanFlag::LooseBinding));
             }
         }
+
+        if let Some(ingress_maps) = vlan_conf.ingress_qos_map.as_deref() {
+            nm_vlan.ingress_priority_map =
+                ingress_maps.iter().map(|m| m.to_string()).collect();
+        }
+        if let Some(egress_maps) = vlan_conf.egress_qos_map.as_deref() {
+            nm_vlan.egress_priority_map =
+                egress_maps.iter().map(|m| m.to_string()).collect();
+        }
+
         nm_conn.vlan = Some(nm_vlan);
     }
 }

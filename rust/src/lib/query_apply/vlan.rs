@@ -11,6 +11,31 @@ impl VlanInterface {
             self.vlan.clone_from(&other.vlan);
         }
     }
+
+    // When VLAN Qos changed only from or to, we should include the whole map
+    // instead of changed.
+    pub(crate) fn include_diff_context(
+        &mut self,
+        desired: &VlanInterface,
+        current: &VlanInterface,
+    ) {
+        if let (Some(des_conf), Some(cur_conf)) =
+            (desired.vlan.as_ref(), current.vlan.as_ref())
+        {
+            // If changed, always include VLAN ID and base-iface as context
+            if des_conf != cur_conf {
+                let new_conf = VlanConfig {
+                    id: des_conf.id,
+                    base_iface: des_conf
+                        .base_iface
+                        .clone()
+                        .or_else(|| cur_conf.base_iface.clone()),
+                    ..Default::default()
+                };
+                self.vlan = Some(new_conf);
+            }
+        }
+    }
 }
 
 impl VlanConfig {

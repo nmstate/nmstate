@@ -176,11 +176,11 @@ impl MergedInterfaces {
             {
                 let mut new_iface = des_iface.clone_name_type_only();
                 new_iface.base_iface_mut().state = des_iface.base_iface().state;
+                new_iface.include_diff_context(des_iface, &cur_iface);
                 let mut new_iface_value = serde_json::to_value(&new_iface)?;
                 merge_json_value(&mut new_iface_value, &diff_value);
-                let mut new_iface =
+                let new_iface =
                     serde_json::from_value::<Interface>(new_iface_value)?;
-                new_iface.include_diff_context(&cur_iface);
                 ret.push(new_iface);
             }
         }
