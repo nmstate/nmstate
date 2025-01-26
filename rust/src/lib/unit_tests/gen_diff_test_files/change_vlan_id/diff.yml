@@ -4,4 +4,5 @@ interfaces:
   type: vlan
   state: up
   vlan:
+    base-iface: veth0
     id: 4

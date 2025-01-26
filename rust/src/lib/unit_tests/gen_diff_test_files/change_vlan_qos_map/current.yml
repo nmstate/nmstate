@@ -1,0 +1,18 @@
+---
+interfaces:
+- name: vlan0
+  type: vlan
+  state: up
+  vlan:
+    id: 100
+    base-iface: eth1
+    reorder-headers: true
+    egress-qos-map:
+      - from: 2
+        to: 2
+    ingress-qos-map:
+      - from: 3
+        to: 3
+- name: eth1
+  tyep: ethernet
+  state: up

@@ -259,9 +259,21 @@ impl Interface {
         }
     }
 
-    pub(crate) fn include_diff_context(&mut self, current: &Self) {
+    pub(crate) fn include_diff_context(
+        &mut self,
+        desired: &Self,
+        current: &Self,
+    ) {
         self.base_iface_mut()
-            .include_diff_context(current.base_iface());
+            .include_diff_context(desired.base_iface(), current.base_iface());
+        if let (
+            Interface::Vlan(vlan_iface),
+            Interface::Vlan(des_iface),
+            Interface::Vlan(cur_iface),
+        ) = (self, desired, current)
+        {
+            vlan_iface.include_diff_context(des_iface, cur_iface);
+        }
     }
 }
 

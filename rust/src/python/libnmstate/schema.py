@@ -329,6 +329,10 @@ class VLAN:
     REGISTRATION_PROTOCOL_NONE = "none"
     REORDER_HEADERS = "reorder-headers"
     LOOSE_BINDING = "loose-binding"
+    INGRESS_QOS_MAP = "ingress-qos-map"
+    EGRESS_QOS_MAP = "egress-qos-map"
+    QOS_MAP_FROM = "from"
+    QOS_MAP_TO = "to"
 
 
 class VXLAN:
