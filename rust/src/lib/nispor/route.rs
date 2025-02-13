@@ -244,13 +244,7 @@ fn nmstate_to_nispor_route_conf(
     ret.dst = nmstate_rt.destination.clone().unwrap_or_default();
     ret.oif.clone_from(&nmstate_rt.next_hop_iface);
     ret.via.clone_from(&nmstate_rt.next_hop_addr);
-    ret.metric = nmstate_rt.metric.and_then(|m| {
-        if let Ok(i) = u32::try_from(m) {
-            Some(i)
-        } else {
-            None
-        }
-    });
+    ret.metric = nmstate_rt.metric.and_then(|m| u32::try_from(m).ok());
     if let Some(table_id) = nmstate_rt.table_id {
         if table_id > u8::MAX.into() {
             return Err(NmstateError::new(
