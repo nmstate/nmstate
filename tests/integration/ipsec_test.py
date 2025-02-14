@@ -644,8 +644,8 @@ def test_ipsec_ipv6_host_to_subnet(
         (
             IpsecTestEnv.HOSTA_IPV6_4IN6,
             IpsecTestEnv.HOSTB_IPV6_4IN6,
-            IpsecTestEnv.HOSTA_IPV4_CRT_SUBNET,
-            IpsecTestEnv.HOSTB_IPV4_CRT_SUBNET,
+            IpsecTestEnv.HOSTA_IPV4_4IN6_SUBNET,
+            IpsecTestEnv.HOSTB_IPV4_4IN6_SUBNET,
         ),
         (
             IpsecTestEnv.HOSTA_IPV4_6IN4,

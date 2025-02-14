@@ -173,14 +173,14 @@ conn hostb_conn_6in4
 
 conn hostb_conn_4in6
     left=2001:db8:d::b
-    leftsubnet=192.0.3.0/24
+    leftsubnet=192.0.5.0/24
     leftid=@hostb.example.org
     leftcert=hostb.example.org
     leftmodecfgserver=no
     rightmodecfgclient=no
     leftsendcert=always
     right=2001:db8:d::a
-    rightsubnet=192.0.4.0/24
+    rightsubnet=192.0.6.0/24
     rightid=@hosta.example.org
     rightcert=hosta.example.org
     ikev2=insist
@@ -220,6 +220,7 @@ class IpsecTestEnv:
     HOSTA_IPV4_IF_SUBNET = "192.0.2.246"
     HOSTA_IPV4_6IN4 = "192.0.2.245"
     HOSTA_IPV4_CRT_SUBNET = "192.0.4.0/24"
+    HOSTA_IPV4_4IN6_SUBNET = "192.0.6.0/24"
     HOSTA_IPSEC_CONN_NAME = "hosta_conn"
     HOSTA_IPV6_P2P = "2001:db8:f::a"
     HOSTA_IPV6_SUBNET = "2001:db8:aa::/64"
@@ -237,6 +238,7 @@ class IpsecTestEnv:
     HOSTB_IPV4_IF_SUBNET = "192.0.2.157"
     HOSTB_IPV4_6IN4 = "192.0.2.158"
     HOSTB_IPV4_CRT_SUBNET = "192.0.3.0/24"
+    HOSTB_IPV4_4IN6_SUBNET = "192.0.5.0/24"
     HOSTB_VPN_SUBNET_PREFIX = "203.0.113"
     HOSTB_VPN_SUBNET = f"{HOSTB_VPN_SUBNET_PREFIX}.0/24"
     HOSTB_VPN_SUBNET_PREFIX6 = "2001:db8:9::"
