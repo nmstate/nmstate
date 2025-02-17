@@ -70,6 +70,12 @@ impl MacVlanInterface {
     pub(crate) fn parent(&self) -> Option<&str> {
         self.mac_vlan.as_ref().map(|cfg| cfg.base_iface.as_str())
     }
+
+    pub(crate) fn change_parent_name(&mut self, name: &str) {
+        if let Some(mac_vlan_conf) = self.mac_vlan.as_mut() {
+            mac_vlan_conf.base_iface = name.to_string();
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

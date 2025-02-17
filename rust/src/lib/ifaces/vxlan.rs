@@ -56,6 +56,12 @@ impl VxlanInterface {
             }
         })
     }
+
+    pub(crate) fn change_parent_name(&mut self, name: &str) {
+        if let Some(vxlan_conf) = self.vxlan.as_mut() {
+            vxlan_conf.base_iface = name.to_string();
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
