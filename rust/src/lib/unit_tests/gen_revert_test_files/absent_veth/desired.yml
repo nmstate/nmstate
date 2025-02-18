@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: veth1
+    type: ethernet
+    state: absent

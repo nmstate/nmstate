@@ -33,6 +33,10 @@ impl Interface {
         &self,
         current: &Self,
     ) -> Result<Self, NmstateError> {
+        if self.is_absent() {
+            return Ok(current.clone());
+        }
+
         let mut revert_value =
             serde_json::to_value(current.clone_name_type_only())?;
         let desired_value = serde_json::to_value(self)?;
