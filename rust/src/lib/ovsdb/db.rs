@@ -2,31 +2,18 @@
 
 use std::collections::HashMap;
 
-use serde_json::{Map, Value};
+use serde_json::Value;
 
-use super::json_rpc::OvsDbJsonRpc;
-
-use crate::{
-    ErrorKind, MergedOvsDbGlobalConfig, NmstateError, OvsDbGlobalConfig,
+use super::{
+    json_rpc::OvsDbJsonRpc, OvsDbMethodEcho, OvsDbMethodTransact,
+    OvsDbOperation, OvsDbSelect,
 };
+use crate::{ErrorKind, NmstateError};
 
-const OVS_DB_NAME: &str = "Open_vSwitch";
-pub(crate) const GLOBAL_CONFIG_TABLE: &str = "Open_vSwitch";
+pub(crate) const OVS_DB_NAME: &str = "Open_vSwitch";
 const NM_RESERVED_EXTERNAL_ID: &str = "NM.connection.uuid";
 
 pub(crate) const DEFAULT_OVS_DB_SOCKET_PATH: &str = "/run/openvswitch/db.sock";
-
-#[derive(Debug)]
-pub(crate) struct OvsDbConnection {
-    rpc: OvsDbJsonRpc,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub(crate) struct OvsDbSelect {
-    table: String,
-    conditions: Vec<OvsDbCondition>,
-    columns: Option<Vec<&'static str>>,
-}
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct OvsDbCondition {
@@ -36,7 +23,7 @@ pub(crate) struct OvsDbCondition {
 }
 
 impl OvsDbCondition {
-    fn to_value(&self) -> Value {
+    pub(crate) fn to_value(&self) -> Value {
         Value::Array(vec![
             Value::String(self.column.to_string()),
             Value::String(self.function.to_string()),
@@ -45,48 +32,45 @@ impl OvsDbCondition {
     }
 }
 
-impl OvsDbSelect {
-    fn to_value(&self) -> Value {
-        let mut ret = Map::new();
-        ret.insert("op".to_string(), Value::String("select".to_string()));
-        ret.insert("table".to_string(), Value::String(self.table.clone()));
-        let condition_values: Vec<Value> =
-            self.conditions.iter().map(|c| c.to_value()).collect();
-        ret.insert("where".to_string(), Value::Array(condition_values));
-        if let Some(columns) = self.columns.as_ref() {
-            ret.insert(
-                "columns".to_string(),
-                Value::Array(
-                    columns
-                        .as_slice()
-                        .iter()
-                        .map(|c| Value::String(c.to_string()))
-                        .collect(),
-                ),
-            );
-        }
-        Value::Object(ret)
-    }
+#[derive(Debug)]
+pub(crate) struct OvsDbConnection {
+    pub(crate) rpc: OvsDbJsonRpc,
+    pub(crate) transaction_id: u64,
 }
 
 impl OvsDbConnection {
+    pub(crate) fn get_transaction_id(&mut self) -> u64 {
+        self.transaction_id += 1;
+        self.transaction_id
+    }
+
     // TODO: support environment variable OVS_DB_UNIX_SOCKET_PATH
     pub(crate) fn new() -> Result<Self, NmstateError> {
         Ok(Self {
             rpc: OvsDbJsonRpc::connect(DEFAULT_OVS_DB_SOCKET_PATH)?,
+            transaction_id: 0,
         })
     }
 
     pub(crate) fn check_connection(&mut self) -> bool {
-        if let Ok(reply) = self.rpc.exec("list_dbs", &Value::Array(vec![])) {
-            if let Some(dbs) = reply.as_array() {
-                dbs.iter().any(|db| db.as_str() == Some(OVS_DB_NAME))
-            } else {
-                false
-            }
+        let transaction_id = self.get_transaction_id();
+        let value = OvsDbMethodEcho::to_value(transaction_id);
+        if self.rpc.send(&value).is_ok() {
+            self.rpc.recv(transaction_id).is_ok()
         } else {
             false
         }
+    }
+
+    pub(crate) fn transact(
+        &mut self,
+        transact: &OvsDbMethodTransact,
+    ) -> Result<Value, NmstateError> {
+        let transaction_id = self.get_transaction_id();
+        let value = transact.to_value(transaction_id);
+        self.rpc.send(&value)?;
+        let reply = self.rpc.recv(transaction_id)?;
+        check_transact_error(reply)
     }
 
     fn _get_ovs_entry(
@@ -94,59 +78,41 @@ impl OvsDbConnection {
         table_name: &str,
         columns: Vec<&'static str>,
     ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
-        let select = OvsDbSelect {
-            table: table_name.to_string(),
-            conditions: vec![],
-            columns: Some(columns),
-        };
+        let reply = self.transact(&OvsDbMethodTransact {
+            db_name: OVS_DB_NAME.to_string(),
+            operations: vec![OvsDbOperation::Select(OvsDbSelect {
+                table: table_name.to_string(),
+                conditions: vec![],
+                columns: Some(columns),
+            })],
+        })?;
+
         let mut ret: HashMap<String, OvsDbEntry> = HashMap::new();
-        match self.rpc.exec(
-            "transact",
-            &Value::Array(vec![
-                Value::String(OVS_DB_NAME.to_string()),
-                select.to_value(),
-            ]),
-        )? {
-            Value::Array(reply) => {
-                if let Some(entries) = reply
-                    .first()
-                    .and_then(|v| v.as_object())
-                    .and_then(|v| v.get("rows"))
-                    .and_then(|v| v.as_array())
-                {
-                    for entry in entries {
-                        let ovsdb_entry: OvsDbEntry = entry.try_into()?;
-                        if !ovsdb_entry.uuid.is_empty() {
-                            ret.insert(
-                                ovsdb_entry.uuid.to_string(),
-                                ovsdb_entry,
-                            );
-                        }
-                    }
-                    Ok(ret)
-                } else {
-                    let e = NmstateError::new(
-                        ErrorKind::PluginFailure,
-                        format!(
-                            "Invalid reply from OVSDB for querying \
-                            {table_name} table: {reply:?}"
-                        ),
-                    );
-                    log::error!("{}", e);
-                    Err(e)
+
+        if let Some(entries) = reply
+            .as_array()
+            .and_then(|reply| reply.first())
+            .and_then(|v| v.as_object())
+            .and_then(|v| v.get("rows"))
+            .and_then(|v| v.as_array())
+        {
+            for entry in entries {
+                let ovsdb_entry: OvsDbEntry = entry.try_into()?;
+                if !ovsdb_entry.uuid.is_empty() {
+                    ret.insert(ovsdb_entry.uuid.to_string(), ovsdb_entry);
                 }
             }
-            reply => {
-                let e = NmstateError::new(
-                    ErrorKind::PluginFailure,
-                    format!(
-                        "Invalid reply from OVSDB for querying \
-                        {table_name} table: {reply:?}"
-                    ),
-                );
-                log::error!("{}", e);
-                Err(e)
-            }
+            Ok(ret)
+        } else {
+            let e = NmstateError::new(
+                ErrorKind::PluginFailure,
+                format!(
+                    "Invalid reply from OVSDB for querying \
+                    {table_name} table: {reply:?}"
+                ),
+            );
+            log::error!("{}", e);
+            Err(e)
         }
     }
 
@@ -207,71 +173,6 @@ impl OvsDbConnection {
                 "datapath_type",
             ],
         )
-    }
-
-    pub(crate) fn get_ovsdb_global_conf(
-        &mut self,
-    ) -> Result<OvsDbGlobalConfig, NmstateError> {
-        let select = OvsDbSelect {
-            table: GLOBAL_CONFIG_TABLE.to_string(),
-            conditions: vec![],
-            columns: Some(vec!["external_ids", "other_config"]),
-        };
-        match self.rpc.exec(
-            "transact",
-            &Value::Array(vec![
-                Value::String(OVS_DB_NAME.to_string()),
-                select.to_value(),
-            ]),
-        )? {
-            Value::Array(reply) => {
-                if let Some(global_conf) = reply
-                    .first()
-                    .and_then(|v| v.as_object())
-                    .and_then(|v| v.get("rows"))
-                    .and_then(|v| v.as_array())
-                    .and_then(|v| v.first())
-                    .and_then(|v| v.as_object())
-                {
-                    Ok(global_conf.into())
-                } else {
-                    let e = NmstateError::new(
-                        ErrorKind::PluginFailure,
-                        format!(
-                            "Invalid reply from OVSDB for querying \
-                            {GLOBAL_CONFIG_TABLE} table: {reply:?}"
-                        ),
-                    );
-                    log::error!("{}", e);
-                    Err(e)
-                }
-            }
-            reply => {
-                let e = NmstateError::new(
-                    ErrorKind::PluginFailure,
-                    format!(
-                        "Invalid reply from OVSDB for querying \
-                        {GLOBAL_CONFIG_TABLE} table: {reply:?}"
-                    ),
-                );
-                log::error!("{}", e);
-                Err(e)
-            }
-        }
-    }
-    pub(crate) fn apply_global_conf(
-        &mut self,
-        ovs_conf: &MergedOvsDbGlobalConfig,
-    ) -> Result<(), NmstateError> {
-        let update: OvsDbUpdate = ovs_conf.into();
-        self.rpc.exec(
-            "transact",
-            &Value::Array(vec![
-                Value::String(OVS_DB_NAME.to_string()),
-                update.to_value(),
-            ]),
-        )?;
-        Ok(())
     }
 }
 
@@ -396,26 +297,29 @@ pub(crate) fn parse_uuid_array(v: &[Value]) -> Vec<String> {
     ret
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub(crate) struct OvsDbUpdate {
-    pub(crate) table: String,
-    pub(crate) conditions: Vec<OvsDbCondition>,
-    pub(crate) row: HashMap<String, Value>,
-}
-
-impl OvsDbUpdate {
-    fn to_value(&self) -> Value {
-        let mut ret = Map::new();
-        ret.insert("op".to_string(), Value::String("update".to_string()));
-        ret.insert("table".to_string(), Value::String(self.table.clone()));
-        let condition_values: Vec<Value> =
-            self.conditions.iter().map(|c| c.to_value()).collect();
-        ret.insert("where".to_string(), Value::Array(condition_values));
-        let mut row_map = Map::new();
-        for (k, v) in self.row.iter() {
-            row_map.insert(k.to_string(), v.clone());
+fn check_transact_error(reply: Value) -> Result<Value, NmstateError> {
+    if let Some(trans_replies) = reply.as_array() {
+        for trans_reply in trans_replies {
+            if let Some(error_type) = trans_reply
+                .as_object()
+                .and_then(|r| r.get("error"))
+                .and_then(|e| e.as_str())
+            {
+                let error_detail = trans_reply
+                    .as_object()
+                    .and_then(|r| r.get("details"))
+                    .and_then(|d| d.as_str())
+                    .unwrap_or("unknown error");
+                let e = NmstateError::new(
+                    ErrorKind::PluginFailure,
+                    format!(
+                        "OVS DB JSON RPC error {error_type}: {error_detail}"
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
         }
-        ret.insert("row".to_string(), Value::Object(row_map));
-        Value::Object(ret)
     }
+    Ok(reply)
 }

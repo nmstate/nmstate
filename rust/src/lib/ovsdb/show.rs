@@ -65,7 +65,7 @@ pub(crate) fn ovsdb_retrieve() -> Result<NetworkState, NmstateError> {
         }
     }
 
-    ret.ovsdb = Some(cli.get_ovsdb_global_conf()?);
+    ret.ovsdb = Some(cli.get_global_conf()?);
 
     Ok(ret)
 }

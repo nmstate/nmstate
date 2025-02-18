@@ -9,7 +9,7 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
     ovsdb::{
-        ovsdb_apply, ovsdb_is_running, ovsdb_retrieve,
+        ovsdb_apply_global_conf, ovsdb_is_running, ovsdb_retrieve,
         DEFAULT_OVS_DB_SOCKET_PATH,
     },
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
@@ -273,8 +273,8 @@ impl NetworkState {
         with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || async {
             nm_checkpoint_timeout_extend(checkpoint, timeout)?;
             nm_apply(merged_state, checkpoint, timeout).await?;
-            if merged_state.ovsdb.is_changed && ovsdb_is_running() {
-                ovsdb_apply(merged_state)?;
+            if ovsdb_is_running() {
+                ovsdb_apply_global_conf(merged_state)?;
             }
             if let Some(running_hostname) =
                 self.hostname.as_ref().and_then(|c| c.running.as_ref())

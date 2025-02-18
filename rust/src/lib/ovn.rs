@@ -124,14 +124,10 @@ impl TryFrom<&str> for OvnConfiguration {
 pub(crate) struct MergedOvnConfiguration {
     pub(crate) desired: OvnConfiguration,
     pub(crate) current: OvnConfiguration,
-    ovsdb_ext_id_value: Option<String>,
+    pub(crate) ovsdb_ext_id_value: Option<String>,
 }
 
 impl MergedOvnConfiguration {
-    pub(crate) fn to_ovsdb_external_id_value(&self) -> Option<String> {
-        self.ovsdb_ext_id_value.clone()
-    }
-
     // Partial editing for ovn:
     //  * Merge desire with current and do overriding.
     //  * To remove a particular ovn-bridge-mapping, do `state: absent`

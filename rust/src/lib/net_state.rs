@@ -382,7 +382,6 @@ impl MergedNetworkState {
         let ovsdb = MergedOvsDbGlobalConfig::new(
             desired.ovsdb,
             current.ovsdb.unwrap_or_default(),
-            &ovn,
         )?;
 
         let ret = Self {
