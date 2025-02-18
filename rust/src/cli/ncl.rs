@@ -326,6 +326,12 @@ fn main() {
                         .takes_value(false)
                         .help("Show state in json format"),
                 )
+                .arg(
+                    clap::Arg::new("VALIDATE")
+                        .long("validate")
+                        .takes_value(false)
+                        .help("Only validate policy"),
+                )
         )
         .subcommand(
             clap::Command::new(SUB_CMD_FORMAT)

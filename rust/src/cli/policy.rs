@@ -34,6 +34,10 @@ pub(crate) fn policy(matches: &clap::ArgMatches) -> Result<String, CliError> {
     if net_policy.is_empty() {
         return Ok(String::new());
     }
+
+    if matches.contains_id("VALIDATE") {
+        return Ok(String::new());
+    }
     let current_state =
         if let Some(current_state_file) = matches.value_of("CURRENT_STATE") {
             deserilize_from_file::<NetworkState>(current_state_file)?
