@@ -97,6 +97,12 @@ impl MacSecInterface {
     pub(crate) fn parent(&self) -> Option<&str> {
         self.macsec.as_ref().map(|cfg| cfg.base_iface.as_str())
     }
+
+    pub(crate) fn change_parent_name(&mut self, name: &str) {
+        if let Some(macsec) = self.macsec.as_mut() {
+            macsec.base_iface = name.to_string();
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

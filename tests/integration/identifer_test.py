@@ -41,6 +41,21 @@ def clean_up():
             - name: vrf0
               type: vrf
               state: absent
+            - name: vlan0
+              type: vlan
+              state: absent
+            - name: vxlan0
+              type: vxlan
+              state: absent
+            - name: mac0
+              type: mac-vlan
+              state: absent
+            - name: mtap0
+              type: mac-vlan
+              state: absent
+            - name: macsec0
+              type: macsec
+              state: absent
           """
         )
     )
@@ -362,3 +377,195 @@ def test_can_have_multiple_iface_holding_same_profile_name(eth1_up, eth2_up):
     assert eth1_iface_state[Interface.PROFILE_NAME] == "port1"
     assert eth2_iface_state[Interface.MAC] == eth2_mac
     assert eth2_iface_state[Interface.PROFILE_NAME] == "port1"
+
+
+def test_vlan_parent_ref_by_mac(eth1_up, clean_up):
+    port1_mac = get_mac_address("eth1")
+
+    state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: vlan0
+          type: vlan
+          state: up
+          vlan:
+            id: 100
+            base-iface: port1""".format(
+            port1_mac
+        )
+    )
+
+    libnmstate.apply(state)
+
+    expected_state = load_yaml(
+        """---
+        interfaces:
+        - name: vlan0
+          type: vlan
+          state: up
+          vlan:
+            id: 100
+            base-iface: eth1"""
+    )
+
+    assert_state_match(expected_state)
+
+
+def test_vxlan_parent_ref_by_mac(eth1_up, clean_up):
+    port1_mac = get_mac_address("eth1")
+
+    state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: vxlan0
+          type: vxlan
+          state: up
+          vxlan:
+            id: 100
+            base-iface: port1""".format(
+            port1_mac
+        )
+    )
+
+    libnmstate.apply(state)
+
+    expected_state = load_yaml(
+        """---
+        interfaces:
+        - name: vxlan0
+          type: vxlan
+          state: up
+          vxlan:
+            id: 100
+            base-iface: eth1"""
+    )
+
+    assert_state_match(expected_state)
+
+
+def test_macvlan_parent_ref_by_mac(eth1_up, clean_up):
+    port1_mac = get_mac_address("eth1")
+
+    state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: mac0
+          type: mac-vlan
+          state: up
+          mac-vlan:
+            mode: vepa
+            base-iface: port1""".format(
+            port1_mac
+        )
+    )
+
+    libnmstate.apply(state)
+
+    expected_state = load_yaml(
+        """---
+        interfaces:
+        - name: mac0
+          type: mac-vlan
+          state: up
+          mac-vlan:
+            mode: vepa
+            base-iface: eth1"""
+    )
+
+    assert_state_match(expected_state)
+
+
+def test_macvtap_parent_ref_by_mac(eth1_up, clean_up):
+    port1_mac = get_mac_address("eth1")
+
+    state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: mtap0
+          type: mac-vtap
+          state: up
+          mac-vtap:
+            mode: vepa
+            base-iface: port1""".format(
+            port1_mac
+        )
+    )
+
+    libnmstate.apply(state)
+
+    expected_state = load_yaml(
+        """---
+        interfaces:
+        - name: mtap0
+          type: mac-vtap
+          state: up
+          mac-vtap:
+            mode: vepa
+            base-iface: eth1"""
+    )
+
+    assert_state_match(expected_state)
+
+
+def test_macsec_parent_ref_by_mac(eth1_up, clean_up):
+    port1_mac = get_mac_address("eth1")
+
+    state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: macsec0
+          type: macsec
+          state: up
+          macsec:
+            encrypt: true
+            base-iface: port1
+            mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+            mka-ckn: >-
+              f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
+            port: 0
+            validation: strict
+            send-sci: true""".format(
+            port1_mac
+        )
+    )
+
+    libnmstate.apply(state)
+
+    expected_state = load_yaml(
+        """---
+        interfaces:
+        - name: macsec0
+          type: macsec
+          state: up
+          macsec:
+            encrypt: true
+            base-iface: eth1
+            mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+            mka-ckn: >-
+              f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
+            port: 0
+            validation: strict
+            send-sci: true"""
+    )
+
+    assert_state_match(expected_state)

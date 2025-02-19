@@ -744,6 +744,23 @@ impl Interface {
         }
     }
 
+    pub(crate) fn change_parent_name(&mut self, parent_name: &str) {
+        match self {
+            Interface::Vlan(vlan) => vlan.change_parent_name(parent_name),
+            Interface::Vxlan(vxlan) => vxlan.change_parent_name(parent_name),
+            Interface::MacVlan(vlan) => vlan.change_parent_name(parent_name),
+            Interface::MacVtap(vtap) => vtap.change_parent_name(parent_name),
+            Interface::MacSec(macsec) => macsec.change_parent_name(parent_name),
+            _ => {
+                log::warn!(
+                    "BUG: change_parent_name() invoked against \
+                    unsupported interface type {:?}",
+                    self
+                )
+            }
+        }
+    }
+
     pub(crate) fn change_port_name(
         &mut self,
         org_port_name: &str,

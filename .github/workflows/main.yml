@@ -128,6 +128,7 @@ jobs:
         run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
 
   integ:
+    timeout-minutes: 30
     runs-on: ubuntu-22.04
     needs: [rust_lint, py_lint, rpm_build]
     strategy:

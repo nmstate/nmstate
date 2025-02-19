@@ -790,6 +790,7 @@ impl MergedInterfaces {
         self.apply_copy_mac_from()?;
         self.validate_controller_and_port_list_confliction()?;
         self.resolve_port_name_ref()?;
+        self.resolve_parent_name_ref()?;
         self.handle_changed_ports()?;
         self.resolve_port_iface_controller_type()?;
         self._set_up_priority()?;
@@ -949,6 +950,70 @@ impl MergedInterfaces {
         }
         Ok(())
     }
+
+    // Use kernel interface name first, then fallback to profile name
+    // Raise error when referring to a profile name has multiple interfaces.
+    fn resolve_parent_name_ref(&mut self) -> Result<(), NmstateError> {
+        let iface_name_search = InterfaceNameSearch::new(self);
+
+        for iface in self.iter_mut() {
+            let des_iface = if let Some(d) = iface.desired.as_mut() {
+                d
+            } else {
+                continue;
+            };
+            if !des_iface.is_up() {
+                continue;
+            }
+            let parent = if let Some(p) = des_iface.parent() {
+                p
+            } else {
+                continue;
+            };
+
+            let for_apply = if let Some(i) = iface.for_apply.as_mut() {
+                i
+            } else {
+                continue;
+            };
+            let for_verify = if let Some(i) = iface.for_verify.as_mut() {
+                i
+            } else {
+                continue;
+            };
+
+            let kernel_names = iface_name_search.get(parent);
+
+            // Prefer kernel name as port name
+            if kernel_names.contains(&parent) {
+                continue;
+            }
+            if kernel_names.len() > 1 {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Interface {} ({}) defined with parent {} \
+                        but multiple interfaces are sharing the \
+                        this profile name",
+                        des_iface.name(),
+                        des_iface.iface_type(),
+                        parent,
+                    ),
+                ));
+            } else if let Some(kernel_name) = kernel_names.first() {
+                des_iface.change_parent_name(kernel_name);
+                for_apply.change_parent_name(kernel_name);
+                for_verify.change_parent_name(kernel_name);
+            } else {
+                // This function is not responsible to validate whether
+                // port interface exists or not. For example,
+                // gen_diff() do not need to validate whether interface
+                // exist or not.
+                // Please do not raise error here.
+            }
+        }
+        Ok(())
+    }
 }
 
 // Special cases:
@@ -1007,4 +1072,68 @@ fn get_ignored_ifaces(
     }
 
     ignored_ifaces
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct InterfaceNameSearch {
+    kernel_nics: HashSet<String>,
+    profile_2_kernel: HashMap<String, Vec<String>>,
+}
+
+impl InterfaceNameSearch {
+    pub(crate) fn new(merged_ifaces: &MergedInterfaces) -> Self {
+        let mut kernel_nics: HashSet<String> = HashSet::new();
+
+        for iface in merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|i| i.merged.is_up())
+        {
+            if let Some(cur_iface) = iface.current.as_ref() {
+                // Existing kernel interface
+                kernel_nics.insert(cur_iface.name().to_string());
+            } else if let Some(des_iface) = iface.desired.as_ref() {
+                // Creating new kernel interface
+                if des_iface.base_iface().identifier.as_ref()
+                    != Some(&InterfaceIdentifier::MacAddress)
+                {
+                    kernel_nics.insert(des_iface.name().to_string());
+                }
+            }
+        }
+
+        let mut profile_2_kernel: HashMap<String, Vec<String>> = HashMap::new();
+        for iface in merged_ifaces.kernel_ifaces.values() {
+            let base_iface = iface.merged.base_iface();
+            if let Some(profile_name) = base_iface.profile_name.as_deref() {
+                if profile_name != base_iface.name.as_str() {
+                    profile_2_kernel
+                        .entry(profile_name.to_string())
+                        .or_default()
+                        .push(base_iface.name.to_string());
+                }
+            }
+        }
+
+        Self {
+            kernel_nics,
+            profile_2_kernel,
+        }
+    }
+
+    /// Search interface kernel name by specified name.
+    /// If any kernel interface name matches with specified, return it
+    /// Vec with that interface name only.
+    /// If no kernel interface name found, search by profile name.
+    /// Because profile name can be duplicate among interfaces,
+    /// return Vec<&str> will contains all matches.
+    pub(crate) fn get<'a>(&'a self, name: &str) -> Vec<&'a str> {
+        if let Some(n) = self.kernel_nics.get(name) {
+            vec![n]
+        } else if let Some(nics) = self.profile_2_kernel.get(name) {
+            nics.as_slice().iter().map(|s| s.as_str()).collect()
+        } else {
+            Vec::new()
+        }
+    }
 }

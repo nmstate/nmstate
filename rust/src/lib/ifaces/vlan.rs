@@ -77,6 +77,12 @@ impl VlanInterface {
         }
         Ok(())
     }
+
+    pub(crate) fn change_parent_name(&mut self, name: &str) {
+        if let Some(vlan_conf) = self.vlan.as_mut() {
+            vlan_conf.base_iface = Some(name.to_string());
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
