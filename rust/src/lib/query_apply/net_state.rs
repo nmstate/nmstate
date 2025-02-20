@@ -162,11 +162,24 @@ impl NetworkState {
             );
         }
         if self.interfaces.has_up_ovs_iface() && !ovsdb_is_running() {
-            log::warn!(
-                "Desired state contains OVS interfaces, but not able \
-                to connect OVS daemon at socket {}",
-                DEFAULT_OVS_DB_SOCKET_PATH
-            );
+            if self.no_verify {
+                log::warn!(
+                    "Desired state contains OVS interfaces, but not able \
+                    to connect OVS daemon at socket {}",
+                    DEFAULT_OVS_DB_SOCKET_PATH
+                );
+            } else {
+                let e = NmstateError::new(
+                    ErrorKind::PluginFailure,
+                    format!(
+                        "Desired state contains OVS interfaces, but \
+                            not able to connect OVS daemon at socket {}",
+                        DEFAULT_OVS_DB_SOCKET_PATH
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
         }
 
         if !self.kernel_only {
