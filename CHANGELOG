@@ -1,4 +1,20 @@
 # Changelog
+## [2.2.41] - 2025-02-23
+### Breaking changes
+ - Minimum supported rust version bump to 1.77. (41c9f6582)
+
+### New features
+ - Refer parent by profile name. (3a17e4e2)
+ - Refer port by profile name. (cf1cfa9e)
+
+### Bug fixes
+ - gen_revert: Include current interface if desire is absent. (24253550)
+ - ovsdb: return an error if ovsdb socket is not available when applying. (3d514163)
+ - rust: Migrate zbus v1 to V5. (41c9f658)
+ - ovsdb: Use incremental change instead of overriding. (b43dedc7)
+ - apply: Support overriding interface configuration without merging. (216bf430)
+ - cli: Unify the state reading function. (8bf6cc71)
+
 ## [2.2.40] - 2024-01-24
 ### Breaking changes
  - N/A
