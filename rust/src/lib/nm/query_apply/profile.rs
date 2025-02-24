@@ -72,12 +72,10 @@ pub(crate) async fn delete_exist_profiles(
             if let Some(uuid) = exist_nm_conn.uuid() {
                 uuids_to_delete.push(uuid);
                 log::info!(
-                    "Deleting existing connection \
-                UUID {}, id {:?} type {:?} name {:?}",
+                    "Deleting existing duplicate connection {}: {}/{}",
                     uuid,
-                    exist_nm_conn.id(),
-                    exist_nm_conn.iface_type(),
-                    exist_nm_conn.iface_name(),
+                    iface_name,
+                    nm_iface_type,
                 );
             }
         }
@@ -91,21 +89,27 @@ pub(crate) async fn save_nm_profiles(
     memory_only: bool,
 ) -> Result<(), NmstateError> {
     for nm_conn in nm_conns {
+        let uuid = nm_conn.uuid().unwrap_or_default();
+        let nm_iface_type = nm_conn.iface_type().cloned().unwrap_or_default();
+        // For MAC identifier interface, it does not have interface name
+        // in NM connection, print connection id instead.
+        let iface_name = nm_conn
+            .iface_name()
+            .or_else(|| nm_conn.id())
+            .unwrap_or("undefined");
         if nm_conn.obj_path.is_empty() {
             log::info!(
-                "Creating connection UUID {:?}, ID {:?}, type {:?} name {:?}",
-                nm_conn.uuid(),
-                nm_conn.id(),
-                nm_conn.iface_type(),
-                nm_conn.iface_name(),
+                "Creating connection {}: {}/{}",
+                uuid,
+                iface_name,
+                nm_iface_type
             );
         } else {
             log::info!(
-                "Modifying connection UUID {:?}, ID {:?}, type {:?} name {:?}",
-                nm_conn.uuid(),
-                nm_conn.id(),
-                nm_conn.iface_type(),
-                nm_conn.iface_name(),
+                "Modifying connection {}: {}/{}",
+                uuid,
+                iface_name,
+                nm_iface_type
             );
         }
         nm_api
