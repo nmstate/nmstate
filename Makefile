@@ -9,7 +9,6 @@ COMMIT_COUNT=$(shell git rev-list --count HEAD --)
 ifeq ($(RELEASE), 1)
     TARBALL=nmstate-$(VERSION).tar.gz
     VENDOR_TARBALL=nmstate-vendor-$(VERSION).tar.xz
-    VENDOR_TARBALL_RUST_1_66=nmstate-vendor-$(VERSION)-rust-1-66.tar.xz
 else
     TARBALL=nmstate-$(VERSION)-alpha-0.$(TIMESTAMP).$(COMMIT_COUNT)git$(GIT_COMMIT).tar.gz
     VENDOR_TARBALL=nmstate-vendor-$(VERSION)-alpha-0.$(TIMESTAMP).$(COMMIT_COUNT)git$(GIT_COMMIT).tar.xz
@@ -150,14 +149,6 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 		 echo -e "'cargo install cargo-vendor-filterer'\n";); \
 		cd $(TMPDIR); \
 		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
-		rm -rf $(TMPDIR)/vendor/mio*; \
-		rm -rf $(TMPDIR)/vendor/tokio*; \
-		cd $(TMPDIR)/vendor; \
-		$(ROOT_DIR)/packaging/download_rust_crate.py mio 0.8.9; \
-		$(ROOT_DIR)/packaging/download_rust_crate.py tokio 1.38.1; \
-		$(ROOT_DIR)/packaging/download_rust_crate.py tokio-macros 2.3.0; \
-		cd $(TMPDIR); \
-		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL_RUST_1_66) vendor ; \
 	else \
 		cd rust; \
 		cargo vendor $(TMPDIR)/vendor; \

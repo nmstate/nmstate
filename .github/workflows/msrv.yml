@@ -1,0 +1,33 @@
+name: Minium Support Rust Version Test
+
+concurrency:
+  group: msrv-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+   types: [opened, synchronize, reopened]
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+jobs:
+  build_on_msrv:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - msrv: "1.77"
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust ${{ matrix.msrv }}
+      run: rustup install ${{ matrix.msrv }}
+
+    - name: Build test
+      run: cd rust && cargo +${{ matrix.msrv }} build --ignore-rust-version
+
+    - name: Unit tests
+      run: cd rust && cargo +${{ matrix.msrv }} test
