@@ -48,6 +48,8 @@ class Route:
     USE_DEFAULT_METRIC = -1
     USE_DEFAULT_ROUTE_TABLE = 0
     CWND = "cwnd"
+    INITCWND = "initcwnd"
+    INITRWND = "initrwnd"
 
 
 class RouteRule:

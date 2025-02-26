@@ -629,3 +629,100 @@ fn test_route_without_options_is_match_with_any() {
     assert!(!desired_route.is_match(&not_match_route));
     assert!(desired_route.is_match(&match_route));
 }
+
+#[test]
+fn test_route_initcwnd_initrcwnd_deserilize_from_string() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r#"
+        initcwnd: "100"
+        initrwnd: "20"
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(route.initcwnd, Some(100));
+    assert_eq!(route.initrwnd, Some(20));
+}
+
+#[test]
+fn test_route_initcwnd_equal() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        initcwnd: 201
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "192.0.2.1"
+        initcwnd: 202
+        "#,
+    )
+    .unwrap();
+
+    assert!(route1 != route2);
+}
+
+#[test]
+fn test_route_initrwnd_equal() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        initrwnd: 2010
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        initrwnd: 2020
+        "#,
+    )
+    .unwrap();
+
+    assert!(route1 != route2);
+}
+
+#[test]
+fn test_route_initrwnd_and_initcwnd_is_match() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        initrwnd: 20
+        initcwnd: 10
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        state: absent
+        initrwnd: 20
+        initcwnd: 10
+        "#,
+    )
+    .unwrap();
+
+    assert!(route2.is_match(&route1));
+}
+
+#[test]
+fn test_route_initcwnd_initrwnd_display() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        initrwnd: 2010
+        initcwnd: 2011
+        "#,
+    )
+    .unwrap();
+
+    let route1_str = route1.to_string();
+
+    assert!(route1_str.contains("initrwnd: 2010"));
+    assert!(route1_str.contains("initcwnd: 2011"));
+}

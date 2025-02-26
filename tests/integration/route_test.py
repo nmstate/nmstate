@@ -2233,3 +2233,32 @@ def test_apply_routes_twice_only_reapplies(dummy0_up):
 
     cur_state = libnmstate.show()
     assert_routes(routes, cur_state)
+
+
+# https://issues.redhat.com/browse/RHEL-59589
+@pytest.mark.tier1
+def test_add_route_with_initcwnd_and_initrwnd(eth1_up):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.INITCWND: 20,
+            Route.INITRWND: 40,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+            Route.INITCWND: 40,
+            Route.INITRWND: 20,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)

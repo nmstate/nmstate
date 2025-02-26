@@ -191,6 +191,20 @@ pub struct RouteEntry {
     /// Route source defines which IP address should be used as the source
     /// for packets routed via a specific route
     pub source: Option<String>,
+    /// Initial congestion window size
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    pub initcwnd: Option<u32>,
+    /// Initial receive window size
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    pub initrwnd: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -282,13 +296,21 @@ impl RouteEntry {
         if self.source.as_ref().is_some() && self.source != other.source {
             return false;
         }
+        if self.initcwnd.is_some() && self.initcwnd != other.initcwnd {
+            return false;
+        }
+        if self.initrwnd.is_some() && self.initrwnd != other.initrwnd {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr, source, weight, cwnd)
+    // destination, next_hop_addr, source, weight, cwnd, initcwnd, initrwnd)
     // Metric is ignored
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, &str, u16, u32) {
+    fn sort_key(
+        &self,
+    ) -> (bool, bool, u32, &str, &str, &str, &str, u16, u32, u32, u32) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
             !self
@@ -305,6 +327,8 @@ impl RouteEntry {
             self.source.as_deref().unwrap_or(""),
             self.weight.unwrap_or_default(),
             self.cwnd.unwrap_or_default(),
+            self.initcwnd.unwrap_or_default(),
+            self.initrwnd.unwrap_or_default(),
         )
     }
 
@@ -455,6 +479,12 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.cwnd {
             props.push(format!("cwnd: {v}"));
+        }
+        if let Some(v) = self.initcwnd {
+            props.push(format!("initcwnd: {v}"));
+        }
+        if let Some(v) = self.initrwnd {
+            props.push(format!("initrwnd: {v}"));
         }
 
         write!(f, "{}", props.join(" "))

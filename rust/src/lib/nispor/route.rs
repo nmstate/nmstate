@@ -206,6 +206,8 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     // we require both cwnd and its lock flag to consider cwnd as set.
     let cwnd_lock = np_route.lock.unwrap_or(0) & (1 << RTAX_CWND) != 0;
     route_entry.cwnd = if cwnd_lock { np_route.cwnd } else { None };
+    route_entry.initcwnd = np_route.initcwnd;
+    route_entry.initrwnd = np_route.initrwnd;
 
     route_entry
 }
