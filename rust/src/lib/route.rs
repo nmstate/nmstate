@@ -205,6 +205,13 @@ pub struct RouteEntry {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub initrwnd: Option<u32>,
+    /// MTU
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    pub mtu: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -302,33 +309,47 @@ impl RouteEntry {
         if self.initrwnd.is_some() && self.initrwnd != other.initrwnd {
             return false;
         }
+        if self.mtu.is_some() && self.mtu != other.mtu {
+            return false;
+        }
         true
     }
 
-    // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr, source, weight, cwnd, initcwnd, initrwnd)
+    // Return tuple of Vec of all properties with default value unwrapped.
     // Metric is ignored
-    fn sort_key(
-        &self,
-    ) -> (bool, bool, u32, &str, &str, &str, &str, u16, u32, u32, u32) {
+    fn sort_key(&self) -> (Vec<bool>, Vec<&str>, Vec<u32>) {
         (
-            !matches!(self.state, Some(RouteState::Absent)),
-            !self
-                .destination
-                .as_ref()
-                .map(|d| is_ipv6_addr(d.as_str()))
-                .unwrap_or_default(),
-            self.table_id.unwrap_or(DEFAULT_TABLE_ID),
-            self.next_hop_iface
-                .as_deref()
-                .unwrap_or(LOOPBACK_IFACE_NAME),
-            self.destination.as_deref().unwrap_or(""),
-            self.next_hop_addr.as_deref().unwrap_or(""),
-            self.source.as_deref().unwrap_or(""),
-            self.weight.unwrap_or_default(),
-            self.cwnd.unwrap_or_default(),
-            self.initcwnd.unwrap_or_default(),
-            self.initrwnd.unwrap_or_default(),
+            vec![
+                // not_absent
+                !matches!(self.state, Some(RouteState::Absent)),
+                // is_ipv6
+                !self
+                    .destination
+                    .as_ref()
+                    .map(|d| is_ipv6_addr(d.as_str()))
+                    .unwrap_or_default(),
+            ],
+            vec![
+                self.next_hop_iface
+                    .as_deref()
+                    .unwrap_or(LOOPBACK_IFACE_NAME),
+                self.destination.as_deref().unwrap_or(""),
+                self.next_hop_addr.as_deref().unwrap_or(""),
+                self.source.as_deref().unwrap_or(""),
+            ],
+            vec![
+                self.table_id.unwrap_or(DEFAULT_TABLE_ID),
+                self.cwnd.unwrap_or_default(),
+                self.initcwnd.unwrap_or_default(),
+                self.initrwnd.unwrap_or_default(),
+                self.mtu.unwrap_or_default(),
+                self.weight.unwrap_or_default().into(),
+                self.route_type
+                    .as_ref()
+                    .map(|t| u8::from(*t))
+                    .unwrap_or_default()
+                    .into(),
+            ],
         )
     }
 
@@ -405,6 +426,12 @@ impl RouteEntry {
                     "The value of 'cwnd' cannot be 0".to_string(),
                 ));
             }
+        }
+        if self.mtu == Some(0) {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "The value of 'mtu' cannot be 0".to_string(),
+            ));
         }
         Ok(())
     }
@@ -485,6 +512,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.initrwnd {
             props.push(format!("initrwnd: {v}"));
+        }
+        if let Some(v) = self.mtu {
+            props.push(format!("mtu: {v}"));
         }
 
         write!(f, "{}", props.join(" "))

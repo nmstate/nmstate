@@ -2262,3 +2262,30 @@ def test_add_route_with_initcwnd_and_initrwnd(eth1_up):
     )
     cur_state = libnmstate.show()
     assert_routes(routes, cur_state)
+
+
+# https://issues.redhat.com/browse/RHEL-80418
+@pytest.mark.tier1
+def test_add_route_with_mtu(eth1_up):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.MTU: 1550,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+            Route.MTU: 1280,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)

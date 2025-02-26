@@ -64,6 +64,7 @@ pub(crate) fn gen_nm_ip_routes(
         nm_route.lock_cwnd = route.cwnd.map(|_| true);
         nm_route.initcwnd = route.initcwnd;
         nm_route.initrwnd = route.initrwnd;
+        nm_route.mtu = route.mtu;
         ret.push(nm_route);
     }
     Ok(ret)

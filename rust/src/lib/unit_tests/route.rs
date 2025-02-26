@@ -726,3 +726,72 @@ fn test_route_initcwnd_initrwnd_display() {
     assert!(route1_str.contains("initrwnd: 2010"));
     assert!(route1_str.contains("initcwnd: 2011"));
 }
+
+#[test]
+fn test_route_mtu_equal() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1280
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1281
+        "#,
+    )
+    .unwrap();
+
+    assert!(route1 != route2);
+}
+
+#[test]
+fn test_route_mtu_is_match() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1280
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        state: absent
+        mtu: 1280
+        "#,
+    )
+    .unwrap();
+
+    assert!(route2.is_match(&route1));
+}
+
+#[test]
+fn test_route_mtu_display() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1280
+        "#,
+    )
+    .unwrap();
+
+    let route1_str = route1.to_string();
+
+    assert!(route1_str.contains("mtu: 1280"));
+}
+
+#[test]
+fn test_route_mtu_deserilize_from_string() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r#"
+        mtu: "1280"
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(route.mtu, Some(1280));
+}

@@ -208,6 +208,7 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     route_entry.cwnd = if cwnd_lock { np_route.cwnd } else { None };
     route_entry.initcwnd = np_route.initcwnd;
     route_entry.initrwnd = np_route.initrwnd;
+    route_entry.mtu = np_route.mtu;
 
     route_entry
 }

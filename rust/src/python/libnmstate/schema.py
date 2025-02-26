@@ -50,6 +50,7 @@ class Route:
     CWND = "cwnd"
     INITCWND = "initcwnd"
     INITRWND = "initrwnd"
+    MTU = "mtu"
 
 
 class RouteRule:
