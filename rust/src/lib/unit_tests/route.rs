@@ -525,6 +525,18 @@ fn test_routes_not_delayed_by_nm() {
 }
 
 #[test]
+fn test_route_cwnd_deserilize_from_string() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r#"
+        cwnd: "100"
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(route.cwnd, Some(100));
+}
+
+#[test]
 fn test_route_cwnd_zero_invalid() {
     let route = serde_yaml::from_str::<RouteEntry>(
         r"

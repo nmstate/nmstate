@@ -181,7 +181,11 @@ pub struct RouteEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route_type: Option<RouteType>,
     /// Congestion window clamp
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub cwnd: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Route source defines which IP address should be used as the source
