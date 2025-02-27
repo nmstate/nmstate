@@ -28,4 +28,8 @@ RUN echo net.ipv6.conf.all.disable_ipv6=0 > \
 
 RUN systemctl enable systemd-udevd NetworkManager openvswitch ipsec
 
+# Fedora has `tsflags=nodocs` which will not install document files in a rpm,
+# this will causing rust rpm build failure.
+RUN sed -i -e '/nodocs/d' /etc/dnf/dnf.conf
+
 CMD ["/usr/sbin/init"]
