@@ -197,6 +197,7 @@ pushd rust/src/python
 popd
 
 %if ! 0%{?rhel} && ! %{is_snapshot}
+pushd rust/src/lib
 # Fedora cargo2rpm has problem when working with worksace dependency
 #   https://pagure.io/fedora-rust/cargo2rpm/issue/13
 # we use `cargo package` to generate the expanded Cargo.toml which
