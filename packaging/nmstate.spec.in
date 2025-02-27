@@ -39,7 +39,7 @@ BuildRequires:  rust-packaging
 BuildRequires:  (crate(clap/cargo) >= 3.1 with crate(clap/cargo) < 4.0)
 BuildRequires:  (crate(clap/default) >= 3.1 with crate(clap/default) < 4.0)
 BuildRequires:  (crate(chrono/default) >= 0.4 with crate(chrono/default) < 0.5)
-BuildRequires:  (crate(env_logger/default) >= 0.10 with crate(env_logger/default) < 0.11)
+BuildRequires:  (crate(env_logger/default) >= 0.11 with crate(env_logger/default) < 0.12)
 BuildRequires:  (crate(libc/default) >= 0.2 with crate(libc/default) < 0.3)
 BuildRequires:  (crate(log/default) >= 0.4 with crate(log/default) < 0.5)
 BuildRequires:  (crate(nispor/default) >= 1.2.12 with crate(nispor/default) < 2.0)
@@ -142,8 +142,8 @@ BuildArch:      noarch
 License:        Apache-2.0
 # https://bugzilla.redhat.com/show_bug.cgi?id=2161128
 Requires:  (crate(nispor/default) >= 1.2.12 with crate(nispor/default) < 2.0)
-Requires:  (crate(nix/default) >= 0.24 with crate(nix/default) < 0.25)
-Requires:  (crate(zbus/default) >= 1.9 with crate(zbus/default) < 2.0)
+Requires:  (crate(nix/default) >= 0.26 with crate(nix/default) < 0.27)
+Requires:  (crate(zbus/default) >= 5.1 with crate(zbus/default) < 6.0)
 
 %description -n rust-%{name}+query_apply-devel
 This package contains library source intended for building other packages
