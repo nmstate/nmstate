@@ -1,6 +1,6 @@
 FROM registry.fedoraproject.org/fedora:latest
 
-RUN echo "2024-04-09" > /build_time
+RUN echo "2025-02-27" > /build_time
 
 RUN dnf update -y && \
     dnf -y install --setopt=install_weak_deps=False \

@@ -1,6 +1,6 @@
 FROM quay.io/centos/centos:stream9
 
-RUN echo "2024-04-09" > /build_time
+RUN echo "2025-02-27" > /build_time
 
 # Add alter-baseos and alter-appstream repositories with lower priority
 COPY c9s-alter-baseos.repo \

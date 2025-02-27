@@ -1,6 +1,6 @@
 FROM quay.io/centos/centos:stream10-development
 
-RUN echo "2024-10-17" > /build_time
+RUN echo "2025-02-27" > /build_time
 
 # Add alter-baseos and alter-appstream repositories with lower priority
 COPY c10s-alter-baseos.repo \
