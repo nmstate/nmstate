@@ -35,6 +35,7 @@ impl NetworkState {
     pub fn checkpoint_rollback(checkpoint: &str) -> Result<(), NmstateError> {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_io()
+            .enable_time()
             .build()
             .map_err(|e| {
                 NmstateError::new(
@@ -60,6 +61,7 @@ impl NetworkState {
     pub fn checkpoint_commit(checkpoint: &str) -> Result<(), NmstateError> {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_io()
+            .enable_time()
             .build()
             .map_err(|e| {
                 NmstateError::new(
@@ -84,6 +86,7 @@ impl NetworkState {
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_io()
+            .enable_time()
             .build()
             .map_err(|e| {
                 NmstateError::new(
