@@ -32,6 +32,7 @@ SET_CMD = ["nmstatectl", "set"]
 SHOW_CMD = ["nmstatectl", "show"]
 CONFIRM_CMD = ["nmstatectl", "commit"]
 ROLLBACK_CMD = ["nmstatectl", "rollback"]
+VALIDATE_CMD = ["nmstatectl", "validate"]
 
 LOOPBACK_CONFIG = {
     "name": "lo",
@@ -63,6 +64,45 @@ ETH1_YAML_CONFIG = b"""interfaces:
   ipv6:
     enabled: false
   mtu: 1500
+"""
+
+BAD_YAML_STATE_CONFIG = b"""interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+  accept-all-mac-addresses: false
+  ipv4:
+    adress:
+    - ip: 192.0.2.250
+      prefix-length: 24
+    enabled: true
+  ipv6:
+    enabled: false
+  mtu: 1500
+"""
+
+BAD_YAML_POLICY_CONFIG = b"""capture:
+  default-gw: routes.running.destination="0.0.0.0/0"
+  base-iface: >-
+    interfaces.name==capture.default-gw.routes.running.0.next-hop-interface
+desiredState:
+  interfaces:
+    - name: br1
+      description: >-
+        DHCP aware Linux bridge to connect a nic that is referenced by a
+        default gateway
+      type: linux-bridge
+      state: up
+      mac-address: "{{ capture.base-iface.interfaces.0.mac-address }}"
+      ipv4:
+        dhcp: true
+        enabled: true
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+          - name: "{{ capture.base-iface.interfaces.0.name }}"
 """
 
 SET_WARNING = "Using 'set' is deprecated, use 'apply' instead."
@@ -200,6 +240,49 @@ def test_apply_command_with_two_states():
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
     assertlib.assert_absent("linux-br0")
+
+
+def test_validate_with_file_state():
+    examples = find_examples_dir()
+    cmd = VALIDATE_CMD + [
+        os.path.join(examples, "linuxbrige_eth1_up.yml"),
+    ]
+    ret = cmdlib.exec_cmd(cmd)
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+
+
+def test_validate_with_file_policy():
+    examples = find_examples_dir()
+    cmd = VALIDATE_CMD + [
+        os.path.join(examples, "policy/bridge-on-default-gw-dhcp/policy.yml"),
+    ]
+    ret = cmdlib.exec_cmd(cmd)
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+
+
+def test_validate_command_with_stdin_state():
+    ret = cmdlib.exec_cmd(VALIDATE_CMD, stdin=ETH1_YAML_CONFIG)
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+
+
+def test_validate_command_with_stdin_bad_state():
+    ret = cmdlib.exec_cmd(VALIDATE_CMD, stdin=BAD_YAML_STATE_CONFIG)
+    rc, out, err = ret
+
+    assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+
+
+def test_validate_command_with_stdin_bad_policy():
+    ret = cmdlib.exec_cmd(VALIDATE_CMD, stdin=BAD_YAML_POLICY_CONFIG)
+    rc, out, err = ret
+
+    assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
 
 
 @pytest.mark.tier1

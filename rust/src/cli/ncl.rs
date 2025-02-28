@@ -22,6 +22,8 @@ mod service;
 mod state;
 #[cfg(feature = "query_apply")]
 mod statistic;
+#[cfg(feature = "query_apply")]
+mod validate;
 
 use env_logger::Builder;
 use log::LevelFilter;
@@ -30,6 +32,7 @@ use log::LevelFilter;
 use crate::apply::{
     apply_from_files, apply_from_stdin, commit, rollback, state_edit,
 };
+
 #[cfg(feature = "query_apply")]
 use crate::autoconf::autoconf;
 #[cfg(feature = "gen_conf")]
@@ -45,6 +48,8 @@ use crate::result::print_result_and_exit;
 use crate::service::ncl_service;
 #[cfg(feature = "query_apply")]
 use crate::statistic::statistic;
+#[cfg(feature = "query_apply")]
+use validate::validate;
 
 pub(crate) const DEFAULT_SERVICE_FOLDER: &str = "/etc/nmstate";
 pub(crate) const CONFIG_FOLDER_KEY: &str = "CONFIG_FOLDER";
@@ -65,6 +70,7 @@ const SUB_CMD_POLICY: &str = "policy";
 const SUB_CMD_FORMAT: &str = "format";
 const SUB_CMD_GEN_REVERT: &str = "gr";
 const SUB_CMD_STATISTIC: &str = "statistic";
+const SUB_CMD_VALIDATE: &str = "validate";
 
 fn main() {
     let argv: Vec<String> = std::env::args().collect();
@@ -389,6 +395,17 @@ fn main() {
                 )
         )
         .subcommand(
+            clap::Command::new(SUB_CMD_VALIDATE)
+                .about("Validate network state or network policy")
+                .arg(
+                    clap::Arg::new("STATE_FILE")
+                        .required(false)
+                        .multiple_occurrences(false)
+                        .index(1)
+                        .help("Network state file"),
+                )
+        )
+        .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
        );
@@ -512,6 +529,8 @@ fn main() {
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_STATISTIC)
     {
         print_result_and_exit(statistic(matches));
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_VALIDATE) {
+        print_result_and_exit(validate(matches));
     } else if matches.subcommand_matches(SUB_CMD_VERSION).is_some() {
         print_result_and_exit(Ok(format!(
             "{} {}",
@@ -648,6 +667,17 @@ fn statistic(
 ) -> Result<String, crate::error::CliError> {
     Err(
         "The statistic sub-command require `query-apply` feature been \
+        enabled during compiling"
+            .into(),
+    )
+}
+
+#[cfg(not(feature = "query_apply"))]
+fn validate(
+    _matches: &clap::ArgMatches,
+) -> Result<String, crate::error::CliError> {
+    Err(
+        "The validate sub-command require `query-apply` feature been \
         enabled during compiling"
             .into(),
     )
