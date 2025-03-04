@@ -1,4 +1,20 @@
 # Changelog
+## [2.2.42] - 2025-03-04
+### Breaking changes
+ - N/A
+
+### New features
+ - route: Add support of MTU option. (aba11371)
+ - route: Add support of initcwnd and initrwnd. (46e52715)
+
+### Bug fixes
+ - rpm spec: Fix fedora compiling. (f61f18b4, 5665a53c)
+ - async: Enable timer in tokio runtime. (4bafa37c)
+ - route: Support deserialize cwnd property from string. (a4a48c50)
+ - Correct spelling of "extension". (fb2aa658)
+ - Makefile: Stop generating vendor tarball for rust 1.66. (53f96d8c)
+ - nm log: Do not use debug print for Option<String>. (92c14d12)
+
 ## [2.2.41] - 2025-02-23
 ### Breaking changes
  - Minimum supported rust version bump to 1.77. (41c9f6582)
