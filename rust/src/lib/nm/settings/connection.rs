@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use super::super::nm_dbus::{
-    NmConnection, NmIfaceType, NmSettingConnection, NmSettingMacVlan,
-    NmSettingVeth, NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
+    NmActiveConnection, NmConnection, NmIfaceType, NmSettingConnection,
+    NmSettingMacVlan, NmSettingVeth, NmSettingVrf, NmSettingVxlan,
+    NmSettingsConnectionFlag,
 };
 use super::{
     bond::{gen_nm_bond_port_setting, gen_nm_bond_setting},
@@ -38,7 +41,7 @@ pub(crate) fn iface_to_nm_connections(
     merged_iface: &MergedInterface,
     merged_state: &MergedNetworkState,
     exist_nm_conns: &[NmConnection],
-    nm_ac_uuids: &[&str],
+    nm_acs: &[NmActiveConnection],
     gen_conf_mode: bool,
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut ret: Vec<NmConnection> = Vec::new();
@@ -68,7 +71,7 @@ pub(crate) fn iface_to_nm_connections(
             exist_nm_conns,
             &iface.base_iface().name,
             &iface.base_iface().iface_type,
-            nm_ac_uuids,
+            nm_acs,
         )
     };
 
@@ -85,7 +88,7 @@ pub(crate) fn iface_to_nm_connections(
                         cur_iface,
                         merged_state,
                         exist_nm_conns,
-                        nm_ac_uuids,
+                        nm_acs,
                         gen_conf_mode,
                     );
                 }
@@ -99,7 +102,7 @@ pub(crate) fn iface_to_nm_connections(
                         cur_iface,
                         merged_state,
                         exist_nm_conns,
-                        nm_ac_uuids,
+                        nm_acs,
                         gen_conf_mode,
                     );
                 }
@@ -117,6 +120,14 @@ pub(crate) fn iface_to_nm_connections(
     let iface = &iface;
 
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
+
+    // If existing NmConnection is a multi-connect one, we should
+    // generate new NmSettingConnection (UUID, name and etc)
+    if nm_conn.is_multi_connect() {
+        nm_conn.connection = None;
+        nm_conn.obj_path = String::new();
+    }
+
     nm_conn.flags = Vec::new();
 
     // Use stable UUID if in gen_conf mode.
@@ -150,7 +161,7 @@ pub(crate) fn iface_to_nm_connections(
                     exist_nm_conns,
                     &ovs_port_conf.name,
                     &InterfaceType::Other("ovs-port".to_string()),
-                    nm_ac_uuids,
+                    nm_acs,
                 );
                 ret.push(create_ovs_port_nm_conn(
                     &ovs_br_iface.base.name,
@@ -301,7 +312,7 @@ pub(crate) fn iface_to_nm_connections(
                             exist_nm_conns,
                             &ovs_port_name,
                             &InterfaceType::Other("ovs-port".to_string()),
-                            nm_ac_uuids,
+                            nm_acs,
                         );
                         ret.push(create_ovs_port_nm_conn(
                             ctrl,
@@ -481,40 +492,60 @@ pub(crate) fn get_exist_profile<'a>(
     exist_nm_conns: &'a [NmConnection],
     iface_name: &str,
     iface_type: &InterfaceType,
-    nm_ac_uuids: &[&str],
+    nm_acs: &[NmActiveConnection],
 ) -> Option<&'a NmConnection> {
-    let mut found_nm_conns: Vec<&NmConnection> = Vec::new();
     let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
         t
     } else {
         return None;
     };
-    for exist_nm_conn in exist_nm_conns {
-        if nm_iface_type == NmIfaceType::Vpn {
-            if exist_nm_conn.id() == Some(iface_name) {
+    if nm_iface_type == NmIfaceType::Vpn {
+        // For VPN connection, we search `connection.id` and prefer activated
+        let mut found_nm_conn = None;
+        let nm_acs_uuids: HashSet<&str> =
+            nm_acs.iter().map(|nm_ac| nm_ac.uuid.as_str()).collect();
+        for exist_nm_conn in exist_nm_conns.iter() {
+            if exist_nm_conn.id() == Some(iface_name)
+                && exist_nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
+            {
                 if let Some(uuid) = exist_nm_conn.uuid() {
-                    // Prefer activated connection
-                    if nm_ac_uuids.contains(&uuid) {
+                    if nm_acs_uuids.contains(&uuid) {
                         return Some(exist_nm_conn);
+                    } else if found_nm_conn.is_none() {
+                        found_nm_conn = Some(exist_nm_conn);
                     }
                 }
-                found_nm_conns.push(exist_nm_conn);
             }
-        } else if exist_nm_conn.iface_name() == Some(iface_name)
-            && (exist_nm_conn.iface_type() == Some(&nm_iface_type)
-                || (nm_iface_type == NmIfaceType::Ethernet
-                    && exist_nm_conn.iface_type() == Some(&NmIfaceType::Veth)))
-        {
-            if let Some(uuid) = exist_nm_conn.uuid() {
-                // Prefer activated connection
-                if nm_ac_uuids.contains(&uuid) {
-                    return Some(exist_nm_conn);
+        }
+        found_nm_conn
+    } else {
+        // Search activate profiles first
+        for nm_ac in nm_acs {
+            if nm_ac.iface_name == iface_name
+                && (nm_ac.iface_type == nm_iface_type
+                    || (nm_iface_type == NmIfaceType::Ethernet
+                        && nm_ac.iface_type == NmIfaceType::Veth))
+            {
+                if let Some(nm_conn) = exist_nm_conns
+                    .iter()
+                    .find(|c| c.uuid() == Some(nm_ac.uuid.as_str()))
+                {
+                    if !nm_conn.is_multi_connect() {
+                        return Some(nm_conn);
+                    }
                 }
             }
-            found_nm_conns.push(exist_nm_conn);
         }
+
+        exist_nm_conns.iter().find(|&exist_nm_conn| {
+            !exist_nm_conn.is_multi_connect()
+                && exist_nm_conn.iface_name() == Some(iface_name)
+                && (exist_nm_conn.iface_type() == Some(&nm_iface_type)
+                    || (nm_iface_type == NmIfaceType::Ethernet
+                        && exist_nm_conn.iface_type()
+                            == Some(&NmIfaceType::Veth)))
+        })
     }
-    found_nm_conns.pop()
 }
 
 fn get_exist_profile_by_profile_name<'a>(
@@ -541,7 +572,7 @@ fn persisten_iface_cur_conf(
     cur_iface: &Interface,
     merged_state: &MergedNetworkState,
     exist_nm_conns: &[NmConnection],
-    nm_ac_uuids: &[&str],
+    nm_acs: &[NmActiveConnection],
     gen_conf_mode: bool,
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut iface = cur_iface.clone();
@@ -557,7 +588,7 @@ fn persisten_iface_cur_conf(
         &merged_iface,
         merged_state,
         exist_nm_conns,
-        nm_ac_uuids,
+        nm_acs,
         gen_conf_mode,
     )
 }

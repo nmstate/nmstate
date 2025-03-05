@@ -343,6 +343,14 @@ impl NmConnection {
         }
         None
     }
+
+    pub fn is_multi_connect(&self) -> bool {
+        matches!(
+            self.connection.as_ref().and_then(|c| c.multi_connect),
+            Some(NmConnectionMultiConnect::Multiple)
+                | Some(NmConnectionMultiConnect::ManualMultiple)
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
@@ -359,6 +367,7 @@ pub struct NmSettingConnection {
     pub autoconnect_ports: Option<bool>,
     pub lldp: Option<bool>,
     pub mptcp_flags: Option<u32>,
+    pub multi_connect: Option<NmConnectionMultiConnect>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -383,6 +392,8 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
             ),
             lldp: _from_map!(v, "lldp", i32::try_from)?.map(|i| i == 1),
             mptcp_flags: _from_map!(v, "mptcp-flags", u32::try_from)?,
+            multi_connect: _from_map!(v, "multi-connect", i32::try_from)?
+                .map(NmConnectionMultiConnect::from),
             _other: v,
         })
     }
@@ -414,6 +425,9 @@ impl ToDbusValue for NmSettingConnection {
         }
         if let Some(v) = &self.mptcp_flags {
             ret.insert("mptcp-flags", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.multi_connect {
+            ret.insert("multi-connect", zvariant::Value::new(i32::from(v)));
         }
 
         ret.insert(
@@ -547,5 +561,53 @@ impl NmRange {
             zvariant::Value::new(zvariant::Value::U64(self.end)),
         )?;
         Ok(zvariant::Value::Dict(ret))
+    }
+}
+
+const NM_CONNECTION_MULTI_CONNECT_DEFAULT: i32 = 0;
+const NM_CONNECTION_MULTI_CONNECT_SINGLE: i32 = 1;
+const NM_CONNECTION_MULTI_CONNECT_MANUAL_MULTIPLE: i32 = 2;
+const NM_CONNECTION_MULTI_CONNECT_MULTIPLE: i32 = 3;
+
+#[derive(Debug, Copy, Clone, PartialEq, Default, Deserialize, Serialize)]
+#[non_exhaustive]
+pub enum NmConnectionMultiConnect {
+    #[default]
+    Default,
+    Single,
+    ManualMultiple,
+    Multiple,
+    Other(i32),
+}
+
+impl From<i32> for NmConnectionMultiConnect {
+    fn from(d: i32) -> Self {
+        match d {
+            NM_CONNECTION_MULTI_CONNECT_DEFAULT => Self::Default,
+            NM_CONNECTION_MULTI_CONNECT_SINGLE => Self::Single,
+            NM_CONNECTION_MULTI_CONNECT_MANUAL_MULTIPLE => Self::ManualMultiple,
+            NM_CONNECTION_MULTI_CONNECT_MULTIPLE => Self::Multiple,
+            _ => Self::Other(d),
+        }
+    }
+}
+
+impl From<NmConnectionMultiConnect> for i32 {
+    fn from(v: NmConnectionMultiConnect) -> i32 {
+        match v {
+            NmConnectionMultiConnect::Default => {
+                NM_CONNECTION_MULTI_CONNECT_DEFAULT
+            }
+            NmConnectionMultiConnect::Single => {
+                NM_CONNECTION_MULTI_CONNECT_SINGLE
+            }
+            NmConnectionMultiConnect::ManualMultiple => {
+                NM_CONNECTION_MULTI_CONNECT_MANUAL_MULTIPLE
+            }
+            NmConnectionMultiConnect::Multiple => {
+                NM_CONNECTION_MULTI_CONNECT_MULTIPLE
+            }
+            NmConnectionMultiConnect::Other(i) => i,
+        }
     }
 }

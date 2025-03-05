@@ -274,3 +274,36 @@ def test_reapply_with_ip_setting_table_and_metric_defaults(dummy0_up):
     libnmstate.apply(desired_state)
     cur_state = libnmstate.show()
     assert_routes(desired_state[Route.KEY][Route.CONFIG], cur_state)
+
+
+@pytest.mark.tier1
+@pytest.fixture
+def vlan_with_empty_connection_iface_name(eth1_up):
+    exec_cmd(
+        "nmcli c add type vlan connection.id eth1.100 "
+        "ipv4.method manual ipv4.addresses 192.0.2.1/24 "
+        "ipv6.method disabled vlan.parent eth1 vlan.id 100".split(),
+        check=True,
+    )
+    exec_cmd("nmcli c up eth1.100".split(), check=True)
+    yield
+    exec_cmd("nmcli c delete eth1.100".split(), check=True)
+
+
+def test_add_route_to_vlan_with_empty_connection_iface_name(
+    vlan_with_empty_connection_iface_name,
+):
+    desired_routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1.100",
+            Route.DESTINATION: "203.0.113.0/24",
+            Route.NEXT_HOP_ADDRESS: "192.0.2.2",
+        }
+    ]
+    libnmstate.apply({Route.KEY: {Route.CONFIG: desired_routes}})
+
+    cur_state = libnmstate.show()
+    assert_routes(
+        desired_routes,
+        cur_state,
+    )
