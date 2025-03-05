@@ -42,6 +42,11 @@ function rebuild_container_images {
     if is_file_changed "$PROJECT_PATH/packaging"; then
         IMAGE_NAME=$(basename $CONTAINER_IMAGE)
         ${PROJECT_PATH}/packaging/build-container.sh $IMAGE_NAME
+    else
+        # pull the image to local, and retry if fails up to 5 times
+        for i in {1..5};do
+            ${CONTAINER_CMD} pull $CONTAINER_IMAGE && break
+        done
     fi
 }
 
