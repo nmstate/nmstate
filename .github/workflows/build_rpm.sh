@@ -12,7 +12,7 @@ CONTAINER_C9S_IMG="quay.io/nmstate/c9s-nmstate-build"
 if [ $1 == "el8" ];then
     # pull the image to local, and retry if fails up to 5 times
     for i in {1..5};do
-        ${CONTAINER_CMD} pull $CONTAINER_C8S_IMG && break
+        podman pull $CONTAINER_C8S_IMG && break
     done
 
     podman run -v $PROJECT_PATH:$CONTAINER_WORKSPACE:rw \
@@ -24,7 +24,7 @@ if [ $1 == "el8" ];then
 else
     # pull the image to local, and retry if fails up to 5 times
     for i in {1..5};do
-        ${CONTAINER_CMD} pull $CONTAINER_C9S_IMG && break
+        podman pull $CONTAINER_C9S_IMG && break
     done
 
     podman run -v $PROJECT_PATH:$CONTAINER_WORKSPACE:rw \
