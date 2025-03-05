@@ -49,7 +49,8 @@ pub use self::bridge::{
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
 };
 pub use self::conn::{
-    NmConnection, NmRange, NmSettingConnection, NmSettingsConnectionFlag,
+    NmConnection, NmConnectionMultiConnect, NmRange, NmSettingConnection,
+    NmSettingsConnectionFlag,
 };
 pub use self::ethtool::NmSettingEthtool;
 pub use self::hsr::NmSettingHsr;

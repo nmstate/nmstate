@@ -26,9 +26,6 @@ pub(crate) fn perpare_nm_conns(
     let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
 
-    let nm_ac_uuids: Vec<&str> =
-        nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
-
     let mut ifaces: Vec<&MergedInterface> = merged_state
         .interfaces
         .iter()
@@ -55,7 +52,7 @@ pub(crate) fn perpare_nm_conns(
                 exist_nm_conns,
                 &iface.merged.base_iface().name,
                 &iface.merged.base_iface().iface_type,
-                &nm_ac_uuids,
+                nm_acs,
             )
         })
         .cloned()
@@ -74,7 +71,7 @@ pub(crate) fn perpare_nm_conns(
             merged_iface,
             merged_state,
             exist_nm_conns,
-            &nm_ac_uuids,
+            nm_acs,
             gen_conf_mode,
         )? {
             if iface.is_up()
