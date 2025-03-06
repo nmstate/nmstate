@@ -38,6 +38,15 @@ impl NmIpRoute {
             if let Some(src) = self.src.as_ref() {
                 write!(opt_string, ",src={}", src).ok();
             }
+            if let Some(v) = self.initcwnd.as_ref() {
+                write!(opt_string, ",initcwnd={}", v).ok();
+            }
+            if let Some(v) = self.initrwnd.as_ref() {
+                write!(opt_string, ",initrwnd={}", v).ok();
+            }
+            if let Some(v) = self.mtu.as_ref() {
+                write!(opt_string, ",mtu={}", v).ok();
+            }
             ret.insert("options".to_string(), opt_string);
         }
         ret
