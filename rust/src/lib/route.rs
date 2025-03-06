@@ -8,6 +8,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ifaces::InterfaceNameSearch,
     ip::{is_ipv6_addr, sanitize_ip_network},
     ErrorKind, InterfaceType, MergedInterfaces, NmstateError,
 };
@@ -100,6 +101,57 @@ impl Routes {
                     }
                 }
                 validate_route_dst(route)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn resolve_next_hop_iface_ref(
+        &mut self,
+        merged_ifaces: &MergedInterfaces,
+    ) -> Result<(), NmstateError> {
+        let iface_name_search = InterfaceNameSearch::new(merged_ifaces);
+
+        if let Some(config_routes) = self.config.as_mut() {
+            for route in config_routes.iter_mut() {
+                let new_iface_name = if let Some(next_hop_iface) =
+                    route.next_hop_iface.as_ref()
+                {
+                    let kernel_names = iface_name_search.get(next_hop_iface);
+                    // Prefer kernel name as port name
+                    if kernel_names.contains(&next_hop_iface.as_str()) {
+                        continue;
+                    }
+                    if kernel_names.is_empty() && !route.is_absent() {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Route '{}': next hop interface {} not found",
+                                route,
+                                next_hop_iface.as_str()
+                            ),
+                        ));
+                    } else if kernel_names.len() > 1 {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Route '{}' defined with next \
+                                hop interface {} but \
+                                multiple interfaces are sharing \
+                                this profile name",
+                                route,
+                                next_hop_iface.as_str()
+                            ),
+                        ));
+                    } else {
+                        kernel_names.first().map(|s| s.to_string())
+                    }
+                } else {
+                    None
+                };
+                if let Some(new_iface_name) = new_iface_name {
+                    route.next_hop_iface.replace(new_iface_name);
+                }
             }
         }
         Ok(())
@@ -539,11 +591,13 @@ pub(crate) struct MergedRoutes {
 
 impl MergedRoutes {
     pub(crate) fn new(
-        desired: Routes,
+        mut desired: Routes,
         current: Routes,
         merged_ifaces: &MergedInterfaces,
     ) -> Result<Self, NmstateError> {
         desired.validate()?;
+        desired.resolve_next_hop_iface_ref(merged_ifaces)?;
+
         let mut desired_routes = Vec::new();
         if let Some(rts) = desired.config.as_ref() {
             for rt in rts {

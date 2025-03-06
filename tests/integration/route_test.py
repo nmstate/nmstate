@@ -22,6 +22,7 @@ from .testlib.bridgelib import linux_bridge
 from .testlib.dummy import dummy_interface
 from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
+from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.route import assert_routes
 from .testlib.route import assert_routes_missing
@@ -2289,3 +2290,133 @@ def test_add_route_with_mtu(eth1_up):
     )
     cur_state = libnmstate.show()
     assert_routes(routes, cur_state)
+
+
+@pytest.fixture
+def port1_ref_by_mac_with_static_route(eth1_up):
+    port1_mac = get_mac_address("eth1")
+
+    routes = [
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.NEXT_HOP_INTERFACE: "port1",
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+        },
+    ]
+
+    iface_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    iface_state[Interface.NAME] = "port1"
+    iface_state[Interface.IDENTIFIER] = Interface.IDENTIFIER_MAC
+    iface_state[Interface.MAC] = port1_mac
+
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: routes,
+            },
+            Interface.KEY: [iface_state],
+        }
+    )
+    yield routes
+
+
+def test_route_next_hop_iface_ref_by_mac(port1_ref_by_mac_with_static_route):
+    expected_routes = port1_ref_by_mac_with_static_route
+    expected_routes[0][Route.NEXT_HOP_INTERFACE] = "eth1"
+
+    cur_state = libnmstate.show()
+    assert_routes(expected_routes, cur_state)
+
+
+def test_route_next_hop_iface_ref_by_profile_name(eth1_up):
+    routes = [
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.NEXT_HOP_INTERFACE: "port1",
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+        },
+    ]
+
+    iface_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    iface_state[Interface.PROFILE_NAME] = "port1"
+
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: routes,
+            },
+            Interface.KEY: [iface_state],
+        }
+    )
+    expected_routes = routes
+    expected_routes[0][Route.NEXT_HOP_INTERFACE] = "eth1"
+
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+
+
+def test_route_next_hop_iface_ref_to_multiple_profiles(eth1_up, eth2_up):
+    routes = [
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.NEXT_HOP_INTERFACE: "port1",
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+        },
+    ]
+
+    iface_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    iface_state[Interface.PROFILE_NAME] = "port1"
+
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Route.KEY: {
+                    Route.CONFIG: routes,
+                },
+                Interface.KEY: [
+                    iface_state,
+                    {
+                        Interface.NAME: "eth2",
+                        Interface.PROFILE_NAME: "port1",
+                    },
+                ],
+            }
+        )
+
+
+def test_route_next_hop_iface_not_found():
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Route.KEY: {
+                    Route.CONFIG: [
+                        {
+                            Route.DESTINATION: "198.51.100.0/24",
+                            Route.NEXT_HOP_INTERFACE: "port_not_exist",
+                            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+                        }
+                    ]
+                },
+            }
+        )
+
+
+def test_route_delete_next_hop_iface_by_profile_name(
+    port1_ref_by_mac_with_static_route,
+):
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.STATE: Route.STATE_ABSENT,
+                        Route.NEXT_HOP_INTERFACE: "port1",
+                    },
+                ]
+            }
+        }
+    )
+
+    cur_routes = libnmstate.show()[Route.KEY]
+    for route in cur_routes[Route.CONFIG]:
+        assert route[Route.NEXT_HOP_INTERFACE] != "eth1"
