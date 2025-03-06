@@ -5,6 +5,7 @@ import libnmstate
 from libnmstate.schema import Interface
 
 from .testlib.assertlib import assert_state_match
+from .testlib.env import nm_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.statelib import show_only
 from .testlib.yaml import load_yaml
@@ -194,6 +195,10 @@ def test_linux_bridge_port_ref_by_mac(eth1_up, eth2_up, clean_up):
     assert_state_match(expected_state)
 
 
+@pytest.mark.skipif(
+    nm_minor_version() < 48,
+    reason=("Ref OVS bridge by mac is only supported by NetworkManager 1.48+"),
+)
 def test_ovs_bridge_port_ref_by_mac(eth1_up, eth2_up, clean_up):
     port1_mac = get_mac_address("eth1")
     port2_mac = get_mac_address("eth2")
