@@ -457,3 +457,64 @@ def test_gen_conf_route_next_hop_iface_ref_by_mac(eth1_eth2_up_with_no_config):
         )
         cur_state = libnmstate.show()
         assert_routes(expected_routes, cur_state)
+
+
+def test_gen_conf_route_initcwnd_mtu():
+    desired_state = load_yaml(
+        """---
+        routes:
+          config:
+              - destination: 203.0.113.0/24
+                mtu: 1550
+                next-hop-address: 192.0.2.252
+                next-hop-interface: eth1
+                table-id: 200
+                initcwnd: 20
+                initrwnd: 30
+              - destination: 2001:db8:a::/64
+                mtu: 1280
+                next-hop-address: 2001:db8:1::2
+                next-hop-interface: eth1
+                table-id: 200
+                initcwnd: 40
+                initrwnd: 50
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: false
+              address:
+              - ip: 192.0.2.251
+                prefix-length: 24
+            ipv6:
+              enabled: true
+              dhcp: false
+              autoconf: false
+              address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: false
+              address:
+              - ip: 192.0.2.251
+                prefix-length: 24
+            ipv6:
+              enabled: true
+              dhcp: false
+              autoconf: false
+              address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        """
+    )
+    with gen_conf_apply(desired_state):
+        desired_routes = desired_state[Route.KEY][Route.CONFIG]
+        cur_state = libnmstate.show()
+        assert_routes(desired_routes, cur_state, nic=None)
