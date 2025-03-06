@@ -7,7 +7,7 @@ use crate::{
     MergedInterface, MergedInterfaces, NmstateError, OvsInterface,
 };
 
-use super::inter_ifaces::InterfaceNameSearch;
+use super::InterfaceNameSearch;
 
 fn is_port_overbook(
     port_to_ctrl: &mut HashMap<String, String>,

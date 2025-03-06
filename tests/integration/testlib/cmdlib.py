@@ -54,7 +54,7 @@ def exec_cmd(cmd, env=None, stdin=None, check=False):
     logging.debug(_retcode_log_line(p.returncode, err=err))
 
     if check and p.returncode != 0:
-        raise Exception(
+        raise subprocess.SubprocessError(
             "Failed command {0}:\n{1}".format(
                 command_log_line(cmd), format_exec_cmd_result(p)
             )
@@ -68,7 +68,9 @@ def command_log_line(args, cwd=None):
 
 
 def format_exec_cmd_result(result):
-    return "rc={}, out={}, err={}".format(*result)
+    return "rc={}, out={}, err={}".format(
+        result.returncode, result.stdout, result.stderr
+    )
 
 
 def _retcode_log_line(code, err=None):

@@ -25,6 +25,7 @@ mod ovs;
 mod sriov;
 mod vlan;
 
+pub(crate) use self::inter_ifaces::{InterfaceNameSearch, MergedInterfaces};
 pub use self::xfrm::XfrmInterface;
 pub use base::*;
 pub use bond::{
@@ -46,7 +47,6 @@ pub use ethtool::{
 };
 pub use hsr::{HsrConfig, HsrInterface, HsrProtocol};
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
-pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;
 pub use ipsec::{
     IpsecInterface, LibreswanAddressFamily, LibreswanConfig,

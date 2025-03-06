@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+from subprocess import SubprocessError
+
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import Interface
 from libnmstate.schema import Route
 import libnmstate
 import pytest
@@ -8,8 +12,10 @@ import yaml
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import dummy_interface
 from ..testlib.env import nm_minor_version
+from ..testlib.ifacelib import get_mac_address
 from ..testlib.iproutelib import ip_monitor_assert_stable_link_up
 from ..testlib.route import assert_routes
+
 
 from libnmstate.error import NmstateVerificationError
 
@@ -307,3 +313,78 @@ def test_add_route_to_vlan_with_empty_connection_iface_name(
         desired_routes,
         cur_state,
     )
+
+
+@pytest.fixture
+def port1_ref_by_mac_with_static_route(eth1_up):
+    port1_mac = get_mac_address("eth1")
+
+    routes = [
+        {
+            Route.DESTINATION: "198.51.100.0/24",
+            Route.NEXT_HOP_INTERFACE: "port1",
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+        },
+    ]
+
+    iface_state = yaml.load(
+        f"""---
+            name: port1
+            type: ethernet
+            state: up
+            mtu: 1500
+            mac-address: {port1_mac}
+            identifier: mac-address
+            ipv4:
+              address:
+              - ip: 192.0.2.252
+                prefix-length: 24
+              dhcp: false
+              enabled: true
+            """,
+        Loader=yaml.SafeLoader,
+    )
+
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: routes,
+            },
+            Interface.KEY: [iface_state],
+        }
+    )
+    yield routes
+
+
+def test_route_delete_next_hop_iface_by_profile_name_no_leftover(
+    port1_ref_by_mac_with_static_route,
+):
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.STATE: Route.STATE_ABSENT,
+                        Route.NEXT_HOP_INTERFACE: "port1",
+                    },
+                ]
+            }
+        }
+    )
+
+    with pytest.raises(SubprocessError):
+        exec_cmd("nmcli c show eth1".split(), check=True)
+    exec_cmd("nmcli c show port1".split(), check=True)
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "port1",
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+    with pytest.raises(SubprocessError):
+        exec_cmd("nmcli c show port1".split(), check=True)
