@@ -11,11 +11,12 @@ apply all network state files ending with \fB.yml\fR in
 \fB/etc/nmstate\fR folder.
 
 .PP
-By default, the network state file will be renamed with the suffix
-\fB.applied\fR after applying it. This is to prevent it being applied again
-when the service runs next.
 
-With \fB/etc/nmstate/nmstate.conf\fR holding below content:
+By default, the service renames the network state file to a name with suffix
+\fB.applied\fR after processing the file. This prevents applying the same file
+again when the service runs next.
+
+Alternatively, you can set the following in \fB/etc/nmstate/nmstate.conf\fR:
 
 .EX
 \fB
@@ -24,11 +25,11 @@ keep_state_file_after_apply = true
 \fR
 .EE
 
-The nmstate.service will not remove network state file, just copy applied
-network stata to file with the suffix \fB.applied\fR after applying it.
+With \fBkeep_state_file_after_apply = true\fR, the service copies the network
+state file to a file with \fB.applied\fR, but preserves the original file.
 
 .PP
-By default, nmstate merge network state file with current network state,
+By default, nmstate merges network state file with current network state,
 if you want to override interface settings without merging, please set
 `override_iface = true` in `[service]` section in
 \fB/etc/nmstate/nmstate.conf\fR:
