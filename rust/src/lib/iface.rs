@@ -1014,6 +1014,7 @@ impl MergedInterface {
                 let iface = cur_iface.clone_name_type_only();
                 self.for_apply = Some(iface);
                 self.preserve_current_controller_info();
+                self.preserve_current_identifer_info();
             }
         }
     }

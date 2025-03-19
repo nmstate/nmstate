@@ -364,4 +364,35 @@ impl MergedInterface {
         }
         Ok(())
     }
+
+    /// Copy MAC address when identifier is [InterfaceIdentifier::MacAddress]
+    pub(crate) fn preserve_current_identifer_info(&mut self) {
+        if self.for_apply.as_ref().map(|i| i.is_up()) == Some(true) {
+            if let (Some(apply_iface), Some(cur_iface)) =
+                (self.for_apply.as_mut(), self.current.as_ref())
+            {
+                if cur_iface.base_iface().identifier
+                    == Some(InterfaceIdentifier::MacAddress)
+                    && apply_iface.base_iface().identifier.is_none()
+                {
+                    apply_iface
+                        .base_iface_mut()
+                        .identifier
+                        .clone_from(&cur_iface.base_iface().identifier);
+                    if apply_iface.base_iface().mac_address.is_none() {
+                        apply_iface
+                            .base_iface_mut()
+                            .mac_address
+                            .clone_from(&cur_iface.base_iface().mac_address);
+                    }
+                    if apply_iface.base_iface().profile_name.is_none() {
+                        apply_iface
+                            .base_iface_mut()
+                            .profile_name
+                            .clone_from(&cur_iface.base_iface().profile_name);
+                    }
+                }
+            }
+        }
+    }
 }
