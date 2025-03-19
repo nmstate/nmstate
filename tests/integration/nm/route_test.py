@@ -317,6 +317,7 @@ def test_add_route_to_vlan_with_empty_connection_iface_name(
 
 @pytest.fixture
 def port1_ref_by_mac_with_static_route(eth1_up):
+    exec_cmd("nmcli c del eth1".split())
     port1_mac = get_mac_address("eth1")
 
     routes = [

@@ -4,6 +4,8 @@ import json
 import os
 
 import pytest
+import yaml
+from subprocess import SubprocessError
 
 import libnmstate
 from libnmstate.schema import Bond
@@ -21,6 +23,7 @@ from ..testlib.bondlib import bond_interface
 from ..testlib.env import is_el8
 from ..testlib.env import is_k8s
 from ..testlib.env import nm_minor_version
+from ..testlib.ifacelib import get_mac_address
 from ..testlib.nmplugin import nm_service_restart
 from ..testlib.retry import retry_till_true_or_timeout
 from ..testlib.vlan import vlan_interface
@@ -214,3 +217,117 @@ def test_vlan_over_bond_reconnect_on_link_revive(
     cmdlib.exec_cmd("ip link set eth1 up".split(), check=True)
     cmdlib.exec_cmd("ip link set eth2 up".split(), check=True)
     assert retry_till_true_or_timeout(RETRY_TIMEOUT, vlan_is_up_with_ip)
+
+
+@pytest.fixture
+def bond0_with_mac_ref_ports(eth1_up, eth2_up):
+    cmdlib.exec_cmd("nmcli c del eth1".split(), check=False)
+    cmdlib.exec_cmd("nmcli c del eth2".split(), check=False)
+    eth1_mac = get_mac_address("eth1")
+    eth2_mac = get_mac_address("eth2")
+
+    state = yaml.load(
+        f"""---
+        interfaces:
+         - name: port1
+           type: ethernet
+           state: up
+           identifier: mac-address
+           mac-address: {eth1_mac}
+         - name: port2
+           type: ethernet
+           state: up
+           identifier: mac-address
+           mac-address: {eth2_mac}
+         - name: bond0
+           type: bond
+           state: up
+           link-aggregation:
+             mode: balance-rr
+             port:
+               - eth1
+               - eth2""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
+
+    yield (eth1_mac, eth2_mac)
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "bond0",
+                    Interface.TYPE: InterfaceType.BOND,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_absent_bond_peserve_bond_port_in_mac_ref(bond0_with_mac_ref_ports):
+    (eth1_mac, eth2_mac) = bond0_with_mac_ref_ports
+    port1_nm_conn_uuid = cmdlib.exec_cmd(
+        "nmcli -g connection.uuid c show port1".split(),
+        check=True,
+    )[1].strip()
+    port2_nm_conn_uuid = cmdlib.exec_cmd(
+        "nmcli -g connection.uuid c show port2".split(),
+        check=True,
+    )[1].strip()
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "bond0",
+                    Interface.TYPE: InterfaceType.BOND,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+    assert (
+        cmdlib.exec_cmd(
+            "nmcli -g 802-3-ethernet.mac-address c show port1".split(),
+            check=True,
+        )[1]
+        .replace("\\", "")
+        .strip()
+        == eth1_mac
+    )
+    assert (
+        cmdlib.exec_cmd(
+            "nmcli -g 802-3-ethernet.mac-address c show port2".split(),
+            check=True,
+        )[1]
+        .replace("\\", "")
+        .strip()
+        == eth2_mac
+    )
+
+    # Make sure nmstate re-use existing NM connection instead of creating new.
+    assert (
+        cmdlib.exec_cmd(
+            "nmcli -g connection.uuid c show port1".split(),
+            check=True,
+        )[1]
+        .replace("\\", "")
+        .strip()
+        == port1_nm_conn_uuid
+    )
+    assert (
+        cmdlib.exec_cmd(
+            "nmcli -g connection.uuid c show port2".split(),
+            check=True,
+        )[1]
+        .replace("\\", "")
+        .strip()
+        == port2_nm_conn_uuid
+    )
+
+    with pytest.raises(SubprocessError):
+        cmdlib.exec_cmd("nmcli c show eth1".split(), check=True)
+    with pytest.raises(SubprocessError):
+        cmdlib.exec_cmd("nmcli c show eth2".split(), check=True)

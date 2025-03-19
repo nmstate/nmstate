@@ -1459,7 +1459,23 @@ def test_change_mtu_of_bond_port(bond99_with_2_port):
     )
 
 
-def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up):
+@pytest.fixture
+def cleanup_bond0():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "bond0",
+                    Interface.TYPE: InterfaceType.BOND,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up, cleanup_bond0):
     eth1_mac = get_mac_address(ETH1)
     eth2_mac = get_mac_address(ETH2)
 
