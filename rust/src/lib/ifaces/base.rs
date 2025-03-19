@@ -285,6 +285,10 @@ impl BaseInterface {
             self.permanent_mac_address = None;
         }
 
+        if let Some(ethtool) = self.ethtool.as_mut() {
+            ethtool.sanitize(is_desired);
+        }
+
         Ok(())
     }
 }

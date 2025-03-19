@@ -254,3 +254,23 @@ def test_ethtool_preserve_existing_ethtool_feature_setting(
     )
     iface_state[Interface.MTU] = 1400
     assertlib.assert_state_match({Interface.KEY: [iface_state]})
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true" or not is_fedora(),
+    reason=("Ethtool fec test need netdevsim kernel module"),
+)
+def test_ethtool_fec_on_netdevsim():
+    desire_iface_state = {
+        Interface.NAME: TEST_NETDEVSIM_NIC,
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Fec.CONFIG_SUBTREE: {
+                Ethtool.Fec.AUTO: False,
+                Ethtool.Fec.MODE: Ethtool.Fec.MODE_OFF,
+            }
+        },
+    }
+    with netdevsim_interface(TEST_NETDEVSIM_NIC):
+        libnmstate.apply({Interface.KEY: [desire_iface_state]})
+        assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
+    assertlib.assert_absent(TEST_NETDEVSIM_NIC)

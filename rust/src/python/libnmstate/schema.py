@@ -565,6 +565,15 @@ class Ethtool:
         TX_USECS_IRQ = "tx-usecs-irq"
         TX_USECS_LOW = "tx-usecs-low"
 
+    class Fec:
+        CONFIG_SUBTREE = "fec"
+        AUTO = "auto"
+        MODE = "mode"
+        MODE_OFF = "off"
+        MODE_RS = "rs"
+        MODE_BASER = "baser"
+        MODE_LLRS = "llrs"
+
 
 class HostNameState:
     KEY = "hostname"

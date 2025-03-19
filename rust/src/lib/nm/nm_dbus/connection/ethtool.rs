@@ -104,6 +104,7 @@ pub struct NmSettingEthtool {
     pub ring_rx_jumbo: Option<u32>,
     pub ring_rx_mini: Option<u32>,
     pub ring_tx: Option<u32>,
+    pub fec_mode: Option<u32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -244,6 +245,7 @@ impl TryFrom<DbusDictionary> for NmSettingEthtool {
             ring_rx_jumbo: _from_map!(v, "ring-rx-jumbo", u32::try_from)?,
             ring_rx_mini: _from_map!(v, "ring-rx-mini", u32::try_from)?,
             ring_tx: _from_map!(v, "ring-tx", u32::try_from)?,
+            fec_mode: _from_map!(v, "fec_mode", u32::try_from)?,
             _other: v,
         })
     }
@@ -353,6 +355,9 @@ impl ToDbusValue for NmSettingEthtool {
         }
         if let Some(v) = &self.ring_tx {
             ret.insert("ring-tx", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.fec_mode {
+            ret.insert("fec-mode", zvariant::Value::new(v));
         }
         Ok(ret)
     }

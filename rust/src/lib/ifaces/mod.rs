@@ -43,7 +43,7 @@ pub use ethernet::{
 };
 pub use ethtool::{
     EthtoolCoalesceConfig, EthtoolConfig, EthtoolFeatureConfig,
-    EthtoolPauseConfig, EthtoolRingConfig,
+    EthtoolFecConfig, EthtoolFecMode, EthtoolPauseConfig, EthtoolRingConfig,
 };
 pub use hsr::{HsrConfig, HsrInterface, HsrProtocol};
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
