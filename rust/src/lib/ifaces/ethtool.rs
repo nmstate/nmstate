@@ -134,6 +134,9 @@ pub struct EthtoolConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// The rx/tx ring parameters of the specified network device.
     pub ring: Option<EthtoolRingConfig>,
+    /// Forward Error Correction
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fec: Option<EthtoolFecConfig>,
 }
 
 impl EthtoolConfig {
@@ -149,6 +152,12 @@ impl EthtoolConfig {
                     features.insert(kernel_name.to_string(), v);
                 }
             }
+        }
+    }
+
+    pub(crate) fn sanitize(&mut self, is_desired: bool) {
+        if let Some(fec_conf) = self.fec.as_mut() {
+            fec_conf.sanitize(is_desired)
         }
     }
 }
@@ -499,5 +508,66 @@ impl MergedInterface {
         {
             ethtool_conf.apply_feature_alias();
         }
+    }
+}
+
+#[derive(
+    Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default, Copy,
+)]
+#[non_exhaustive]
+#[serde(deny_unknown_fields)]
+pub struct EthtoolFecConfig {
+    /// Request the driver to choose FEC mode based on SFP module parameters.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub auto: Option<bool>,
+    /// For querying, this property is for active FEC mode.
+    /// For applying, this property is for desired FEC mode.
+    /// When applying with `auto: true`, this property will be ignored.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<EthtoolFecMode>,
+}
+
+impl EthtoolFecConfig {
+    pub(crate) fn sanitize(&mut self, is_desired: bool) {
+        if is_desired && self.auto == Some(true) {
+            if let Some(mode) = self.mode.take() {
+                log::info!(
+                    "Ignoring ethtool fec mode setting {mode} because \
+                auto enabled"
+                );
+            }
+        }
+    }
+}
+
+#[derive(
+    Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default, Copy,
+)]
+#[non_exhaustive]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub enum EthtoolFecMode {
+    #[default]
+    Off,
+    Rs,
+    Baser,
+    Llrs,
+}
+
+impl std::fmt::Display for EthtoolFecMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Off => "off",
+                Self::Rs => "rs",
+                Self::Baser => "baser",
+                Self::Llrs => "llrs",
+            }
+        )
     }
 }

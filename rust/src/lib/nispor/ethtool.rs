@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    EthtoolCoalesceConfig, EthtoolConfig, EthtoolPauseConfig, EthtoolRingConfig,
+    EthtoolCoalesceConfig, EthtoolConfig, EthtoolFecConfig, EthtoolFecMode,
+    EthtoolPauseConfig, EthtoolRingConfig,
 };
 
 pub(crate) fn np_ethtool_to_nmstate(
@@ -61,5 +62,26 @@ fn gen_ethtool_config(ethtool_info: &nispor::EthtoolInfo) -> EthtoolConfig {
 
         ret.ring = Some(ring_config);
     }
+    if let Some(fec) = &ethtool_info.fec {
+        ret.fec = Some(EthtoolFecConfig {
+            auto: Some(fec.auto),
+            mode: np_fec_mode_to_nmstate(&fec.active),
+        });
+    }
     ret
+}
+
+fn np_fec_mode_to_nmstate(
+    np_mode: &nispor::EthtoolFecMode,
+) -> Option<EthtoolFecMode> {
+    match *np_mode {
+        nispor::EthtoolFecMode::Off => Some(EthtoolFecMode::Off),
+        nispor::EthtoolFecMode::Rs => Some(EthtoolFecMode::Rs),
+        nispor::EthtoolFecMode::Baser => Some(EthtoolFecMode::Baser),
+        nispor::EthtoolFecMode::Llrs => Some(EthtoolFecMode::Llrs),
+        _ => {
+            log::info!("Unsupported Ethtool FEC mode {np_mode:?}");
+            None
+        }
+    }
 }

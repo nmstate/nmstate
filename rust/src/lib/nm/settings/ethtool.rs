@@ -4,8 +4,9 @@ use std::collections::HashMap;
 
 use crate::nm::nm_dbus::{NmConnection, NmSettingEthtool};
 use crate::{
-    ErrorKind, EthtoolCoalesceConfig, EthtoolFeatureConfig, EthtoolPauseConfig,
-    EthtoolRingConfig, Interface, NmstateError,
+    ErrorKind, EthtoolCoalesceConfig, EthtoolFeatureConfig, EthtoolFecConfig,
+    EthtoolFecMode, EthtoolPauseConfig, EthtoolRingConfig, Interface,
+    NmstateError,
 };
 
 const KERNEL_ETHTOOL_FEATURE_2_NM: [(&str, &str); 10] = [
@@ -40,6 +41,9 @@ pub(crate) fn gen_ethtool_setting(
         }
         if let Some(ring_conf) = ethtool_iface.ring.as_ref() {
             apply_ring_options(&mut nm_ethtool_set, ring_conf);
+        }
+        if let Some(fec_conf) = ethtool_iface.fec.as_ref() {
+            apply_fec_options(&mut nm_ethtool_set, fec_conf);
         }
         nm_conn.ethtool = Some(nm_ethtool_set);
     }
@@ -115,4 +119,27 @@ fn apply_ring_options(
     nm_ethtool_set.ring_rx_jumbo = ring_conf.rx_jumbo;
     nm_ethtool_set.ring_rx_mini = ring_conf.rx_mini;
     nm_ethtool_set.ring_tx = ring_conf.tx;
+}
+
+const NM_SETTING_ETHTOOL_FEC_MODE_AUTO: u32 = 1 << 1;
+const NM_SETTING_ETHTOOL_FEC_MODE_OFF: u32 = 1 << 2;
+const NM_SETTING_ETHTOOL_FEC_MODE_RS: u32 = 1 << 3;
+const NM_SETTING_ETHTOOL_FEC_MODE_BASER: u32 = 1 << 4;
+const NM_SETTING_ETHTOOL_FEC_MODE_LLRS: u32 = 1 << 5;
+
+fn apply_fec_options(
+    nm_ethtool_set: &mut NmSettingEthtool,
+    fec_conf: &EthtoolFecConfig,
+) {
+    nm_ethtool_set.fec_mode = match (fec_conf.auto, fec_conf.mode) {
+        (None, None) => None,
+        (Some(true), _) => Some(NM_SETTING_ETHTOOL_FEC_MODE_AUTO),
+        (Some(false), None) => Some(NM_SETTING_ETHTOOL_FEC_MODE_OFF),
+        (Some(false), Some(mode)) | (None, Some(mode)) => match mode {
+            EthtoolFecMode::Off => Some(NM_SETTING_ETHTOOL_FEC_MODE_OFF),
+            EthtoolFecMode::Rs => Some(NM_SETTING_ETHTOOL_FEC_MODE_RS),
+            EthtoolFecMode::Baser => Some(NM_SETTING_ETHTOOL_FEC_MODE_BASER),
+            EthtoolFecMode::Llrs => Some(NM_SETTING_ETHTOOL_FEC_MODE_LLRS),
+        },
+    }
 }
