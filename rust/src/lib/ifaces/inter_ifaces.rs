@@ -613,6 +613,21 @@ impl Interfaces {
         }
         ret
     }
+
+    /// In gen_conf mode, for interface with `identifier: mac-address`
+    /// cannot resolve to real kernel interface name. So treat `interface.name`
+    /// as kernel name and also store that as profile name.
+    pub(crate) fn handle_gen_conf_mac_identifer(&mut self) {
+        for iface in self.kernel_ifaces.values_mut().filter(|i| i.is_up()) {
+            if iface.base_iface().identifier.as_ref()
+                == Some(&InterfaceIdentifier::MacAddress)
+                && iface.base_iface().profile_name.is_none()
+            {
+                iface.base_iface_mut().profile_name =
+                    Some(iface.name().to_string());
+            }
+        }
+    }
 }
 
 fn is_opt_str_empty(opt_string: &Option<String>) -> bool {
@@ -669,6 +684,7 @@ impl MergedInterfaces {
         if gen_conf_mode {
             desired.set_unknown_iface_to_eth()?;
             desired.set_missing_port_to_eth();
+            desired.handle_gen_conf_mac_identifer();
         } else {
             desired.resolve_sriov_reference(&current)?;
             desired.resolve_mac_identifider_in_current(&current)?;
@@ -1106,12 +1122,10 @@ impl InterfaceNameSearch {
         for iface in merged_ifaces.kernel_ifaces.values() {
             let base_iface = iface.merged.base_iface();
             if let Some(profile_name) = base_iface.profile_name.as_deref() {
-                if profile_name != base_iface.name.as_str() {
-                    profile_2_kernel
-                        .entry(profile_name.to_string())
-                        .or_default()
-                        .push(base_iface.name.to_string());
-                }
+                profile_2_kernel
+                    .entry(profile_name.to_string())
+                    .or_default()
+                    .push(base_iface.name.to_string());
             }
         }
 

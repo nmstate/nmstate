@@ -18,6 +18,7 @@ from ..testlib import iprule
 from ..testlib.env import is_k8s
 from ..testlib.env import nm_minor_version
 from ..testlib.genconf import gen_conf_apply
+from ..testlib.ifacelib import get_mac_address
 from ..testlib.route import assert_routes
 from ..testlib.statelib import show_only
 
@@ -271,3 +272,188 @@ def test_gen_conf_blackhole_routes():
         desired_routes[1][Route.NEXT_HOP_INTERFACE] = "lo"
         cur_state = libnmstate.show()
         assert_routes(desired_routes, cur_state, nic=None)
+
+
+@pytest.fixture
+def eth1_eth2_up_with_no_config(eth1_up, eth2_up):
+    # Remove eth1 and eth2 config to make sure newly created one been activated
+    # on next NM service reload
+
+    libnmstate.apply(
+        load_yaml(
+            """
+            interfaces:
+            - name: eth1
+              type: ethernet
+              state: absent
+            - name: eth2
+              type: ethernet
+              state: absent
+            """
+        )
+    )
+
+
+def test_gen_conf_bond_port_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+    port2_mac = get_mac_address("eth2")
+
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: port2
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: bond0
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - port1
+            - port2""".format(
+            port1_mac, port2_mac
+        )
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: bond0
+              type: bond
+              state: up
+              link-aggregation:
+                mode: balance-rr
+                port:
+                - eth1
+                - eth2"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_linux_bridge_port_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+    port2_mac = get_mac_address("eth2")
+
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: port2
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port:
+            - name: port1
+            - name: port2""".format(
+            port1_mac, port2_mac
+        )
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: br0
+              type: linux-bridge
+              state: up
+              bridge:
+                port:
+                - name: eth1
+                - name: eth2"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_vrf_port_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+    port2_mac = get_mac_address("eth2")
+
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: port2
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+            port:
+            - port1
+            - port2""".format(
+            port1_mac, port2_mac
+        )
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: vrf0
+              type: vrf
+              state: up
+              vrf:
+                route-table-id: 100
+                port:
+                - eth1
+                - eth2"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_route_next_hop_iface_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+
+    desired_state = load_yaml(
+        """---
+        interfaces:
+          - name: port1
+            type: ethernet
+            state: up
+            mac-address: {}
+            identifier: mac-address
+            ipv4:
+              enabled: true
+              address:
+              - ip: 192.0.2.251
+                prefix-length: 24
+              dhcp: false
+        routes:
+          config:
+          - destination: 0.0.0.0/0
+            next-hop-address: 192.0.2.1
+            next-hop-interface: port1
+            """.format(
+            port1_mac
+        )
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_routes = load_yaml(
+            """---
+              - destination: 0.0.0.0/0
+                next-hop-address: 192.0.2.1
+                next-hop-interface: eth1"""
+        )
+        cur_state = libnmstate.show()
+        assert_routes(expected_routes, cur_state)
