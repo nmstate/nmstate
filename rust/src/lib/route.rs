@@ -264,6 +264,13 @@ pub struct RouteEntry {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub mtu: Option<u32>,
+    /// Enable quickack will disable disables delayed acknowledgments.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub quickack: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -364,6 +371,9 @@ impl RouteEntry {
         if self.mtu.is_some() && self.mtu != other.mtu {
             return false;
         }
+        if self.quickack.is_some() && self.quickack != other.quickack {
+            return false;
+        }
         true
     }
 
@@ -380,6 +390,7 @@ impl RouteEntry {
                     .as_ref()
                     .map(|d| is_ipv6_addr(d.as_str()))
                     .unwrap_or_default(),
+                self.quickack.unwrap_or_default(),
             ],
             vec![
                 self.next_hop_iface
@@ -567,6 +578,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.mtu {
             props.push(format!("mtu: {v}"));
+        }
+        if let Some(v) = self.quickack {
+            props.push(format!("quickack: {v}"));
         }
 
         write!(f, "{}", props.join(" "))

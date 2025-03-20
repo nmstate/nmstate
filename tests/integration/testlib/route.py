@@ -46,6 +46,9 @@ def _clone_prepare_routes(routes, nic=None):
             table_id = route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE)
             if table_id == Route.USE_DEFAULT_ROUTE_TABLE:
                 route[Route.TABLE_ID] = KERNEL_DEFAULT_TABLE_ID
+            # Treat no quickack as False
+            if Route.QUICKACK not in route:
+                route[Route.QUICKACK] = False
 
             routes_out.append(route)
 

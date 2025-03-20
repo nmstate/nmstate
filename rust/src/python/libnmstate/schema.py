@@ -51,6 +51,7 @@ class Route:
     INITCWND = "initcwnd"
     INITRWND = "initrwnd"
     MTU = "mtu"
+    QUICKACK = "quickack"
 
 
 class RouteRule:

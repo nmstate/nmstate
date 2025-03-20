@@ -209,6 +209,7 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     route_entry.initcwnd = np_route.initcwnd;
     route_entry.initrwnd = np_route.initrwnd;
     route_entry.mtu = np_route.mtu;
+    route_entry.quickack = np_route.quickack.map(|q| q > 0);
 
     route_entry
 }

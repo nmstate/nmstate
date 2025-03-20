@@ -65,6 +65,7 @@ pub(crate) fn gen_nm_ip_routes(
         nm_route.initcwnd = route.initcwnd;
         nm_route.initrwnd = route.initrwnd;
         nm_route.mtu = route.mtu;
+        nm_route.quickack = route.quickack;
         ret.push(nm_route);
     }
     Ok(ret)

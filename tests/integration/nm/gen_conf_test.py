@@ -459,7 +459,7 @@ def test_gen_conf_route_next_hop_iface_ref_by_mac(eth1_eth2_up_with_no_config):
         assert_routes(expected_routes, cur_state)
 
 
-def test_gen_conf_route_initcwnd_mtu():
+def test_gen_conf_route_initcwnd_mtu_quickack():
     desired_state = load_yaml(
         """---
         routes:
@@ -471,6 +471,7 @@ def test_gen_conf_route_initcwnd_mtu():
                 table-id: 200
                 initcwnd: 20
                 initrwnd: 30
+                quickack: true
               - destination: 2001:db8:a::/64
                 mtu: 1280
                 next-hop-address: 2001:db8:1::2
@@ -478,6 +479,7 @@ def test_gen_conf_route_initcwnd_mtu():
                 table-id: 200
                 initcwnd: 40
                 initrwnd: 50
+                quickack: false
         interfaces:
           - name: eth1
             type: ethernet
