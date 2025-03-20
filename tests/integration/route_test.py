@@ -2420,3 +2420,30 @@ def test_route_delete_next_hop_iface_by_profile_name(
     cur_routes = libnmstate.show()[Route.KEY]
     for route in cur_routes[Route.CONFIG]:
         assert route[Route.NEXT_HOP_INTERFACE] != "eth1"
+
+
+# https://issues.redhat.com/browse/RHEL-80418
+@pytest.mark.tier1
+def test_add_route_with_quickack(eth1_up):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.QUICKACK: True,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+            Route.QUICKACK: False,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)

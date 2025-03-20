@@ -74,9 +74,9 @@ impl MergedRoutes {
         ignored_ifaces: &[&str],
         current_ifaces: &Interfaces,
     ) -> Result<(), NmstateError> {
-        let mut cur_routes: Vec<&RouteEntry> = Vec::new();
-        if let Some(cur_rts) = current.config.as_ref() {
-            for cur_rt in cur_rts {
+        let mut cur_routes: Vec<RouteEntry> = Vec::new();
+        if let Some(cur_rts) = current.config.clone() {
+            for mut cur_rt in cur_rts {
                 if let Some(via) = cur_rt.next_hop_iface.as_ref() {
                     if ignored_ifaces.contains(&via.as_str())
                         && cur_rt.route_type.is_none()
@@ -84,6 +84,7 @@ impl MergedRoutes {
                         continue;
                     }
                 }
+                cur_rt.sanitize_current_route_for_verify();
                 cur_routes.push(cur_rt);
             }
         }
@@ -194,4 +195,18 @@ pub(crate) fn is_route_delayed_by_nm(
     };
 
     !has_address
+}
+
+impl RouteEntry {
+    // When desire state has `quickack: false`, the post-apply current state
+    // will not have `quickack` at all because `quickack: false` means no
+    // `quickack`. This will lead to verification error.
+    // Instead of always providing `quickack: false` on querying,
+    // this function change `quickack: none` as `quickack: false` in the
+    // current state for verify only.
+    fn sanitize_current_route_for_verify(&mut self) {
+        if self.quickack.is_none() {
+            self.quickack = Some(false);
+        }
+    }
 }

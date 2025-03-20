@@ -47,6 +47,9 @@ impl NmIpRoute {
             if let Some(v) = self.mtu.as_ref() {
                 write!(opt_string, ",mtu={}", v).ok();
             }
+            if let Some(v) = self.quickack.as_ref() {
+                write!(opt_string, ",quickack={}", v).ok();
+            }
             ret.insert("options".to_string(), opt_string);
         }
         ret
