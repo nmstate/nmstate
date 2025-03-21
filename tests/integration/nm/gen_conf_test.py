@@ -520,3 +520,44 @@ def test_gen_conf_route_initcwnd_mtu_quickack():
         desired_routes = desired_state[Route.KEY][Route.CONFIG]
         cur_state = libnmstate.show()
         assert_routes(desired_routes, cur_state, nic=None)
+
+
+def test_gen_conf_ovs_bridge_port_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+    port2_mac = get_mac_address("eth2")
+
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: port2
+          type: ethernet
+          identifier: mac-address
+          mac-address: {}
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: port1
+            - name: port2""".format(
+            port1_mac, port2_mac
+        )
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: br0
+              type: ovs-bridge
+              state: up
+              bridge:
+                port:
+                - name: eth1
+                - name: eth2"""
+        )
+        assertlib.assert_state_match(expected_state)
