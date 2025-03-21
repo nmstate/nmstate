@@ -80,7 +80,21 @@ fn parse_ovs_bridge_conf(
     for port_uuid in ovsdb_br.ports.as_slice() {
         if let Some(ovsdb_port) = ovsdb_ports.get(port_uuid) {
             let mut port_conf = OvsBridgePortConfig::new();
-            port_conf.name.clone_from(&ovsdb_port.name);
+            // OVS bond will have 2 ports where its logical(in-database) name
+            // should be used instead of kernel interface name.
+            if ovsdb_port.ports.len() == 1 {
+                // The port name is not kernel interface name, so we use
+                // Interface table for kernel interface name if found.
+                if let Some(ovsdb_iface) =
+                    ovsdb_ifaces.get(ovsdb_port.ports.first().unwrap())
+                {
+                    port_conf.name.clone_from(&ovsdb_iface.name);
+                } else {
+                    port_conf.name.clone_from(&ovsdb_port.name);
+                }
+            } else {
+                port_conf.name.clone_from(&ovsdb_port.name);
+            }
             if ovsdb_port.ports.len() > 1 {
                 port_conf.bond =
                     Some(parse_ovs_bond_conf(ovsdb_port, ovsdb_ifaces));
