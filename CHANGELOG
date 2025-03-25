@@ -1,4 +1,25 @@
 # Changelog
+## [2.2.43] - 2025-03-25
+### Breaking changes
+ - N/A
+
+### New features
+ - go: Support generating state from policy in golang bindings. (1749d99a)
+ - route: Add support of quickack. (279189f9)
+ - route: Add gen_conf support for initrwnd,initcwnd and mtu. (d9184728)
+ - gen_conf: Support referring interface by profile name. (7f989ba3)
+ - ethtool: Add support of FEC. (40bdd176)
+ - vlan: Add support of QoS mapping. (ea02d0c6)
+ - route: Support refer route next hop interface by profile name. (4f36718e)
+
+### Bug fixes
+ - vxlan: Skip serialize destination-port if it is None. (7c5937a1)
+ - ovsdb: Fix query output when port and interface name differ. (7da5f844)
+ - nm: Preserve identifier information when detaching bond port. (59b38eae)
+ - doc: Improve document of nmstate.service. (945c0bca)
+ - validate: Check state and policy. (ae044847)
+ - nm vlan: Support empty `connection.interface-name`. (a8286c07)
+
 ## [2.2.42] - 2025-03-04
 ### Breaking changes
  - N/A
