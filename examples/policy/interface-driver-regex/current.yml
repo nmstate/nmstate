@@ -1,0 +1,32 @@
+---
+interfaces:
+  - name: eth0
+    type: ethernet
+    driver: igb
+    state: up
+    mac-address: 52:55:00:D1:55:01
+    accept-all-mac-addresses: false
+    lldp:
+      enabled: false
+  - name: eth1
+    driver: tg3
+    type: ethernet
+    state: up
+    mac-address: 52:55:00:D1:56:02
+    accept-all-mac-addresses: false
+    lldp:
+      enabled: false
+  - name: eth3
+    driver: tg4
+    type: ethernet
+    state: up
+    mac-address: 52:55:00:D1:56:03
+    accept-all-mac-addresses: false
+    lldp:
+      enabled: false
+  - name: eth4
+    driver: virtio
+    type: ethernet
+    state: up
+    mac-address: 52:55:00:D1:56:04
+    accept-all-mac-addresses: false

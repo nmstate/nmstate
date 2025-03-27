@@ -6,6 +6,7 @@ use super::json::{search_item, update_items};
 
 pub(crate) fn get_iface_match(
     prop_path: &[String],
+    op: fn(&str, &str) -> Result<bool, NmstateError>,
     value: &str,
     state: &NetworkState,
     line: &str,
@@ -15,6 +16,7 @@ pub(crate) fn get_iface_match(
     for iface in search_item(
         "interface",
         prop_path,
+        op,
         value,
         state.interfaces.to_vec().as_slice(),
         line,

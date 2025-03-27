@@ -10,7 +10,10 @@ use crate::{ErrorKind, NetworkState, NmstateError};
 
 use super::{
     iface::{get_iface_match, update_ifaces},
-    json::{get_value_from_json, value_retain_only, value_to_string},
+    json::{
+        equal_op, get_value_from_json, regex_op, value_retain_only,
+        value_to_string,
+    },
     route::{get_route_match, update_routes},
     route_rule::{get_route_rule_match, update_route_rules},
     token::{parse_str_to_capture_tokens, NetworkCaptureToken},
@@ -247,6 +250,15 @@ impl NetworkCaptureCommand {
                 ret.routes = match self.action {
                     NetworkCaptureAction::Equal => get_route_match(
                         &keys[1..],
+                        equal_op,
+                        matching_value_str.as_str(),
+                        &input,
+                        self.line.as_str(),
+                        key_pos + "routes.".len(),
+                    )?,
+                    NetworkCaptureAction::Regex => get_route_match(
+                        &keys[1..],
+                        regex_op,
                         matching_value_str.as_str(),
                         &input,
                         self.line.as_str(),
@@ -266,6 +278,15 @@ impl NetworkCaptureCommand {
                 ret.rules = match self.action {
                     NetworkCaptureAction::Equal => get_route_rule_match(
                         &keys[1..],
+                        equal_op,
+                        matching_value_str.as_str(),
+                        &input,
+                        self.line.as_str(),
+                        key_pos + "route-rules.".len(),
+                    )?,
+                    NetworkCaptureAction::Regex => get_route_rule_match(
+                        &keys[1..],
+                        regex_op,
                         matching_value_str.as_str(),
                         &input,
                         self.line.as_str(),
@@ -285,6 +306,15 @@ impl NetworkCaptureCommand {
                 ret.interfaces = match self.action {
                     NetworkCaptureAction::Equal => get_iface_match(
                         &keys[1..],
+                        equal_op,
+                        matching_value_str.as_str(),
+                        &input,
+                        self.line.as_str(),
+                        key_pos + "interfaces.".len(),
+                    )?,
+                    NetworkCaptureAction::Regex => get_iface_match(
+                        &keys[1..],
+                        regex_op,
                         matching_value_str.as_str(),
                         &input,
                         self.line.as_str(),
@@ -323,6 +353,7 @@ pub enum NetworkCaptureAction {
     None,
     Equal,
     Replace,
+    Regex,
 }
 
 impl Default for NetworkCaptureAction {
@@ -339,6 +370,7 @@ impl std::fmt::Display for NetworkCaptureAction {
             match self {
                 Self::Equal => "==",
                 Self::Replace => ":=",
+                Self::Regex => "=~",
                 Self::None => "",
             }
         )
@@ -533,68 +565,59 @@ fn get_condition_value(
     }
 }
 
+fn process_command(
+    ret: &mut NetworkCaptureCommand,
+    pos: usize,
+    action: NetworkCaptureAction,
+    tokens: &[NetworkCaptureToken],
+) -> Result<(), NmstateError> {
+    let line = ret.line.as_str();
+    if pos + 1 >= tokens.len() {
+        return Err(NmstateError::new_policy_error(
+            format!("The {} action got no value defined afterwards", action),
+            line,
+            tokens[pos].pos(),
+        ));
+    }
+    ret.action = action;
+    let (key, key_capture) =
+        get_condition_key(&tokens[..pos], line, &tokens[pos])?;
+    if ret.key_capture.is_none() {
+        if let Some((cap_name, pos)) = key_capture {
+            ret.key_capture = Some(cap_name);
+            ret.key_capture_pos = pos;
+        }
+    }
+    ret.key = key;
+    let (value, value_capture) =
+        get_condition_value(&tokens[pos + 1..], line, &tokens[pos])?;
+    ret.value = value;
+    if let Some((cap_name, pos)) = value_capture {
+        ret.value_capture = Some(cap_name);
+        ret.value_capture_pos = pos;
+    }
+    Ok(())
+}
+
 fn process_tokens_without_pipe(
     ret: &mut NetworkCaptureCommand,
     tokens: &[NetworkCaptureToken],
 ) -> Result<(), NmstateError> {
-    let line = ret.line.as_str();
     if let Some(pos) = tokens
         .iter()
         .position(|c| matches!(c, &NetworkCaptureToken::Equal(_)))
     {
-        if pos + 1 >= tokens.len() {
-            return Err(NmstateError::new_policy_error(
-                "The equal action got no value defined afterwards".to_string(),
-                line,
-                tokens[pos].pos(),
-            ));
-        }
-        ret.action = NetworkCaptureAction::Equal;
-        let (key, key_capture) =
-            get_condition_key(&tokens[..pos], line, &tokens[pos])?;
-        if ret.key_capture.is_none() {
-            if let Some((cap_name, pos)) = key_capture {
-                ret.key_capture = Some(cap_name);
-                ret.key_capture_pos = pos;
-            }
-        }
-        ret.key = key;
-        let (value, value_capture) =
-            get_condition_value(&tokens[pos + 1..], line, &tokens[pos])?;
-        ret.value = value;
-        if let Some((cap_name, pos)) = value_capture {
-            ret.value_capture = Some(cap_name);
-            ret.value_capture_pos = pos;
-        }
+        process_command(ret, pos, NetworkCaptureAction::Equal, tokens)?;
     } else if let Some(pos) = tokens
         .iter()
         .position(|c| matches!(c, &NetworkCaptureToken::Replace(_)))
     {
-        if pos + 1 > tokens.len() {
-            return Err(NmstateError::new_policy_error(
-                "The replace action got no value defined afterwards"
-                    .to_string(),
-                line,
-                tokens[pos].pos(),
-            ));
-        }
-        ret.action = NetworkCaptureAction::Replace;
-        let (key, key_capture) =
-            get_condition_key(&tokens[..pos], line, &tokens[pos])?;
-        if ret.key_capture.is_none() {
-            if let Some((cap_name, pos)) = key_capture {
-                ret.key_capture = Some(cap_name);
-                ret.key_capture_pos = pos;
-            }
-        }
-        ret.key = key;
-        let (value, value_capture) =
-            get_condition_value(&tokens[pos + 1..], line, &tokens[pos])?;
-        ret.value = value;
-        if let Some((cap_name, pos)) = value_capture {
-            ret.value_capture = Some(cap_name);
-            ret.value_capture_pos = pos;
-        }
+        process_command(ret, pos, NetworkCaptureAction::Replace, tokens)?;
+    } else if let Some(pos) = tokens
+        .iter()
+        .position(|c| matches!(c, &NetworkCaptureToken::Regex(_)))
+    {
+        process_command(ret, pos, NetworkCaptureAction::Regex, tokens)?;
     } else if let Some(NetworkCaptureToken::Path(_, _)) = tokens.first() {
         // User just want to remove all information except the defined one
         ret.action = NetworkCaptureAction::None;

@@ -89,6 +89,45 @@ fn test_policy_capture_with_equal() {
 }
 
 #[test]
+fn test_policy_capture_with_regex() {
+    let cap_con = NetworkCaptureCommand::parse(
+        r#"
+        capture.base-iface-routes | routes.running.next-hop-interface=~"^br.*$"
+        "#
+        .trim(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        cap_con.key_capture.as_ref(),
+        Some(&"base-iface-routes".to_string())
+    );
+    assert_eq!(cap_con.action, NetworkCaptureAction::Regex);
+    assert_eq!(
+        cap_con.key,
+        NetworkCaptureToken::Path(
+            vec![
+                "routes".to_string(),
+                "running".to_string(),
+                "next-hop-interface".to_string(),
+            ],
+            "capture.base-iface-routes | r".len() - 1,
+        )
+    );
+    assert_eq!(
+        cap_con.value,
+        NetworkCaptureToken::Value(
+            "^br.*$".to_string(),
+            "capture.base-iface-routes | \
+            routes.running.next-hop-interface==\"b"
+                .len()
+                - 1,
+        ),
+    );
+    assert!(cap_con.value_capture.is_none());
+}
+
+#[test]
 fn test_policy_capture_simple_store() {
     let cap_con = NetworkCaptureCommand::parse(
         r"

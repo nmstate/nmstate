@@ -2,7 +2,7 @@
 
 use crate::NmstateError;
 
-const NEXT_TOKEN_START_CHARS: [char; 6] = [' ', '=', '!', '|', '"', ':'];
+const NEXT_TOKEN_START_CHARS: [char; 7] = [' ', '=', '!', '|', '"', ':', '~'];
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub(crate) enum NetworkCaptureToken {
@@ -11,6 +11,7 @@ pub(crate) enum NetworkCaptureToken {
     Pipe(usize),              // |
     Replace(usize),           // :=
     Equal(usize),             // ==
+    Regex(usize),             // =~
     Null(usize),              // Unquoted null or NULL or Null
 }
 
@@ -28,6 +29,7 @@ impl NetworkCaptureToken {
             | Self::Pipe(p)
             | Self::Replace(p)
             | Self::Equal(p)
+            | Self::Regex(p)
             | Self::Null(p) => *p,
         }
     }
@@ -62,10 +64,31 @@ pub(crate) fn parse_str_to_capture_tokens(
                             ));
                         }
                         ret.push(NetworkCaptureToken::Equal(pos));
+                    } else if c == '~' {
+                        if ret.as_slice().iter().any(|c| {
+                            matches!(c, &NetworkCaptureToken::Regex(_))
+                        }) {
+                            return Err(NmstateError::new_policy_error(
+                                "Nmpolicy does not allows two regex action"
+                                    .to_string(),
+                                line,
+                                pos,
+                            ));
+                        }
+                        if pos + 2 >= line_chars.len()
+                            || line_chars[pos + 2] != '"'
+                        {
+                            return Err(NmstateError::new_policy_error(
+                                "Missing double quote after regex".to_string(),
+                                line,
+                                pos,
+                            ));
+                        }
+                        ret.push(NetworkCaptureToken::Regex(pos));
                     } else {
                         return Err(NmstateError::new_policy_error(
-                            "Invalid equal action string after =, \
-                            expecting another '='"
+                            "Invalid equal or regex action string after =, \
+                            expecting another '=' or '~'"
                                 .to_string(),
                             line,
                             pos + 1,
@@ -73,8 +96,8 @@ pub(crate) fn parse_str_to_capture_tokens(
                     }
                 } else {
                     return Err(NmstateError::new_policy_error(
-                        "Invalid equal action string after =, \
-                        expecting another '=', but got nothing"
+                        "Invalid equal or regex action, string after =, \
+                        expecting another '=' or '~', but got nothing"
                             .to_string(),
                         line,
                         pos,

@@ -6,6 +6,7 @@ use super::json::{search_item, update_items};
 
 pub(crate) fn get_route_rule_match(
     prop_path: &[String],
+    op: fn(&str, &str) -> Result<bool, NmstateError>,
     value: &str,
     state: &NetworkState,
     line: &str,
@@ -25,6 +26,7 @@ pub(crate) fn get_route_rule_match(
             ret.config = Some(search_item(
                 "route_rule",
                 &prop_path[1..],
+                op,
                 value,
                 state.rules.config.as_ref().unwrap_or(&empty_vec),
                 line,

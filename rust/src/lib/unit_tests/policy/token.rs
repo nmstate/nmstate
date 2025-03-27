@@ -120,3 +120,21 @@ fn test_policy_token_path_pipe() {
         ]
     )
 }
+
+#[test]
+fn test_policy_token_regex() {
+    assert_eq!(
+        parse_str_to_capture_tokens("interfaces.driver=~\"igb|tg3\"").unwrap(),
+        vec![
+            NetworkCaptureToken::Path(
+                vec!["interfaces".into(), "driver".into()],
+                0
+            ),
+            NetworkCaptureToken::Regex("interfaces.driver=".len() - 1),
+            NetworkCaptureToken::Value(
+                "igb|tg3".into(),
+                "interfaces.driver=~\"i".len() - 1
+            )
+        ]
+    )
+}

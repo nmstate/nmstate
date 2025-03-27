@@ -51,6 +51,9 @@ optional = true
 workspace = true
 optional = true
 
+[dependencies.regex]
+workspace = true
+
 [dev-dependencies]
 serde_yaml = { workspace = true }
 

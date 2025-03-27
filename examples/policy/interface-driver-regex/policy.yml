@@ -1,0 +1,6 @@
+---
+capture:
+  igb-and-tg-drivers: interfaces.driver=~"^igb$|^tg.*$"
+  igb-and-tg-drivers-with-lldp: capture.igb-and-tg-drivers | interfaces.lldp.enabled:=true
+desiredState:
+  interfaces: '{{ capture.igb-and-tg-drivers-with-lldp.interfaces }}'

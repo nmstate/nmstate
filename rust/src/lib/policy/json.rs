@@ -4,6 +4,8 @@ use crate::{ErrorKind, NmstateError};
 
 use super::capture::PROPERTY_SPLITTER;
 
+use regex::Regex;
+
 pub(crate) fn get_value_from_json(
     prop_path: &[String],
     data: &serde_json::Map<String, serde_json::Value>,
@@ -89,9 +91,27 @@ pub(crate) fn value_to_string(v: &serde_json::Value) -> String {
     }
 }
 
+pub(crate) fn regex_op(value: &str, regex: &str) -> Result<bool, NmstateError> {
+    match Regex::new(regex) {
+        Ok(re) => Ok(re.is_match(value)),
+        Err(e) => Err(NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Failed to parse regex '{}'. Input value: '{}'. Error: {}",
+                regex, value, e
+            ),
+        )),
+    }
+}
+
+pub(crate) fn equal_op(lhs: &str, rhs: &str) -> Result<bool, NmstateError> {
+    Ok(lhs == rhs)
+}
+
 pub(crate) fn search_item<T>(
     item_name: &str,
     prop_path: &[String],
+    op: fn(&str, &str) -> Result<bool, NmstateError>,
     value: &str,
     items: &[T],
     line: &str,
@@ -116,7 +136,7 @@ where
                 Ok(v) => v,
                 Err(_) => continue,
             };
-        if value_to_string(&cur_value).as_str() == value {
+        if op(value_to_string(&cur_value).as_str(), value)? {
             ret.push(item.clone());
         }
     }
