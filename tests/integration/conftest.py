@@ -18,6 +18,7 @@ from libnmstate.schema import RouteRule
 from .testlib import ifacelib
 from .testlib.veth import create_veth_pair
 from .testlib.veth import remove_veth_pair
+from .testlib.ipsec import pull_ipsec_srv_container_image
 
 
 REPORT_HEADER = """RPMs: {rpms}
@@ -93,6 +94,7 @@ def _mark_tier2_tests(items):
 
 @pytest.fixture(scope="session", autouse=True)
 def test_env_setup():
+    pull_ipsec_srv_container_image()
     _logging_setup()
     old_state = libnmstate.show()
     old_state = _remove_interfaces_from_env(old_state)
