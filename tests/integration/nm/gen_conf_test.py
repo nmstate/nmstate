@@ -522,6 +522,11 @@ def test_gen_conf_route_initcwnd_mtu_quickack():
         assert_routes(desired_routes, cur_state, nic=None)
 
 
+@pytest.mark.skipif(
+    nm_minor_version() < 48,
+    reason="NetworkManager only fixed "
+    "https://issues.redhat.com/browse/RHEL-34617 on 1.48+",
+)
 def test_gen_conf_ovs_bridge_port_ref_by_mac(eth1_eth2_up_with_no_config):
     port1_mac = get_mac_address("eth1")
     port2_mac = get_mac_address("eth2")
