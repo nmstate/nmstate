@@ -36,6 +36,7 @@ BuildRequires:  systemd-rpm-macros
 BuildRequires:  rust-toolset
 %else
 BuildRequires:  rust-packaging
+%if ! %{is_snapshot}
 BuildRequires:  (crate(clap/cargo) >= 3.1 with crate(clap/cargo) < 4.0)
 BuildRequires:  (crate(clap/default) >= 3.1 with crate(clap/default) < 4.0)
 BuildRequires:  (crate(chrono/default) >= 0.4 with crate(chrono/default) < 0.5)
@@ -57,6 +58,7 @@ BuildRequires:  (crate(tokio/default) >= 1.3 with crate(tokio/default) < 2.0)
 BuildRequires:  (crate(tokio/net) >= 1.3 with crate(tokio/net) < 2.0)
 BuildRequires:  (crate(tokio/rt) >= 1.3 with crate(tokio/rt) < 2.0)
 BuildRequires:  (crate(tokio/signal) >= 1.3 with crate(tokio/signal) < 2.0)
+%endif
 %endif
 
 %description
@@ -164,6 +166,10 @@ pushd rust
 %if 0%{?rhel}
 # Source3 is vendored dependencies
 %cargo_prep -V 3
+%elif %{?is_snapshot}
+tar xf %{SOURCE3}
+# Source3 is vendored dependencies
+%cargo_prep -v vendor
 %else
 %cargo_prep
 %endif
