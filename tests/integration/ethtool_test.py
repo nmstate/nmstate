@@ -80,14 +80,14 @@ def test_ethtool_pause_on_netdevsim():
     os.environ.get("CI") == "true" or not is_fedora(),
     reason=("Ethtool pause test need netdevsim kernel module"),
 )
-def test_ethtool_pause_auto_on_netdevsim():
+def test_ethtool_pause_off_on_netdevsim():
     desire_iface_state = {
         Interface.NAME: TEST_NETDEVSIM_NIC,
         Ethtool.CONFIG_SUBTREE: {
             Ethtool.Pause.CONFIG_SUBTREE: {
-                Ethtool.Pause.AUTO_NEGOTIATION: True,
-                Ethtool.Pause.RX: True,
-                Ethtool.Pause.TX: True,
+                Ethtool.Pause.AUTO_NEGOTIATION: False,
+                Ethtool.Pause.RX: False,
+                Ethtool.Pause.TX: False,
             }
         },
     }
