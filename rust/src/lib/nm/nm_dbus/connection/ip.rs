@@ -114,6 +114,7 @@ pub struct NmSettingIp {
     pub dhcp_send_hostname: Option<bool>,
     pub dhcp_fqdn: Option<String>,
     pub dhcp_hostname: Option<String>,
+    pub forwarding: Option<i32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -156,6 +157,7 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
             )?,
             dhcp_fqdn: _from_map!(v, "dhcp-fqdn", String::try_from)?,
             dhcp_hostname: _from_map!(v, "dhcp-hostname", String::try_from)?,
+            forwarding: _from_map!(v, "forwarding", i32::try_from)?,
             ..Default::default()
         };
 
@@ -236,6 +238,9 @@ impl ToDbusValue for NmSettingIp {
         }
         if let Some(dns_priority) = self.dns_priority {
             ret.insert("dns-priority", zvariant::Value::new(dns_priority));
+        }
+        if let Some(forwarding) = self.forwarding {
+            ret.insert("forwarding", zvariant::Value::new(forwarding));
         }
         if let Some(v) = self.ignore_auto_dns {
             ret.insert("ignore-auto-dns", zvariant::Value::new(v));
