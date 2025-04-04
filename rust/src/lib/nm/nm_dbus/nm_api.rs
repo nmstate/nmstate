@@ -271,11 +271,19 @@ impl NmApi<'_> {
         // We cannot use `org.freedesktop.NetworkManager.GetDeviceByIpIface`
         // because OVS bridge/port/iface might hold identical device name.
         // Need to check interface type also.
-        if let (Some(iface_name), Some(nm_iface_type)) =
-            (nm_conn.iface_name(), nm_conn.iface_type())
-        {
-            let nm_dev_obj_path =
-                self.get_disk_obj_path(iface_name, nm_iface_type).await?;
+        if let Some(nm_iface_type) = nm_conn.iface_type() {
+            let mac_address = nm_conn
+                .wired
+                .as_ref()
+                .and_then(|w| w.mac_address.as_deref())
+                .unwrap_or("");
+            let nm_dev_obj_path = self
+                .get_disk_obj_path(
+                    nm_conn.iface_name().unwrap_or(""),
+                    mac_address,
+                    nm_iface_type,
+                )
+                .await?;
             self.dbus
                 .nm_dev_reapply(nm_dev_obj_path.as_str(), nm_conn)
                 .await
@@ -283,7 +291,7 @@ impl NmApi<'_> {
             Err(NmError::new(
                 ErrorKind::Bug,
                 format!(
-                    "Failed to extract interface name and type from \
+                    "Failed to extract interface type, name or MAC from \
                     connection {nm_conn:?}"
                 ),
             ))
@@ -472,10 +480,19 @@ impl NmApi<'_> {
     async fn get_disk_obj_path(
         &mut self,
         iface_name: &str,
+        mac_address: &str,
         nm_iface_type: &NmIfaceType,
     ) -> Result<String, NmError> {
         if let Some(nm_dev) = self.devices_get().await?.into_iter().find(|d| {
-            d.name == iface_name
+            let mut ifname_matched = false;
+            let mut mac_matched = false;
+
+            if !iface_name.is_empty() {
+                ifname_matched = d.name == iface_name;
+            } else if !mac_address.is_empty() {
+                mac_matched = d.mac_address == mac_address;
+            }
+            (ifname_matched || mac_matched)
                 && ((&d.iface_type == nm_iface_type)
                     || ([NmIfaceType::Veth, NmIfaceType::Ethernet]
                         .contains(nm_iface_type)

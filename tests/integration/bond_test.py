@@ -32,6 +32,7 @@ from .testlib.env import is_k8s
 from .testlib.env import nm_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
+from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.vlan import vlan_interface
 
@@ -1511,3 +1512,55 @@ def test_attach_mac_based_iface_to_bond_port(eth1_up, eth2_up, cleanup_bond0):
         statelib.show_only((ETH2,))[Interface.KEY][0][Interface.MAC]
         == eth2_mac
     )
+
+
+@pytest.fixture
+def bond0_with_eth1_ref_by_mac(eth1_up):
+    eth1_mac = get_mac_address(ETH1)
+
+    state = yaml.load(
+        f"""---
+        interfaces:
+         - name: port1
+           type: ethernet
+           state: up
+           identifier: mac-address
+           mac-address: {eth1_mac}
+         - name: bond0
+           type: bond
+           state: up
+           link-aggregation:
+             mode: balance-rr
+             port:
+               - eth1""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
+    yield
+    libnmstate.apply(
+        yaml.load(
+            """---
+            interfaces:
+             - name: bond0
+               type: bond
+               state: absent""",
+            Loader=yaml.SafeLoader,
+        )
+    )
+
+
+@ip_monitor_assert_stable_link_up("bond0")
+def test_reapply_bond_port_ref_by_mac(bond0_with_eth1_ref_by_mac):
+    eth1_mac = get_mac_address(ETH1)
+
+    state = yaml.load(
+        f"""---
+        interfaces:
+         - name: port1
+           type: ethernet
+           state: up
+           identifier: mac-address
+           mac-address: {eth1_mac}""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
