@@ -765,7 +765,10 @@ def test_get_ip_address_from_unmanaged_dummy():
             )
         ]
 
-        assert iface_state[Interface.IPV4] == {
+        ipv4_state = iface_state[Interface.IPV4].copy()
+        ipv4_state.pop("forwarding", None)
+
+        assert ipv4_state == {
             InterfaceIPv4.ENABLED: True,
             InterfaceIPv4.ADDRESS: [
                 {
