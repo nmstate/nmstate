@@ -109,6 +109,7 @@ fn apply_coalesce_options(
     nm_ethtool_set.coalesce_rx_usecs_irq = coalesce_conf.rx_usecs_irq;
     nm_ethtool_set.coalesce_sample_interval = coalesce_conf.sample_interval;
     nm_ethtool_set.coalesce_stats_block_usecs = coalesce_conf.stats_block_usecs;
+    nm_ethtool_set.coalesce_tx_usecs = coalesce_conf.tx_usecs;
 }
 
 fn apply_ring_options(
