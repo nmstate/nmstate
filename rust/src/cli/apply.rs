@@ -262,7 +262,7 @@ async fn apply_state_async(
     .map_err(|e| format!("tokio failed to hook on signal SIGINT: {e}"))?;
     tokio::select! {
         _ = ctrlc_stream.recv() => {
-            rollback("")?;
+            NetworkState::checkpoint_rollback_async("").await?;
             Err("Interrupted by SIGINT".into())
         }
         result = net_state.apply_async() => {
