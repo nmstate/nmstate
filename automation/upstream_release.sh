@@ -103,9 +103,9 @@ git tag --sign v$CUR_VERSION -m "New release ${CUR_VERSION}" \
 git push upstream --tags
 
 cd $CODE_BASE_DIR/rust/src/lib
-cargo publish
+cargo publish --allow-dirty
 cd $CODE_BASE_DIR/rust/src/cli
-cargo publish
+cargo publish --allow-dirty
 
 cd $CODE_BASE_DIR
 RELEASE=1 make release
