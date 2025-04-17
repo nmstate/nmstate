@@ -1,4 +1,17 @@
 # Changelog
+## [2.2.44] - 2025-04-17
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - cli: Fix control+c panic. (3dc2cdae)
+ - nm: dbus: fix reapply for mac address identified connections. (b45544e8)
+ - ethtool: Fix support of `coalesce.tx-usecs`. (cc125f21)
+ - Python: Remove runtime requirement for setuptools. (c3b6b983)
+
 ## [2.2.43] - 2025-03-25
 ### Breaking changes
  - N/A
