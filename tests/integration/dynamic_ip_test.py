@@ -730,6 +730,10 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
     _sort_ip_addresses(origin_ipv6_state[InterfaceIP.ADDRESS])
     _sort_ip_addresses(new_ipv4_state[InterfaceIP.ADDRESS])
     _sort_ip_addresses(new_ipv6_state[InterfaceIP.ADDRESS])
+    _remove_ip_mptcp_flags(origin_ipv4_state[InterfaceIP.ADDRESS])
+    _remove_ip_mptcp_flags(origin_ipv6_state[InterfaceIP.ADDRESS])
+    _remove_ip_mptcp_flags(new_ipv4_state[InterfaceIP.ADDRESS])
+    _remove_ip_mptcp_flags(new_ipv6_state[InterfaceIP.ADDRESS])
     _remove_ip_lifetime(origin_ipv4_state[InterfaceIP.ADDRESS])
     _remove_ip_lifetime(origin_ipv6_state[InterfaceIP.ADDRESS])
     _remove_ip_lifetime(new_ipv4_state[InterfaceIP.ADDRESS])
@@ -1529,6 +1533,11 @@ def _remove_ip_lifetime(addresses):
     for addr in addresses:
         addr.pop(InterfaceIP.ADDRESS_VALID_LIFE_TIME, None)
         addr.pop(InterfaceIP.ADDRESS_PREFERRED_LIFE_TIME, None)
+
+
+def _remove_ip_mptcp_flags(addresses):
+    for addr in addresses:
+        addr.pop(InterfaceIP.MPTCP_FLAGS, None)
 
 
 def test_enable_dhcp_with_no_server(dummy00):
