@@ -226,8 +226,8 @@ impl TryFrom<&str> for OvnBridgeMapping {
             Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Cannot convert {map_str} to OvnBridgeMapping, \
-                    expected format is `<localnet>{}<bridge>`",
+                    "Cannot convert {map_str} to OvnBridgeMapping, expected \
+                     format is `<localnet>{}<bridge>`",
                     Self::SEPARATOR
                 ),
             ))
@@ -265,8 +265,8 @@ impl OvnBridgeMapping {
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "mapping for `localnet` key {} missing the \
-                    `bridge` attribute",
+                    "mapping for `localnet` key {} missing the `bridge` \
+                     attribute",
                     self.localnet
                 ),
             ));

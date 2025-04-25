@@ -30,7 +30,7 @@ pub(crate) async fn nm_checkpoint_rollback(
         .wait_checkpoint_rollback(CHECKPOINT_ROLLBACK_TIMEOUT)
         .await
     {
-        warn!("{}", e);
+        warn!("{e}");
     }
     Ok(())
 }

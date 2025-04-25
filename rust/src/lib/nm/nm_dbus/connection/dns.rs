@@ -23,7 +23,7 @@ pub(crate) fn parse_nm_dns(
                         ErrorKind::InvalidArgument,
                         format!("Failed to convert to IP address: {e}"),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             },
@@ -41,7 +41,7 @@ pub(crate) fn parse_nm_dns(
                             ErrorKind::InvalidArgument,
                             format!("Failed to convert {b:?} to IP address"),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                 }
@@ -50,7 +50,7 @@ pub(crate) fn parse_nm_dns(
                         ErrorKind::InvalidArgument,
                         format!("Failed to convert to IP address: {e}"),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             },
@@ -58,11 +58,11 @@ pub(crate) fn parse_nm_dns(
                 let e = NmError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Failed to convert to IP address: \
-                        invalid signature {s:?}"
+                        "Failed to convert to IP address: invalid signature \
+                         {s:?}"
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -84,7 +84,7 @@ pub(crate) fn parse_nm_dns_search(
             ErrorKind::InvalidArgument,
             format!("In valid DNS search: {e}"),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         e
     })
 }
@@ -97,7 +97,7 @@ pub(crate) fn parse_nm_dns_options(
             ErrorKind::InvalidArgument,
             format!("In valid DNS options: {e}"),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         e
     })
 }
@@ -121,7 +121,7 @@ pub(crate) fn nm_ip_dns_to_value(
             ErrorKind::Bug,
             "nm_ip_dns_to_value got unexpected empty dns_srvs".to_string(),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         return Err(e);
     };
     for dns_srv in dns_srvs {
@@ -131,7 +131,7 @@ pub(crate) fn nm_ip_dns_to_value(
                     ErrorKind::InvalidArgument,
                     format!("Invalid IPv6 address: {dns_srv}: {e}"),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 e
             })?;
             let mut bytes = [0u8; IPV6_ADDR_LEN];
@@ -143,7 +143,7 @@ pub(crate) fn nm_ip_dns_to_value(
                     ErrorKind::InvalidArgument,
                     format!("Invalid IPv4 address: {dns_srv}: {e}"),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 e
             })?;
             let ip_addr_u32 = u32::from_be_bytes(ip_addr.octets()).to_be();

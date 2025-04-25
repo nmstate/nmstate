@@ -185,10 +185,7 @@ fn test_ifaces_resolve_unknown_bond_iface() {
             Some(BondMode::RoundRobin)
         );
     } else {
-        panic!(
-            "Should be resolved to bond interface, but got {:?}",
-            desired
-        );
+        panic!("Should be resolved to bond interface, but got {desired:?}");
     }
 }
 

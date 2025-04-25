@@ -8,7 +8,7 @@ impl From<nispor::HsrProtocol> for HsrProtocol {
             nispor::HsrProtocol::Hsr => Self::Hsr,
             nispor::HsrProtocol::Prp => Self::Prp,
             _ => {
-                log::warn!("Unknown HSR protocol {:?}", v);
+                log::warn!("Unknown HSR protocol {v:?}");
                 Self::default()
             }
         }

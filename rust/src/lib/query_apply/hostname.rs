@@ -32,8 +32,8 @@ impl MergedHostNameState {
         } else {
             return Err(NmstateError::new(
                 ErrorKind::Bug,
-                "MergedHostNameState::verify(): Got current \
-                HostNameState set to None"
+                "MergedHostNameState::verify(): Got current HostNameState set \
+                 to None"
                     .to_string(),
             ));
         };
@@ -43,13 +43,13 @@ impl MergedHostNameState {
                 let e = NmstateError::new(
                     ErrorKind::VerificationError,
                     format!(
-                        "Verification fail, desire hostname.running: \
-                        {}, current: {:?}",
+                        "Verification fail, desire hostname.running: {}, \
+                         current: {:?}",
                         running,
                         current.running.as_ref()
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -58,13 +58,13 @@ impl MergedHostNameState {
                 let e = NmstateError::new(
                     ErrorKind::VerificationError,
                     format!(
-                        "Verification fail, desire hostname.config: \
-                        {}, current: {:?}",
+                        "Verification fail, desire hostname.config: {}, \
+                         current: {:?}",
                         config,
                         current.config.as_ref()
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }

@@ -177,8 +177,8 @@ pub(crate) async fn store_dns_config_via_global_api(
     options: &[String],
 ) -> Result<(), NmstateError> {
     log::info!(
-        "Storing DNS to NetworkManager via global dns API, \
-        this will cause __all__ interface level DNS settings been ignored"
+        "Storing DNS to NetworkManager via global dns API, this will cause \
+         __all__ interface level DNS settings been ignored"
     );
 
     let nm_config = NmGlobalDnsConfig::new_wildcard(
@@ -186,7 +186,7 @@ pub(crate) async fn store_dns_config_via_global_api(
         servers.to_vec(),
         options.to_vec(),
     );
-    log::debug!("Applying NM global DNS config {:?}", nm_config);
+    log::debug!("Applying NM global DNS config {nm_config:?}");
     nm_api
         .set_global_dns_configuration(&nm_config)
         .await
@@ -250,8 +250,8 @@ pub(crate) fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
     .is_some()
     {
         log::info!(
-            "Using interface level DNS for special use case: \
-            IPv6 link-local address as DNS nameserver"
+            "Using interface level DNS for special use case: IPv6 link-local \
+             address as DNS nameserver"
         );
         return true;
     }
@@ -276,8 +276,8 @@ pub(crate) fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
                 == Some(true)
         {
             log::info!(
-                "Using interface level DNS for special use case: \
-                appending static DNS nameserver before dynamic ones."
+                "Using interface level DNS for special use case: appending \
+                 static DNS nameserver before dynamic ones."
             );
             return true;
         }
@@ -286,9 +286,9 @@ pub(crate) fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
                 == Some(true)
         {
             log::info!(
-                "Using interface level DNS for special use case: \
-                explicitly requested interface level DNS via \
-                defining static IP and static DNS nameserver."
+                "Using interface level DNS for special use case: explicitly \
+                 requested interface level DNS via defining static IP and \
+                 static DNS nameserver."
             );
             return true;
         }

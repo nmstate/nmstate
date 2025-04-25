@@ -144,8 +144,8 @@ impl BondInterface {
                             ErrorKind::InvalidArgument,
                             format!(
                                 "Port {} and {} of Bond {} are sharing the \
-                                same queue-id which is not supported by \
-                                linux kernel yet",
+                                 same queue-id which is not supported by \
+                                 linux kernel yet",
                                 exist_port_name,
                                 port_conf.name.as_str(),
                                 self.base.name.as_str()
@@ -242,7 +242,7 @@ impl BondInterface {
                     &self.base.name
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             return Err(e);
         }
         Ok(())
@@ -259,11 +259,11 @@ impl BondInterface {
         let e = NmstateError::new(
             ErrorKind::InvalidArgument,
             "MAC address cannot be specified in bond interface along with \
-            fail_over_mac active on active backup mode"
+             fail_over_mac active on active backup mode"
                 .to_string(),
         );
         if self.is_mac_restricted_mode() && self.base.mac_address.is_some() {
-            log::error!("{}", e);
+            log::error!("{e}");
             return Err(e);
         }
 
@@ -272,7 +272,7 @@ impl BondInterface {
                 && self.base.mac_address.is_some()
                 && !self.is_not_mac_restricted_mode_explicitly()
             {
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -305,13 +305,13 @@ impl BondInterface {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "The port names specified in `port` conflict with \
-                        the port names specified in `ports-config` for \
-                        bond interface: {}",
+                        "The port names specified in `port` conflict with the \
+                         port names specified in `ports-config` for bond \
+                         interface: {}",
                         &self.base.name
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -1388,10 +1388,10 @@ impl BondOptions {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     "The ad_actor_system bond option cannot be an IANA \
-                    multicast address(prefix with 01:00:5E)"
+                     multicast address(prefix with 01:00:5E)"
                         .to_string(),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -1408,7 +1408,7 @@ impl BondOptions {
                     "Bond miimon and arp interval are not compatible options."
                         .to_string(),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -1433,8 +1433,8 @@ impl BondOptions {
             {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "To enable balance-slb, bond mode should be \
-                    balance-xor and xmit_hash_policy: 'vlan+srcmac'"
+                    "To enable balance-slb, bond mode should be balance-xor \
+                     and xmit_hash_policy: 'vlan+srcmac'"
                         .to_string(),
                 ));
             }

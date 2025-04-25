@@ -70,7 +70,7 @@ impl IpsecInterface {
                 if is_desired {
                     log::info!(
                         "Treating IPv4 `dhcp: false` for IPSec interface {} \
-                        as IPv4 disabled",
+                         as IPv4 disabled",
                         self.base.name.as_str()
                     );
                 }
@@ -211,8 +211,8 @@ where
                 Ok(Some(d.to_string()))
             } else {
                 Err(serde::de::Error::custom(
-                    "Invalid ipsec-interface value, should be \
-                    unsigned integer, string 'yes' or 'no'",
+                    "Invalid ipsec-interface value, should be unsigned \
+                     integer, string 'yes' or 'no'",
                 ))
             }
         }
@@ -223,15 +223,15 @@ where
                     Ok(Some(s))
                 } else {
                     Err(serde::de::Error::custom(
-                        "Invalid ipsec-interface value, should be \
-                        unsigned integer, string 'yes' or 'no'",
+                        "Invalid ipsec-interface value, should be unsigned \
+                         integer, string 'yes' or 'no'",
                     ))
                 }
             }
         },
         _ => Err(serde::de::Error::custom(
-            "Invalid ipsec-interface value, should be \
-            unsigned integer, string 'yes' or 'no'",
+            "Invalid ipsec-interface value, should be unsigned integer, \
+             string 'yes' or 'no'",
         )),
     }
 }

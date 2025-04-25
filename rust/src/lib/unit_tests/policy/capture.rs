@@ -41,7 +41,7 @@ fn test_policy_capture_with_replace() {
         NetworkCaptureToken::Value(
             "br1".to_string(),
             "capture.base-iface-routes | \
-            routes.running.next-hop-interface:=\"b"
+             routes.running.next-hop-interface:=\"b"
                 .len()
                 - 1
         )
@@ -80,7 +80,7 @@ fn test_policy_capture_with_equal() {
         NetworkCaptureToken::Value(
             "br1".to_string(),
             "capture.base-iface-routes | \
-            routes.running.next-hop-interface==\"b"
+             routes.running.next-hop-interface==\"b"
                 .len()
                 - 1,
         ),
@@ -109,7 +109,7 @@ fn test_policy_capture_simple_store() {
 fn test_policy_capture_equal_to_prop_path() {
     let cap_con = NetworkCaptureCommand::parse(
         "routes.running.next-hop-interface == \
-        capture.primary-nic.interfaces.0.name",
+         capture.primary-nic.interfaces.0.name",
     )
     .unwrap();
 
@@ -134,9 +134,7 @@ fn test_policy_capture_equal_to_prop_path() {
                 "0".to_string(),
                 "name".to_string(),
             ],
-            "routes.running.next-hop-interface == \
-            capture.primary-nic.i"
-                .len()
+            "routes.running.next-hop-interface == capture.primary-nic.i".len()
                 - 1
         )
     );

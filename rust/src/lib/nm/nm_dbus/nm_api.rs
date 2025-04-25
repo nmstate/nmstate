@@ -97,7 +97,7 @@ impl NmApi<'_> {
         }
         self.checkpoint = None;
         self.cp_refresh_time = None;
-        debug!("checkpoint_destroy: {}", checkpoint_to_destroy);
+        debug!("checkpoint_destroy: {checkpoint_to_destroy}");
         self.dbus
             .checkpoint_destroy(checkpoint_to_destroy.as_str())
             .await
@@ -113,7 +113,7 @@ impl NmApi<'_> {
         }
         self.checkpoint = None;
         self.cp_refresh_time = None;
-        debug!("checkpoint_rollback: {}", checkpoint_to_rollback);
+        debug!("checkpoint_rollback: {checkpoint_to_rollback}");
         self.dbus
             .checkpoint_rollback(checkpoint_to_rollback.as_str())
             .await
@@ -136,7 +136,7 @@ impl NmApi<'_> {
         &mut self,
         uuid: &str,
     ) -> Result<(), NmError> {
-        debug!("connection_activate: {}", uuid);
+        debug!("connection_activate: {uuid}");
         self.extend_timeout_if_required().await?;
         let nm_conn = self.dbus.get_conn_obj_path_by_uuid(uuid).await?;
         self.dbus.connection_activate(&nm_conn).await
@@ -146,7 +146,7 @@ impl NmApi<'_> {
         &mut self,
         uuid: &str,
     ) -> Result<(), NmError> {
-        debug!("connection_deactivate: {}", uuid);
+        debug!("connection_deactivate: {uuid}");
         self.extend_timeout_if_required().await?;
         if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid).await {
             if !nm_ac.is_empty() {
@@ -214,9 +214,8 @@ impl NmApi<'_> {
                 }
                 Err(e) => {
                     debug!(
-                        "Ignoring error when get applied connection for \
-                        dev {}: {}",
-                        nm_dev_obj_path, e
+                        "Ignoring error when get applied connection for dev \
+                         {nm_dev_obj_path}: {e}"
                     );
                 }
             }
@@ -229,7 +228,7 @@ impl NmApi<'_> {
         nm_conn: &NmConnection,
         memory_only: bool,
     ) -> Result<(), NmError> {
-        debug!("connection_add: {:?}", nm_conn);
+        debug!("connection_add: {nm_conn:?}");
         self.extend_timeout_if_required().await?;
         if !nm_conn.obj_path.is_empty() {
             self.dbus
@@ -248,12 +247,12 @@ impl NmApi<'_> {
         &mut self,
         uuid: &str,
     ) -> Result<(), NmError> {
-        debug!("connection_delete: {}", uuid);
+        debug!("connection_delete: {uuid}");
         self.extend_timeout_if_required().await?;
         if let Ok(con_obj_path) =
             self.dbus.get_conn_obj_path_by_uuid(uuid).await
         {
-            debug!("Found nm_connection {} for UUID {}", con_obj_path, uuid);
+            debug!("Found nm_connection {con_obj_path} for UUID {uuid}");
             if !con_obj_path.is_empty() {
                 self.dbus.connection_delete(&con_obj_path).await?;
             }
@@ -265,7 +264,7 @@ impl NmApi<'_> {
         &mut self,
         nm_conn: &NmConnection,
     ) -> Result<(), NmError> {
-        debug!("connection_reapply: {:?}", nm_conn);
+        debug!("connection_reapply: {nm_conn:?}");
         self.extend_timeout_if_required().await?;
 
         // We cannot use `org.freedesktop.NetworkManager.GetDeviceByIpIface`
@@ -292,7 +291,7 @@ impl NmApi<'_> {
                 ErrorKind::Bug,
                 format!(
                     "Failed to extract interface type, name or MAC from \
-                    connection {nm_conn:?}"
+                     connection {nm_conn:?}"
                 ),
             ))
         }
@@ -312,7 +311,7 @@ impl NmApi<'_> {
                 get_nm_ac_by_obj_path(&self.dbus.connection, &nm_ac_obj_path)
                     .await
             {
-                debug!("Got active connection {:?}", nm_ac);
+                debug!("Got active connection {nm_ac:?}");
                 nm_acs.push(nm_ac);
             }
         }
@@ -324,10 +323,7 @@ impl NmApi<'_> {
         checkpoint: &str,
         added_time_sec: u32,
     ) -> Result<(), NmError> {
-        debug!(
-            "checkpoint_timeout_extend: {} {}",
-            checkpoint, added_time_sec
-        );
+        debug!("checkpoint_timeout_extend: {checkpoint} {added_time_sec}");
         self.dbus
             .checkpoint_timeout_extend(checkpoint, added_time_sec)
             .await
@@ -342,16 +338,13 @@ impl NmApi<'_> {
                 .await
             {
                 Ok(nm_dev) => {
-                    debug!("Got Device {:?}", nm_dev);
+                    debug!("Got Device {nm_dev:?}");
                     ret.push(nm_dev);
                 }
                 Err(e) => {
                     // We might have race when relieve device list along with
                     // deleting device
-                    debug!(
-                        "Failed to retrieve device {} {}",
-                        nm_dev_obj_path, e
-                    )
+                    debug!("Failed to retrieve device {nm_dev_obj_path} {e}")
                 }
             }
         }
@@ -397,10 +390,7 @@ impl NmApi<'_> {
             if waiting_nm_dev.is_empty() {
                 return Ok(());
             } else {
-                debug!(
-                    "Waiting rollback on these devices {:?}",
-                    waiting_nm_dev
-                );
+                debug!("Waiting rollback on these devices {waiting_nm_dev:?}");
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
         }
@@ -432,7 +422,7 @@ impl NmApi<'_> {
             // just delete the /etc/hostname file
             if std::path::Path::new("/etc/hostname").exists() {
                 if let Err(e) = std::fs::remove_file("/etc/hostname") {
-                    log::error!("Failed to remove static /etc/hostname: {}", e);
+                    log::error!("Failed to remove static /etc/hostname: {e}");
                 }
             }
             Ok(())

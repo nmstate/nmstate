@@ -121,7 +121,7 @@ pub(crate) async fn nm_retrieve(
                     if nm_dev.state == NmDeviceState::Activated {
                         log::warn!(
                             "Failed to find applied NmConnection for \
-                            interface {} {}",
+                             interface {} {}",
                             nm_dev.name,
                             nm_dev.iface_type
                         );
@@ -378,7 +378,7 @@ fn iface_get(
                 Box::new(iface)
             }),
             _ => {
-                log::debug!("Skip unsupported interface {:?}", base_iface);
+                log::debug!("Skip unsupported interface {base_iface:?}");
                 return None;
             }
         };

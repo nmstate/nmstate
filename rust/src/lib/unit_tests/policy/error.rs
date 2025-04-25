@@ -333,8 +333,8 @@ fn test_policy_empty_reference() {
 
 #[test]
 fn test_policy_reference_with_two_paths() {
-    let line = "{{ capture.void.interface.0.name \
-        capture.void.interface.1.name }}";
+    let line =
+        "{{ capture.void.interface.0.name capture.void.interface.1.name }}";
     let result = parse_str_to_template_tokens(line);
     assert!(result.is_err());
     if let Err(e) = result {

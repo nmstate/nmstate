@@ -536,8 +536,8 @@ impl EthtoolFecConfig {
         if is_desired && self.auto == Some(true) {
             if let Some(mode) = self.mode.take() {
                 log::info!(
-                    "Ignoring ethtool fec mode setting {mode} because \
-                auto enabled"
+                    "Ignoring ethtool fec mode setting {mode} because auto \
+                     enabled"
                 );
             }
         }

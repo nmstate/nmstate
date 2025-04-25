@@ -54,7 +54,10 @@ impl HsrInterface {
             if let Some(conf) = &mut self.hsr {
                 if let Some(address) = &mut conf.supervision_address {
                     address.as_mut().make_ascii_uppercase();
-                    log::warn!("The supervision-address is read-only, ignoring it on desired state.");
+                    log::warn!(
+                        "The supervision-address is read-only, ignoring it on \
+                         desired state."
+                    );
                 }
             }
         }

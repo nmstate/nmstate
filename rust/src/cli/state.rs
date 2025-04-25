@@ -110,7 +110,7 @@ where
                     };
                     return Err(CliError::from(format!(
                         "Provide file is not valid NetworkState or \
-                        NetworkPolicy: {e}"
+                         NetworkPolicy: {e}"
                     )));
                 }
             };

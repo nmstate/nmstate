@@ -83,8 +83,8 @@ impl Routes {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "A {:?} Route cannot have a next \
-                                hop : {route:?}",
+                                "A {:?} Route cannot have a next hop : \
+                                 {route:?}",
                                 route.route_type.unwrap()
                             ),
                         ));
@@ -94,8 +94,8 @@ impl Routes {
                         return Err(NmstateError::new(
                             ErrorKind::NotImplementedError,
                             format!(
-                                "Route with empty next hop interface \
-                            is not supported: {route:?}"
+                                "Route with empty next hop interface is not \
+                                 supported: {route:?}"
                             ),
                         ));
                     }
@@ -135,10 +135,9 @@ impl Routes {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Route '{}' defined with next \
-                                hop interface {} but \
-                                multiple interfaces are sharing \
-                                this profile name",
+                                "Route '{}' defined with next hop interface \
+                                 {} but multiple interfaces are sharing this \
+                                 profile name",
                                 route,
                                 next_hop_iface.as_str()
                             ),
@@ -424,9 +423,7 @@ impl RouteEntry {
                 let new_dst = sanitize_ip_network(dst)?;
                 if dst != &new_dst {
                     log::warn!(
-                        "Route destination {} sanitized to {}",
-                        dst,
-                        new_dst
+                        "Route destination {dst} sanitized to {new_dst}"
                     );
                     self.destination = Some(new_dst);
                 }
@@ -436,9 +433,7 @@ impl RouteEntry {
             let new_via = format!("{}", via.parse::<std::net::IpAddr>()?);
             if via != &new_via {
                 log::warn!(
-                    "Route next-hop-address {} sanitized to {}",
-                    via,
-                    new_via
+                    "Route next-hop-address {via} sanitized to {new_via}"
                 );
                 self.next_hop_addr = Some(new_via);
             }
@@ -449,16 +444,12 @@ impl RouteEntry {
                 src.parse::<std::net::IpAddr>().map_err(|e| {
                     NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Failed to parse IP address '{}': {}", src, e),
+                        format!("Failed to parse IP address '{src}': {e}"),
                     )
                 })?
             );
             if src != &new_src {
-                log::info!(
-                    "Route source address {} sanitized to {}",
-                    src,
-                    new_src
-                );
+                log::info!("Route source address {src} sanitized to {new_src}");
                 self.source = Some(new_src);
             }
         }
@@ -467,8 +458,8 @@ impl RouteEntry {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Invalid ECMP route weight {weight}, \
-                        should be in the range of 1 to 256"
+                        "Invalid ECMP route weight {weight}, should be in the \
+                         range of 1 to 256"
                     ),
                 ));
             }
@@ -657,7 +648,7 @@ impl MergedRoutes {
                         ErrorKind::InvalidArgument,
                         format!(
                             "The next hop interface of desired Route '{rt}' \
-                            has been marked as absent"
+                             has been marked as absent"
                         ),
                     ));
                 }
@@ -668,7 +659,7 @@ impl MergedRoutes {
                         ErrorKind::InvalidArgument,
                         format!(
                             "The next hop interface of desired Route '{rt}' \
-                            has been marked as IPv6 disabled"
+                             has been marked as IPv6 disabled"
                         ),
                     ));
                 }
@@ -679,7 +670,7 @@ impl MergedRoutes {
                         ErrorKind::InvalidArgument,
                         format!(
                             "The next hop interface of desired Route '{rt}' \
-                            has been marked as IPv4 disabled"
+                             has been marked as IPv4 disabled"
                         ),
                     ));
                 }
@@ -830,8 +821,8 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
                             return Err(NmstateError::new(
                                 ErrorKind::InvalidArgument,
                                 format!(
-                                    "The prefix of the route destination network \
-                                    '{dst}' is invalid"
+                                    "The prefix of the route destination \
+                                     network '{dst}' is invalid"
                                 ),
                             ));
                         }
@@ -839,23 +830,23 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
                     if prefix >= 8 && route.is_unicast() {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
-                            "0.0.0.0/8 and its subnet cannot be used as \
-                            the route destination for unicast route, please use \
-                            the default gateway 0.0.0.0/0 instead"
+                            "0.0.0.0/8 and its subnet cannot be used as the \
+                             route destination for unicast route, please use \
+                             the default gateway 0.0.0.0/0 instead"
                                 .to_string(),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                 } else if route.is_unicast() {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        "0.0.0.0/8 and its subnet cannot be used as \
-                        the route destination for unicast route, please use \
-                        the default gateway 0.0.0.0/0 instead"
+                        "0.0.0.0/8 and its subnet cannot be used as the route \
+                         destination for unicast route, please use the \
+                         default gateway 0.0.0.0/0 instead"
                             .to_string(),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }

@@ -55,11 +55,11 @@ impl MacVtapInterface {
                 {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        "Disable accept-all-mac-addresses(promiscuous) \
-                        is only allowed on passthru mode"
+                        "Disable accept-all-mac-addresses(promiscuous) is \
+                         only allowed on passthru mode"
                             .to_string(),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }

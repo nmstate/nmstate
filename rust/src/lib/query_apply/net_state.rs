@@ -114,7 +114,7 @@ impl NetworkState {
                     self.update_state(&ovsdb_state);
                 }
                 Err(e) => {
-                    log::warn!("Failed to retrieve OVS DB state: {}", e);
+                    log::warn!("Failed to retrieve OVS DB state: {e}");
                 }
             }
         }
@@ -159,28 +159,26 @@ impl NetworkState {
             >= MAX_SUPPORTED_INTERFACES
         {
             log::warn!(
-                "Interfaces count exceeds the support limit {} in \
-                desired state",
-                MAX_SUPPORTED_INTERFACES,
+                "Interfaces count exceeds the support limit \
+                 {MAX_SUPPORTED_INTERFACES} in desired state",
             );
         }
         if self.interfaces.has_up_ovs_iface() && !ovsdb_is_running() {
             if self.no_verify {
                 log::warn!(
-                    "Desired state contains OVS interfaces, but not able \
-                    to connect OVS daemon at socket {}",
-                    DEFAULT_OVS_DB_SOCKET_PATH
+                    "Desired state contains OVS interfaces, but not able to \
+                     connect OVS daemon at socket {DEFAULT_OVS_DB_SOCKET_PATH}"
                 );
             } else {
                 let e = NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "Desired state contains OVS interfaces, but \
-                            not able to connect OVS daemon at socket {}",
-                        DEFAULT_OVS_DB_SOCKET_PATH
+                        "Desired state contains OVS interfaces, but not able \
+                         to connect OVS daemon at socket \
+                         {DEFAULT_OVS_DB_SOCKET_PATH}"
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -200,7 +198,7 @@ impl NetworkState {
         cur_net_state.set_include_secrets(true);
         if let Err(e) = cur_net_state.retrieve_async().await {
             if e.kind().can_retry() {
-                log::info!("Retrying on: {}", e);
+                log::info!("Retrying on: {e}");
                 tokio::time::sleep(std::time::Duration::from_millis(
                     RETRY_NM_INTERVAL_MILLISECONDS,
                 ))
@@ -243,7 +241,7 @@ impl NetworkState {
             Ok(c) => c,
             Err(e) => {
                 if e.kind().can_retry() {
-                    log::info!("Retrying on: {}", e);
+                    log::info!("Retrying on: {e}");
                     tokio::time::sleep(std::time::Duration::from_millis(
                         RETRY_NM_INTERVAL_MILLISECONDS,
                     ))
@@ -291,7 +289,7 @@ impl NetworkState {
                 return Err(NmstateError::new(
                     ErrorKind::Bug,
                     "Got unexpected None for merged_state in \
-                    apply_with_nm_backend()"
+                     apply_with_nm_backend()"
                         .into(),
                 ));
             };
@@ -460,17 +458,17 @@ where
             if !no_commit {
                 nm_checkpoint_destroy(checkpoint).await?;
 
-                log::info!("Destroyed checkpoint {}", checkpoint);
+                log::info!("Destroyed checkpoint {checkpoint}");
             } else {
-                log::info!("Skipping commit for checkpoint {}", checkpoint);
+                log::info!("Skipping commit for checkpoint {checkpoint}");
             }
             Ok(())
         }
         Err(e) => {
             if let Err(e) = nm_checkpoint_rollback(checkpoint).await {
-                log::warn!("nm_checkpoint_rollback() failed: {}", e);
+                log::warn!("nm_checkpoint_rollback() failed: {e}");
             }
-            log::info!("Rollbacked to checkpoint {}", checkpoint);
+            log::info!("Rollbacked to checkpoint {checkpoint}");
             Err(e)
         }
     }
@@ -496,7 +494,7 @@ where
                     return Err(e);
                 }
             } else {
-                log::info!("Retrying on: {}", e);
+                log::info!("Retrying on: {e}");
                 tokio::time::sleep(std::time::Duration::from_millis(
                     interval_ms,
                 ))

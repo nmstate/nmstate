@@ -39,7 +39,10 @@ impl NmIpRouteRule {
                         "from ::/0".to_string()
                     }
                 } else {
-                    warn!("Neither from, to or family specified on route rule. Assuming IPv4.");
+                    warn!(
+                        "Neither from, to or family specified on route rule. \
+                         Assuming IPv4."
+                    );
                     "from 0.0.0.0/0".to_string()
                 }
             } else {

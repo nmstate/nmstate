@@ -87,10 +87,7 @@ impl NmSetting8021X {
                 }
                 Err(e) => {
                     log::warn!(
-                        "Failed to convert private_key_password: \
-                        {:?} {:?}",
-                        v,
-                        e
+                        "Failed to convert private_key_password: {v:?} {e:?}"
                     );
                 }
             }
@@ -101,12 +98,7 @@ impl NmSetting8021X {
                     self.password = Some(s);
                 }
                 Err(e) => {
-                    log::warn!(
-                        "Failed to convert password: \
-                        {:?} {:?}",
-                        v,
-                        e
-                    );
+                    log::warn!("Failed to convert password: {v:?} {e:?}");
                 }
             }
         }
@@ -124,10 +116,10 @@ impl NmSetting8021X {
                     ErrorKind::InvalidArgument,
                     format!(
                         "Failed to parse glib bytes to UTF-8 string: \
-                        {value:?}: {e:?}"
+                         {value:?}: {e:?}"
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         };
@@ -138,10 +130,11 @@ impl NmSetting8021X {
             let e = NmError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Specified glib bytes is started with {GLIB_FILE_PATH_PREFIX}: {value:?}"
+                    "Specified glib bytes is started with \
+                     {GLIB_FILE_PATH_PREFIX}: {value:?}"
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             Err(e)
         }
     }

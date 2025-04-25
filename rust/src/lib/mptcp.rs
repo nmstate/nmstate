@@ -68,7 +68,7 @@ impl MergedInterface {
                         "MPTCP flags mustn't have both signal and fullmesh"
                             .to_string(),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }
@@ -108,10 +108,10 @@ fn validate_iface_mptcp_and_addr_mptcp_flags(iface: &BaseInterface) {
             addr_flags.sort_unstable();
             if iface_flags != addr_flags {
                 log::warn!(
-                    "Nmstate does not support setting different \
-                    MPTCP flags within the interface. Ignoring MPTCP \
-                    flags {:?} of IP address {}/{} as it is different \
-                    from interface level MPTCP flags {:?}",
+                    "Nmstate does not support setting different MPTCP flags \
+                     within the interface. Ignoring MPTCP flags {:?} of IP \
+                     address {}/{} as it is different from interface level \
+                     MPTCP flags {:?}",
                     addr_flags,
                     ip_addr.ip,
                     ip_addr.prefix_length,

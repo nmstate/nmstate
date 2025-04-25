@@ -411,7 +411,7 @@ impl<'de> Deserialize<'de> for Interface {
                 Ok(Interface::IpVlan(Box::new(inner)))
             }
             Some(iface_type) => {
-                log::warn!("Unsupported interface type {}", iface_type);
+                log::warn!("Unsupported interface type {iface_type}");
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Unknown(Box::new(inner)))
@@ -578,10 +578,8 @@ impl Interface {
                         obj.len() == 3
                     } else {
                         log::error!(
-                            "BUG: is_up_exist_connection() got \
-                            unexpected(not object) serde_json::to_value() \
-                            return {}",
-                            v
+                            "BUG: is_up_exist_connection() got unexpected(not \
+                             object) serde_json::to_value() return {v}"
                         );
                         false
                     }
@@ -589,8 +587,7 @@ impl Interface {
                 Err(e) => {
                     log::error!(
                         "BUG: is_up_exist_connection() got unexpected \
-                    serde_json::to_value() failure {}",
-                        e
+                         serde_json::to_value() failure {e}"
                     );
                     false
                 }
@@ -753,9 +750,8 @@ impl Interface {
             Interface::MacSec(macsec) => macsec.change_parent_name(parent_name),
             _ => {
                 log::warn!(
-                    "BUG: change_parent_name() invoked against \
-                    unsupported interface type {:?}",
-                    self
+                    "BUG: change_parent_name() invoked against unsupported \
+                     interface type {self:?}"
                 )
             }
         }
@@ -812,8 +808,8 @@ impl MergedInterface {
                     (None, None) => {
                         return Err(NmstateError::new(
                             ErrorKind::Bug,
-                            "BUG: MergedInterface got both desired \
-                            and current set to None"
+                            "BUG: MergedInterface got both desired and \
+                             current set to None"
                                 .to_string(),
                         ));
                     }
@@ -1043,9 +1039,9 @@ impl MergedInterface {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Interface {} cannot live without controller, \
-                            but it is detached from original controller \
-                            {org_ctrl}, cannot apply desired `state:up`",
+                            "Interface {} cannot live without controller, but \
+                             it is detached from original controller \
+                             {org_ctrl}, cannot apply desired `state:up`",
                             self.merged.name()
                         ),
                     ));
@@ -1073,7 +1069,7 @@ impl MergedInterface {
                 ErrorKind::Bug,
                 format!(
                     "Reached unreachable code: apply_ctrller_change() \
-                    self.for_apply still None: {self:?}"
+                     self.for_apply still None: {self:?}"
                 ),
             ));
         };
@@ -1086,9 +1082,9 @@ impl MergedInterface {
                 .and_then(|c| c.base_iface().controller.as_ref())
             {
                 log::info!(
-                    "Interface {} cannot live without controller, \
-                    marking as absent as it has been detached from its \
-                    original controller {org_ctrl}",
+                    "Interface {} cannot live without controller, marking as \
+                     absent as it has been detached from its original \
+                     controller {org_ctrl}",
                     self.merged.name(),
                 );
             }

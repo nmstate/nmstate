@@ -176,8 +176,8 @@ impl DnsClientState {
                                 ErrorKind::InvalidArgument,
                                 format!(
                                     "Option '{opt}' is not supported to hold \
-                                    a value, only support these without \
-                                    value: {} and these with values: {}:n",
+                                     a value, only support these without \
+                                     value: {} and these with values: {}:n",
                                     SUPPORTED_DNS_OPTS_NO_VALUE.join(", "),
                                     SUPPORTED_DNS_OPTS_WITH_VALUE.join(":n, ")
                                 ),
@@ -190,9 +190,9 @@ impl DnsClientState {
                             return Err(NmstateError::new(
                                 ErrorKind::InvalidArgument,
                                 format!(
-                                    "Unsupported DNS option {opt}, \
-                                    only support these without value: {} \
-                                    and these with values: {}",
+                                    "Unsupported DNS option {opt}, only \
+                                     support these without value: {} and \
+                                     these with values: {}",
                                     SUPPORTED_DNS_OPTS_NO_VALUE.join(", "),
                                     SUPPORTED_DNS_OPTS_WITH_VALUE.join(":n, ")
                                 ),
@@ -312,8 +312,8 @@ impl MergedNetworkState {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Desired IPv6 link local DNS server {srv} is \
-                        pointing to interface {iface_name} \
-                        which does not exist."
+                             pointing to interface {iface_name} which does \
+                             not exist."
                         ),
                     ));
                 };
@@ -323,9 +323,9 @@ impl MergedNetworkState {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Interface {iface_name} has IPv6 disabled, \
-                            hence cannot hold desired IPv6 link local \
-                            DNS server {srv}"
+                            "Interface {iface_name} has IPv6 disabled, hence \
+                             cannot hold desired IPv6 link local DNS server \
+                             {srv}"
                         ),
                     ));
                 }
@@ -335,8 +335,8 @@ impl MergedNetworkState {
             return Err(NmstateError::new(
                 ErrorKind::NotImplementedError,
                 format!(
-                    "Only support IPv6 link local DNS name server(s) \
-                pointing to a single interface, but got '{}'",
+                    "Only support IPv6 link local DNS name server(s) pointing \
+                     to a single interface, but got '{}'",
                     iface_names.join(" ")
                 ),
             ));
@@ -358,10 +358,10 @@ pub(crate) fn parse_dns_ipv6_link_local_srv(
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Invalid IPv6 address in {srv}, only IPv6 link local \
-                            address is allowed to have '%' character in DNS \
-                            name server, the correct format should be \
-                            'fe80::deef:1%eth1'"
+                            "Invalid IPv6 address in {srv}, only IPv6 link \
+                             local address is allowed to have '%' character \
+                             in DNS name server, the correct format should be \
+                             'fe80::deef:1%eth1'"
                         ),
                     ));
                 }
@@ -370,9 +370,8 @@ pub(crate) fn parse_dns_ipv6_link_local_srv(
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid DNS server {srv}, the IPv6 \
-                        link local DNS server should be in the format like \
-                        'fe80::deef:1%eth1'"
+                    "Invalid DNS server {srv}, the IPv6 link local DNS server \
+                     should be in the format like 'fe80::deef:1%eth1'"
                 ),
             ));
         }

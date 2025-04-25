@@ -326,7 +326,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_both() {
             Some(&BondMode::ActiveBackup)
         );
     } else {
-        panic!("Expecting a bond interface but got {:?}", iface);
+        panic!("Expecting a bond interface but got {iface:?}");
     }
 }
 

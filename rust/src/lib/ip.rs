@@ -290,9 +290,8 @@ impl InterfaceIpv4 {
                 if is_desired {
                     for addr in addrs {
                         log::info!(
-                            "Static addresses {} defined when dynamic \
-                            IP is enabled",
-                            addr
+                            "Static addresses {addr} defined when dynamic IP \
+                             is enabled"
                         );
                     }
                 }
@@ -302,7 +301,7 @@ impl InterfaceIpv4 {
         if let Some(addrs) = self.addresses.as_mut() {
             if is_desired {
                 for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
-                    log::info!("Ignoring Auto IP address {}", addr);
+                    log::info!("Ignoring Auto IP address {addr}");
                 }
                 if let Some(addr) =
                     addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
@@ -310,8 +309,7 @@ impl InterfaceIpv4 {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Got IPv6 address {} in ipv4 config section",
-                            addr
+                            "Got IPv6 address {addr} in ipv4 config section"
                         ),
                     ));
                 }
@@ -322,8 +320,8 @@ impl InterfaceIpv4 {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Invalid IPv4 network prefix length '{}', \
-                            should be in the range of 0 to {IPV4_ADDR_LEN}",
+                            "Invalid IPv4 network prefix length '{}', should \
+                             be in the range of 0 to {IPV4_ADDR_LEN}",
                             addr.prefix_length
                         ),
                     ));
@@ -349,8 +347,7 @@ impl InterfaceIpv4 {
             self.auto_route_metric = None;
             if is_desired && self.dhcp_client_id.is_some() {
                 log::warn!(
-                    "Ignoring `dhcp-client-id` setting when DHCPv4 is \
-                    disabled"
+                    "Ignoring `dhcp-client-id` setting when DHCPv4 is disabled"
                 );
             }
             self.dhcp_client_id = None;
@@ -365,8 +362,8 @@ impl InterfaceIpv4 {
                     if !custom_hostname.is_empty() {
                         log::warn!(
                             "Ignoring `dhcp-custom-hostname: \
-                            {custom_hostname}` as `dhcp-send-hostname` is \
-                            disabled"
+                             {custom_hostname}` as `dhcp-send-hostname` is \
+                             disabled"
                         );
                     }
                 }
@@ -581,14 +578,13 @@ impl InterfaceIpv6 {
         if let Some(addrs) = self.addresses.as_mut() {
             if is_desired {
                 for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
-                    log::info!("Ignoring Auto IP address {}", addr);
+                    log::info!("Ignoring Auto IP address {addr}");
                 }
                 if let Some(addr) = addrs.iter().find(|a| a.ip.is_ipv4()) {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Got IPv4 address {} in ipv6 config section",
-                            addr
+                            "Got IPv4 address {addr} in ipv6 config section"
                         ),
                     ));
                 }
@@ -599,8 +595,8 @@ impl InterfaceIpv6 {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Invalid IPv6 network prefix length '{}', \
-                            should be in the range of 0 to {IPV6_ADDR_LEN}",
+                            "Invalid IPv6 network prefix length '{}', should \
+                             be in the range of 0 to {IPV6_ADDR_LEN}",
                             addr.prefix_length
                         ),
                     ));
@@ -627,9 +623,8 @@ impl InterfaceIpv6 {
                 if is_desired {
                     for addr in addrs {
                         log::info!(
-                            "Static addresses {} defined when dynamic \
-                            IP is enabled",
-                            addr
+                            "Static addresses {addr} defined when dynamic IP \
+                             is enabled"
                         );
                     }
                 }
@@ -685,10 +680,9 @@ impl InterfaceIpv6 {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Desired IPv6 token '{token}' cannot \
-                        be applied with IPv6 autoconf disabled, \
-                        you may remove IPv6 token by setting as \
-                        empty string or `::`"
+                        "Desired IPv6 token '{token}' cannot be applied with \
+                         IPv6 autoconf disabled, you may remove IPv6 token by \
+                         setting as empty string or `::`"
                     ),
                 ));
             }
@@ -702,8 +696,8 @@ impl InterfaceIpv6 {
                     if !custom_hostname.is_empty() {
                         log::warn!(
                             "Ignoring `dhcp-custom-hostname: \
-                            {custom_hostname}` as `dhcp-send-hostname` is \
-                            disabled"
+                             {custom_hostname}` as `dhcp-send-hostname` is \
+                             disabled"
                         );
                     }
                 }
@@ -950,7 +944,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
                 ErrorKind::InvalidArgument,
                 format!("Invalid IP address {}: {e}", addr[0]),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             e
         })?;
 
@@ -966,7 +960,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
                     ErrorKind::InvalidArgument,
                     format!("Invalid IP address {value}: {parse_error}"),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 e
             })?
         };
@@ -1133,12 +1127,12 @@ fn validate_wait_ip(base_iface: &BaseInterface) -> Result<(), NmstateError> {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Cannot set 'wait-ip: {}' with IPv4 disabled. \
-                    Interface: {}({})",
+                    "Cannot set 'wait-ip: {}' with IPv4 disabled. Interface: \
+                     {}({})",
                     wait_ip, &base_iface.name, &base_iface.iface_type
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             return Err(e);
         }
         if (wait_ip == &WaitIp::Ipv6 || wait_ip == &WaitIp::Ipv4AndIpv6)
@@ -1151,12 +1145,12 @@ fn validate_wait_ip(base_iface: &BaseInterface) -> Result<(), NmstateError> {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Cannot set 'wait-ip: {}' with IPv6 disabled. \
-                    Interface: {}({})",
+                    "Cannot set 'wait-ip: {}' with IPv6 disabled. Interface: \
+                     {}({})",
                     wait_ip, &base_iface.name, &base_iface.iface_type
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             return Err(e);
         }
     }
@@ -1191,8 +1185,8 @@ pub(crate) fn sanitize_ip_network(
                 NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Invalid IP network prefix length \
-                        '{}' in '{ip_net}': {e}",
+                        "Invalid IP network prefix length '{}' in '{ip_net}': \
+                         {e}",
                         ip_nets[1]
                     ),
                 )
@@ -1204,9 +1198,9 @@ pub(crate) fn sanitize_ip_network(
                     Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Invalid IPv6 network prefix length '{}' \
-                            in '{ip_net}', should be smaller than \
-                            {IPV6_ADDR_LEN}'",
+                            "Invalid IPv6 network prefix length '{}' in \
+                             '{ip_net}', should be smaller than \
+                             {IPV6_ADDR_LEN}'",
                             ip_nets[1],
                         ),
                     ))
@@ -1217,9 +1211,8 @@ pub(crate) fn sanitize_ip_network(
                 Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Invalid IPv4 network prefix length '{}' \
-                        in '{ip_net}', should be smaller than \
-                        {IPV4_ADDR_LEN}'",
+                        "Invalid IPv4 network prefix length '{}' in \
+                         '{ip_net}', should be smaller than {IPV4_ADDR_LEN}'",
                         ip_nets[1],
                     ),
                 ))
@@ -1231,8 +1224,8 @@ pub(crate) fn sanitize_ip_network(
             ErrorKind::InvalidArgument,
             format!(
                 "Invalid IP network string: '{ip_net}', expecting 'ip/prefix' \
-                or 'ip' format, for example: 192.0.2.0/24 or \
-                2001:db8:1::/64 or 192.0.2.1"
+                 or 'ip' format, for example: 192.0.2.0/24 or 2001:db8:1::/64 \
+                 or 192.0.2.1"
             ),
         )),
     }
@@ -1341,8 +1334,8 @@ fn sanitize_ipv6_token_to_string(
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Desired IPv6 token should be lead \
-                            by 64 bits 0. But got {token}"
+                            "Desired IPv6 token should be lead by 64 bits 0. \
+                             But got {token}"
                         ),
                     ));
                 }
@@ -1363,8 +1356,8 @@ fn sanitize_ipv6_token_to_string(
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Desired IPv6 token '{token}' is not a \
-                        valid IPv6 address: {e}"
+                        "Desired IPv6 token '{token}' is not a valid IPv6 \
+                         address: {e}"
                     ),
                 ));
             }

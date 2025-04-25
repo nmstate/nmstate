@@ -245,8 +245,8 @@ fn find_interface_for_rule<'a>(
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "The interface {iif} required by route rule \
-                    {rule} does not exists"
+                    "The interface {iif} required by route rule {rule} does \
+                     not exists"
                 ),
             ));
         }

@@ -52,11 +52,11 @@ impl IpVlanInterface {
                 if conf.private == Some(true) && conf.vepa == Some(true) {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        "Both private and VEPA flags cannot \
-                    be enabled at the same time"
+                        "Both private and VEPA flags cannot be enabled at the \
+                         same time"
                             .to_string(),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }

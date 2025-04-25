@@ -57,9 +57,7 @@ pub(crate) async fn get_routes(running_config_only: bool) -> Routes {
             }
             Err(e) => {
                 log::warn!(
-                    "Failed to retrieve {:?} route via nispor: {}",
-                    protocol,
-                    e
+                    "Failed to retrieve {protocol:?} route via nispor: {e}"
                 );
             }
         }
@@ -141,7 +139,7 @@ fn np_routetype_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
             route_entry.route_type = Some(RouteType::Prohibit)
         }
         _ => {
-            log::debug!("Got unsupported route {:?}", np_route);
+            log::debug!("Got unsupported route {np_route:?}");
         }
     }
     // according to `man ip-route`, cwnd is useless without the lock flag, so
@@ -254,8 +252,8 @@ fn nmstate_to_nispor_route_conf(
             return Err(NmstateError::new(
                 ErrorKind::NotImplementedError,
                 format!(
-                    "nispor apply does not support route table ID bigger \
-                    than {} yet, got {}, ignoring",
+                    "nispor apply does not support route table ID bigger than \
+                     {} yet, got {}, ignoring",
                     u8::MAX,
                     table_id
                 ),

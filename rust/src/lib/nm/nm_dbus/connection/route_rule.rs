@@ -199,7 +199,7 @@ impl From<u8> for NmIpRouteRuleAction {
             RTN_UNREACHABLE => Self::Unreachable,
             RTN_PROHIBIT => Self::Prohibit,
             _ => {
-                log::warn!("Unsupported IP route rule action {}", v);
+                log::warn!("Unsupported IP route rule action {v}");
                 Self::Other(v)
             }
         }
@@ -223,7 +223,7 @@ impl std::fmt::Display for NmIpRouteRuleAction {
             NmIpRouteRuleAction::Blackhole => write!(f, "blackhole"),
             NmIpRouteRuleAction::Unreachable => write!(f, "unreachable"),
             NmIpRouteRuleAction::Prohibit => write!(f, "prohibit"),
-            NmIpRouteRuleAction::Other(d) => write!(f, "{}", d),
+            NmIpRouteRuleAction::Other(d) => write!(f, "{d}"),
         }
     }
 }

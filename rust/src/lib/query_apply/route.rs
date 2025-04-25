@@ -110,8 +110,8 @@ impl MergedRoutes {
                     return Err(NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired absent route {rt} still found \
-                            after apply: {cur_rt}",
+                            "Desired absent route {rt} still found after \
+                             apply: {cur_rt}",
                         ),
                     ));
                 }
@@ -128,7 +128,10 @@ impl MergedRoutes {
 
                 if !cur_routes.iter().any(|cur_rt| rt.is_match(cur_rt)) {
                     if is_route_delayed_by_nm(rt, current_ifaces) {
-                        log::warn!("Route {rt} still missing due to NetworkManager waiting to receive an IP address");
+                        log::warn!(
+                            "Route {rt} still missing due to NetworkManager \
+                             waiting to receive an IP address"
+                        );
                     }
 
                     return Err(NmstateError::new(

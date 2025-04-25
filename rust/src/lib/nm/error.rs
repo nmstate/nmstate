@@ -33,7 +33,7 @@ pub(crate) fn nm_error_to_nmstate(nm_error: NmError) -> NmstateError {
                 ErrorKind::DependencyError,
                 format!(
                     "Please upgrade NetworkManager for specified interface \
-                    type: {nm_error}"
+                     type: {nm_error}"
                 ),
             )
         }

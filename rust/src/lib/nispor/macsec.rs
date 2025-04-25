@@ -11,7 +11,7 @@ impl From<nispor::MacSecValidate> for MacSecValidate {
             nispor::MacSecValidate::Check => Self::Check,
             nispor::MacSecValidate::Strict => Self::Strict,
             _ => {
-                log::warn!("Unknown MACsec validate mode {:?}", v);
+                log::warn!("Unknown MACsec validate mode {v:?}");
                 Self::default()
             }
         }
@@ -25,7 +25,7 @@ impl From<nispor::MacSecOffload> for MacSecOffload {
             nispor::MacSecOffload::Phy => Self::Phy,
             nispor::MacSecOffload::Mac => Self::Mac,
             _ => {
-                log::warn!("Unknown MACsec offload mode {:?}", v);
+                log::warn!("Unknown MACsec offload mode {v:?}");
                 Self::default()
             }
         }

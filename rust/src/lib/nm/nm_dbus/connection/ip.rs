@@ -306,8 +306,7 @@ fn parse_nm_ip_address_data(
                 Ok(a) => a,
                 Err(e) => {
                     warn!(
-                        "Failed to convert {} to HashMap: {}",
-                        nm_addr_display, e
+                        "Failed to convert {nm_addr_display} to HashMap: {e}"
                     );
                     continue;
                 }
@@ -318,7 +317,7 @@ fn parse_nm_ip_address_data(
         {
             a
         } else {
-            warn!("Failed to find address property from {:?}", nm_addr);
+            warn!("Failed to find address property from {nm_addr:?}");
 
             continue;
         };
@@ -327,7 +326,7 @@ fn parse_nm_ip_address_data(
         {
             a
         } else {
-            warn!("Failed to find address property from {:?}", nm_addr);
+            warn!("Failed to find address property from {nm_addr:?}");
 
             continue;
         };

@@ -106,8 +106,7 @@ fn get_chassis_id(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
             )));
         } else {
             log::warn!(
-                "Got unsupported chassis_id_type {}, expecting u8",
-                id_type
+                "Got unsupported chassis_id_type {id_type}, expecting u8"
             );
         }
     }
@@ -124,10 +123,7 @@ fn get_port_id(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
                 id_type.into(),
             )));
         } else {
-            log::warn!(
-                "Got unsupported port_id_type {}, expecting u8",
-                id_type
-            );
+            log::warn!("Got unsupported port_id_type {id_type}, expecting u8");
         }
     }
     None

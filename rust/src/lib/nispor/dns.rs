@@ -72,7 +72,7 @@ pub(crate) fn apply_dns_conf_to_etc(
 
     for srv in config.servers.as_slice() {
         if !srv.is_empty() {
-            writeln!(content, "nameserver {}", srv).ok();
+            writeln!(content, "nameserver {srv}").ok();
         }
     }
 
@@ -99,8 +99,8 @@ pub(crate) fn apply_dns_conf_to_etc(
             return Err(NmstateError::new(
                 ErrorKind::Bug,
                 format!(
-                    "Failed to open {ETC_RESOLV_CONF_PATH} \
-                    with write permission: {e}"
+                    "Failed to open {ETC_RESOLV_CONF_PATH} with write \
+                     permission: {e}"
                 ),
             ));
         }

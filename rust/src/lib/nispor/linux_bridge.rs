@@ -117,7 +117,7 @@ fn np_bridge_options_to_nmstate(
                     Some(LinuxBridgeMulticastRouterType::Enabled)
                 }
                 _ => {
-                    warn!("Unsupported linux bridge multicast router {:?}", r);
+                    warn!("Unsupported linux bridge multicast router {r:?}");
                     None
                 }
             });
@@ -135,7 +135,7 @@ fn np_bridge_options_to_nmstate(
                     Some(VlanProtocol::Ieee8021Ad)
                 }
                 _ => {
-                    warn!("Unsupported linux bridge vlan protocol {:?}", v);
+                    warn!("Unsupported linux bridge vlan protocol {v:?}");
                     None
                 }
             });
@@ -159,7 +159,7 @@ fn devide_by_user_hz(v: u32) -> Result<u32, NmstateError> {
                 "Failed to get configurable system variable CLK_TCK"
                     .to_string(),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             return Err(e);
         }
     };

@@ -205,8 +205,8 @@ impl NmDbus<'_> {
                     {
                         NmError::new(
                             ErrorKind::CheckpointConflict,
-                            "Another checkpoint exists, \
-                            please wait its timeout or destroy it"
+                            "Another checkpoint exists, please wait its \
+                             timeout or destroy it"
                                 .to_string(),
                         )
                     } else {
@@ -249,7 +249,7 @@ impl NmDbus<'_> {
         &self,
         checkpoint: &str,
     ) -> Result<(), NmError> {
-        debug!("checkpoint_destroy: {}", checkpoint);
+        debug!("checkpoint_destroy: {checkpoint}");
         Ok(self
             .proxy
             .checkpoint_destroy(&str_to_obj_path(checkpoint)?)
@@ -260,7 +260,7 @@ impl NmDbus<'_> {
         &self,
         checkpoint: &str,
     ) -> Result<(), NmError> {
-        debug!("checkpoint_rollback: {}", checkpoint);
+        debug!("checkpoint_rollback: {checkpoint}");
         self.proxy
             .checkpoint_rollback(&str_to_obj_path(checkpoint)?)
             .await?;
@@ -287,8 +287,8 @@ impl NmDbus<'_> {
                 if let zbus::Error::MethodError(ref error_type, ..) = e {
                     if error_type.as_str()
                         == format!(
-                            "{NM_DBUS_INTERFACE_ROOT}.\
-                            Settings.InvalidConnection",
+                            "{NM_DBUS_INTERFACE_ROOT}.Settings.\
+                             InvalidConnection",
                         )
                     {
                         Err(NmError::new(
@@ -363,7 +363,7 @@ impl NmDbus<'_> {
         &self,
         con_obj_path: &str,
     ) -> Result<(), NmError> {
-        debug!("connection_delete: {}", con_obj_path);
+        debug!("connection_delete: {con_obj_path}");
         let proxy = zbus::Proxy::new(
             &self.connection,
             NM_DBUS_INTERFACE_ROOT,
@@ -477,8 +477,8 @@ impl NmDbus<'_> {
                 {
                     if error_type.as_str()
                         == format!(
-                            "{NM_DBUS_INTERFACE_ROOT}.\
-                            Device.IncompatibleConnection"
+                            "{NM_DBUS_INTERFACE_ROOT}.Device.\
+                             IncompatibleConnection"
                         )
                     {
                         Err(NmError::new(

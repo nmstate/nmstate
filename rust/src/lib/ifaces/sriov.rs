@@ -92,9 +92,11 @@ impl SrIovConfig {
                         && vf.qos.unwrap_or_default() == 0
                     {
                         let e = NmstateError::new(
-                                ErrorKind::InvalidArgument,
-                                "VLAN protocol 802.1ad is not allowed when both VLAN ID and VLAN QoS are zero or unset"
-                                    .to_string(),);
+                            ErrorKind::InvalidArgument,
+                            "VLAN protocol 802.1ad is not allowed when both \
+                             VLAN ID and VLAN QoS are zero or unset"
+                                .to_string(),
+                        );
                         log::error!("VF ID {}: {}", vf.id, e);
                         return Err(e);
                     }
@@ -247,7 +249,7 @@ impl Interfaces {
                             iface.name()
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }
@@ -260,12 +262,12 @@ impl Interfaces {
                         ErrorKind::InvalidArgument,
                         format!(
                             "SR-IOV VF name {} has been resolved as interface \
-                            {}, but it is already defined in desire state",
+                             {}, but it is already defined in desire state",
                             changed_iface_name,
                             iface.name()
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
                 self.kernel_ifaces.insert(iface.name().to_string(), iface);
@@ -297,9 +299,8 @@ impl Interfaces {
                         get_sriov_vf_iface_name(current, pf_name, vf_id)
                     {
                         log::info!(
-                            "SR-IOV VF {} resolved to interface name {}",
-                            port,
-                            vf_iface_name
+                            "SR-IOV VF {port} resolved to interface name \
+                             {vf_iface_name}"
                         );
                         pending_changes.push((
                             iface.name().to_string(),
@@ -311,8 +312,8 @@ impl Interfaces {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find SR-IOV VF interface \
-                                name for {}",
+                                "Failed to find SR-IOV VF interface name for \
+                                 {}",
                                 iface.name()
                             ),
                         ));
@@ -342,11 +343,11 @@ fn parse_sriov_vf_naming(
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Invalid SR-IOV VF ID in {iface_name}, correct format \
-                            is 'sriov:<pf_name>:<vf_id>', error: {e}"
+                            "Invalid SR-IOV VF ID in {iface_name}, correct \
+                             format is 'sriov:<pf_name>:<vf_id>', error: {e}"
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     Err(e)
                 }
             }
@@ -355,10 +356,10 @@ fn parse_sriov_vf_naming(
                 ErrorKind::InvalidArgument,
                 format!(
                     "Invalid SR-IOV VF name {iface_name}, correct format is \
-                    'sriov:<pf_name>:<vf_id>'",
+                     'sriov:<pf_name>:<vf_id>'",
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             Err(e)
         }
     } else {

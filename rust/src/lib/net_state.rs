@@ -317,8 +317,8 @@ impl NetworkState {
     pub fn checkpoint_rollback(_checkpoint: &str) -> Result<(), NmstateError> {
         Err(NmstateError::new(
             ErrorKind::DependencyError,
-            "NetworkState::checkpoint_rollback() need `query_apply` \
-            feature enabled"
+            "NetworkState::checkpoint_rollback() need `query_apply` feature \
+             enabled"
                 .into(),
         ))
     }
@@ -327,8 +327,8 @@ impl NetworkState {
     pub fn checkpoint_commit(_checkpoint: &str) -> Result<(), NmstateError> {
         Err(NmstateError::new(
             ErrorKind::DependencyError,
-            "NetworkState::checkpoint_commit() need `query_apply` \
-            feature enabled"
+            "NetworkState::checkpoint_commit() need `query_apply` feature \
+             enabled"
                 .into(),
         ))
     }

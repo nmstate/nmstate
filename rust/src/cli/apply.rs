@@ -231,10 +231,8 @@ fn run_editor(tmp_file_path: &str) -> Result<NetworkState, CliError> {
 fn ask_for_retry() -> bool {
     loop {
         println!(
-            "Try again? [y,n]:\n\
-            y - yes, start editor again\n\
-            n - no, throw away my changes\n\
-            > "
+            "Try again? [y,n]:\ny - yes, start editor again\nn - no, throw \
+             away my changes\n> "
         );
         stdout().lock().flush().ok();
         let mut retry = String::new();

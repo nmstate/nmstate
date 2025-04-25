@@ -11,12 +11,12 @@ pub(crate) fn get_hostname_state() -> Option<HostNameState> {
         Ok(hostname_cstr) => match hostname_cstr.into_string() {
             Ok(h) => Some(h),
             Err(s) => {
-                log::error!("Failed to convert hostname to String: {:?}", s);
+                log::error!("Failed to convert hostname to String: {s:?}");
                 None
             }
         },
         Err(e) => {
-            log::error!("Failed to get hostname {}", e);
+            log::error!("Failed to get hostname {e}");
             None
         }
     };
@@ -47,9 +47,7 @@ fn get_config_hostname() -> Option<String> {
     let mut contents = String::new();
     if let Err(e) = fd.read_to_string(&mut contents) {
         log::error!(
-            "Failed to read hostname config {}: {}",
-            HOSTNAME_CONFIG_PATH,
-            e
+            "Failed to read hostname config {HOSTNAME_CONFIG_PATH}: {e}"
         );
         None
     } else {
@@ -64,7 +62,7 @@ pub(crate) fn set_running_hostname(hostname: &str) -> Result<(), NmstateError> {
             ErrorKind::InvalidArgument,
             "Cannot set empty runtime hostname".to_string(),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         return Err(e);
     }
     if hostname.len() >= HOST_NAME_MAX {
@@ -72,7 +70,7 @@ pub(crate) fn set_running_hostname(hostname: &str) -> Result<(), NmstateError> {
             ErrorKind::InvalidArgument,
             format!("hostname to long, should be less than {HOST_NAME_MAX}"),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         return Err(e);
     }
 
@@ -86,7 +84,7 @@ pub(crate) fn set_running_hostname(hostname: &str) -> Result<(), NmstateError> {
                 nix::errno::errno()
             ),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         return Err(e);
     }
     Ok(())

@@ -25,8 +25,8 @@ pub(crate) fn autoconf(argv: &[String]) -> Result<String, CliError> {
                 .short('d')
                 .takes_value(false)
                 .help(
-                    "Generate the network state that is going to be \
-                    applied and print it out without applying any change.",
+                    "Generate the network state that is going to be applied \
+                     and print it out without applying any change.",
                 ),
         )
         .arg(

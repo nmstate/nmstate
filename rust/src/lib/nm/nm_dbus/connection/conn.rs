@@ -459,7 +459,7 @@ impl NmSettingConnection {
             Some(NM_AUTOCONENCT_PORT_YES) => Some(true),
             Some(NM_AUTOCONENCT_PORT_NO) => Some(false),
             Some(v) => {
-                warn!("Unknown autoconnect-ports value {}", v);
+                warn!("Unknown autoconnect-ports value {v}");
                 None
             }
             // For autoconnect, None means true

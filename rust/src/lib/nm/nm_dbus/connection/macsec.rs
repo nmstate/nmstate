@@ -93,12 +93,7 @@ impl NmSettingMacSec {
                     self.mka_cak = Some(s);
                 }
                 Err(e) => {
-                    log::warn!(
-                        "Failed to convert mka_cak: \
-                        {:?} {:?}",
-                        v,
-                        e
-                    );
+                    log::warn!("Failed to convert mka_cak: {v:?} {e:?}");
                 }
             }
         }

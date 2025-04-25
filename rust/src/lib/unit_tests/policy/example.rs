@@ -31,8 +31,8 @@ fn test_policy_examples() {
         let state =
             serde_yaml::to_string(&NetworkState::try_from(policy).unwrap())
                 .unwrap();
-        println!("Got:\n{}", state);
-        println!("Expected:\n{}", expected_state);
+        println!("Got:\n{state}");
+        println!("Expected:\n{expected_state}");
         assert_eq!(state, expected_state);
         println!("Pass    {path:?}");
     }
