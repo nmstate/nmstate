@@ -64,8 +64,8 @@ pub(crate) fn parse_str_to_capture_tokens(
                         ret.push(NetworkCaptureToken::Equal(pos));
                     } else {
                         return Err(NmstateError::new_policy_error(
-                            "Invalid equal action string after =, \
-                            expecting another '='"
+                            "Invalid equal action string after =, expecting \
+                             another '='"
                                 .to_string(),
                             line,
                             pos + 1,
@@ -73,8 +73,8 @@ pub(crate) fn parse_str_to_capture_tokens(
                     }
                 } else {
                     return Err(NmstateError::new_policy_error(
-                        "Invalid equal action string after =, \
-                        expecting another '=', but got nothing"
+                        "Invalid equal action string after =, expecting \
+                         another '=', but got nothing"
                             .to_string(),
                         line,
                         pos,
@@ -113,8 +113,8 @@ pub(crate) fn parse_str_to_capture_tokens(
                         }
                     } else {
                         return Err(NmstateError::new_policy_error(
-                            "Invalid replace action string after =, \
-                            expecting another '='"
+                            "Invalid replace action string after =, expecting \
+                             another '='"
                                 .to_string(),
                             line,
                             pos + 1,
@@ -122,8 +122,8 @@ pub(crate) fn parse_str_to_capture_tokens(
                     }
                 } else {
                     return Err(NmstateError::new_policy_error(
-                        "Invalid replace action string after =, \
-                        expecting another '=', but got nothing"
+                        "Invalid replace action string after =, expecting \
+                         another '=', but got nothing"
                             .to_string(),
                         line,
                         pos,
@@ -264,7 +264,7 @@ pub(crate) fn parse_str_to_template_tokens(
                         }) {
                             return Err(NmstateError::new_policy_error(
                                 "Nmpolicy does not allow multiple references \
-                                {{}}"
+                                 {{}}"
                                     .to_string(),
                                 line,
                                 pos,
@@ -283,7 +283,7 @@ pub(crate) fn parse_str_to_template_tokens(
                     } else {
                         return Err(NmstateError::new_policy_error(
                             "Invalid reference action string after {, \
-                            expecting another '{'"
+                             expecting another '{'"
                                 .to_string(),
                             line,
                             pos,
@@ -291,8 +291,8 @@ pub(crate) fn parse_str_to_template_tokens(
                     }
                 } else {
                     return Err(NmstateError::new_policy_error(
-                        "Invalid reference action string after =, \
-                        expecting another '{', but got nothing"
+                        "Invalid reference action string after =, expecting \
+                         another '{', but got nothing"
                             .to_string(),
                         line,
                         pos,
@@ -307,7 +307,7 @@ pub(crate) fn parse_str_to_template_tokens(
                         }) {
                             return Err(NmstateError::new_policy_error(
                                 "Nmpolicy does not allow multiple references \
-                                {{}}"
+                                 {{}}"
                                     .to_string(),
                                 line,
                                 pos,
@@ -317,7 +317,7 @@ pub(crate) fn parse_str_to_template_tokens(
                     } else {
                         return Err(NmstateError::new_policy_error(
                             "Invalid reference action string after }, \
-                            expecting another '}'"
+                             expecting another '}'"
                                 .to_string(),
                             line,
                             pos,
@@ -325,8 +325,8 @@ pub(crate) fn parse_str_to_template_tokens(
                     }
                 } else {
                     return Err(NmstateError::new_policy_error(
-                        "Invalid reference action string after }, \
-                        expecting another '}', but got nothing"
+                        "Invalid reference action string after }, expecting \
+                         another '}', but got nothing"
                             .to_string(),
                         line,
                         pos,
@@ -412,8 +412,8 @@ pub(crate) fn parse_str_to_template_tokens(
     ) {
         if token_start_pos >= token_end_pos {
             return Err(NmstateError::new_policy_error(
-                "The reference start {{ can not be placed before \
-                reference end }}"
+                "The reference start {{ can not be placed before reference \
+                 end }}"
                     .to_string(),
                 line,
                 ret[token_end_pos].pos(),
@@ -421,8 +421,8 @@ pub(crate) fn parse_str_to_template_tokens(
         }
         if token_start_pos + 1 >= token_end_pos {
             return Err(NmstateError::new_policy_error(
-                "No property path between reference start {{ and \
-                reference end }}"
+                "No property path between reference start {{ and reference \
+                 end }}"
                     .to_string(),
                 line,
                 ret[token_end_pos].pos() - 1,
@@ -430,8 +430,8 @@ pub(crate) fn parse_str_to_template_tokens(
         }
         if token_start_pos + 2 != token_end_pos {
             return Err(NmstateError::new_policy_error(
-                "Only allows single property path between reference \
-                start {{ and reference end }}"
+                "Only allows single property path between reference start {{ \
+                 and reference end }}"
                     .to_string(),
                 line,
                 ret[token_start_pos + 2].pos(),

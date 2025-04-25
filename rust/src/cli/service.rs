@@ -56,17 +56,16 @@ pub(crate) fn ncl_service(
         Ok(f) => f,
         Err(e) => {
             log::info!(
-                "Failed to read config folder {folder} due to \
-                    error {e}, ignoring"
+                "Failed to read config folder {folder} due to error {e}, \
+                 ignoring"
             );
             return Ok(String::new());
         }
     };
     if state_files.is_empty() {
         log::info!(
-            "No new nmstate config(end with .{}) found in config folder {}",
-            CONFIG_FILE_EXTENSION,
-            folder
+            "No new nmstate config(end with .{CONFIG_FILE_EXTENSION}) found \
+             in config folder {folder}"
         );
         return Ok(String::new());
     }

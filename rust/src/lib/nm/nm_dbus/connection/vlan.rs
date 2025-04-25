@@ -162,10 +162,12 @@ impl TryFrom<String> for NmVlanProtocol {
                 let e = NmError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Invalid VLAN protocol {vlan_protocol}, only support: {NM_VLAN_PROTOCOL_802_1Q} and {NM_VLAN_PROTOCOL_802_1AD}"
+                        "Invalid VLAN protocol {vlan_protocol}, only support: \
+                         {NM_VLAN_PROTOCOL_802_1Q} and \
+                         {NM_VLAN_PROTOCOL_802_1AD}"
                     ),
                 );
-                error!("{}", e);
+                error!("{e}");
                 Err(e)
             }
         }

@@ -18,10 +18,11 @@ fn is_port_overbook(
         let e = NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
-                "Port {port} is overbooked by two controller: {ctrl}, {cur_ctrl}"
+                "Port {port} is overbooked by two controller: {ctrl}, \
+                 {cur_ctrl}"
             ),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         return Err(e);
     } else {
         port_to_ctrl.insert(port.to_string(), ctrl.to_string());
@@ -77,9 +78,9 @@ impl MergedInterfaces {
                             return Err(NmstateError::new(
                                 ErrorKind::InvalidArgument,
                                 format!(
-                                    "Interface {} has controller {} \
-                                    but not listed in port list of \
-                                    controller interface",
+                                    "Interface {} has controller {} but not \
+                                     listed in port list of controller \
+                                     interface",
                                     merged_iface.merged.name(),
                                     des_ctrl_name,
                                 ),
@@ -90,8 +91,8 @@ impl MergedInterfaces {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Interface {} desired controller \
-                            {des_ctrl_name} not found",
+                            "Interface {} desired controller {des_ctrl_name} \
+                             not found",
                             merged_iface.merged.name()
                         ),
                     ));
@@ -134,8 +135,8 @@ impl MergedInterfaces {
                             ErrorKind::InvalidArgument,
                             format!(
                                 "Interface {} desired to detach controller \
-                                via controller property set to '', but \
-                                still been listed as port of controller {} ",
+                                 via controller property set to '', but still \
+                                 been listed as port of controller {} ",
                                 iface.merged.name(),
                                 ctrl_name
                             ),
@@ -144,9 +145,8 @@ impl MergedInterfaces {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Interface {} has controller property set \
-                                to {}, but been listed as port of \
-                                controller {} ",
+                                "Interface {} has controller property set to \
+                                 {}, but been listed as port of controller {} ",
                                 iface.merged.name(),
                                 des_ctrl_name,
                                 ctrl_name
@@ -199,9 +199,9 @@ impl MergedInterfaces {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Controller {} ({}) has port with \
-                            profile name {} but multiple interfaces \
-                            are sharing the this profile name",
+                            "Controller {} ({}) has port with profile name {} \
+                             but multiple interfaces are sharing the this \
+                             profile name",
                             des_iface.name(),
                             des_iface.iface_type(),
                             port_name,
@@ -282,7 +282,7 @@ impl MergedInterfaces {
                 if ctrl_type == Some(InterfaceType::OvsBridge) {
                     log::info!(
                         "Creating new OVS internal interface {iface_name} to \
-                        edit as its controller {ctrl_name} required so",
+                         edit as its controller {ctrl_name} required so",
                     );
                     self.kernel_ifaces.insert(
                         iface_name.to_string(),
@@ -304,8 +304,8 @@ impl MergedInterfaces {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Controller interface {ctrl_name} is \
-                                holding unknown port {iface_name}"
+                            "Controller interface {ctrl_name} is holding \
+                             unknown port {iface_name}"
                         ),
                     ));
                 }
@@ -369,8 +369,8 @@ impl MergedInterfaces {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "The controller {} of interface {} \
-                                does not exists",
+                                "The controller {} of interface {} does not \
+                                 exists",
                                 ctrl_name,
                                 iface.merged.name()
                             ),
@@ -447,7 +447,7 @@ impl MergedInterfaces {
                         // Its controller does not have valid up priority yet.
                         log::debug!(
                             "Controller {ctrl_name} of {iface_name} is has no \
-                            up priority"
+                             up priority"
                         );
                         ret = false;
                     }
@@ -501,7 +501,7 @@ impl MergedInterfaces {
             }
         }
 
-        log::debug!("Pending kernel up priority changes {:?}", pending_changes);
+        log::debug!("Pending kernel up priority changes {pending_changes:?}");
         for (iface_name, priority) in pending_changes.iter() {
             if let Some(iface) = self
                 .kernel_ifaces
@@ -563,13 +563,13 @@ impl MergedInterfaces {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "InfiniBand interface {:?} cannot use as \
-                            port of {}. Only active-backup bond allowed.",
+                            "InfiniBand interface {:?} cannot use as port of \
+                             {}. Only active-backup bond allowed.",
                             ib_iface_names.intersection(&ports),
                             iface.name()
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }
@@ -630,9 +630,9 @@ impl Interfaces {
                         }) != Some(true)
                         {
                             log::info!(
-                                "Controller interface {}({}) contains \
-                                port {port_name} which is currently ignored, \
-                                marking this port as 'state: up'. ",
+                                "Controller interface {}({}) contains port \
+                                 {port_name} which is currently ignored, \
+                                 marking this port as 'state: up'. ",
                                 iface.name(),
                                 iface.iface_type()
                             );

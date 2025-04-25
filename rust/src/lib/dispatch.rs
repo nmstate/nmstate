@@ -44,7 +44,7 @@ impl MergedInterfaces {
             } else {
                 log::info!(
                     "Dispatch script is not protected by checkpoint, please \
-                    backup your original nmstate created dispatch scripts"
+                     backup your original nmstate created dispatch scripts"
                 )
             }
         }

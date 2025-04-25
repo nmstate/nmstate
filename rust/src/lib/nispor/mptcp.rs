@@ -20,7 +20,7 @@ pub(crate) fn get_mptcp_flags(
                         match MptcpAddressFlag::try_from(*np_flag) {
                             Ok(f) => flags.push(f),
                             Err(e) => {
-                                log::warn!("{}", e);
+                                log::warn!("{e}");
                                 continue;
                             }
                         }
@@ -105,7 +105,8 @@ impl std::convert::TryFrom<nispor::MptcpAddressFlag> for MptcpAddressFlag {
             _ => Err(NmstateError::new(
                 ErrorKind::NotSupportedError,
                 format!(
-                    "MPTCP address flag {value:?} is not supported by nmstate yet"
+                    "MPTCP address flag {value:?} is not supported by nmstate \
+                     yet"
                 ),
             )),
         }

@@ -60,9 +60,11 @@ impl MacSecInterface {
                 if conf.mka_cak.is_none() ^ conf.mka_ckn.is_none() {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        "The mka_cak and mka_cnk must be all missing or present.".to_string()
+                        "The mka_cak and mka_cnk must be all missing or \
+                         present."
+                            .to_string(),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
                 if let Some(mka_cak) = &conf.mka_cak {
@@ -72,7 +74,7 @@ impl MacSecInterface {
                             "The mka_cak must be a string of 32 characters"
                                 .to_string(),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                 }
@@ -83,9 +85,11 @@ impl MacSecInterface {
                     {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
-                            "The mka_ckn must be a string of even size between 2 and 64 characters".to_string()
+                            "The mka_ckn must be a string of even size \
+                             between 2 and 64 characters"
+                                .to_string(),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                 }

@@ -253,8 +253,8 @@ pub(crate) fn update_json_value(
                         Err(NmstateError::new(
                             ErrorKind::Bug,
                             format!(
-                                "Failed to get newly inserted map in {:?} \
-                                for {}",
+                                "Failed to get newly inserted map in {:?} for \
+                                 {}",
                                 data, prop_path[0],
                             ),
                         ))
@@ -292,7 +292,8 @@ where
         let mut item_value = serde_json::to_value(item).map_err(|e| {
             NmstateError::new_policy_error(
                 format!(
-                    "Failed to convert {item:?} item into serde_json value: {e}"
+                    "Failed to convert {item:?} item into serde_json value: \
+                     {e}"
                 ),
                 line,
                 pos,
@@ -309,7 +310,7 @@ where
                         ErrorKind::Bug,
                         format!(
                             "Failed to deserialize {item_value:?} into \
-                            {item_name}: {e}"
+                             {item_name}: {e}"
                         ),
                     )
                 })?,

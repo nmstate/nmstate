@@ -554,8 +554,8 @@ impl LinuxBridgeOptions {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Linux bridge {} has different \
-                            group_forward_mask: {v1}, group_fwd_mask: {v2}, \
-                            these two property is the same, hence conflicting",
+                             group_forward_mask: {v1}, group_fwd_mask: {v2}, \
+                             these two property is the same, hence conflicting",
                             base_iface.name.as_str()
                         ),
                     ));
@@ -587,8 +587,8 @@ impl LinuxBridgeOptions {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Linux bridge {} has vlan-default-pvid different \
-                        than 1 but VLAN filtering is not enabled.",
+                        "Linux bridge {} has vlan-default-pvid different than \
+                         1 but VLAN filtering is not enabled.",
                         linux_bridge.base.name.as_str()
                     ),
                 ));
@@ -656,14 +656,14 @@ impl LinuxBridgeStpOptions {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Desired STP hello time {} is not in the range \
-                        of [{},{}]",
+                        "Desired STP hello time {} is not in the range of \
+                         [{},{}]",
                         hello_time,
                         Self::HELLO_TIME_MIN,
                         Self::HELLO_TIME_MAX
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -673,14 +673,13 @@ impl LinuxBridgeStpOptions {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Desired STP max age {} is not in the range \
-                        of [{},{}]",
+                        "Desired STP max age {} is not in the range of [{},{}]",
                         max_age,
                         Self::MAX_AGE_MIN,
                         Self::MAX_AGE_MAX
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -691,14 +690,14 @@ impl LinuxBridgeStpOptions {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Desired STP forward delay {} is not in the range \
-                        of [{},{}]",
+                        "Desired STP forward delay {} is not in the range of \
+                         [{},{}]",
                         forward_delay,
                         Self::FORWARD_DELAY_MIN,
                         Self::FORWARD_DELAY_MAX
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -732,7 +731,7 @@ impl FromStr for LinuxBridgeMulticastRouterType {
                 ErrorKind::InvalidArgument,
                 format!(
                     "Invalid linux bridge multicast_router type {s}, \
-                    expecting 0|1|2 or auto|disabled|enabled"
+                     expecting 0|1|2 or auto|disabled|enabled"
                 ),
             )),
         }
@@ -750,7 +749,7 @@ impl TryFrom<u64> for LinuxBridgeMulticastRouterType {
                 ErrorKind::InvalidArgument,
                 format!(
                     "Invalid linux bridge multicast_router type {value}, \
-                    expecting 0|1|2 or auto|disabled|enabled"
+                     expecting 0|1|2 or auto|disabled|enabled"
                 ),
             )),
         }

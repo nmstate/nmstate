@@ -31,7 +31,7 @@ pub(crate) fn apply_mptcp_conf(
                      tools before applying MPTCP flags"
                         .to_string(),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
             let mut nm_mptcp_flags: u32 = 0;

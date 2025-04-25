@@ -64,10 +64,10 @@ impl OvsDbConnection {
                 ErrorKind::PluginFailure,
                 format!(
                     "Invalid reply from OVSDB for querying \
-                    {GLOBAL_CONFIG_TABLE} table: {reply:?}"
+                     {GLOBAL_CONFIG_TABLE} table: {reply:?}"
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             Err(e)
         }
     }
@@ -101,7 +101,7 @@ fn append_mutations(
     let delete_keys: Vec<Value> = data
         .keys()
         .map(|k| {
-            log::debug!("Removing old value of key {} from {}", k, column);
+            log::debug!("Removing old value of key {k} from {column}");
             Value::String(k.to_string())
         })
         .collect();
@@ -119,7 +119,7 @@ fn append_mutations(
         .iter()
         .filter_map(|(k, v)| {
             v.as_ref().map(|v| {
-                log::info!("Inserting key {} value {} into {}", k, v, column);
+                log::info!("Inserting key {k} value {v} into {column}");
                 Value::Array(vec![
                     Value::String(k.to_string()),
                     Value::String(v.to_string()),

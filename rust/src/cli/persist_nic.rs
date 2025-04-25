@@ -66,8 +66,8 @@ pub(crate) fn entrypoint(
 ) -> Result<String, CliError> {
     if is_predictable_ifname_disabled() {
         log::info!(
-            "systemd predictable network interface name is disabled \
-            by kernel argument `net.ifnames=0`, will do nothing"
+            "systemd predictable network interface name is disabled by kernel \
+             argument `net.ifnames=0`, will do nothing"
         );
         return Ok("".to_string());
     }
@@ -150,8 +150,7 @@ fn run_persist_immediately(
             }
         });
         log::info!(
-            "Will persist the interface {iface_name} \
-            driver {} with MAC {mac}",
+            "Will persist the interface {iface_name} driver {} with MAC {mac}",
             driver.unwrap_or("unknown")
         );
         if !dry_run {
@@ -285,8 +284,8 @@ pub(crate) fn clean_up(
                 Ok(i) => i,
                 Err(e) => {
                     log::error!(
-                        "Failed to retrieve systemd preferred \
-                        iface name for {iface_name}: {e}"
+                        "Failed to retrieve systemd preferred iface name for \
+                         {iface_name}: {e}"
                     );
                     continue;
                 }
@@ -316,9 +315,8 @@ pub(crate) fn clean_up(
             }
         } else {
             log::info!(
-                "systemd generated interface name \
-                '{systemd_iface_name}' != pinned name '{iface_name}', \
-                will keep config file {}",
+                "systemd generated interface name '{systemd_iface_name}' != \
+                 pinned name '{iface_name}', will keep config file {}",
                 file_path.display()
             );
         }
@@ -388,8 +386,7 @@ pub(crate) fn get_systemd_preferred_iface_name(
     }
 
     Err(format!(
-        "Failed to retrieve interface name from udevadm command: {}",
-        output
+        "Failed to retrieve interface name from udevadm command: {output}"
     )
     .into())
 }
@@ -408,6 +405,7 @@ fn persist_iface_name_via_systemd_link(
     }
 
     let content = if let Some(driver) = driver {
+        #[cfg_attr(any(), rustfmt::skip)]
         format!(
             "{PERSIST_GENERATED_BY}\n\
             [Match]\n\
@@ -417,6 +415,7 @@ fn persist_iface_name_via_systemd_link(
             Name={iface_name}\n"
         )
     } else {
+        #[cfg_attr(any(), rustfmt::skip)]
         format!(
             "{PERSIST_GENERATED_BY}\n\
             [Match]\n\
@@ -493,8 +492,8 @@ fn get_bond_port_mac(iface: &Interface) -> Option<String> {
                 })
             {
                 log::info!(
-                    "Using MAC address stored in bond port: {mac} \
-                    for interface {}",
+                    "Using MAC address stored in bond port: {mac} for \
+                     interface {}",
                     iface.name()
                 );
                 return Some(mac);

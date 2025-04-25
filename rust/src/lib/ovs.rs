@@ -49,8 +49,8 @@ impl OvsDbGlobalConfig {
             Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "The `{}` is reserved for OVN mapping, please use \
-                    `ovn` section instead of `ovs-db` section",
+                    "The `{}` is reserved for OVN mapping, please use `ovn` \
+                     section instead of `ovs-db` section",
                     Self::OVN_BRIDGE_MAPPINGS_KEY
                 ),
             ))
@@ -139,7 +139,7 @@ impl<'de> Deserialize<'de> for OvsDbIfaceConfig {
                 let remain_keys: Vec<String> = v.keys().cloned().collect();
                 return Err(serde::de::Error::custom(format!(
                     "Unsupported section names '{}', only supports \
-                    `external_ids` and `other_config`",
+                     `external_ids` and `other_config`",
                     remain_keys.join(", ")
                 )));
             }

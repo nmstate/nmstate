@@ -19,7 +19,7 @@ pub(crate) fn get_bond_balance_slb(nm_conn: &NmConnection) -> Option<bool> {
             Some("1") => Some(true),
             Some("0") => Some(false),
             Some(i) => {
-                log::warn!("Unknown value for bond balance-slb {}", i);
+                log::warn!("Unknown value for bond balance-slb {i}");
                 None
             }
             None => None,

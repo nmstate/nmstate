@@ -107,11 +107,11 @@ impl OvsDbConnection {
             let e = NmstateError::new(
                 ErrorKind::PluginFailure,
                 format!(
-                    "Invalid reply from OVSDB for querying \
-                    {table_name} table: {reply:?}"
+                    "Invalid reply from OVSDB for querying {table_name} \
+                     table: {reply:?}"
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             Err(e)
         }
     }
@@ -226,7 +226,7 @@ impl TryFrom<&Value> for OvsDbEntry {
                 return Ok(ret);
             }
         }
-        log::error!("{}", e);
+        log::error!("{e}");
         Err(e)
     }
 }
@@ -316,7 +316,7 @@ fn check_transact_error(reply: Value) -> Result<Value, NmstateError> {
                         "OVS DB JSON RPC error {error_type}: {error_detail}"
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }

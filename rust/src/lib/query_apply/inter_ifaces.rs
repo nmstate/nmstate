@@ -134,7 +134,7 @@ fn verify_desire_absent_but_found_in_current(
                 cur_iface
             ),
         );
-        log::error!("{}", e);
+        log::error!("{e}");
         Err(e)
     } else {
         // Hard to predict real hardware state due to backend variety.

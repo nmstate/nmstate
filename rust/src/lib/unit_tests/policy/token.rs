@@ -68,8 +68,8 @@ fn test_policy_token_path_equal_unquoted_string() {
 fn test_policy_token_path_equal_path() {
     assert_eq!(
         parse_str_to_capture_tokens(
-            "interfaces.name==\
-                capture.default-gw.routes.running.0.next-hop-interface"
+            "interfaces.name==capture.default-gw.routes.running.0.\
+             next-hop-interface"
         )
         .unwrap(),
         vec![

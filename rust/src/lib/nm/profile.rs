@@ -136,7 +136,7 @@ fn can_skip_activation(
                 {
                     log::info!(
                         "Skipping activation of {} as its controller {} \
-                        desire to be down or absent",
+                         desire to be down or absent",
                         merged_iface.merged.name(),
                         ctrl_iface
                     );
@@ -171,7 +171,7 @@ fn can_skip_activation(
                     {
                         log::info!(
                             "Skipping activation of {} as its controller {} \
-                            will automatically activate it",
+                             will automatically activate it",
                             merged_iface.merged.name(),
                             ctrl_iface
                         );

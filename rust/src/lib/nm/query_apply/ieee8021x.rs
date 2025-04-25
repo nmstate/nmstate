@@ -30,9 +30,8 @@ fn vec_u8_to_file_path(raw: &[u8]) -> Option<String> {
         Ok(s) => Some(s),
         Err(e) => {
             log::error!(
-                "Unsupported NetworkManager 802.1x glib bytes: {:?}, error: {}",
-                raw,
-                e
+                "Unsupported NetworkManager 802.1x glib bytes: {raw:?}, \
+                 error: {e}"
             );
             None
         }

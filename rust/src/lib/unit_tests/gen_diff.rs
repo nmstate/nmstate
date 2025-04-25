@@ -40,7 +40,7 @@ fn load_state(file_path: &std::path::Path) -> NetworkState {
     match serde_yaml::from_reader(fd) {
         Ok(n) => n,
         Err(e) => {
-            panic!("FAIL to load NetworkState from {:?}: {}", file_path, e);
+            panic!("FAIL to load NetworkState from {file_path:?}: {e}");
         }
     }
 }

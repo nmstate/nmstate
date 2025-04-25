@@ -20,8 +20,8 @@ pub(crate) fn nm_gen_conf(
         .is_some()
     {
         log::warn!(
-            "Cannot store hostname configuration to keyfile \
-            of NetworkManager, please edit /etc/hostname manually"
+            "Cannot store hostname configuration to keyfile of \
+             NetworkManager, please edit /etc/hostname manually"
         );
     }
 

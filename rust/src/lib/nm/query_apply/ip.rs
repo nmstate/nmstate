@@ -29,7 +29,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             | NmSettingIpMethod::Shared => (true, Some(false)),
             NmSettingIpMethod::Auto => (true, Some(true)),
             _ => {
-                log::warn!("Unexpected NM IP method {:?}", nm_ip_method);
+                log::warn!("Unexpected NM IP method {nm_ip_method:?}");
                 (true, None)
             }
         };
@@ -95,8 +95,8 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             NmSettingIpMethod::Dhcp => (true, Some(true), Some(false)),
             NmSettingIpMethod::Ignore => {
                 log::debug!(
-                    "Found NmSettingIpMethod::Ignore for ipv6, \
-                    reply on nispor for setting IPv6 query"
+                    "Found NmSettingIpMethod::Ignore for ipv6, reply on \
+                     nispor for setting IPv6 query"
                 );
                 return InterfaceIpv6 {
                     enabled_defined: false,
@@ -288,8 +288,8 @@ fn nm_rules_to_nmstate(
                 Ok(i) => rule.suppress_prefix_length = Some(i),
                 Err(e) => {
                     log::warn!(
-                        "BUG: Failed to convert `suppress_prefixlength` \
-                        got from NM: {v} to u32: {e}"
+                        "BUG: Failed to convert `suppress_prefixlength` got \
+                         from NM: {v} to u32: {e}"
                     );
                 }
             }
@@ -302,7 +302,7 @@ fn nm_rules_to_nmstate(
                 }
                 NmIpRouteRuleAction::Prohibit => RouteRuleAction::Prohibit,
                 _ => {
-                    log::warn!("Unknown NM IP route rule action {:?}", v);
+                    log::warn!("Unknown NM IP route rule action {v:?}");
                     continue;
                 }
             });

@@ -75,8 +75,8 @@ pub(crate) async fn delete_orphan_ovs_ports(
                         }
 
                         log::info!(
-                            "Deleting orphan OVS port connection {} \
-                            as interface {}({}) detached from OVS bridge",
+                            "Deleting orphan OVS port connection {} as \
+                             interface {}({}) detached from OVS bridge",
                             ovs_port_uuid,
                             iface.merged.name(),
                             iface.merged.iface_type()

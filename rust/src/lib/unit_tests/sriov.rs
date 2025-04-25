@@ -632,7 +632,7 @@ fn test_sriov_enable_and_use_in_single_yaml() {
         assert_eq!(sr_iov_conf.drivers_autoprobe, None);
         assert_eq!(sr_iov_conf.total_vfs, Some(2));
     } else {
-        panic!("Expecting Ethernet interface, got {:?}", pf_state);
+        panic!("Expecting Ethernet interface, got {pf_state:?}");
     }
 }
 
@@ -772,7 +772,7 @@ fn test_sriov_vf_revert_to_default() {
             Some(&Vec::new())
         );
     } else {
-        panic!("Expecting a Ethernet interface, but got {:?}", iface);
+        panic!("Expecting a Ethernet interface, but got {iface:?}");
     }
 
     let verify_iface = merged_ifaces
@@ -795,7 +795,7 @@ fn test_sriov_vf_revert_to_default() {
             None
         );
     } else {
-        panic!("Expecting a Ethernet interface, but got {:?}", verify_iface);
+        panic!("Expecting a Ethernet interface, but got {verify_iface:?}");
     }
 }
 

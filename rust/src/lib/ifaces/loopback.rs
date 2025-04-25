@@ -110,8 +110,8 @@ impl LoopbackInterface {
             if self.base.ipv6.as_ref().map(|i| i.is_auto()) == Some(true) {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "Loopback interface cannot be have IPv6 \
-                autoconf/DHCPv6 enabled"
+                    "Loopback interface cannot be have IPv6 autoconf/DHCPv6 \
+                     enabled"
                         .to_string(),
                 ));
             }

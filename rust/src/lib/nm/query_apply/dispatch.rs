@@ -98,8 +98,8 @@ fi
         return Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
-                "Failed to create NetworkManager dispatch script \
-                {file_path}: {e}"
+                "Failed to create NetworkManager dispatch script {file_path}: \
+                 {e}"
             ),
         ));
     }

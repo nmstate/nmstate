@@ -70,8 +70,8 @@ impl BridgePortVlanConfig {
                 }
                 _ => {
                     log::warn!(
-                        "Please call flatten_vlan_ranges() \
-                        before sort_port_vlans()"
+                        "Please call flatten_vlan_ranges() before \
+                         sort_port_vlans()"
                     );
                     std::cmp::Ordering::Equal
                 }
@@ -110,8 +110,8 @@ impl BridgePortVlanConfig {
             {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "Bridge VLAN filtering `tag` cannot be use \
-                    in trunk mode without `enable-native`"
+                    "Bridge VLAN filtering `tag` cannot be use in trunk mode \
+                     without `enable-native`"
                         .to_string(),
                 ));
             }
@@ -121,8 +121,8 @@ impl BridgePortVlanConfig {
             {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "Bridge VLAN filtering `enable-native: true` \
-                    cannot be set in access mode"
+                    "Bridge VLAN filtering `enable-native: true` cannot be \
+                     set in access mode"
                         .to_string(),
                 ));
             }
@@ -133,7 +133,7 @@ impl BridgePortVlanConfig {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             "Bridge VLAN filtering access mode cannot have \
-                            trunk-tags defined"
+                             trunk-tags defined"
                                 .to_string(),
                         ));
                     }
@@ -145,8 +145,8 @@ impl BridgePortVlanConfig {
             {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "Bridge VLAN filtering trunk mode cannot have \
-                empty trunk-tags"
+                    "Bridge VLAN filtering trunk mode cannot have empty \
+                     trunk-tags"
                         .to_string(),
                 ));
             }
@@ -220,21 +220,21 @@ impl<'de> Deserialize<'de> for BridgePortTrunkTag {
             if let Some(id) = id.as_str() {
                 Ok(Self::Id(id.parse::<u16>().map_err(|e| {
                     serde::de::Error::custom(format!(
-                        "Failed to parse BridgePortTrunkTag id \
-                        {id} as u16: {e}"
+                        "Failed to parse BridgePortTrunkTag id {id} as u16: \
+                         {e}"
                     ))
                 })?))
             } else if let Some(id) = id.as_u64() {
                 Ok(Self::Id(u16::try_from(id).map_err(|e| {
                     serde::de::Error::custom(format!(
-                        "Failed to parse BridgePortTrunkTag id \
-                        {id} as u16: {e}"
+                        "Failed to parse BridgePortTrunkTag id {id} as u16: \
+                         {e}"
                     ))
                 })?))
             } else {
                 Err(serde::de::Error::custom(format!(
-                    "The id of BridgePortTrunkTag should be \
-                    unsigned 16 bits integer, but got {v}"
+                    "The id of BridgePortTrunkTag should be unsigned 16 bits \
+                     integer, but got {v}"
                 )))
             }
         } else if let Some(id_range) = v.get("id-range") {
@@ -244,8 +244,8 @@ impl<'de> Deserialize<'de> for BridgePortTrunkTag {
             ))
         } else {
             Err(serde::de::Error::custom(format!(
-                "BridgePortTrunkTag only support 'id' or 'id-range', \
-                but got {v}"
+                "BridgePortTrunkTag only support 'id' or 'id-range', but got \
+                 {v}"
             )))
         }
     }
@@ -313,8 +313,8 @@ fn validate_overlap_trunk_tags(
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Bridge VLAN trunk tag {tag} is \
-                            overlapping with other tag {existing_tag}"
+                            "Bridge VLAN trunk tag {tag} is overlapping with \
+                             other tag {existing_tag}"
                         ),
                     ));
                 }
@@ -332,7 +332,7 @@ fn validate_overlap_trunk_tags(
                                 ErrorKind::InvalidArgument,
                                 format!(
                                     "Bridge VLAN trunk tag {tag} is \
-                                    overlapping with other tag {existing_tag}"
+                                     overlapping with other tag {existing_tag}"
                                 ),
                             ));
                         }

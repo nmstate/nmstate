@@ -295,14 +295,14 @@ impl Interfaces {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Veth interface {} is currently holding \
-                                peer assigned to other namespace \
-                                Please remove this veth pair \
-                                before changing veth peer to {des_peer}",
+                                "Veth interface {} is currently holding peer \
+                                 assigned to other namespace Please remove \
+                                 this veth pair before changing veth peer to \
+                                 {des_peer}",
                                 iface.name(),
                             ),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     };
 
@@ -312,17 +312,17 @@ impl Interfaces {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Veth interface {} is currently holding \
-                                peer {} which is marked as ignored. \
-                                Hence not allowing changing its peer \
-                                to {}. Please remove this veth pair \
-                                before changing veth peer",
+                                "Veth interface {} is currently holding peer \
+                                 {} which is marked as ignored. Hence not \
+                                 allowing changing its peer to {}. Please \
+                                 remove this veth pair before changing veth \
+                                 peer",
                                 iface.name(),
                                 cur_peer,
                                 des_peer
                             ),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                 }
@@ -345,8 +345,8 @@ impl Interfaces {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Veth interface {} does not exist, \
-                            peer name is required for creating it",
+                            "Veth interface {} does not exist, peer name is \
+                             required for creating it",
                             iface.name()
                         ),
                     ));

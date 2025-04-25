@@ -89,8 +89,8 @@ where
         Err(yaml_error) => match serde_json::from_str(&content) {
             Ok(n) => Ok(n),
             Err(json_error) => Err(format!(
-                "Failed to load from file, \
-                     tried both YAML and JSON format. Errors: {yaml_error}, {json_error}"
+                "Failed to load from file, tried both YAML and JSON format. \
+                 Errors: {yaml_error}, {json_error}"
             )
             .into()),
         },

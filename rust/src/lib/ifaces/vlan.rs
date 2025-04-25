@@ -91,9 +91,9 @@ impl VlanInterface {
                             return Err(NmstateError::new(
                                 ErrorKind::InvalidArgument,
                                 format!(
-                                    "The maximum VLAN priority is 7, \
-                                    but got VLAN {} ingress qos map from \
-                                    value set as {}",
+                                    "The maximum VLAN priority is 7, but got \
+                                     VLAN {} ingress qos map from value set \
+                                     as {}",
                                     self.base.name.as_str(),
                                     in_map.from
                                 ),
@@ -107,9 +107,8 @@ impl VlanInterface {
                             return Err(NmstateError::new(
                                 ErrorKind::InvalidArgument,
                                 format!(
-                                    "The maximum VLAN priority is 7, \
-                                    but got VLAN {} egress qos map to \
-                                    value set as {}",
+                                    "The maximum VLAN priority is 7, but got \
+                                     VLAN {} egress qos map to value set as {}",
                                     self.base.name.as_str(),
                                     eg_map.to
                                 ),

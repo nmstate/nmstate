@@ -48,7 +48,7 @@ impl<'de> Deserialize<'de> for NetworkCaptureRules {
                 )));
             }
         }
-        log::debug!("Parsed into commands {:?}", cmds);
+        log::debug!("Parsed into commands {cmds:?}");
         Ok(NetworkCaptureRules { cmds })
     }
 }
@@ -76,11 +76,7 @@ impl NetworkCaptureRules {
         let mut ret = HashMap::new();
         for (var_name, cmd) in cmds.as_slice() {
             let matched_state = cmd.execute(current, &ret)?;
-            log::debug!(
-                "Found match state for {}: {:?}",
-                var_name,
-                matched_state
-            );
+            log::debug!("Found match state for {var_name}: {matched_state:?}");
             ret.insert(var_name.to_string(), matched_state);
         }
         Ok(ret)
@@ -186,8 +182,8 @@ impl NetworkCaptureCommand {
                         NmstateError::new(
                             ErrorKind::Bug,
                             format!(
-                                "Failed to convert NetworkState {input:?} \
-                                 to serde_json value: {e}"
+                                "Failed to convert NetworkState {input:?} to \
+                                 serde_json value: {e}"
                             ),
                         )
                     })?;
@@ -357,8 +353,8 @@ pub(crate) fn get_value(
                     NmstateError::new(
                         ErrorKind::Bug,
                         format!(
-                            "Failed to convert NetworkState {state:?} \
-                            to serde_json value: {e}"
+                            "Failed to convert NetworkState {state:?} to \
+                             serde_json value: {e}"
                         ),
                     )
                 })?
@@ -370,7 +366,8 @@ pub(crate) fn get_value(
                 None => Err(NmstateError::new(
                     ErrorKind::Bug,
                     format!(
-                        "Failed to convert NetworkState {state:?} to serde_json map",
+                        "Failed to convert NetworkState {state:?} to \
+                         serde_json map",
                     ),
                 )),
             }
@@ -379,9 +376,7 @@ pub(crate) fn get_value(
         NetworkCaptureToken::Value(v, _) => {
             Ok(serde_json::Value::String(v.clone()))
         }
-        NetworkCaptureToken::Null(_) => {
-            Ok(serde_json::Value::Null)
-        }
+        NetworkCaptureToken::Null(_) => Ok(serde_json::Value::Null),
         _ => todo!(),
     }
 }
@@ -396,7 +391,7 @@ fn get_input_capture_source(
             if path.len() != 2 || path[0] != "capture" {
                 Err(NmstateError::new_policy_error(
                     "The pipe action should always in format of \
-                    'capture.<capture_name>'"
+                     'capture.<capture_name>'"
                         .to_string(),
                     line,
                     *pos,
@@ -408,7 +403,7 @@ fn get_input_capture_source(
         Some(NetworkCaptureToken::Value(_, pos)) => {
             Err(NmstateError::new_policy_error(
                 "The pipe action should always in format of \
-                'capture.<capture_name>'"
+                 'capture.<capture_name>'"
                     .to_string(),
                 line,
                 *pos,
@@ -416,14 +411,14 @@ fn get_input_capture_source(
         }
         Some(token) => Err(NmstateError::new_policy_error(
             "The pipe action should always in format of \
-                'capture.<capture_name>'"
+             'capture.<capture_name>'"
                 .to_string(),
             line,
             token.pos(),
         )),
         None => Err(NmstateError::new_policy_error(
             "The pipe action should always in format of \
-                'capture.<capture_name>'"
+             'capture.<capture_name>'"
                 .to_string(),
             line,
             pipe_token.pos(),
@@ -459,7 +454,7 @@ fn get_condition_key(
         } else {
             Err(NmstateError::new_policy_error(
                 "The equal or replace action should always start with \
-                property path"
+                 property path"
                     .to_string(),
                 line,
                 tokens[0].pos(),
@@ -467,8 +462,8 @@ fn get_condition_key(
         }
     } else {
         Err(NmstateError::new_policy_error(
-            "The equal or replace action should always start with \
-            property path"
+            "The equal or replace action should always start with property \
+             path"
                 .to_string(),
             line,
             action_token.pos(),
@@ -484,7 +479,7 @@ fn get_condition_value(
     if tokens.len() != 1 {
         return Err(NmstateError::new_policy_error(
             "The equal or replace action should end with single value or \
-            property path"
+             property path"
                 .to_string(),
             line,
             if tokens.len() >= 2 {
@@ -503,10 +498,10 @@ fn get_condition_value(
                         ErrorKind::InvalidArgument,
                         format!(
                             "When using equal action to match against \
-                            captured data, the correct format should be \
-                            'interfaces.name == \
-                            capture.default-gw.interfaces.0.name', \
-                            but got: {line}"
+                             captured data, the correct format should be \
+                             'interfaces.name == \
+                             capture.default-gw.interfaces.0.name', but got: \
+                             {line}"
                         ),
                     ));
                 }
@@ -526,8 +521,8 @@ fn get_condition_value(
         _ => Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
-                "The equal action should end with single value or \
-                property path but got: {line}"
+                "The equal action should end with single value or property \
+                 path but got: {line}"
             ),
         )),
     }
@@ -615,10 +610,9 @@ fn sort_captures(
     Err(NmstateError::new(
         ErrorKind::InvalidArgument,
         format!(
-            "Failed to sort the policy capture in \
-                {SORT_CAPTURE_MAX_ROUND} round of rotation, \
-                please order the capture in desire \
-                policy by placing capture before its consumer"
+            "Failed to sort the policy capture in {SORT_CAPTURE_MAX_ROUND} \
+             round of rotation, please order the capture in desire policy by \
+             placing capture before its consumer"
         ),
     ))
 }

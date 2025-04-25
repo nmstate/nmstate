@@ -52,7 +52,7 @@ pub(crate) fn get_route_rules(
                 rule.action = Some(RouteRuleAction::Prohibit)
             }
             _ => {
-                log::debug!("Got unsupported route rule {:?}", np_rule);
+                log::debug!("Got unsupported route rule {np_rule:?}");
                 continue;
             }
         }

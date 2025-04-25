@@ -72,8 +72,7 @@ pub(crate) fn update_route_rules(
         }
         _ => {
             return Err(NmstateError::new_policy_error(
-                "Only support 'config' keyword for \
-                replacing route rules"
+                "Only support 'config' keyword for replacing route rules"
                     .to_string(),
                 line,
                 pos,

@@ -62,7 +62,7 @@ pub(crate) async fn nm_apply(
         if merged_state.memory_only {
             log::debug!(
                 "NM: Cannot change configure hostname in memory only mode, \
-                ignoring"
+                 ignoring"
             );
         } else {
             nm_api
@@ -96,8 +96,8 @@ pub(crate) async fn nm_apply(
 
         if merged_state.dns.is_search_or_option_only() {
             log::info!(
-                "Using interface level DNS for special use case: \
-                only static DNS search and/or DNS option desired"
+                "Using interface level DNS for special use case: only static \
+                 DNS search and/or DNS option desired"
             );
             // we cannot use global DNS in this case because global DNS suppress
             // DNS nameserver learn from DHCP/autoconf.
@@ -111,8 +111,8 @@ pub(crate) async fn nm_apply(
                 store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
             {
                 log::info!(
-                    "Cannot store DNS to interface profile: {e}, \
-                    will try to set via global DNS"
+                    "Cannot store DNS to interface profile: {e}, will try to \
+                     set via global DNS"
                 );
                 store_dns_config_via_global_api(
                     &mut nm_api,
@@ -285,8 +285,7 @@ async fn delete_ifaces(
             if let Some(uuid) = nm_conn.uuid() {
                 if !uuids_to_delete.contains(uuid) {
                     log::info!(
-                        "Deleting NM connection for absent interface \
-                        {}/{}: {}",
+                        "Deleting NM connection for absent interface {}/{}: {}",
                         &iface.name(),
                         &iface.iface_type(),
                         uuid
@@ -301,8 +300,8 @@ async fn delete_ifaces(
                     if is_uuid(ctrl) {
                         if !uuids_to_delete.contains(ctrl) {
                             log::info!(
-                                "Deleting NM OVS port connection {} \
-                                 for absent OVS interface {}",
+                                "Deleting NM OVS port connection {} for \
+                                 absent OVS interface {}",
                                 ctrl,
                                 &iface.name(),
                             );
@@ -375,7 +374,7 @@ async fn delete_remain_virtual_interface_as_desired(
                 // There might be an race with on-going profile/connection
                 // deletion, verification will raise error for it later.
                 if let Err(e) = nm_api.device_delete(&nm_dev.obj_path).await {
-                    log::debug!("Failed to delete interface {:?}", e);
+                    log::debug!("Failed to delete interface {e:?}");
                 }
             }
         }
@@ -502,8 +501,8 @@ async fn check_nm_version(
     if let Ok(version) = version {
         if version < min {
             log::warn!(
-                "Unsupported NetworkManager version {version}, \
-                expecting >= {min}"
+                "Unsupported NetworkManager version {version}, expecting >= \
+                 {min}"
             );
         }
     } else {
@@ -533,8 +532,8 @@ fn is_bridge_port_changed_default_pvid(
         if let Some(ctrl_name) = nm_conn.controller() {
             if default_pvid_changed_brs.contains(&ctrl_name) {
                 log::info!(
-                    "Reactivating linux bridge port as its controller \
-                    has `vlan-default-pvid` changes"
+                    "Reactivating linux bridge port as its controller has \
+                     `vlan-default-pvid` changes"
                 );
                 return true;
             }
@@ -564,8 +563,8 @@ fn is_bond_port_queue_id_changed(
         if let Some(iface_name) = nm_conn.iface_name() {
             if changed_ports.contains(&iface_name) {
                 log::info!(
-                    "Reactivating bond port {iface_name} as its \
-                    queue ID has changed"
+                    "Reactivating bond port {iface_name} as its queue ID has \
+                     changed"
                 );
                 return true;
             }

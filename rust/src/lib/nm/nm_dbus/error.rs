@@ -51,7 +51,7 @@ impl From<&str> for NmDeviceError {
             _ => {
                 log::warn!(
                     "Unknown error kind \
-                    org.freedesktop.NetworkManager.Device.{nm_err_kind}"
+                     org.freedesktop.NetworkManager.Device.{nm_err_kind}"
                 );
                 Self::Unknown(nm_err_kind.to_string())
             }
@@ -88,7 +88,7 @@ impl From<&str> for NmSettingError {
             _ => {
                 log::warn!(
                     "Unknown error kind \
-                    org.freedesktop.NetworkManager.Settings.{nm_err_kind}"
+                     org.freedesktop.NetworkManager.Settings.{nm_err_kind}"
                 );
                 Self::Unknown(nm_err_kind.to_string())
             }
@@ -124,8 +124,9 @@ impl From<&str> for NmConnectionError {
             "InvalidProperty" => Self::InvalidProperty,
             _ => {
                 log::warn!(
-                    "Unknown error kind org.freedesktop.NetworkManager.\
-                    Settings.Connection.{nm_err_kind}"
+                    "Unknown error kind \
+                     org.freedesktop.NetworkManager.Settings.Connection.\
+                     {nm_err_kind}"
                 );
                 Self::Unknown(nm_err_kind.to_string())
             }
@@ -172,7 +173,7 @@ impl From<&str> for NmManagerError {
             _ => {
                 log::warn!(
                     "Unknown error kind \
-                    org.freedesktop.NetworkManager.{nm_err_kind}"
+                     org.freedesktop.NetworkManager.{nm_err_kind}"
                 );
                 Self::Unknown(nm_err_kind.to_string())
             }
@@ -216,11 +217,7 @@ fn parse_nm_dbus_error(nm_err_kind: &str, nm_err_msg: &str) -> NmError {
                     }
                 }
                 _ => {
-                    log::warn!(
-                        "Unknown NM error {}: {}",
-                        nm_err_kind,
-                        nm_err_msg
-                    );
+                    log::warn!("Unknown NM error {nm_err_kind}: {nm_err_msg}");
                 }
             }
         } else {
@@ -280,7 +277,7 @@ impl From<zbus::Error> for NmError {
             }
         }
 
-        log::warn!("Unknown DBUS error {:?}", e);
+        log::warn!("Unknown DBUS error {e:?}");
 
         Self {
             kind: ErrorKind::DbusConnectionError,

@@ -100,7 +100,7 @@ impl Interfaces {
                             iface.name()
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }

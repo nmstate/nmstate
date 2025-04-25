@@ -72,7 +72,7 @@ impl MergedRouteRules {
                         ErrorKind::VerificationError,
                         format!(
                             "Desired absent route rule {rule} still found \
-                            after apply: {cur_rt}"
+                             after apply: {cur_rt}"
                         ),
                     ));
                 }

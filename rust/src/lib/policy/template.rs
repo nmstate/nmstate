@@ -27,7 +27,7 @@ impl NetworkStateTemplate {
         &self,
         capture_results: &HashMap<String, NetworkState>,
     ) -> Result<NetworkState, NmstateError> {
-        log::debug!("fill_with_captured_data {:?} {:?}", self, capture_results);
+        log::debug!("fill_with_captured_data {self:?} {capture_results:?}");
 
         let mut desire_state_value = self.0.clone();
         let mut new_values = HashMap::new();
@@ -79,7 +79,7 @@ fn resolve_capture_data(
                 {
                     return Err(NmstateError::new_policy_error(
                         "The resolved reference result is object or array, \
-                        hence you cannot add prefix or postfix"
+                         hence you cannot add prefix or postfix"
                             .to_string(),
                         line,
                         *pos,
@@ -123,8 +123,8 @@ fn resolve_capture_data(
                 }
             } else {
                 return Err(NmstateError::new_policy_error(
-                    "Only allow property path between reference \
-                        start {{ and reference end }}"
+                    "Only allow property path between reference start {{ and \
+                     reference end }}"
                         .to_string(),
                     line,
                     tokens[token_start_pos].pos(),
@@ -138,7 +138,7 @@ fn resolve_capture_data(
             HashMap::new();
         for (k, v) in value.iter_mut() {
             if let Some(new_value) = resolve_capture_data(v, capture_results)? {
-                log::debug!("Changing {} to {} for {}", v, new_value, k);
+                log::debug!("Changing {v} to {new_value} for {k}");
                 pending_changes.insert(k.to_string(), new_value);
             }
         }
@@ -150,7 +150,7 @@ fn resolve_capture_data(
         for (index, item) in items.iter_mut().enumerate() {
             if let Some(new_item) = resolve_capture_data(item, capture_results)?
             {
-                log::debug!("Changing {} to {}", item, new_item);
+                log::debug!("Changing {item} to {new_item}");
                 pending_changes.push((index, new_item));
             }
         }
@@ -170,7 +170,7 @@ fn get_capture_value(
     if prop_path.len() < 2 {
         return Err(NmstateError::new_policy_error(
             "Invalid capture reference string, should be in the format \
-            capture.<capture_name>.<property_path>"
+             capture.<capture_name>.<property_path>"
                 .to_string(),
             line,
             pos,

@@ -42,7 +42,7 @@ pub(crate) fn store_dns_config_to_iface(
         return Err(NmstateError::new(
             ErrorKind::NotImplementedError,
             "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 \
-                nameservers is not supported yet"
+             nameservers is not supported yet"
                 .to_string(),
         ));
     }
@@ -50,8 +50,7 @@ pub(crate) fn store_dns_config_to_iface(
     let (cur_v4_ifaces, cur_v6_ifaces) =
         get_cur_dns_ifaces(&merged_state.interfaces);
     log::debug!(
-        "Current DNS interface is \
-            v4 {cur_v4_ifaces:?} v6 {cur_v6_ifaces:?}"
+        "Current DNS interface is v4 {cur_v4_ifaces:?} v6 {cur_v6_ifaces:?}"
     );
     let (v4_iface_name, v6_iface_name) = reselect_dns_ifaces(
         merged_state,
@@ -61,8 +60,8 @@ pub(crate) fn store_dns_config_to_iface(
         nm_devs,
     );
     log::debug!(
-        "Re-selected DNS interfaces are v4 {v4_iface_name:?}, \
-            v6 {v6_iface_name:?}"
+        "Re-selected DNS interfaces are v4 {v4_iface_name:?}, v6 \
+         {v6_iface_name:?}"
     );
 
     purge_dns_config(false, cur_v4_ifaces.as_slice(), merged_state)?;
@@ -223,8 +222,7 @@ pub(crate) fn extract_ipv6_link_local_iface_from_dns_srv(
         let splits: Vec<&str> = srv.split('%').collect();
         if splits.len() == 2 && !splits[1].is_empty() {
             log::debug!(
-                "Extracted IPv6 link local DNS interface name \
-                {} from {srv}",
+                "Extracted IPv6 link local DNS interface name {} from {srv}",
                 splits[1]
             );
             return Some(splits[1].to_string());
@@ -339,8 +337,8 @@ fn _save_dns_to_iface(
         return Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
-                "Failed to find suitable(IP enabled) \
-                interface for DNS server {servers:?}"
+                "Failed to find suitable(IP enabled) interface for DNS server \
+                 {servers:?}"
             ),
         ));
     }
@@ -391,8 +389,8 @@ fn _save_dns_to_iface(
         return Err(NmstateError::new(
             ErrorKind::Bug,
             format!(
-                "_save_dns_to_iface(): Failed to find interface \
-                {iface_name} among {merged_state:?}"
+                "_save_dns_to_iface(): Failed to find interface {iface_name} \
+                 among {merged_state:?}"
             ),
         ));
     }
@@ -777,8 +775,8 @@ fn store_dns_search_or_options_to_auto_iface(
     Err(NmstateError::new(
         ErrorKind::InvalidArgument,
         format!(
-            "Failed to find suitable(Auto IP) interface for DNS \
-            searches '{}' or options '{}'",
+            "Failed to find suitable(Auto IP) interface for DNS searches '{}' \
+             or options '{}'",
             merged_state.dns.searches.as_slice().join(" "),
             merged_state.dns.options.as_slice().join(" ")
         ),
@@ -906,7 +904,7 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
         ErrorKind::InvalidArgument,
         format!(
             "Failed to find suitable(IP enabled) interface for DNS searches \
-            '{}'",
+             '{}'",
             merged_state.dns.searches.as_slice().join(" ")
         ),
     ))

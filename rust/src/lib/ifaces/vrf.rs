@@ -72,8 +72,8 @@ impl VrfInterface {
         if is_desired {
             if let Some(mac) = self.base.mac_address.as_ref() {
                 log::warn!(
-                    "Ignoring MAC address {mac} of VRF interface {} \
-                    as it is a layer 3(IP) interface",
+                    "Ignoring MAC address {mac} of VRF interface {} as it is \
+                     a layer 3(IP) interface",
                     self.base.name.as_str()
                 );
             }
@@ -115,12 +115,12 @@ impl VrfInterface {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Route table ID undefined or 0 is not allowed for \
-                        new VRF interface {}",
+                        "Route table ID undefined or 0 is not allowed for new \
+                         VRF interface {}",
                         self.base.name
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }

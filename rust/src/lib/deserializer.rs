@@ -301,10 +301,7 @@ impl std::convert::TryFrom<serde_json::Value> for NumberAsString {
             serde_json::Value::String(s) => Ok(Self { value: s }),
             _ => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!(
-                    "Invalid data type: {s}, should be \
-                     integer or string"
-                ),
+                format!("Invalid data type: {s}, should be integer or string"),
             )),
         }
     }

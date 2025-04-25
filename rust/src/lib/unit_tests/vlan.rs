@@ -140,8 +140,8 @@ fn test_vlan_orphan_but_desired() {
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
         assert!(e.msg().contains(
-            "Interface bond0.100 cannot be in up state \
-            as its parent bond0 has been marked as absent"
+            "Interface bond0.100 cannot be in up state as its parent bond0 \
+             has been marked as absent"
         ));
     }
 }

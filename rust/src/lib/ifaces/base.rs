@@ -247,9 +247,9 @@ impl BaseInterface {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "MTU should be >= {MINIMUM_IPV6_MTU} \
-                                when IPv6 is enabled on interface {}, \
-                                but got mtu: {mtu}",
+                                "MTU should be >= {MINIMUM_IPV6_MTU} when \
+                                 IPv6 is enabled on interface {}, but got \
+                                 mtu: {mtu}",
                                 self.name.as_str()
                             ),
                         ));
@@ -272,8 +272,8 @@ impl BaseInterface {
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "User space interface {}/{} is not allow to hold \
-                    dispatch configurations",
+                    "User space interface {}/{} is not allow to hold dispatch \
+                     configurations",
                     self.name.as_str(),
                     self.iface_type,
                 ),
@@ -325,8 +325,8 @@ impl MergedInterface {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Desired MTU {} for interface {} \
-                            is bigger than maximum allowed MTU {}",
+                            "Desired MTU {} for interface {} is bigger than \
+                             maximum allowed MTU {}",
                             desire_mtu, desired.name, max_mtu
                         ),
                     ));
@@ -334,8 +334,8 @@ impl MergedInterface {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Desired MTU {} for interface {} \
-                            is smaller than minimum allowed MTU {}",
+                            "Desired MTU {} for interface {} is smaller than \
+                             minimum allowed MTU {}",
                             desire_mtu, desired.name, min_mtu
                         ),
                     ));
@@ -359,7 +359,7 @@ impl MergedInterface {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Interface {} cannot have IP enabled as it is \
-                            attached to a controller where IP is not allowed",
+                             attached to a controller where IP is not allowed",
                             base_iface.name.as_str()
                         ),
                     ));

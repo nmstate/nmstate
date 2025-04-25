@@ -119,7 +119,7 @@ impl OvsBridgeInterface {
             if is_desired {
                 log::warn!(
                     "OVS Bridge {} could not hold 'mtu:{mtu}' configuration \
-                    as it only exists in OVS database, ignoring",
+                     as it only exists in OVS database, ignoring",
                     self.base.name.as_str()
                 );
             }
@@ -129,9 +129,8 @@ impl OvsBridgeInterface {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "OVS Bridge {} can not hold MAC address, \
-                        please set MAC address on OVS internal interface \
-                        instead",
+                        "OVS Bridge {} can not hold MAC address, please set \
+                         MAC address on OVS internal interface instead",
                         self.base.name.as_str()
                     ),
                 ));
@@ -452,11 +451,11 @@ impl OvsInterface {
                     ErrorKind::InvalidArgument,
                     format!(
                         "OVS patch interface is not allowed to hold MTU \
-                        configuration, interface name {}",
+                         configuration, interface name {}",
                         self.base.name.as_str()
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
             if self.base.ipv4.as_ref().map(|c| c.enabled) == Some(true)
@@ -466,11 +465,11 @@ impl OvsInterface {
                     ErrorKind::InvalidArgument,
                     format!(
                         "OVS patch interface is not allowed to hold IP \
-                        configuration, interface name {}",
+                         configuration, interface name {}",
                         self.base.name.as_str()
                     ),
                 );
-                log::error!("{}", e);
+                log::error!("{e}");
                 return Err(e);
             }
         }
@@ -676,9 +675,9 @@ fn validate_dpdk_queue_desc(
         Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
-                "OVS DPDK {prop_name} must power of 2 within \
-                range of 1 to 4096. Setting to 0 if you want to remove \
-                this setting from OVS database. But got {n}"
+                "OVS DPDK {prop_name} must power of 2 within range of 1 to \
+                 4096. Setting to 0 if you want to remove this setting from \
+                 OVS database. But got {n}"
             ),
         ))
     } else {
@@ -714,7 +713,7 @@ impl MergedInterface {
         {
             log::warn!(
                 "OVS bridge {} cannot exist with empty port list, adding a \
-                OVS internal interface with the same name",
+                 OVS internal interface with the same name",
                 self.merged.name()
             );
             let iface_name = self.merged.name().to_string();

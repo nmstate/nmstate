@@ -321,11 +321,11 @@ impl Interfaces {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find unknown type interface {iface_name} \
-                                in current state"
+                                "Failed to find unknown type interface \
+                                 {iface_name} in current state"
                             ),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                     1 => {
@@ -337,11 +337,11 @@ impl Interfaces {
                             ErrorKind::InvalidArgument,
                             format!(
                                 "Found 2+ interface matching desired unknown \
-                            type interface {}: {:?}",
+                                 type interface {}: {:?}",
                                 iface_name, &founds
                             ),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                 }
@@ -373,9 +373,8 @@ impl Interfaces {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Desired interface {} has \
-                            `identifier: mac-address` but not MAC address \
-                            defined",
+                            "Desired interface {} has `identifier: \
+                             mac-address` but not MAC address defined",
                             iface.name()
                         ),
                     ));
@@ -441,8 +440,8 @@ impl Interfaces {
                     ErrorKind::InvalidArgument,
                     format!(
                         "Desired interface {} has `identifier: mac-address` \
-                    with MAC address {mac_address}, but no interface is \
-                    holding that MAC address",
+                         with MAC address {mac_address}, but no interface is \
+                         holding that MAC address",
                         iface.name()
                     ),
                 ));
@@ -545,7 +544,7 @@ impl Interfaces {
         for iface_name in iface_names_to_add {
             let mut iface = EthernetInterface::default();
             iface.base.name.clone_from(&iface_name);
-            log::warn!("Assuming undefined port {} as ethernet", iface_name);
+            log::warn!("Assuming undefined port {iface_name} as ethernet");
             self.kernel_ifaces
                 .insert(iface_name, Interface::Ethernet(Box::new(iface)));
         }
@@ -578,7 +577,7 @@ impl Interfaces {
                             ErrorKind::Bug,
                             format!(
                                 "BUG: Failed to convert {iface:?} to \
-                                serde_json value: {e}"
+                                 serde_json value: {e}"
                             ),
                         ));
                     }
@@ -702,7 +701,7 @@ impl MergedInterfaces {
         }
 
         for (iface_name, iface_type) in ignored_ifaces.as_slice() {
-            log::info!("Ignoring interface {} type {}", iface_name, iface_type);
+            log::info!("Ignoring interface {iface_name} type {iface_type}");
         }
 
         desired.remove_ignored_ifaces(ignored_ifaces.as_slice());
@@ -834,14 +833,13 @@ impl MergedInterfaces {
         }
         log::error!(
             "Failed to set up priority: please order the interfaces in desire \
-            state to place controller before its ports"
+             state to place controller before its ports"
         );
         Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             "Failed to set up priority: nmstate only support nested interface \
-            up to 4 levels. To support more nest level, \
-            please order the interfaces in desire \
-            state to place controller before its ports"
+             up to 4 levels. To support more nest level, please order the \
+             interfaces in desire state to place controller before its ports"
                 .to_string(),
         ))
     }
@@ -889,12 +887,12 @@ impl MergedInterfaces {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find mac address of \
-                                interface {src_iface_name} \
-                                for copy-mac-from of iface {iface_name}"
+                                "Failed to find mac address of interface \
+                                 {src_iface_name} for copy-mac-from of iface \
+                                 {iface_name}"
                             ),
                         );
-                        log::error!("{}", e);
+                        log::error!("{e}");
                         return Err(e);
                     }
                 } else {
@@ -902,10 +900,10 @@ impl MergedInterfaces {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Failed to find interface {src_iface_name} for \
-                            copy-mac-from of iface {iface_name}"
+                             copy-mac-from of iface {iface_name}"
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }
@@ -947,16 +945,14 @@ impl MergedInterfaces {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Interface {} cannot be in up state \
-                                as its parent {parent} has been marked \
-                                as absent",
+                                "Interface {} cannot be in up state as its \
+                                 parent {parent} has been marked as absent",
                                 iface.merged.name(),
                             ),
                         ));
                     }
                     log::info!(
-                        "Marking interface {} as absent as its \
-                        parent {} is so",
+                        "Marking interface {} as absent as its parent {} is so",
                         iface.merged.name(),
                         parent
                     );
@@ -1008,9 +1004,8 @@ impl MergedInterfaces {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Interface {} ({}) defined with parent {} \
-                        but multiple interfaces are sharing the \
-                        this profile name",
+                        "Interface {} ({}) defined with parent {} but \
+                         multiple interfaces are sharing the this profile name",
                         des_iface.name(),
                         des_iface.iface_type(),
                         parent,

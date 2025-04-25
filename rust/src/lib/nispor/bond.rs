@@ -87,7 +87,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
             nispor::BondAdSelect::Bandwidth => Some(BondAdSelect::Bandwidth),
             nispor::BondAdSelect::Count => Some(BondAdSelect::Count),
             _ => {
-                warn!("Unsupported bond ad_select option {:?}", r);
+                warn!("Unsupported bond ad_select option {r:?}");
                 None
             }
         });
@@ -103,7 +103,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                     Some(BondAllPortsActive::Delivered)
                 }
                 _ => {
-                    warn!("Unsupported bond all ports active options {:?}", r);
+                    warn!("Unsupported bond all ports active options {r:?}");
                     None
                 }
             });
@@ -116,7 +116,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                     Some(BondArpAllTargets::All)
                 }
                 _ => {
-                    warn!("Unsupported bond arp_all_targets option {:?}", r);
+                    warn!("Unsupported bond arp_all_targets option {r:?}");
                     None
                 }
             });
@@ -139,7 +139,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                     Some(BondArpValidate::FilterBackup)
                 }
                 _ => {
-                    warn!("Unsupported bond arp_validate options {:?}", r);
+                    warn!("Unsupported bond arp_validate options {r:?}");
                     None
                 }
             });
@@ -154,7 +154,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                     Some(BondFailOverMac::Follow)
                 }
                 _ => {
-                    warn!("Unsupported bond fail_over_mac options {:?}", r);
+                    warn!("Unsupported bond fail_over_mac options {r:?}");
                     None
                 }
             });
@@ -162,7 +162,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
             nispor::BondLacpRate::Slow => Some(BondLacpRate::Slow),
             nispor::BondLacpRate::Fast => Some(BondLacpRate::Fast),
             _ => {
-                warn!("Unsupported bond lacp_rate options {:?}", r);
+                warn!("Unsupported bond lacp_rate options {r:?}");
                 None
             }
         });
@@ -185,7 +185,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                     Some(BondPrimaryReselect::Failure)
                 }
                 _ => {
-                    warn!("Unsupported bond primary_reselect options {:?}", r);
+                    warn!("Unsupported bond primary_reselect options {r:?}");
                     None
                 }
             });
@@ -214,7 +214,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                     Some(BondXmitHashPolicy::VlanSrcMac)
                 }
                 _ => {
-                    warn!("Unsupported bond xmit_hash_policy options {:?}", r);
+                    warn!("Unsupported bond xmit_hash_policy options {r:?}");
                     None
                 }
             });

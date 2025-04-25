@@ -99,12 +99,10 @@ fn main() {
                 .help("Disable logging")
                 .global(true),
         )
-        .subcommand(
-            clap::Command::new(SUB_CMD_AUTOCONF)
-                .about(
-                    "Automatically configure network based on LLDP \
-                    information (experimental)")
-        )
+        .subcommand(clap::Command::new(SUB_CMD_AUTOCONF).about(
+            "Automatically configure network based on LLDP information \
+             (experimental)",
+        ))
         .subcommand(
             clap::Command::new(SUB_CMD_SHOW)
                 .about("Show network state")
@@ -119,7 +117,7 @@ fn main() {
                         .short('k')
                         .long("kernel")
                         .takes_value(false)
-                        .help("Show kernel network state only")
+                        .help("Show kernel network state only"),
                 )
                 .arg(
                     clap::Arg::new("JSON")
@@ -140,7 +138,7 @@ fn main() {
                         .long("show-secrets")
                         .takes_value(false)
                         .help("Show secrets(hide by default)"),
-                )
+                ),
         )
         .subcommand(
             clap::Command::new(SUB_CMD_APPLY)
@@ -160,7 +158,7 @@ fn main() {
                         .takes_value(false)
                         .help(
                             "Do not verify that the state was completely set \
-                            and disable rollback to previous state.",
+                             and disable rollback to previous state.",
                         ),
                 )
                 .arg(
@@ -172,19 +170,18 @@ fn main() {
                 )
                 .arg(
                     clap::Arg::new("NO_COMMIT")
-                      .long("no-commit")
-                      .takes_value(false)
-                      .help(
-                        "Do not commit new state after verification"
-                      ),
+                        .long("no-commit")
+                        .takes_value(false)
+                        .help("Do not commit new state after verification"),
                 )
                 .arg(
                     clap::Arg::new("TIMEOUT")
-                      .long("timeout")
-                      .takes_value(true)
-                      .help(
-                        "Timeout in seconds before reverting uncommited changes."
-                      ),
+                        .long("timeout")
+                        .takes_value(true)
+                        .help(
+                            "Timeout in seconds before reverting uncommited \
+                             changes.",
+                        ),
                 )
                 .arg(
                     clap::Arg::new("SHOW_SECRETS")
@@ -204,10 +201,10 @@ fn main() {
                         .long("override-iface")
                         .takes_value(false)
                         .help(
-                            "Override interface settings \
-                            without merge current network state"
+                            "Override interface settings without merge \
+                             current network state",
                         ),
-                )
+                ),
         )
         .subcommand(
             clap::Command::new(SUB_CMD_GEN_CONF)
@@ -254,7 +251,7 @@ fn main() {
                         .takes_value(false)
                         .help(
                             "Do not verify that the state was completely set \
-                            and disable rollback to previous state.",
+                             and disable rollback to previous state.",
                         ),
                 )
                 .arg(
@@ -266,18 +263,16 @@ fn main() {
                 )
                 .arg(
                     clap::Arg::new("NO_COMMIT")
-                      .long("no-commit")
-                      .takes_value(false)
-                      .help(
-                        "Do not commit new state after verification"
-                      ),
+                        .long("no-commit")
+                        .takes_value(false)
+                        .help("Do not commit new state after verification"),
                 )
                 .arg(
                     clap::Arg::new("MEMORY_ONLY")
                         .long("memory-only")
                         .takes_value(false)
                         .help("Do not make the state persistent"),
-                )
+                ),
         )
         .subcommand(
             clap::Command::new(SUB_CMD_SERVICE)
@@ -314,24 +309,27 @@ fn main() {
                         .short('a')
                         .long("captured")
                         .takes_value(true)
-                        .help("Bypass the capture action by \
-                              reading captured network state from \
-                              specified file"),
+                        .help(
+                            "Bypass the capture action by reading captured \
+                             network state from specified file",
+                        ),
                 )
                 .arg(
                     clap::Arg::new("OUTPUT_CAPTURED")
                         .short('o')
                         .long("output-captured")
                         .takes_value(true)
-                        .help("Store the captured network states to \
-                              specified file"),
+                        .help(
+                            "Store the captured network states to specified \
+                             file",
+                        ),
                 )
                 .arg(
                     clap::Arg::new("JSON")
                         .long("json")
                         .takes_value(false)
                         .help("Show state in json format"),
-                )
+                ),
         )
         .subcommand(
             clap::Command::new(SUB_CMD_FORMAT)
@@ -367,9 +365,9 @@ fn main() {
                         .long("json")
                         .takes_value(false)
                         .help("Show state in json format"),
-                )
+                ),
         )
-   .subcommand(
+        .subcommand(
             clap::Command::new(SUB_CMD_STATISTIC)
                 .alias("st")
                 .about("Generate statistic of specified desire states")
@@ -392,7 +390,7 @@ fn main() {
                         .long("json")
                         .takes_value(false)
                         .help("Show statistic in json format"),
-                )
+                ),
         )
         .subcommand(
             clap::Command::new(SUB_CMD_VALIDATE)
@@ -403,18 +401,15 @@ fn main() {
                         .multiple_occurrences(false)
                         .index(1)
                         .help("Network state file"),
-                )
+                ),
         )
-        .subcommand(
-            clap::Command::new(SUB_CMD_VERSION)
-            .about("Show version")
-       );
+        .subcommand(clap::Command::new(SUB_CMD_VERSION).about("Show version"));
     if cfg!(feature = "query_apply") {
         app = app.subcommand(
             clap::Command::new(SUB_CMD_PERSIST_NIC_NAMES)
                 .about(
                     "Generate .link files which persist active network \
-                    interfaces to their current names",
+                     interfaces to their current names",
                 )
                 .arg(
                     clap::Arg::new("DRY_RUN")
@@ -433,8 +428,8 @@ fn main() {
                         .long("cleanup")
                         .takes_value(false)
                         .help(
-                            "Remove previously created .link files \
-                            which has no effect",
+                            "Remove previously created .link files which has \
+                             no effect",
                         ),
                 )
                 .arg(
@@ -442,9 +437,9 @@ fn main() {
                         .long("kargs-out")
                         .takes_value(true)
                         .help(
-                            "When pinning, write kargs to append; \
-                            when cleaning up, write kargs to delete \
-                            (space-separated)",
+                            "When pinning, write kargs to append; when \
+                             cleaning up, write kargs to delete \
+                             (space-separated)",
                         ),
                 )
                 .arg(
@@ -567,34 +562,42 @@ fn main() {
 
 #[cfg(not(feature = "gen_conf"))]
 fn gen_conf(_file_path: &str) -> Result<String, crate::error::CliError> {
-    Err("The gc sub-command require `gen_conf` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The gc sub-command require `gen_conf` feature been enabled during \
+         compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "gen_revert"))]
 fn gen_revert(
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
-    Err("The gr sub-command require `gen_revert` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The gr sub-command require `gen_revert` feature been enabled during \
+         compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "query_apply"))]
 fn show(_matches: &clap::ArgMatches) -> Result<String, crate::error::CliError> {
-    Err("The show sub-command require `query_apply` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The show sub-command require `query_apply` feature been enabled \
+         during compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "query_apply"))]
 fn apply_from_stdin(
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
-    Err("The apply sub-command require `query_apply` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The apply sub-command require `query_apply` feature been enabled \
+         during compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "query_apply"))]
@@ -602,23 +605,27 @@ fn apply_from_files(
     _file_paths: &[&str],
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
-    Err("The apply sub-command require `query_apply` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The apply sub-command require `query_apply` feature been enabled \
+         during compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "query_apply"))]
 fn commit(_checkpoint: &str) -> Result<String, crate::error::CliError> {
-    Err("The commit sub-command require `query_apply` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The commit sub-command require `query_apply` feature been enabled \
+         during compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "query_apply"))]
 fn rollback(_checkpoint: &str) -> Result<String, crate::error::CliError> {
     Err(
-        "The rollback sub-command require `query_apply` feature been \
-        enabled during compiling"
+        "The rollback sub-command require `query_apply` feature been enabled \
+         during compiling"
             .into(),
     )
 }
@@ -627,16 +634,18 @@ fn rollback(_checkpoint: &str) -> Result<String, crate::error::CliError> {
 fn state_edit(
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
-    Err("The edit sub-command require `query_apply` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The edit sub-command require `query_apply` feature been enabled \
+         during compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "query_apply"))]
 fn autoconf(_argv: &[String]) -> Result<String, crate::error::CliError> {
     Err(
-        "The autoconf sub-command require `query_apply` feature been \
-        enabled during compiling"
+        "The autoconf sub-command require `query_apply` feature been enabled \
+         during compiling"
             .into(),
     )
 }
@@ -646,8 +655,8 @@ fn ncl_service(
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
     Err(
-        "The service sub-command require `query_apply` feature been \
-        enabled during compiling"
+        "The service sub-command require `query_apply` feature been enabled \
+         during compiling"
             .into(),
     )
 }
@@ -656,9 +665,11 @@ fn ncl_service(
 fn policy(
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
-    Err("The policy sub-command require `query_apply` feature been \
-        enabled during compiling"
-        .into())
+    Err(
+        "The policy sub-command require `query_apply` feature been enabled \
+         during compiling"
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "query_apply"))]
@@ -666,8 +677,8 @@ fn statistic(
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
     Err(
-        "The statistic sub-command require `query-apply` feature been \
-        enabled during compiling"
+        "The statistic sub-command require `query-apply` feature been enabled \
+         during compiling"
             .into(),
     )
 }
@@ -677,8 +688,8 @@ fn validate(
     _matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
     Err(
-        "The validate sub-command require `query-apply` feature been \
-        enabled during compiling"
+        "The validate sub-command require `query-apply` feature been enabled \
+         during compiling"
             .into(),
     )
 }

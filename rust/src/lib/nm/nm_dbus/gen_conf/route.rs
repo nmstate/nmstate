@@ -24,31 +24,31 @@ impl NmIpRoute {
             let mut opt_string =
                 format!("table={}", self.table.unwrap_or(DEFAULT_ROUTE_TABLE));
             if let Some(weight) = self.weight {
-                write!(opt_string, ",weight={}", weight).ok();
+                write!(opt_string, ",weight={weight}").ok();
             }
             if let Some(route_type) = self.route_type.as_ref() {
-                write!(opt_string, ",type={}", route_type).ok();
+                write!(opt_string, ",type={route_type}").ok();
             }
             if let Some(cwnd) = self.cwnd {
-                write!(opt_string, ",cwnd={}", cwnd).ok();
+                write!(opt_string, ",cwnd={cwnd}").ok();
             }
             if let Some(lock_cwnd) = self.lock_cwnd {
-                write!(opt_string, ",lock-cwnd={}", lock_cwnd).ok();
+                write!(opt_string, ",lock-cwnd={lock_cwnd}").ok();
             }
             if let Some(src) = self.src.as_ref() {
-                write!(opt_string, ",src={}", src).ok();
+                write!(opt_string, ",src={src}").ok();
             }
             if let Some(v) = self.initcwnd.as_ref() {
-                write!(opt_string, ",initcwnd={}", v).ok();
+                write!(opt_string, ",initcwnd={v}").ok();
             }
             if let Some(v) = self.initrwnd.as_ref() {
-                write!(opt_string, ",initrwnd={}", v).ok();
+                write!(opt_string, ",initrwnd={v}").ok();
             }
             if let Some(v) = self.mtu.as_ref() {
-                write!(opt_string, ",mtu={}", v).ok();
+                write!(opt_string, ",mtu={v}").ok();
             }
             if let Some(v) = self.quickack.as_ref() {
-                write!(opt_string, ",quickack={}", v).ok();
+                write!(opt_string, ",quickack={v}").ok();
             }
             ret.insert("options".to_string(), opt_string);
         }

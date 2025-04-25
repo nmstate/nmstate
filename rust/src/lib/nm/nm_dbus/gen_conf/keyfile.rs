@@ -55,7 +55,7 @@ fn zvariant_value_to_string(
                 ErrorKind::Bug,
                 format!("Cannot convert Dict {d:?} to key file format"),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             Err(e)
         }
         zvariant::Value::Array(a) => {
@@ -73,7 +73,7 @@ fn zvariant_value_to_string(
                 ErrorKind::Bug,
                 format!("BUG: Unknown value type in section {value:?}"),
             );
-            error!("{}", e);
+            error!("{e}");
             Err(e)
         }
     }

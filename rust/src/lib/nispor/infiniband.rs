@@ -10,7 +10,7 @@ impl From<nispor::IpoibMode> for InfiniBandMode {
             nispor::IpoibMode::Datagram => Self::Datagram,
             nispor::IpoibMode::Connected => Self::Connected,
             _ => {
-                log::warn!("Unknown IP over IB mode {:?}", m);
+                log::warn!("Unknown IP over IB mode {m:?}");
                 Self::default()
             }
         }

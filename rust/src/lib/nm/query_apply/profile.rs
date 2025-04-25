@@ -72,10 +72,8 @@ pub(crate) async fn delete_exist_profiles(
             if let Some(uuid) = exist_nm_conn.uuid() {
                 uuids_to_delete.push(uuid);
                 log::info!(
-                    "Deleting existing duplicate connection {}: {}/{}",
-                    uuid,
-                    iface_name,
-                    nm_iface_type,
+                    "Deleting existing duplicate connection {uuid}: \
+                     {iface_name}/{nm_iface_type}",
                 );
             }
         }
@@ -99,17 +97,11 @@ pub(crate) async fn save_nm_profiles(
             .unwrap_or("undefined");
         if nm_conn.obj_path.is_empty() {
             log::info!(
-                "Creating connection {}: {}/{}",
-                uuid,
-                iface_name,
-                nm_iface_type
+                "Creating connection {uuid}: {iface_name}/{nm_iface_type}"
             );
         } else {
             log::info!(
-                "Modifying connection {}: {}/{}",
-                uuid,
-                iface_name,
-                nm_iface_type
+                "Modifying connection {uuid}: {iface_name}/{nm_iface_type}"
             );
         }
         nm_api
@@ -238,9 +230,8 @@ async fn _activate_nm_profiles(
                             && ctrller_type != &NmIfaceType::OvsPort
                         {
                             log::info!(
-                                "Skip connection activation as its \
-                                controller already activated its ports: \
-                                {}: {}/{}",
+                                "Skip connection activation as its controller \
+                                 already activated its ports: {}: {}/{}",
                                 uuid,
                                 nm_conn.iface_name().unwrap_or(""),
                                 nm_conn
@@ -367,7 +358,7 @@ async fn reapply_or_activate(
                 ErrorKind::Bug,
                 format!(
                     "reapply_or_activate(): Got NmConnection without UUID \
-                    {nm_conn:?}"
+                     {nm_conn:?}"
                 ),
             ));
         }
@@ -380,8 +371,8 @@ async fn reapply_or_activate(
     );
     if let Err(e) = nm_api.connection_reapply(nm_conn).await {
         log::info!(
-            "Reapply operation failed on {} {} {uuid}, \
-            reason: {}, retry on normal activation",
+            "Reapply operation failed on {} {} {uuid}, reason: {}, retry on \
+             normal activation",
             nm_conn.iface_type().cloned().unwrap_or_default(),
             nm_conn.iface_name().unwrap_or(""),
             e

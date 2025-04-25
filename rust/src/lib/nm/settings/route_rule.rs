@@ -48,8 +48,8 @@ pub(crate) fn gen_nm_ip_rules(
                 return Err(NmstateError::new(
                     ErrorKind::Bug,
                     format!(
-                        "NM route rule got None \
-                        or USE_DEFAULT_PRIORITY priority: {nm_rule:?}"
+                        "NM route rule got None or USE_DEFAULT_PRIORITY \
+                         priority: {nm_rule:?}"
                     ),
                 ));
             }
@@ -76,8 +76,8 @@ pub(crate) fn gen_nm_ip_rules(
                     NmstateError::new(
                         ErrorKind::NotSupportedError,
                         format!(
-                            "Specified suppress-prefix-length {v} is \
-                            not supported by NetworkManager: {e}"
+                            "Specified suppress-prefix-length {v} is not \
+                             supported by NetworkManager: {e}"
                         ),
                     )
                 })?);

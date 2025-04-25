@@ -154,7 +154,7 @@ impl RouteRuleEntry {
                     "Neither ip-from, ip-to nor family is defined '{self}'"
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             return Err(e);
         } else if let Some(family) = self.family {
             if let Some(ip_from) = self.ip_from.as_ref() {
@@ -164,11 +164,11 @@ impl RouteRuleEntry {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "The ip-from format mismatches with the \
-                            family set '{self}'"
+                            "The ip-from format mismatches with the family \
+                             set '{self}'"
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }
@@ -179,11 +179,11 @@ impl RouteRuleEntry {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "The ip-to format mismatches with the family \
-                            set {self}"
+                            "The ip-to format mismatches with the family set \
+                             {self}"
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }
@@ -196,11 +196,11 @@ impl RouteRuleEntry {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "fwmask is present but fwmark is \
-                    not defined or is zero {self:?}"
+                    "fwmask is present but fwmark is not defined or is zero \
+                     {self:?}"
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             return Err(e);
         }
         Ok(())
@@ -225,7 +225,7 @@ impl RouteRuleEntry {
                     match InterfaceIpAddr::try_from(ip_from) {
                         Ok(i) => i.to_string(),
                         Err(e) => {
-                            log::error!("{}", e);
+                            log::error!("{e}");
                             return false;
                         }
                     }
@@ -249,7 +249,7 @@ impl RouteRuleEntry {
                     match InterfaceIpAddr::try_from(ip_to) {
                         Ok(ref i) => i.to_string(),
                         Err(e) => {
-                            log::error!("{}", e);
+                            log::error!("{e}");
                             return false;
                         }
                     }
@@ -327,8 +327,8 @@ impl RouteRuleEntry {
                     *family == AddressFamily::IPv4
                 } else {
                     log::warn!(
-                        "Neither ip-from, ip-to nor family \
-                        is defined, treating it a IPv4 route rule"
+                        "Neither ip-from, ip-to nor family is defined, \
+                         treating it a IPv4 route rule"
                     );
                     true
                 }
@@ -359,11 +359,7 @@ impl RouteRuleEntry {
                     };
                 }
                 if ip != &new_ip {
-                    log::warn!(
-                        "Route rule ip-from {} sanitized to {}",
-                        ip,
-                        new_ip
-                    );
+                    log::warn!("Route rule ip-from {ip} sanitized to {new_ip}");
                     self.ip_from = Some(new_ip);
                 }
             }
@@ -380,11 +376,7 @@ impl RouteRuleEntry {
                     };
                 }
                 if ip != &new_ip {
-                    log::warn!(
-                        "Route rule ip-to {} sanitized to {}",
-                        ip,
-                        new_ip
-                    );
+                    log::warn!("Route rule ip-to {ip} sanitized to {new_ip}");
                     self.ip_to = Some(new_ip);
                 }
             }
@@ -394,8 +386,8 @@ impl RouteRuleEntry {
 
         if self.action.is_none() && self.table_id.is_none() {
             log::info!(
-                "Route rule {self} has no action or route-table \
-                defined, using default route table 254"
+                "Route rule {self} has no action or route-table defined, \
+                 using default route table 254"
             );
             self.table_id = Some(RouteRuleEntry::DEFAULR_ROUTE_TABLE_ID);
         }

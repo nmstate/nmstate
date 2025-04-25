@@ -55,7 +55,7 @@ impl MergedOvnConfiguration {
                 ErrorKind::VerificationError,
                 format!(
                     "Verification failure: {reference} desire '{desire}', \
-                    current '{current}'"
+                     current '{current}'"
                 ),
             ))
         } else {

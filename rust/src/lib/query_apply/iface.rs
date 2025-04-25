@@ -57,16 +57,16 @@ impl Interface {
                     let e = NmstateError::new(
                         ErrorKind::KernelIntegerRoundedError,
                         format!(
-                            "Linux kernel configured with 250 HZ \
-                                will round up/down the integer in linux \
-                                bridge {} option '{}' from {:?} to {:?}.",
+                            "Linux kernel configured with 250 HZ will round \
+                             up/down the integer in linux bridge {} option \
+                             '{}' from {:?} to {:?}.",
                             self.name(),
                             reference,
                             des,
                             cur
                         ),
                     );
-                    log::error!("{}", e);
+                    log::error!("{e}");
                     return Err(e);
                 }
             }
@@ -75,7 +75,7 @@ impl Interface {
                 ErrorKind::VerificationError,
                 format!(
                     "Verification failure: {reference} desire '{desire}', \
-                    current '{current}'"
+                     current '{current}'"
                 ),
             ))
         } else {
@@ -94,9 +94,8 @@ impl Interface {
                     iface.update_bridge(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -105,9 +104,8 @@ impl Interface {
                     iface.update_bond(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -117,9 +115,8 @@ impl Interface {
                     iface.update_veth(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -128,9 +125,8 @@ impl Interface {
                     iface.update_vlan(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -139,9 +135,8 @@ impl Interface {
                     iface.update_vxlan(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -150,9 +145,8 @@ impl Interface {
                     iface.update_ovs_bridge(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -161,9 +155,8 @@ impl Interface {
                     iface.update_mac_vlan(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -172,9 +165,8 @@ impl Interface {
                     iface.update_mac_vtap(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -183,9 +175,8 @@ impl Interface {
                     iface.update_vrf(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -194,9 +185,8 @@ impl Interface {
                     iface.update_ib(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -205,9 +195,8 @@ impl Interface {
                     iface.update_ovs_iface(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -216,9 +205,8 @@ impl Interface {
                     iface.update_macsec(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -227,9 +215,8 @@ impl Interface {
                     iface.update_hsr(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -238,9 +225,8 @@ impl Interface {
                     iface.update_ipsec(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }
@@ -249,9 +235,8 @@ impl Interface {
                     iface.update_ipvlan(other_iface);
                 } else {
                     log::warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface,
-                        other
+                        "Don't know how to update iface {iface:?} with \
+                         {other:?}"
                     );
                 }
             }

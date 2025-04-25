@@ -43,8 +43,8 @@ pub(crate) fn get_route_match(
         }
         _ => {
             return Err(NmstateError::new_policy_error(
-                "Only support 'running' or 'config' keyword for \
-                route searching"
+                "Only support 'running' or 'config' keyword for route \
+                 searching"
                     .to_string(),
                 line,
                 pos,
@@ -93,8 +93,8 @@ pub(crate) fn update_routes(
         }
         _ => {
             return Err(NmstateError::new_policy_error(
-                "Only support 'running' or 'config' keyword for \
-                    replacing routes"
+                "Only support 'running' or 'config' keyword for replacing \
+                 routes"
                     .to_string(),
                 line,
                 pos,

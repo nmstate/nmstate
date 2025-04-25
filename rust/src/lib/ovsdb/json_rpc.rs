@@ -47,7 +47,7 @@ impl OvsDbJsonRpc {
 
     pub(crate) fn send(&mut self, data: &Value) -> Result<(), NmstateError> {
         let buffer = serde_json::to_string(&data)?;
-        log::debug!("OVSDB: sending command {}", buffer);
+        log::debug!("OVSDB: sending command {buffer}");
         self.socket
             .write_all(buffer.as_bytes())
             .map_err(parse_socket_io_error)?;
@@ -82,14 +82,14 @@ impl OvsDbJsonRpc {
                     "Transaction ID mismatch for OVS DB JSON RPC: {reply:?}"
                 ),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             Err(e)
         } else if let Some(rpc_error) = reply.error {
             let e = NmstateError::new(
                 ErrorKind::PluginFailure,
                 format!("OVS DB JSON RPC error: {rpc_error:?}"),
             );
-            log::error!("{}", e);
+            log::error!("{e}");
             Err(e)
         } else {
             Ok(reply.result)

@@ -99,10 +99,8 @@ fn should_ignore(reference: &str, desire: &Value, current: &Value) -> bool {
         // Per oVirt request, bond option difference should not
         // fail verification.
         log::warn!(
-            "Bond option miss-match: {} desire '{}', current '{}'",
-            reference,
-            desire,
-            current
+            "Bond option miss-match: {reference} desire '{desire}', current \
+             '{current}'"
         );
         true
     } else {
