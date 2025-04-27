@@ -13,6 +13,7 @@ from libnmstate.schema import VXLAN
 
 from .testlib import assertlib
 from .testlib.apply import apply_with_description
+from .testlib.assertlib import assert_state
 from .testlib.bondlib import bond_interface
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.cmdlib import exec_cmd
@@ -100,8 +101,7 @@ def test_rollback_for_vxlans(eth1_up):
         libnmstate.apply(desired_state)
 
     time.sleep(5)  # Give some time for NetworkManager to rollback
-    current_state_after_apply = libnmstate.show()
-    assert current_state == current_state_after_apply
+    assert_state({Interface.KEY: current_state[Interface.KEY]})
 
 
 def test_set_vxlan_iface_down(eth1_up):

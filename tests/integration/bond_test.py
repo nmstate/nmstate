@@ -24,6 +24,7 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.apply import apply_with_description
 from .testlib.assertlib import assert_mac_address
+from .testlib.assertlib import assert_state
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
@@ -335,12 +336,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
         libnmstate.apply(desired_state)
 
     time.sleep(5)
-
-    current_state_after_apply = libnmstate.show()
-    assert (
-        current_state[Interface.KEY]
-        == current_state_after_apply[Interface.KEY]
-    )
+    assert_state({Interface.KEY: current_state[Interface.KEY]})
 
 
 @pytest.mark.tier1

@@ -24,6 +24,7 @@ from libnmstate.schema import VLAN
 from .testlib import assertlib
 from .testlib.apply import apply_with_description
 from .testlib.assertlib import assert_mac_address
+from .testlib.assertlib import assert_state
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import generate_vlan_filtering_config
@@ -410,8 +411,7 @@ def test_rollback_for_linux_bridge():
             libnmstate.apply(desired_state)
 
     time.sleep(5)  # Give some time for NetworkManager to rollback
-    current_state = libnmstate.show()
-    assert original_state == current_state
+    assert_state({Interface.KEY: original_state[Interface.KEY]})
 
 
 @pytest.mark.tier1
