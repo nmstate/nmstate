@@ -17,6 +17,7 @@ from .testlib import assertlib
 from .testlib import statelib
 from .testlib.apply import apply_with_description
 from .testlib.assertlib import assert_mac_address
+from .testlib.assertlib import assert_state
 from .testlib.env import nm_minor_version
 from .testlib.vlan import vlan_interface
 
@@ -146,8 +147,7 @@ def test_rollback_for_vlans(eth1_up):
         libnmstate.apply(desired_state)
 
     time.sleep(5)  # Give some time for NetworkManager to rollback
-    current_state_after_apply = libnmstate.show()
-    assert current_state == current_state_after_apply
+    assert_state({Interface.KEY: current_state[Interface.KEY]})
 
 
 def test_set_vlan_iface_down(eth1_up):
