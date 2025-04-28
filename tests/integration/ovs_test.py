@@ -1415,7 +1415,7 @@ class TestOvsDpdk:
         assertlib.assert_absent(BRIDGE0)
         assertlib.assert_absent(PORT1)
 
-    def test_create_ovs_dpdk_queue_descriptor(self, datapaths):
+    def test_create_ovs_dpdk_queue_descriptor(self):
         dpdk0_state = {
             OVSInterface.Dpdk.DEVARGS: _test_pci_path(),
             OVSInterface.Dpdk.N_RXQ_DESC: 1024,
