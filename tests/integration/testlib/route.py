@@ -49,6 +49,16 @@ def _clone_prepare_routes(routes, nic=None):
             # Treat no quickack as False
             if Route.QUICKACK not in route:
                 route[Route.QUICKACK] = False
+            # suffix /32 or /128 when missing
+            if "/" not in route[Route.DESTINATION]:
+                if ":" in route[Route.DESTINATION]:
+                    route[Route.DESTINATION] += "/128"
+                else:
+                    route[Route.DESTINATION] += "/32"
+            # kernel automatically set next-hop-interface to lo for IPv6
+            # special type route like blackhole
+            if Route.ROUTETYPE in route and ":" in route[Route.DESTINATION]:
+                route.setdefault(Route.NEXT_HOP_INTERFACE, "lo")
 
             routes_out.append(route)
 
