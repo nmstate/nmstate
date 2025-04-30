@@ -204,6 +204,14 @@ fn main() {
                             "Override interface settings without merge \
                              current network state",
                         ),
+                )
+                .arg(
+                    clap::Arg::new("WAIT_MISSING_IFACE")
+                        .long("wait-missing-iface")
+                        .takes_value(true)
+                        .help(
+                            "Seconds to wait for missing interface to show up",
+                        ),
                 ),
         )
         .subcommand(

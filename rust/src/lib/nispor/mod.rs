@@ -24,7 +24,9 @@ mod veth;
 mod vlan;
 mod vrf;
 mod vxlan;
+mod wait_iface;
 
+pub(crate) use self::wait_iface::wait_iface_async;
 pub(crate) use apply::nispor_apply;
 pub(crate) use hostname::set_running_hostname;
 pub(crate) use show::nispor_retrieve;

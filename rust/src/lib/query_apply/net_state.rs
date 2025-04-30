@@ -3,7 +3,9 @@
 use std::future::Future;
 
 use crate::{
-    nispor::{nispor_apply, nispor_retrieve, set_running_hostname},
+    nispor::{
+        nispor_apply, nispor_retrieve, set_running_hostname, wait_iface_async,
+    },
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
@@ -183,16 +185,6 @@ impl NetworkState {
             }
         }
 
-        if !self.kernel_only {
-            self.apply_with_nm_backend().await
-        } else {
-            // TODO: Need checkpoint for kernel only mode
-            self.apply_without_nm_backend().await
-        }
-    }
-
-    async fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
-        let mut merged_state = None;
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
@@ -209,6 +201,28 @@ impl NetworkState {
             }
         }
 
+        if self.wait_missing_iface_sec > 0 {
+            let ifaces = self
+                .interfaces
+                .get_missing_ifaces(&cur_net_state.interfaces);
+            if !ifaces.is_empty() {
+                wait_iface_async(&ifaces, self.wait_missing_iface_sec).await?;
+            }
+        }
+
+        if !self.kernel_only {
+            self.apply_with_nm_backend(cur_net_state).await
+        } else {
+            // TODO: Need checkpoint for kernel only mode
+            self.apply_without_nm_backend(cur_net_state).await
+        }
+    }
+
+    async fn apply_with_nm_backend(
+        &self,
+        mut cur_net_state: Self,
+    ) -> Result<(), NmstateError> {
+        let mut merged_state = None;
         // At this point, the `unknown` interface type is not resolved yet,
         // hence when user want `enable-and-use` single-transaction for SR-IOV,
         // they need define the interface type. It is overkill to do resolve at
@@ -352,12 +366,10 @@ impl NetworkState {
         .await
     }
 
-    async fn apply_without_nm_backend(&self) -> Result<(), NmstateError> {
-        let mut cur_net_state = NetworkState::new();
-        cur_net_state.set_kernel_only(self.kernel_only);
-        cur_net_state.set_include_secrets(true);
-        cur_net_state.retrieve_async().await?;
-
+    async fn apply_without_nm_backend(
+        &self,
+        cur_net_state: Self,
+    ) -> Result<(), NmstateError> {
         let merged_state = MergedNetworkState::new(
             self.clone(),
             cur_net_state.clone(),

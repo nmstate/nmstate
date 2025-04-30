@@ -10,6 +10,7 @@ use nmstate::NetworkState;
 use crate::{error::CliError, state::state_from_fd};
 
 const DEFAULT_TIMEOUT: u32 = 60;
+const DEFAULT_MISSING_IFACE_TMO: u32 = 60;
 
 pub(crate) fn apply_from_stdin(
     matches: &clap::ArgMatches,
@@ -63,12 +64,39 @@ where
     } else {
         DEFAULT_TIMEOUT
     };
+    let wait_missing_iface = if matches
+        .try_contains_id("WAIT_MISSING_IFACE")
+        .unwrap_or_default()
+    {
+        match matches.try_get_one::<String>("WAIT_MISSING_IFACE") {
+            Ok(Some(t)) => match u32::from_str(t) {
+                Ok(i) => i,
+                Err(e) => {
+                    return Err(CliError {
+                        code: crate::error::EX_DATAERR,
+                        error_msg: e.to_string(),
+                    });
+                }
+            },
+            Ok(None) => DEFAULT_MISSING_IFACE_TMO,
+            Err(e) => {
+                return Err(CliError {
+                    code: crate::error::EX_DATAERR,
+                    error_msg: e.to_string(),
+                });
+            }
+        }
+    } else {
+        // No wait
+        0
+    };
     let mut net_state = state_from_fd(reader)?;
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
     net_state.set_override_iface(override_iface);
+    net_state.set_wait_missing_iface(wait_missing_iface);
     net_state.set_memory_only(
         matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
     );

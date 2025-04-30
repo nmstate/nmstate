@@ -51,6 +51,14 @@ optional = true
 workspace = true
 optional = true
 
+# TODO: Only for demo
+[dependencies.rtnetlink]
+version = "0.16"
+
+# TODO: Only for demo
+[dependencies.futures]
+version = "0.3.11"
+
 [dev-dependencies]
 serde_yaml = { workspace = true }
 

@@ -365,3 +365,77 @@ fn test_unknown_iface_type() {
         "foo_type\n"
     );
 }
+
+#[test]
+fn test_get_missing_iface() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth3
+  type: ethernet
+  state: up
+- name: eth5
+  type: ethernet
+  state: up
+- name: eth7
+  type: ethernet
+  state: up
+- name: eth9
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: eth1
+  type: ethernet
+  state: up
+  controller: vrf0
+- name: eth2
+  type: ethernet
+  state: up
+- name: eth4.100
+  type: vlan
+  state: up
+  vlan:
+    id: 100
+    base-iface: eth4
+- name: bond0
+  type: bond
+  link-aggregation:
+    mode: active-backup
+    ports-config:
+      - name: eth5
+      - name: eth6
+- name: br0
+  type: linux-bridge
+  bridge:
+    ports:
+      - name: eth7
+      - name: eth8
+- name: br1
+  type: ovs-bridge
+  bridge:
+    ports:
+    - name: ovs0
+    - name: bond1
+      link-aggregation:
+        mode: balance-slb
+        port:
+          - name: eth9
+          - name: eth10
+",
+    )
+    .unwrap();
+
+    let mut miss_ifaces = desired.get_missing_ifaces(&current);
+    miss_ifaces.sort();
+
+    assert_eq!(
+        miss_ifaces,
+        vec!["eth10", "eth2", "eth4", "eth6", "eth8", "vrf0"]
+    );
+}

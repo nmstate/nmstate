@@ -126,6 +126,8 @@ pub struct NetworkState {
     pub(crate) memory_only: bool,
     #[serde(skip)]
     pub(crate) override_iface: bool,
+    #[serde(skip)]
+    pub(crate) wait_missing_iface_sec: u32,
 }
 
 impl NetworkState {
@@ -227,6 +229,15 @@ impl NetworkState {
     /// will treat it as disabled regardless current network status.
     pub fn set_override_iface(&mut self, value: bool) -> &mut Self {
         self.override_iface = value;
+        self
+    }
+
+    /// Nmstate by default will treat missing interface as
+    /// `ErrorKind::InvalidArgument` error.
+    /// When set to with non-zero integer, nmstate will wait the missing
+    /// interface to show up within specified seconds.
+    pub fn set_wait_missing_iface(&mut self, wait_time_sec: u32) -> &mut Self {
+        self.wait_missing_iface_sec = wait_time_sec;
         self
     }
 

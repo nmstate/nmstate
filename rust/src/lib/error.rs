@@ -17,6 +17,7 @@ pub enum ErrorKind {
     PolicyError,
     PermissionError,
     SrIovVfNotFound,
+    Timeout,
 }
 
 #[cfg(feature = "query_apply")]

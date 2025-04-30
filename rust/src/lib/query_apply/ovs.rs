@@ -115,6 +115,25 @@ impl OvsBridgeInterface {
             self.bridge.clone_from(&other.bridge);
         }
     }
+
+    pub(crate) fn get_bond_ports(&self) -> Vec<&str> {
+        let mut ret: Vec<&str> = Vec::new();
+        if let Some(ports) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.ports.as_ref())
+        {
+            for bond_port_conf in ports.iter().filter_map(|p| p.bond.as_ref()) {
+                if let Some(bond_ports) = bond_port_conf.ports.as_ref() {
+                    for bond_port in bond_ports {
+                        ret.push(bond_port.name.as_str())
+                    }
+                }
+            }
+        }
+
+        ret
+    }
 }
 
 impl OvsInterface {

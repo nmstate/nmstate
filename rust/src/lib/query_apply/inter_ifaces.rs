@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     state::{gen_diff_json_value, merge_json_value},
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterfaces,
@@ -94,6 +96,58 @@ impl Interfaces {
                 iface.remove_port(&port_name)
             }
         }
+    }
+
+    pub(crate) fn get_missing_ifaces<'a>(
+        &'a self,
+        current: &Self,
+    ) -> Vec<&'a str> {
+        let mut missing_ifaces: HashSet<&str> = HashSet::new();
+        for iface in self.iter().filter(|iface| iface.is_up()) {
+            if iface.iface_type() == InterfaceType::Ethernet
+                && current
+                    .get_iface(iface.name(), iface.iface_type())
+                    .is_none()
+            {
+                missing_ifaces.insert(iface.name());
+            }
+
+            if let Some(ports) = iface.ports() {
+                // OVS bridge missing port will be treated as OVS internal
+                // interface, hence we cannot tell whether it is a missing
+                // OVS system interface, but OVS bond interface are all OVS
+                // system interface
+                if let Interface::OvsBridge(ovs_iface) = iface {
+                    for port in ovs_iface.get_bond_ports() {
+                        if !current.kernel_ifaces.contains_key(port) {
+                            missing_ifaces.insert(port);
+                        }
+                    }
+                } else {
+                    for port in ports {
+                        if !current.kernel_ifaces.contains_key(port) {
+                            missing_ifaces.insert(port);
+                        }
+                    }
+                }
+            }
+            if let Some(parent) = iface.parent() {
+                if !parent.is_empty()
+                    && !current.kernel_ifaces.contains_key(parent)
+                {
+                    missing_ifaces.insert(parent);
+                }
+            }
+
+            if let Some(controller) = iface.base_iface().controller.as_ref() {
+                if !controller.is_empty()
+                    && !current.kernel_ifaces.contains_key(controller)
+                {
+                    missing_ifaces.insert(controller);
+                }
+            }
+        }
+        missing_ifaces.drain().collect()
     }
 }
 
