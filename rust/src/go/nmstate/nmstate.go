@@ -236,3 +236,39 @@ func (n *Nmstate) GenerateConfiguration(state string) (string, error) {
 	}
 	return C.GoString(config), nil
 }
+
+// Validate checks that the given state and policy are syntactically and
+// schema-wise valid. State can be an empty string if only policy validation
+// is needed. Returns any log output, and an error on failure.
+func (n *Nmstate) Validate(state, policy string) (string, error) {
+	var (
+		cState  *C.char
+		cPolicy *C.char
+		cLog    *C.char
+		cKind   *C.char
+		cMsg    *C.char
+	)
+
+	cState = C.CString(state)
+	cPolicy = C.CString(policy)
+	defer C.nmstate_cstring_free(cState)
+	defer C.nmstate_cstring_free(cPolicy)
+
+	rc := C.nmstate_validate(cState, cPolicy, &cLog, &cKind, &cMsg)
+
+	defer func() {
+		C.nmstate_cstring_free(cLog)
+		C.nmstate_cstring_free(cKind)
+		C.nmstate_cstring_free(cMsg)
+	}()
+
+	log := C.GoString(cLog)
+
+	if rc != C.NMSTATE_PASS {
+		kind := C.GoString(cKind)
+		msg := C.GoString(cMsg)
+		return log, fmt.Errorf("validation failed (kind=%s): %s", kind, msg)
+	}
+
+	return log, nil
+}

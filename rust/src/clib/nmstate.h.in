@@ -266,6 +266,43 @@ int nmstate_net_state_from_policy(const char *policy,
                                   char **err_kind,
                                   char **err_msg);
 /**
+ * nmstate_validate - Validate network state and policy syntax/schema
+ *
+ * Version:
+ *      2.2.47
+ *
+ * Description:
+ *      Perform syntax and schema validation on the provided network state
+ *      and policy (in JSON or YAML). The state parameter can be an empty
+ *      string if only policy validation is needed. Only syntax and schema
+ *      are checked at this time; future versions will expand validation.
+ *
+ * @state:
+ *      Pointer to a NUL-terminated char array containing the current
+ *      network state in JSON or YAML. May be empty.
+ * @policy:
+ *      Pointer to a NUL-terminated char array containing the network
+ *      policy in JSON or YAML.
+ * @log:
+ *      Output pointer for log messages (warnings/info). The returned
+ *      buffer must be freed with nmstate_log_free().
+ * @err_kind:
+ *      Output pointer for the error kind string. The returned buffer
+ *      must be freed with nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer for the error message string. The returned buffer
+ *      must be freed with nmstate_err_msg_free().
+ *
+ * Return:
+ *      NMSTATE_PASS on success, NMSTATE_FAIL on syntax/schema/internal error.
+ */
+int nmstate_validate(const char *state,
+                    const char *policy,
+                    char **log,
+                    char **err_kind,
+                    char **err_msg);
+
+/**
  * nmstate_cstring_free - free the memory of C string
  *
  * Version:

@@ -190,3 +190,19 @@ pub use crate::route_rule::{
 };
 #[cfg(feature = "query_apply")]
 pub use crate::statistic::{NmstateFeature, NmstateStatistic};
+
+#[cfg(feature = "query_apply")]
+pub fn validate(state: &str, policy: &str) -> Result<(), NmstateError> {
+    if !state.trim().is_empty() {
+        NetworkState::new_from_yaml(state).map_err(|e| {
+            NmstateError::new(e.kind(), format!("State validation failed: {e}"))
+        })?;
+    }
+    serde_yaml::from_str::<NetworkPolicy>(policy).map_err(|e| {
+        NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!("Policy validation failed: {e}"),
+        )
+    })?;
+    Ok(())
+}

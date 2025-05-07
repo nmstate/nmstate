@@ -74,3 +74,28 @@ func TestGenerateConfiguration(t *testing.T) {
 	assert.NoError(t, err, "must succeed calling nmstate_generate_configurations c binding")
 	assert.NotEmpty(t, config, "config should not be empty")
 }
+
+func TestValidate(t *testing.T) {
+	nms := New()
+
+	state := ``
+	policy := `{
+		"capture": {
+			"ethernets": "interfaces.type==\"ethernet\"",
+			"ethernets-up": "capture.ethernets.interfaces.state==\"up\"",
+			"ethernets-lldp": "capture.ethernets-up | interfaces.lldp.enabled:=true"
+		},
+		"desiredState": {
+			"interfaces": "{{ capture.ethernets-lldp.interfaces }}"
+		}
+     }`
+
+	logOutput, err := nms.Validate(state, policy)
+	assert.NoError(t, err, "Validate should succeed for a valid policy with empty state")
+	assert.NotEmpty(t, logOutput, "validation log should not be empty")
+
+	// Test with invalid policy
+	badPolicy := `{ "capture": [1, 2, 3] }`
+	_, err = nms.Validate(state, badPolicy)
+	assert.Error(t, err, "Validate should fail for invalid policy")
+}
