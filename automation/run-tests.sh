@@ -328,7 +328,6 @@ done
 : ${COMPILED_RPMS_DIR:=""}
 
 if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
-   [ $TEST_TYPE != $TEST_TYPE_LINT ] && \
    [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
     modprobe_ovs
 fi
@@ -370,11 +369,7 @@ if [ -z "${RUN_BAREMETAL}" ] && [ -z "${RUN_K8S}" ];then
     copy_workspace_container
 fi
 
-if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
-   [ $TEST_TYPE != $TEST_TYPE_LINT ] && \
-   [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
-    install_nmstate
-fi
+install_nmstate
 
 if [[ -v PRETEST_EXEC ]];then
     exec_cmd "$PRETEST_EXEC"
