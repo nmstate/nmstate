@@ -1,0 +1,7 @@
+FROM registry.fedoraproject.org/fedora:latest
+
+RUN echo "2025-05-22" > /build_time
+
+RUN dnf update -y && \
+    dnf -y install --setopt=install_weak_deps=False \
+        git yamllint python3-flake8 black && dnf clean all

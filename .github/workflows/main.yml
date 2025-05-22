@@ -115,17 +115,12 @@ jobs:
 
   py_lint:
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - job_type: "c9s-nm_stable-format"
-          - job_type: "c9s-nm_stable-lint"
+    container: quay.io/nmstate/test-env:nmstate-lint
     steps:
       - uses: actions/checkout@v4
       - name: Run tests
         shell: bash
-        run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
+        run: ./automation/run-lint-tests.sh
 
   integ:
     timeout-minutes: 30

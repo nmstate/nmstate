@@ -8,8 +8,6 @@ CONT_EXPORT_DIR="/exported-artifacts"
 CONTAINER_WORKSPACE="/workspace/nmstate"
 
 TEST_TYPE_ALL="all"
-TEST_TYPE_FORMAT="format"
-TEST_TYPE_LINT="lint"
 TEST_TYPE_RUST_GO="rust_go"
 TEST_TYPE_INTEG="integ"
 TEST_TYPE_INTEG_TIER1="integ_tier1"
@@ -75,16 +73,6 @@ function install_nmstate {
 }
 
 function run_tests {
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_FORMAT ];then
-        exec_cmd "tox -e black"
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_LINT ];then
-        exec_cmd "tox -e flake8,yamllint"
-    fi
-
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_RUST_GO ];then
         if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
@@ -316,14 +304,10 @@ while true; do
         echo "[--use-installed-nmstate] [--test-type=<TEST_TYPE>] [--test-vdsm]"
         echo "    Valid TEST_TYPE are:"
         echo "     * $TEST_TYPE_ALL (default)"
-        echo "     * $TEST_TYPE_FORMAT"
-        echo "     * $TEST_TYPE_LINT"
         echo "     * $TEST_TYPE_INTEG"
         echo "     * $TEST_TYPE_INTEG_TIER1"
         echo "     * $TEST_TYPE_INTEG_TIER2"
         echo "     * $TEST_TYPE_INTEG_SLOW"
-        echo "     * $TEST_TYPE_UNIT_PY36"
-        echo "     * $TEST_TYPE_UNIT_PY38"
         echo "     * $TEST_TYPE_RUST_GO"
         echo -n "--customize allows to specify a command to customize the "
         echo "container before running the tests"
