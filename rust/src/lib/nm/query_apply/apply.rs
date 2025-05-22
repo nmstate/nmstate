@@ -236,12 +236,12 @@ async fn delete_ifaces(
                 all_nm_conns
                     .as_slice()
                     .iter()
-                    .filter(|c| c.iface_name() == Some(iface.name()))
+                    .filter(|c| c.iface_name().as_deref() == Some(iface.name()))
                     .collect()
             } else {
                 let nm_iface_type = iface_type_to_nm(&iface.iface_type())?;
                 nm_conns_name_type_index
-                    .get(&(iface.name(), nm_iface_type))
+                    .get(&(iface.name().to_string(), nm_iface_type))
                     .cloned()
                     .unwrap_or_default()
             };
@@ -308,7 +308,7 @@ async fn delete_ifaces(
                             uuids_to_delete.insert(ctrl);
                         }
                     } else if let Some(nm_conns) = nm_conns_name_type_index
-                        .get(&(ctrl, NmIfaceType::OvsPort))
+                        .get(&(ctrl.to_string(), NmIfaceType::OvsPort))
                     {
                         for nm_conn in nm_conns {
                             if let Some(uuid) = nm_conn.uuid() {
@@ -401,7 +401,7 @@ async fn delete_orphan_ports(
                 if let Some(uuid) = nm_conn.uuid() {
                     log::info!(
                         "Deleting NM orphan profile {}/{}: {}",
-                        nm_conn.iface_name().unwrap_or(""),
+                        nm_conn.iface_name().unwrap_or_default(),
                         nm_conn.iface_type().cloned().unwrap_or_default(),
                         uuid
                     );
@@ -561,7 +561,7 @@ fn is_bond_port_queue_id_changed(
 ) -> bool {
     if nm_conn.controller_type() == Some(&NmIfaceType::Bond) {
         if let Some(iface_name) = nm_conn.iface_name() {
-            if changed_ports.contains(&iface_name) {
+            if changed_ports.contains(&iface_name.as_str()) {
                 log::info!(
                     "Reactivating bond port {iface_name} as its queue ID has \
                      changed"

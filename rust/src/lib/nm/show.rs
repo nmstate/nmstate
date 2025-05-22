@@ -220,16 +220,15 @@ pub(crate) fn nm_conn_to_base_iface(
 ) -> Option<BaseInterface> {
     if let Some(iface_name) = nm_conn.iface_name().or_else(|| {
         if nm_conn.iface_type() == Some(&NmIfaceType::Vpn) {
-            nm_conn.id()
+            nm_conn.id().map(|i| i.to_string())
         } else {
             None
         }
     }) {
         let ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
-        let ipv6 = nm_conn
-            .ipv6
-            .as_ref()
-            .map(|nm_ip_set| nm_ip_setting_to_nmstate6(iface_name, nm_ip_set));
+        let ipv6 = nm_conn.ipv6.as_ref().map(|nm_ip_set| {
+            nm_ip_setting_to_nmstate6(iface_name.as_str(), nm_ip_set)
+        });
 
         let mut base_iface = BaseInterface::new();
         base_iface.name = iface_name.to_string();
@@ -391,7 +390,7 @@ fn iface_get(
 
 fn get_first_nm_conn<'a>(
     nm_conns_name_type_index: &'a HashMap<
-        (&'a str, NmIfaceType),
+        (String, NmIfaceType),
         Vec<&'a NmConnection>,
     >,
     name: &'a str,
@@ -403,7 +402,8 @@ fn get_first_nm_conn<'a>(
     } else {
         nm_iface_type.clone()
     };
-    if let Some(nm_conns) = nm_conns_name_type_index.get(&(name, nm_iface_type))
+    if let Some(nm_conns) =
+        nm_conns_name_type_index.get(&(name.to_string(), nm_iface_type))
     {
         if nm_conns.is_empty() {
             None

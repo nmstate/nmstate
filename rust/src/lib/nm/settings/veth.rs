@@ -25,7 +25,7 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
 ) -> Result<NmConnection, NmstateError> {
     for nm_conn in exist_nm_conns {
         if let Some(iface_type) = nm_conn.iface_type() {
-            if nm_conn.iface_name() == Some(peer_name)
+            if nm_conn.iface_name().as_deref() == Some(peer_name)
                 && [NmIfaceType::Ethernet, NmIfaceType::Veth]
                     .contains(iface_type)
             {

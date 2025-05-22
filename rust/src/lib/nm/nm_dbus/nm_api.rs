@@ -278,7 +278,7 @@ impl NmApi<'_> {
                 .unwrap_or("");
             let nm_dev_obj_path = self
                 .get_disk_obj_path(
-                    nm_conn.iface_name().unwrap_or(""),
+                    nm_conn.iface_name().unwrap_or_default().as_str(),
                     mac_address,
                     nm_iface_type,
                 )

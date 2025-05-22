@@ -205,8 +205,23 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
 }
 
 impl NmConnection {
-    pub fn iface_name(&self) -> Option<&str> {
-        _connection_inner_string_member!(self, iface_name)
+    pub fn iface_name(&self) -> Option<String> {
+        if let Some(name) = _connection_inner_string_member!(self, iface_name) {
+            Some(name.to_string())
+        } else if self.iface_type() == Some(&NmIfaceType::Vlan) {
+            // VLAN will use <parent>.<vlan_id> if not defined.
+            if let Some((Some(parent), Some(vlan_id))) = self
+                .vlan
+                .as_ref()
+                .map(|v| (v.parent.as_ref(), v.id.as_ref()))
+            {
+                Some(format!("{parent}.{vlan_id}"))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
     pub fn iface_type(&self) -> Option<&NmIfaceType> {

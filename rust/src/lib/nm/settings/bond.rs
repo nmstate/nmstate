@@ -225,7 +225,7 @@ pub(crate) fn gen_nm_bond_port_setting(
     let mut nm_set = nm_conn.bond_port.as_ref().cloned().unwrap_or_default();
     let bond_port_conf = if let Some(i) = nm_conn
         .iface_name()
-        .and_then(|iface_name| bond_iface.get_port_conf(iface_name))
+        .and_then(|iface_name| bond_iface.get_port_conf(iface_name.as_str()))
     {
         i
     } else {

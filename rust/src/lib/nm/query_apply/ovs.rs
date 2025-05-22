@@ -125,7 +125,7 @@ pub(crate) fn merge_ovs_netdev_tun_iface(
             tun_nm_conns
                 .as_slice()
                 .iter()
-                .find(|c| c.iface_name() == Some(iface.name())),
+                .find(|c| c.iface_name().as_deref() == Some(iface.name())),
         ) {
             if let (Some(mut base_iface), Interface::OvsInterface(oiface)) = (
                 nm_conn_to_base_iface(Some(nm_dev), nm_conn, None, None),

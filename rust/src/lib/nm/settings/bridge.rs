@@ -134,7 +134,7 @@ pub(crate) fn gen_nm_br_port_setting(
     let mut nm_set = nm_conn.bridge_port.as_ref().cloned().unwrap_or_default();
     let br_port_conf = if let Some(i) = nm_conn
         .iface_name()
-        .and_then(|iface_name| br_iface.get_port_conf(iface_name))
+        .and_then(|iface_name| br_iface.get_port_conf(iface_name.as_str()))
     {
         i
     } else {

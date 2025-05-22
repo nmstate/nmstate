@@ -539,7 +539,7 @@ pub(crate) fn get_exist_profile<'a>(
 
         exist_nm_conns.iter().find(|&exist_nm_conn| {
             !exist_nm_conn.is_multi_connect()
-                && exist_nm_conn.iface_name() == Some(iface_name)
+                && exist_nm_conn.iface_name().as_deref() == Some(iface_name)
                 && (exist_nm_conn.iface_type() == Some(&nm_iface_type)
                     || (nm_iface_type == NmIfaceType::Ethernet
                         && exist_nm_conn.iface_type()
