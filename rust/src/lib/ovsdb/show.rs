@@ -16,20 +16,20 @@ use crate::{
 
 use super::db::{parse_str_map, OvsDbConnection, OvsDbEntry};
 
-pub(crate) fn ovsdb_is_running() -> bool {
-    if let Ok(mut cli) = OvsDbConnection::new() {
-        cli.check_connection()
+pub(crate) async fn ovsdb_is_running() -> bool {
+    if let Ok(mut cli) = OvsDbConnection::new().await {
+        cli.check_connection().await
     } else {
         false
     }
 }
 
-pub(crate) fn ovsdb_retrieve() -> Result<NetworkState, NmstateError> {
+pub(crate) async fn ovsdb_retrieve() -> Result<NetworkState, NmstateError> {
     let mut ret = NetworkState::new();
-    let mut cli = OvsDbConnection::new()?;
-    let ovsdb_ifaces = cli.get_ovs_ifaces()?;
-    let ovsdb_brs = cli.get_ovs_bridges()?;
-    let ovsdb_ports = cli.get_ovs_ports()?;
+    let mut cli = OvsDbConnection::new().await?;
+    let ovsdb_ifaces = cli.get_ovs_ifaces().await?;
+    let ovsdb_brs = cli.get_ovs_bridges().await?;
+    let ovsdb_ports = cli.get_ovs_ports().await?;
 
     for ovsdb_br in ovsdb_brs.values() {
         let mut iface = OvsBridgeInterface::new();
@@ -65,7 +65,7 @@ pub(crate) fn ovsdb_retrieve() -> Result<NetworkState, NmstateError> {
         }
     }
 
-    ret.ovsdb = Some(cli.get_global_conf()?);
+    ret.ovsdb = Some(cli.get_global_conf().await?);
 
     Ok(ret)
 }

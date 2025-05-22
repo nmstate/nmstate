@@ -37,17 +37,19 @@ fn convert_map(
 }
 
 impl OvsDbConnection {
-    pub(crate) fn get_global_conf(
+    pub(crate) async fn get_global_conf(
         &mut self,
     ) -> Result<OvsDbGlobalConfig, NmstateError> {
-        let reply = self.transact(&OvsDbMethodTransact {
-            db_name: OVS_DB_NAME.to_string(),
-            operations: vec![OvsDbOperation::Select(OvsDbSelect {
-                table: GLOBAL_CONFIG_TABLE.to_string(),
-                conditions: vec![],
-                columns: Some(vec!["external_ids", "other_config"]),
-            })],
-        })?;
+        let reply = self
+            .transact(&OvsDbMethodTransact {
+                db_name: OVS_DB_NAME.to_string(),
+                operations: vec![OvsDbOperation::Select(OvsDbSelect {
+                    table: GLOBAL_CONFIG_TABLE.to_string(),
+                    conditions: vec![],
+                    columns: Some(vec!["external_ids", "other_config"]),
+                })],
+            })
+            .await?;
 
         if let Some(global_conf) = reply
             .as_array()
@@ -139,7 +141,7 @@ fn append_mutations(
     }
 }
 
-pub(crate) fn ovsdb_apply_global_conf(
+pub(crate) async fn ovsdb_apply_global_conf(
     merged_state: &MergedNetworkState,
 ) -> Result<(), NmstateError> {
     if !merged_state.ovsdb.is_changed() && !merged_state.ovn.is_changed() {
@@ -147,7 +149,7 @@ pub(crate) fn ovsdb_apply_global_conf(
         return Ok(());
     }
 
-    let mut cli = OvsDbConnection::new()?;
+    let mut cli = OvsDbConnection::new().await?;
     let mut operations = Vec::new();
     let mut is_external_ids_purged = false;
 
@@ -229,7 +231,7 @@ pub(crate) fn ovsdb_apply_global_conf(
             db_name: OVS_DB_NAME.to_string(),
             operations,
         };
-        cli.transact(&transact)?;
+        cli.transact(&transact).await?;
     }
     Ok(())
 }

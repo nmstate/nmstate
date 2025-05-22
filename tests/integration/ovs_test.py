@@ -2226,3 +2226,66 @@ def ovs_bridge1_with_bond_as_system_iface(eth1_up, eth2_up):
 def test_ovs_system_iface_link_stable(ovs_bridge1_with_bond_as_system_iface):
     desired_state = ovs_bridge1_with_bond_as_system_iface
     libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def cleanup_test_bridge_afterwards():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE0,
+                    Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+# https://issues.redhat.com/browse/RHEL-93154
+@pytest.mark.tier1
+def test_ovsdb_recv_end_of_message(cleanup_test_bridge_afterwards):
+    # This special cooked YAML just make the OVSDB query reply exactly 4096
+    # bytes which fit exactly single recv/read buffer.
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: ovs1
+          type: ovs-interface
+          state: up
+          ovs-db:
+            external_ids:
+              a: 1
+              b: 2
+              c: 3
+              d: 4
+              f: 4
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+             - name: ovs1
+             - name: ovs2
+             - name: ovs3
+             - name: ovs4
+             - name: ovs5
+             - name: ovs6
+             - name: ovs7
+             - name: ovs8
+             - name: ovs9
+             - name: ovs10
+             - name: ovs11
+             - name: ovs12
+             - name: ovs13
+             - name: ovs14
+             - name: ovs15
+             - name: ovs16
+             - name: ovs17
+            """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
