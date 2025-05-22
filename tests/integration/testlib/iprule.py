@@ -37,24 +37,26 @@ def ip_rule_exist_in_os(rule):
     logging.debug(f"Current ip rules in OS: {result[1]}")
     assert result[0] == 0
     current_rules = json.loads(result[1])
-    found = True
+    found = False
     for rule in current_rules:
-        if rule.get("src") == "all" or rule.get("dst") == "all":
-            continue
+        logging.debug(f"Checking ip rule is OS: {rule}")
+        found = True
 
         if rule.get("table") == "main":
             rule["table"] = f"{iplib.KERNEL_MAIN_ROUTE_TABLE_ID}"
+        if rule.get("src") not in (None, "all"):
+            rule["src"] = iplib.to_ip_address_full(
+                rule["src"], rule.get("srclen")
+            )
+        if rule.get("dst") not in (None, "all"):
+            rule["dst"] = iplib.to_ip_address_full(
+                rule["dst"], rule.get("dstlen")
+            )
 
-        logging.debug(f"Checking ip rule is OS: {rule}")
-        found = True
-        if ip_from and ip_from != iplib.to_ip_address_full(
-            rule["src"], rule.get("srclen")
-        ):
+        if ip_from is not None and rule["src"] != ip_from:
             found = False
             continue
-        if ip_to and ip_to != iplib.to_ip_address_full(
-            rule["dst"], rule.get("dstlen")
-        ):
+        if ip_to is not None and rule.get("dst") != ip_to:
             found = False
             continue
         if priority is not None and rule["priority"] != priority:
