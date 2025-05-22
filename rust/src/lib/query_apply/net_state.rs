@@ -107,8 +107,8 @@ impl NetworkState {
         self.routes = state.routes;
         self.rules = state.rules;
         self.dns = state.dns;
-        if ovsdb_is_running() {
-            match ovsdb_retrieve() {
+        if ovsdb_is_running().await {
+            match ovsdb_retrieve().await {
                 Ok(mut ovsdb_state) => {
                     ovsdb_state.isolate_ovn()?;
                     self.update_state(&ovsdb_state);
@@ -163,7 +163,7 @@ impl NetworkState {
                  {MAX_SUPPORTED_INTERFACES} in desired state",
             );
         }
-        if self.interfaces.has_up_ovs_iface() && !ovsdb_is_running() {
+        if self.interfaces.has_up_ovs_iface() && !ovsdb_is_running().await {
             if self.no_verify {
                 log::warn!(
                     "Desired state contains OVS interfaces, but not able to \
@@ -323,8 +323,8 @@ impl NetworkState {
         with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || async {
             nm_checkpoint_timeout_extend(checkpoint, timeout).await?;
             nm_apply(merged_state, checkpoint, timeout).await?;
-            if ovsdb_is_running() {
-                ovsdb_apply_global_conf(merged_state)?;
+            if ovsdb_is_running().await {
+                ovsdb_apply_global_conf(merged_state).await?;
             }
             if let Some(running_hostname) =
                 self.hostname.as_ref().and_then(|c| c.running.as_ref())

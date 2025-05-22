@@ -45,47 +45,49 @@ impl OvsDbConnection {
     }
 
     // TODO: support environment variable OVS_DB_UNIX_SOCKET_PATH
-    pub(crate) fn new() -> Result<Self, NmstateError> {
+    pub(crate) async fn new() -> Result<Self, NmstateError> {
         Ok(Self {
-            rpc: OvsDbJsonRpc::connect(DEFAULT_OVS_DB_SOCKET_PATH)?,
+            rpc: OvsDbJsonRpc::connect(DEFAULT_OVS_DB_SOCKET_PATH).await?,
             transaction_id: 0,
         })
     }
 
-    pub(crate) fn check_connection(&mut self) -> bool {
+    pub(crate) async fn check_connection(&mut self) -> bool {
         let transaction_id = self.get_transaction_id();
         let value = OvsDbMethodEcho::to_value(transaction_id);
-        if self.rpc.send(&value).is_ok() {
-            self.rpc.recv(transaction_id).is_ok()
+        if self.rpc.send(&value).await.is_ok() {
+            self.rpc.recv(transaction_id).await.is_ok()
         } else {
             false
         }
     }
 
-    pub(crate) fn transact(
+    pub(crate) async fn transact(
         &mut self,
         transact: &OvsDbMethodTransact,
     ) -> Result<Value, NmstateError> {
         let transaction_id = self.get_transaction_id();
         let value = transact.to_value(transaction_id);
-        self.rpc.send(&value)?;
-        let reply = self.rpc.recv(transaction_id)?;
+        self.rpc.send(&value).await?;
+        let reply = self.rpc.recv(transaction_id).await?;
         check_transact_error(reply)
     }
 
-    fn _get_ovs_entry(
+    async fn _get_ovs_entry(
         &mut self,
         table_name: &str,
         columns: Vec<&'static str>,
     ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
-        let reply = self.transact(&OvsDbMethodTransact {
-            db_name: OVS_DB_NAME.to_string(),
-            operations: vec![OvsDbOperation::Select(OvsDbSelect {
-                table: table_name.to_string(),
-                conditions: vec![],
-                columns: Some(columns),
-            })],
-        })?;
+        let reply = self
+            .transact(&OvsDbMethodTransact {
+                db_name: OVS_DB_NAME.to_string(),
+                operations: vec![OvsDbOperation::Select(OvsDbSelect {
+                    table: table_name.to_string(),
+                    conditions: vec![],
+                    columns: Some(columns),
+                })],
+            })
+            .await?;
 
         let mut ret: HashMap<String, OvsDbEntry> = HashMap::new();
 
@@ -116,7 +118,7 @@ impl OvsDbConnection {
         }
     }
 
-    pub(crate) fn get_ovs_ifaces(
+    pub(crate) async fn get_ovs_ifaces(
         &mut self,
     ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
         self._get_ovs_entry(
@@ -131,9 +133,10 @@ impl OvsDbConnection {
                 "options",
             ],
         )
+        .await
     }
 
-    pub(crate) fn get_ovs_ports(
+    pub(crate) async fn get_ovs_ports(
         &mut self,
     ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
         self._get_ovs_entry(
@@ -153,9 +156,10 @@ impl OvsDbConnection {
                 "lacp",
             ],
         )
+        .await
     }
 
-    pub(crate) fn get_ovs_bridges(
+    pub(crate) async fn get_ovs_bridges(
         &mut self,
     ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
         self._get_ovs_entry(
@@ -173,6 +177,7 @@ impl OvsDbConnection {
                 "datapath_type",
             ],
         )
+        .await
     }
 }
 
