@@ -327,10 +327,7 @@ done
 : ${INSTALL_DEPS:="false"}
 : ${COMPILED_RPMS_DIR:=""}
 
-if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
-   [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
-    modprobe_ovs
-fi
+modprobe_ovs
 
 if [ -n "${RUN_BAREMETAL}" ];then
     CONTAINER_WORKSPACE="."
