@@ -8,7 +8,7 @@ from libnmstate.schema import RouteRule
 from . import cmdlib
 
 
-def ip_rule_exist_in_os(rule):
+def ip_rule_exist_in_os(rule, unique=True):
     ip_from = rule.get(RouteRule.IP_FROM)
     ip_to = rule.get(RouteRule.IP_TO)
     priority = rule.get(RouteRule.PRIORITY)
@@ -38,6 +38,7 @@ def ip_rule_exist_in_os(rule):
     assert result[0] == 0
     current_rules = json.loads(result[1])
     found = False
+    matches_count = 0
     for rule in current_rules:
         logging.debug(f"Checking ip rule is OS: {rule}")
         found = True
@@ -84,7 +85,10 @@ def ip_rule_exist_in_os(rule):
             found = False
             continue
         if found:
-            break
+            if unique:
+                matches_count += 1
+            else:
+                break
     if not found:
         logging.debug(f"Failed to find expected ip rule: {expected_rule}")
-    assert found
+    assert found if not unique else matches_count == 1

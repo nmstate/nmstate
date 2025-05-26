@@ -601,6 +601,10 @@ impl MergedRouteRules {
     }
 }
 
+/// Set a proper priority on rules with USE_DEFAULT_PRIORITY: if a matching
+/// rule already existed, use its priority so we don't create a new one. If
+/// not, use an increasing priority number so we don't create rules with the
+/// same priority.
 fn set_auto_priority(
     for_apply: &mut [RouteRuleEntry],
     merged: &[RouteRuleEntry],
@@ -615,8 +619,18 @@ fn set_auto_priority(
             && (r.priority.is_none()
                 || r.priority == Some(RouteRuleEntry::USE_DEFAULT_PRIORITY))
     }) {
-        max_priority += 1;
-        rule.priority = Some(max_priority);
+        let cur_prio =
+            merged.iter().find_map(|cur_rule| match cur_rule.priority {
+                Some(RouteRuleEntry::USE_DEFAULT_PRIORITY) => None,
+                Some(n) => rule.is_match(cur_rule).then_some(n),
+                None => None,
+            });
+        if cur_prio.is_some() {
+            rule.priority = cur_prio;
+        } else {
+            max_priority += 1;
+            rule.priority = Some(max_priority);
+        }
     }
 }
 
