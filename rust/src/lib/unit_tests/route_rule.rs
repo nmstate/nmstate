@@ -320,3 +320,119 @@ fn test_route_rule_auto_priority_increasing_from_empty() {
     );
     assert_eq!(rules[2].priority, Some(30002));
 }
+
+#[test]
+fn test_route_rule_auto_priority_existing() {
+    let des_rules: RouteRules = serde_yaml::from_str(
+        r"
+        config:
+        - ip-to: 192.168.2.30
+          route-table: 200
+          family: ipv4
+        - ip-to: 192.168.2.31
+          route-table: 200
+          family: ipv4
+        - ip-to: 192.168.2.32
+          route-table: 200
+          family: ipv4
+        ",
+    )
+    .unwrap();
+
+    let cur_rules: RouteRules = serde_yaml::from_str(
+        r"
+        config:
+        - ip-to: 192.168.2.30
+          priority: 100
+          route-table: 200
+          family: ipv4
+        - ip-to: 192.168.2.31
+          priority: 30001
+          route-table: 200
+          family: ipv4
+        - ip-to: 192.168.2.32
+          priority: 101
+          route-table: 200
+          family: ipv4
+        ",
+    )
+    .unwrap();
+
+    let merged = MergedRouteRules::new(des_rules, cur_rules).unwrap();
+
+    let mut rules = merged.for_apply;
+    rules.sort_unstable();
+
+    assert_eq!(rules.len(), 3);
+    assert_eq!(
+        rules[0].ip_to.as_ref().map(|i| i.to_string()),
+        Some("192.168.2.30/32".to_string())
+    );
+    assert_eq!(rules[0].priority, Some(100));
+    assert_eq!(
+        rules[1].ip_to.as_ref().map(|i| i.to_string()),
+        Some("192.168.2.31/32".to_string())
+    );
+    assert_eq!(rules[1].priority, Some(30001));
+    assert_eq!(
+        rules[2].ip_to.as_ref().map(|i| i.to_string()),
+        Some("192.168.2.32/32".to_string())
+    );
+    assert_eq!(rules[2].priority, Some(101));
+}
+
+#[test]
+fn test_route_rule_auto_priority_some_existing_and_some_new() {
+    let des_rules: RouteRules = serde_yaml::from_str(
+        r"
+        config:
+        - ip-to: 192.168.2.30
+          route-table: 200
+          family: ipv4
+        - ip-to: 192.168.2.31
+          route-table: 200
+          family: ipv4
+        - ip-to: 192.168.2.32
+          route-table: 200
+          family: ipv4
+        ",
+    )
+    .unwrap();
+
+    let cur_rules: RouteRules = serde_yaml::from_str(
+        r"
+        config:
+        - ip-to: 192.168.2.30
+          priority: 100
+          route-table: 200
+          family: ipv4
+        - ip-to: 192.168.2.100
+          priority: 30001
+          route-table: 200
+          family: ipv4
+        ",
+    )
+    .unwrap();
+
+    let merged = MergedRouteRules::new(des_rules, cur_rules).unwrap();
+
+    let mut rules = merged.for_apply;
+    rules.sort_unstable();
+
+    assert_eq!(rules.len(), 3);
+    assert_eq!(
+        rules[0].ip_to.as_ref().map(|i| i.to_string()),
+        Some("192.168.2.30/32".to_string())
+    );
+    assert_eq!(rules[0].priority, Some(100));
+    assert_eq!(
+        rules[1].ip_to.as_ref().map(|i| i.to_string()),
+        Some("192.168.2.31/32".to_string())
+    );
+    assert_eq!(rules[1].priority, Some(30002));
+    assert_eq!(
+        rules[2].ip_to.as_ref().map(|i| i.to_string()),
+        Some("192.168.2.32/32".to_string())
+    );
+    assert_eq!(rules[2].priority, Some(30003));
+}
