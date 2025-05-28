@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.45] - 2025-05-28
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - ovs: Fix stuck on `nmstatectl show`. (58a63914)
+ - route rule: ensure idempotency for USE_DEFAULT_PRIORITY. (2f607651)
+ - route rule: avoid adding twice to merged state. (3537f890)
+
 ## [2.2.44] - 2025-04-17
 ### Breaking changes
  - N/A
