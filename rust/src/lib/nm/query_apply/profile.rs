@@ -186,6 +186,12 @@ async fn _activate_nm_profiles(
                     nm_conn.iface_name().unwrap_or(""),
                     nm_conn.iface_type().cloned().unwrap_or_default(),
                 ));
+                log::info!(
+                    "Activating connection {}: {}/{}",
+                    uuid,
+                    nm_conn.iface_name().unwrap_or(""),
+                    nm_conn.iface_type().cloned().unwrap_or_default()
+                );
                 if let Err(e) = nm_api
                     .connection_activate(uuid)
                     .await
