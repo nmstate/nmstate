@@ -38,7 +38,8 @@ pub(crate) fn nm_gen_conf(
         &merged_state,
         &Vec::new(),
         &Vec::new(),
-        true, // gen_conf mode
+        true,  // gen_conf mode
+        false, // is_retry
     )?
     .to_store;
 
