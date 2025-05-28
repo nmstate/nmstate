@@ -320,35 +320,39 @@ impl NetworkState {
     ) -> Result<(), NmstateError> {
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
-        with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || async {
-            nm_checkpoint_timeout_extend(checkpoint, timeout).await?;
-            nm_apply(merged_state, checkpoint, timeout).await?;
-            if ovsdb_is_running().await {
-                ovsdb_apply_global_conf(merged_state).await?;
-            }
-            if let Some(running_hostname) =
-                self.hostname.as_ref().and_then(|c| c.running.as_ref())
-            {
-                set_running_hostname(running_hostname)?;
-            }
-            if !self.no_verify {
-                with_retry(
-                    VERIFY_RETRY_INTERVAL_MILLISECONDS,
-                    retry_count,
-                    || async {
-                        nm_checkpoint_timeout_extend(checkpoint, timeout)
-                            .await?;
-                        let mut new_cur_net_state = cur_net_state.clone();
-                        new_cur_net_state.set_include_secrets(true);
-                        new_cur_net_state.retrieve_async().await?;
-                        merged_state.verify(&new_cur_net_state)
-                    },
-                )
-                .await
-            } else {
-                Ok(())
-            }
-        })
+        with_retry(
+            RETRY_NM_INTERVAL_MILLISECONDS,
+            RETRY_NM_COUNT,
+            |is_retry| async move {
+                nm_checkpoint_timeout_extend(checkpoint, timeout).await?;
+                nm_apply(merged_state, checkpoint, timeout, is_retry).await?;
+                if ovsdb_is_running().await {
+                    ovsdb_apply_global_conf(merged_state).await?;
+                }
+                if let Some(running_hostname) =
+                    self.hostname.as_ref().and_then(|c| c.running.as_ref())
+                {
+                    set_running_hostname(running_hostname)?;
+                }
+                if !self.no_verify {
+                    with_retry(
+                        VERIFY_RETRY_INTERVAL_MILLISECONDS,
+                        retry_count,
+                        |_| async {
+                            nm_checkpoint_timeout_extend(checkpoint, timeout)
+                                .await?;
+                            let mut new_cur_net_state = cur_net_state.clone();
+                            new_cur_net_state.set_include_secrets(true);
+                            new_cur_net_state.retrieve_async().await?;
+                            merged_state.verify(&new_cur_net_state)
+                        },
+                    )
+                    .await
+                } else {
+                    Ok(())
+                }
+            },
+        )
         .await
     }
 
@@ -375,7 +379,7 @@ impl NetworkState {
             with_retry(
                 VERIFY_RETRY_INTERVAL_MILLISECONDS,
                 VERIFY_RETRY_COUNT_KERNEL_MODE,
-                || async {
+                |_| async {
                     let mut new_cur_net_state = cur_net_state.clone();
                     new_cur_net_state.retrieve_async().await?;
                     merged_state.verify(&new_cur_net_state)
@@ -480,13 +484,14 @@ async fn with_retry<T, Fut>(
     func: T,
 ) -> Result<(), NmstateError>
 where
-    T: FnOnce() -> Fut + Copy,
+    T: FnOnce(bool) -> Fut + Copy,
     // Once `std::ops::AsyncFnOnce` is stable, use it instead
     Fut: Future<Output = Result<(), NmstateError>>,
 {
     let mut cur_count = 0usize;
     while cur_count < count {
-        if let Err(e) = func().await {
+        let is_retry = cur_count != 0;
+        if let Err(e) = func(is_retry).await {
             if cur_count == count - 1 || !e.kind().can_retry() {
                 if e.kind().can_ignore() {
                     return Ok(());

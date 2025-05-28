@@ -22,6 +22,7 @@ pub(crate) fn perpare_nm_conns(
     exist_nm_conns: &[NmConnection],
     nm_acs: &[NmActiveConnection],
     gen_conf_mode: bool,
+    is_retry: bool,
 ) -> Result<PerparedNmConnections, NmstateError> {
     let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
@@ -75,12 +76,13 @@ pub(crate) fn perpare_nm_conns(
             gen_conf_mode,
         )? {
             if iface.is_up()
-                && !can_skip_activation(
-                    merged_iface,
-                    &merged_state.interfaces,
-                    &nm_conn,
-                    exist_nm_conns,
-                )
+                && (is_retry
+                    || !can_skip_activation(
+                        merged_iface,
+                        &merged_state.interfaces,
+                        &nm_conn,
+                        exist_nm_conns,
+                    ))
             {
                 nm_conns_to_activate.push(nm_conn.clone());
             }

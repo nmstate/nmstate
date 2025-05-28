@@ -43,6 +43,7 @@ pub(crate) async fn nm_apply(
     merged_state: &MergedNetworkState,
     checkpoint: &str,
     timeout: u32,
+    is_retry: bool,
 ) -> Result<(), NmstateError> {
     let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
     let mut nm_route_remove_needs_deactivate = true;
@@ -152,6 +153,7 @@ pub(crate) async fn nm_apply(
         exist_nm_conns.as_slice(),
         nm_acs.as_slice(),
         false,
+        is_retry,
     )?;
 
     let nm_ac_uuids: Vec<&str> =
