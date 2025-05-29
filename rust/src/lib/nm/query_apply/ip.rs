@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
 use std::ops::BitXor;
 
 use super::super::nm_dbus::{
@@ -249,8 +250,8 @@ pub(crate) fn query_nmstate_wait_ip(
 fn nm_rules_to_nmstate(
     is_ipv6: bool,
     ip_set: &NmSettingIp,
-) -> Option<Vec<RouteRuleEntry>> {
-    let mut ret = Vec::new();
+) -> Option<HashSet<RouteRuleEntry>> {
+    let mut ret = HashSet::new();
     for nm_rule in ip_set.route_rules.as_slice() {
         let mut rule = RouteRuleEntry::new();
         if is_ipv6 {
@@ -307,7 +308,7 @@ fn nm_rules_to_nmstate(
                 }
             });
         }
-        ret.push(rule);
+        ret.insert(rule);
     }
     Some(ret)
 }

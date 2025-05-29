@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
@@ -191,7 +192,7 @@ pub struct InterfaceIpv4 {
     /// Deserialize from `dhcp-custom-hostname`
     pub dhcp_custom_hostname: Option<String>,
     pub(crate) dns: Option<DnsClientState>,
-    pub(crate) rules: Option<Vec<RouteRuleEntry>>,
+    pub(crate) rules: Option<HashSet<RouteRuleEntry>>,
 }
 
 impl InterfaceIpv4 {
@@ -547,7 +548,7 @@ pub struct InterfaceIpv6 {
     pub dhcp_custom_hostname: Option<String>,
 
     pub(crate) dns: Option<DnsClientState>,
-    pub(crate) rules: Option<Vec<RouteRuleEntry>>,
+    pub(crate) rules: Option<HashSet<RouteRuleEntry>>,
 }
 
 impl InterfaceIpv6 {

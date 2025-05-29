@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     ErrorKind, MergedInterfaces, MergedNetworkState, NmstateError, RouteEntry,
     RouteRuleEntry,
@@ -94,7 +96,7 @@ fn apply_absent_rule(
             }
         }
 
-        let mut remain_rules = Vec::new();
+        let mut remain_rules = HashSet::new();
         if absent_rule.is_ipv6() {
             let full_rules = if let Some(rules) = iface
                 .for_apply
@@ -113,7 +115,7 @@ fn apply_absent_rule(
             if let Some(rules) = full_rules {
                 for rule in rules {
                     if !absent_rule.is_match(rule) {
-                        remain_rules.push(rule.clone());
+                        remain_rules.insert(rule.clone());
                     }
                 }
             }
@@ -142,7 +144,7 @@ fn apply_absent_rule(
             if let Some(rules) = full_rules {
                 for rule in rules {
                     if !absent_rule.is_match(rule) {
-                        remain_rules.push(rule.clone());
+                        remain_rules.insert(rule.clone());
                     }
                 }
             }
@@ -182,19 +184,16 @@ fn append_route_rule(
                 {
                     // When desired state has no rules defined, we should
                     // copy current rules first, then append.
-                    if ip_conf.rules.is_none() {
-                        ip_conf.rules = iface
+                    let rules = ip_conf.rules.get_or_insert_with(|| {
+                        iface
                             .merged
                             .base_iface()
                             .ipv6
                             .as_ref()
-                            .and_then(|i| i.rules.clone());
-                    }
-                    if let Some(rules) = ip_conf.rules.as_mut() {
-                        rules.push(rule.clone());
-                    } else {
-                        ip_conf.rules = Some(vec![rule.clone()]);
-                    }
+                            .and_then(|ipv6| ipv6.rules.clone())
+                            .unwrap_or_default()
+                    });
+                    rules.insert(rule.clone());
                 }
             } else {
                 if apply_iface.base_iface().ipv4.is_none() {
@@ -208,19 +207,16 @@ fn append_route_rule(
                 {
                     // When desired state has no rules defined, we should
                     // copy current rules first, then append.
-                    if ip_conf.rules.is_none() {
-                        ip_conf.rules = iface
+                    let rules = ip_conf.rules.get_or_insert_with(|| {
+                        iface
                             .merged
                             .base_iface()
                             .ipv4
                             .as_ref()
-                            .and_then(|i| i.rules.clone());
-                    }
-                    if let Some(rules) = ip_conf.rules.as_mut() {
-                        rules.push(rule.clone());
-                    } else {
-                        ip_conf.rules = Some(vec![rule.clone()]);
-                    }
+                            .and_then(|ipv4| ipv4.rules.clone())
+                            .unwrap_or_default()
+                    });
+                    rules.insert(rule.clone());
                 }
             }
         }
