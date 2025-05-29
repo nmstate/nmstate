@@ -10,8 +10,8 @@ use crate::{
 const AF_INET6: i32 = 10;
 const AF_INET: i32 = 2;
 
-pub(crate) fn gen_nm_ip_rules(
-    rules: &[RouteRuleEntry],
+pub(crate) fn gen_nm_ip_rules<'a>(
+    rules: impl IntoIterator<Item = &'a RouteRuleEntry>,
     is_ipv6: bool,
 ) -> Result<Vec<NmIpRouteRule>, NmstateError> {
     let mut ret = Vec::new();
