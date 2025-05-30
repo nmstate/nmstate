@@ -92,6 +92,7 @@ pub(crate) fn reselect_dns_ifaces(
         cur_v4_ifaces,
         nm_acs,
         nm_devs,
+        false,
     )
     .unwrap_or_default();
 
@@ -105,6 +106,7 @@ pub(crate) fn reselect_dns_ifaces(
             cur_v6_ifaces,
             nm_acs,
             nm_devs,
+            false,
         )
     })
     .unwrap_or_default();
@@ -124,12 +126,15 @@ fn find_dns_iface(
     cur_dns_ifaces: &[String],
     nm_acs: &[NmActiveConnection],
     nm_devs: &[NmDevice],
+    desired_only: bool,
 ) -> Option<String> {
     // Try using current DNS interface if in desired list
-    for iface_name in cur_dns_ifaces {
-        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-            if iface.is_changed() && iface.is_iface_valid_for_dns(is_ipv6) {
-                return Some(iface_name.to_string());
+    if !desired_only {
+        for iface_name in cur_dns_ifaces {
+            if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+                if iface.is_changed() && iface.is_iface_valid_for_dns(is_ipv6) {
+                    return Some(iface_name.to_string());
+                }
             }
         }
     }
@@ -182,6 +187,10 @@ fn find_dns_iface(
                 return Some(iface_name.to_string());
             }
         }
+    }
+
+    if desired_only {
+        return None;
     }
 
     let mut cur_iface_names: Vec<&str> = merged_ifaces
@@ -912,4 +921,33 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
 
 fn is_supported_kernel_iface(nm_iface_type: &NmIfaceType) -> bool {
     SUPPORT_NM_KERNEL_IFACES.contains(nm_iface_type)
+}
+
+// Use first desired interface with IP enabled to stored desired DNS.
+// Do nothing when:
+//  * Mixing IPv4 and IPv6 DNS server.
+//  * No desired interface has IP enabled in desired state(ignore current state
+//    because we don't want to touch IP config unless desired)
+//  * ipv6 link local address as DNS nameserver. It should be handled by
+//    `reselect_dns_ifaces()`
+#[cfg(feature = "query_apply")]
+pub(crate) fn store_dns_config_to_desired_iface(
+    merged_state: &mut MergedNetworkState,
+) {
+    let srvs = merged_state.dns.servers.as_slice();
+
+    //  Mixing IPv4 and IPv6 DNS server. (Cannot split them into ipv4.dns and
+    //  ipv6.dns section but still preserve desired order)
+    if srvs.len() > 2 && is_mixed_dns_servers(srvs) {
+        return;
+    }
+
+    let v4_iface_name =
+        find_dns_iface(false, &merged_state.interfaces, &[], &[], &[], true)
+            .unwrap_or_default();
+    let v6_iface_name =
+        find_dns_iface(true, &merged_state.interfaces, &[], &[], &[], true)
+            .unwrap_or_default();
+
+    save_dns_to_iface(&v4_iface_name, &v6_iface_name, merged_state).ok();
 }
