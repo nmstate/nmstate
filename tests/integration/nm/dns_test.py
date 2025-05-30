@@ -302,3 +302,28 @@ def test_reselect_iface_dns_if_desired(eth1_up):
     assert cmdlib.exec_cmd(
         "nmcli -g ipv4.dns c show eth1".split(), check=True
     )[1].strip() == ",".join(TEST_DNS_SRVS)
+
+
+# https://issues.redhat.com/browse/RHEL-91250
+@pytest.mark.tier1
+def test_write_both_global_dns_and_iface_dns(eth1_up):
+
+    state = load_yaml(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv4:
+            dhcp: true
+            auto-dns: false
+            enabled: true
+        """
+    )
+    state[DNS.KEY] = {DNS.CONFIG: {DNS.SERVER: TEST_DNS_SRVS}}
+
+    libnmstate.apply(state)
+    assert_global_dns(TEST_DNS_SRVS)
+    assert cmdlib.exec_cmd(
+        "nmcli -g ipv4.dns c show eth1".split(), check=True
+    )[1].strip() == ",".join(TEST_DNS_SRVS)

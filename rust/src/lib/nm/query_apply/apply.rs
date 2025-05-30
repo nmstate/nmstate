@@ -4,7 +4,10 @@ use std::collections::HashSet;
 
 use super::super::{
     device::create_index_for_nm_devs,
-    dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
+    dns::{
+        store_dns_config_to_desired_iface, store_dns_config_to_iface,
+        store_dns_search_or_option_to_iface,
+    },
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection, NmIfaceType, NmVersion, NmVersionInfo},
     profile::{perpare_nm_conns, PerparedNmConnections},
@@ -134,6 +137,10 @@ pub(crate) async fn nm_apply(
                 merged_state.dns.options.as_slice(),
             )
             .await?;
+            // Still store DNS into desired interface to provides backwards
+            // compatibility for user who uses NM keyfiles only:
+            // https://github.com/coreos/fedora-coreos-tracker/issues/1947
+            store_dns_config_to_desired_iface(&mut merged_state);
         }
     }
     let PerparedNmConnections {
