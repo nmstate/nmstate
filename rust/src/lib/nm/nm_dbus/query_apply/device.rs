@@ -45,6 +45,7 @@ const NM_DEVICE_TYPE_WIREGUARD: u32 = 29;
 const NM_DEVICE_TYPE_WIFI_P2P: u32 = 30;
 const NM_DEVICE_TYPE_VRF: u32 = 31;
 const NM_DEVICE_TYPE_LOOPBACK: u32 = 32;
+const NM_DEVICE_TYPE_HSR: u32 = 33;
 const NM_DEVICE_TYPE_IPVLAN: u32 = 34;
 
 async fn nm_dev_name_get(
@@ -112,6 +113,7 @@ async fn nm_dev_iface_type_get(
             NM_DEVICE_TYPE_WIFI_P2P => NmIfaceType::WifiP2p,
             NM_DEVICE_TYPE_VRF => NmIfaceType::Vrf,
             NM_DEVICE_TYPE_LOOPBACK => NmIfaceType::Loopback,
+            NM_DEVICE_TYPE_HSR => NmIfaceType::Hsr,
             NM_DEVICE_TYPE_IPVLAN => NmIfaceType::Ipvlan,
             _ => NmIfaceType::Other(format!("unknown({i})")),
         }),
