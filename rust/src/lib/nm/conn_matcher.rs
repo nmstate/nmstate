@@ -364,6 +364,13 @@ impl NmConnectionMatcher {
     ) -> Option<&NmConnection> {
         self.applied_by_uuid.get(uuid).map(Rc::as_ref)
     }
+
+    pub(crate) fn get_nm_ac_by_uuid(
+        &self,
+        uuid: &str,
+    ) -> Option<&NmActiveConnection> {
+        self.acs_by_uuid.get(uuid).map(Rc::as_ref)
+    }
 }
 
 const NM_IFACE_TYPES_USE_PARENT_MAC: [NmIfaceType; 3] =

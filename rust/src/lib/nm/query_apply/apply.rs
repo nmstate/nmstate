@@ -195,7 +195,12 @@ pub(crate) async fn nm_apply(
         .await?;
     }
 
-    activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice()).await?;
+    activate_nm_profiles(
+        &mut nm_api,
+        nm_conns_to_activate.as_slice(),
+        &conn_matcher,
+    )
+    .await?;
 
     deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())
         .await?;
