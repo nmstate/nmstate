@@ -374,6 +374,8 @@ pub struct NmSettingConnection {
     pub lldp: Option<bool>,
     pub mptcp_flags: Option<u32>,
     pub multi_connect: Option<NmConnectionMultiConnect>,
+    /// The last successful activation time since EPOCH in seconds.
+    pub timestamp: Option<u64>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -405,6 +407,7 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
             mptcp_flags: _from_map!(v, "mptcp-flags", u32::try_from)?,
             multi_connect: _from_map!(v, "multi-connect", i32::try_from)?
                 .map(NmConnectionMultiConnect::from),
+            timestamp: _from_map!(v, "timestamp", u64::try_from)?,
             _other: v,
         })
     }
@@ -457,6 +460,9 @@ impl ToDbusValue for NmSettingConnection {
                 None => zvariant::Value::new(NM_AUTOCONENCT_PORT_DEFAULT),
             },
         );
+        if let Some(v) = self.timestamp {
+            ret.insert("timestamp", zvariant::Value::new(v));
+        }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
         }));
