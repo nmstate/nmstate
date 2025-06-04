@@ -17,6 +17,7 @@ pub struct NmActiveConnection {
     pub iface_type: NmIfaceType,
     pub iface_name: String,
     pub state_flags: u32,
+    pub dev_obj_path: Option<String>,
 }
 
 #[cfg(feature = "query_apply")]
@@ -102,15 +103,15 @@ pub(crate) async fn get_nm_ac_by_obj_path(
     if (!nm_conn_obj_path.is_empty()) && nm_conn_obj_path != "/" {
         let nm_conn =
             nm_con_get_from_obj_path(connection, &nm_conn_obj_path).await?;
+        let nm_dev_obj_path =
+            nm_ac_obj_path_nm_dev_obj_path_get(connection, obj_path).await?;
+
         let iface_name = match nm_conn.iface_name() {
             Some(i) => i.to_string(),
             None => {
                 // Try to get interface name from NmDevice
-                if let Some(nm_dev_obj_path) =
-                    nm_ac_obj_path_nm_dev_obj_path_get(connection, obj_path)
-                        .await?
-                {
-                    nm_dev_from_obj_path(connection, &nm_dev_obj_path)
+                if let Some(nm_dev_obj_path) = nm_dev_obj_path.as_ref() {
+                    nm_dev_from_obj_path(connection, nm_dev_obj_path)
                         .await?
                         .name
                 } else {
@@ -125,6 +126,7 @@ pub(crate) async fn get_nm_ac_by_obj_path(
             iface_type,
             state_flags: nm_ac_obj_path_state_flags_get(connection, obj_path)
                 .await?,
+            dev_obj_path: nm_dev_obj_path,
         }))
     } else {
         Ok(None)

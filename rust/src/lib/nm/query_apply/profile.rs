@@ -3,7 +3,8 @@
 use super::super::{
     error::nm_error_to_nmstate,
     nm_dbus::{
-        self, NmApi, NmConnection, NmIfaceType, NmSettingsConnectionFlag,
+        self, NmActiveConnection, NmApi, NmConnection, NmIfaceType,
+        NmSettingsConnectionFlag,
     },
     NmConnectionMatcher,
 };
@@ -81,21 +82,15 @@ pub(crate) async fn save_nm_profiles(
 pub(crate) async fn activate_nm_profiles(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
+    conn_matcher: &NmConnectionMatcher,
 ) -> Result<(), NmstateError> {
     let mut nm_conns = nm_conns.to_vec();
-    let nm_acs = nm_api
-        .active_connections_get()
-        .await
-        .map_err(nm_error_to_nmstate)?;
-    let nm_ac_uuids: Vec<&str> =
-        nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
-
     for i in 1..ACTIVATION_RETRY_COUNT + 1 {
         if !nm_conns.is_empty() {
             let remain_nm_conns = _activate_nm_profiles(
                 nm_api,
                 nm_conns.as_slice(),
-                nm_ac_uuids.as_slice(),
+                conn_matcher,
             )
             .await?;
             if remain_nm_conns.is_empty() {
@@ -129,7 +124,7 @@ pub(crate) async fn activate_nm_profiles(
 async fn _activate_nm_profiles(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
-    nm_ac_uuids: &[&str],
+    conn_matcher: &NmConnectionMatcher,
 ) -> Result<Vec<(NmConnection, NmstateError)>, NmstateError> {
     // Contain a list of `(iface_name, nm_iface_type)`.
     let mut new_controllers: Vec<(&str, NmIfaceType)> = Vec::new();
@@ -139,8 +134,10 @@ async fn _activate_nm_profiles(
         .filter(|c| c.iface_type().map(|t| t.is_controller()) == Some(true))
     {
         if let Some(uuid) = nm_conn.uuid() {
-            if nm_ac_uuids.contains(&uuid) {
-                if let Err(e) = reapply_or_activate(nm_api, nm_conn).await {
+            if let Some(nm_ac) = conn_matcher.get_nm_ac_by_uuid(uuid) {
+                if let Err(e) =
+                    reapply_or_activate(nm_api, nm_conn, nm_ac).await
+                {
                     if e.kind().can_retry() {
                         failed_nm_conns.push((nm_conn.clone(), e));
                     } else {
@@ -177,14 +174,10 @@ async fn _activate_nm_profiles(
         .filter(|c| c.iface_type().map(|t| t.is_controller()) != Some(true))
     {
         if let Some(uuid) = nm_conn.uuid() {
-            if nm_ac_uuids.contains(&uuid) {
-                log::info!(
-                    "Reapplying connection {}: {}/{}",
-                    uuid,
-                    nm_conn.iface_name().unwrap_or(""),
-                    nm_conn.iface_type().cloned().unwrap_or_default()
-                );
-                if let Err(e) = reapply_or_activate(nm_api, nm_conn).await {
+            if let Some(nm_ac) = conn_matcher.get_nm_ac_by_uuid(uuid) {
+                if let Err(e) =
+                    reapply_or_activate(nm_api, nm_conn, nm_ac).await
+                {
                     if e.kind().can_retry() {
                         failed_nm_conns.push((nm_conn.clone(), e));
                     } else {
@@ -280,6 +273,7 @@ pub(crate) async fn delete_profiles(
 async fn reapply_or_activate(
     nm_api: &mut NmApi<'_>,
     nm_conn: &NmConnection,
+    nm_ac: &NmActiveConnection,
 ) -> Result<(), NmstateError> {
     let uuid = match nm_conn.uuid() {
         Some(u) => u,
@@ -293,25 +287,35 @@ async fn reapply_or_activate(
             ));
         }
     };
-    log::info!(
-        "Reapplying connection {}: {}/{}",
-        uuid,
-        nm_conn.iface_name().unwrap_or(""),
-        nm_conn.iface_type().cloned().unwrap_or_default()
-    );
-    if let Err(e) = nm_api.connection_reapply(nm_conn).await {
+    if let Some(nm_dev_obj_path) = nm_ac.dev_obj_path.as_deref() {
         log::info!(
-            "Reapply operation failed on {} {} {uuid}, reason: {}, retry on \
-             normal activation",
-            nm_conn.iface_type().cloned().unwrap_or_default(),
-            nm_conn.iface_name().unwrap_or(""),
-            e
+            "Reapplying connection {}: {}/{}",
+            uuid,
+            nm_ac.iface_name,
+            nm_ac.iface_type,
         );
+        if let Err(e) =
+            nm_api.connection_reapply(nm_conn, nm_dev_obj_path).await
+        {
+            log::info!(
+                "Reapply operation failed on {} {} {uuid}, reason: {}, retry \
+                 on normal activation",
+                nm_ac.iface_name,
+                nm_ac.iface_type,
+                e
+            );
+            nm_api
+                .connection_activate(uuid)
+                .await
+                .map_err(nm_error_to_nmstate)?;
+        }
+    } else {
         nm_api
             .connection_activate(uuid)
             .await
             .map_err(nm_error_to_nmstate)?;
     }
+
     Ok(())
 }
 
