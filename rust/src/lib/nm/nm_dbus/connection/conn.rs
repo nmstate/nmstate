@@ -367,6 +367,10 @@ pub struct NmSettingConnection {
     pub controller_type: Option<NmIfaceType>,
     pub autoconnect: Option<bool>,
     pub autoconnect_ports: Option<bool>,
+    /// Priority for NmConnection when multiple NmConnection is capable
+    /// to activate the same NmDevice. The bigger number is better.
+    /// Default value is 0. The valid range is -999 to 999.
+    pub autoconnect_priority: Option<i32>,
     pub lldp: Option<bool>,
     pub mptcp_flags: Option<u32>,
     pub multi_connect: Option<NmConnectionMultiConnect>,
@@ -392,6 +396,11 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
             autoconnect_ports: NmSettingConnection::i32_to_autoconnect_ports(
                 _from_map!(v, "autoconnect-slaves", i32::try_from)?,
             ),
+            autoconnect_priority: _from_map!(
+                v,
+                "autoconnect-priority",
+                i32::try_from
+            )?,
             lldp: _from_map!(v, "lldp", i32::try_from)?.map(|i| i == 1),
             mptcp_flags: _from_map!(v, "mptcp-flags", u32::try_from)?,
             multi_connect: _from_map!(v, "multi-connect", i32::try_from)?
