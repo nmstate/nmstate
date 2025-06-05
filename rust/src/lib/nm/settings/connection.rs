@@ -72,7 +72,10 @@ pub(crate) fn iface_to_nm_connections(
                     );
                 }
             }
-            return Ok(vec![nm_conn.clone()]);
+            // We should not return multi-connect NmConnection
+            if !nm_conn.is_multi_connect() {
+                return Ok(vec![nm_conn.clone()]);
+            }
         } else if !iface.is_userspace() {
             // User want to convert unmanaged interface to managed
             if let Some(cur_iface) = merged_iface.current.as_ref() {
