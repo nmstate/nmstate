@@ -173,7 +173,7 @@ impl TryFrom<DbusDictionary> for NmSettingBridge {
 }
 
 impl ToDbusValue for NmSettingBridge {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.stp {
             ret.insert("stp", zvariant::Value::new(v));
@@ -315,7 +315,7 @@ impl TryFrom<DbusDictionary> for NmSettingBridgeVlanRange {
 }
 
 impl NmSettingBridgeVlanRange {
-    fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(
             &zvariant::Signature::Str,
             &zvariant::Signature::Variant,
@@ -364,7 +364,7 @@ impl TryFrom<DbusDictionary> for NmSettingBridgePort {
 }
 
 impl ToDbusValue for NmSettingBridgePort {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
 
         self.hairpin_mode

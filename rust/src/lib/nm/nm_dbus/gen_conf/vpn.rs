@@ -7,7 +7,9 @@ use zvariant::Value;
 use super::super::{NmError, NmSettingVpn, ToDbusValue, ToKeyfile};
 
 impl ToKeyfile for NmSettingVpn {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(vpn_data) = self.data.as_ref() {
             for (key, value) in vpn_data.iter() {
@@ -28,7 +30,7 @@ impl ToKeyfile for NmSettingVpn {
 impl NmSettingVpn {
     pub(crate) fn secrets_to_keyfile(
         &self,
-    ) -> Option<HashMap<String, zvariant::Value>> {
+    ) -> Option<HashMap<String, zvariant::Value<'_>>> {
         self.secrets.as_ref().map(|s| {
             s.iter()
                 .map(|(k, v)| (k.to_string(), Value::new(v)))

@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use super::super::{NmError, NmSetting8021X, ToKeyfile};
 
 impl ToKeyfile for NmSetting8021X {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.identity {
             ret.insert("identity".to_string(), zvariant::Value::new(v));

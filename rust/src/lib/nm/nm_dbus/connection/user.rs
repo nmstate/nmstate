@@ -41,7 +41,7 @@ impl TryFrom<DbusDictionary> for NmSettingUser {
 }
 
 impl ToDbusValue for NmSettingUser {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.data {
             let mut dict_value = zvariant::Dict::new(

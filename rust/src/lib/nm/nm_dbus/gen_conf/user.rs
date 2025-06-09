@@ -7,7 +7,9 @@ use zvariant::Value;
 use super::super::{NmError, NmSettingUser, ToKeyfile};
 
 impl ToKeyfile for NmSettingUser {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(data) = self.data.as_ref() {
             for (key, value) in data.iter() {

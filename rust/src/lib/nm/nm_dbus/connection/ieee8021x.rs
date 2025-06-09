@@ -44,7 +44,7 @@ impl TryFrom<DbusDictionary> for NmSetting8021X {
 }
 
 impl ToDbusValue for NmSetting8021X {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.identity {
             ret.insert("identity", zvariant::Value::new(v));

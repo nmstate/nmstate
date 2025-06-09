@@ -32,7 +32,7 @@ impl TryFrom<DbusDictionary> for NmSettingBond {
 }
 
 impl ToDbusValue for NmSettingBond {
-    fn to_value(&self) -> Result<HashMap<&str, Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         ret.insert("options", Value::from(self.options.clone()));
         ret.extend(
@@ -64,7 +64,7 @@ impl TryFrom<DbusDictionary> for NmSettingBondPort {
 }
 
 impl ToDbusValue for NmSettingBondPort {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
 
         self.priority

@@ -36,7 +36,7 @@ impl TryFrom<DbusDictionary> for NmSettingVxlan {
 }
 
 impl ToDbusValue for NmSettingVxlan {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = self.parent.as_deref() {
             if !v.is_empty() {

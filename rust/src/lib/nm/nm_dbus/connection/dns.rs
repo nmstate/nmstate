@@ -104,7 +104,7 @@ pub(crate) fn parse_nm_dns_options(
 
 pub(crate) fn nm_ip_dns_to_value(
     dns_srvs: &[String],
-) -> Result<zvariant::Value, NmError> {
+) -> Result<zvariant::Value<'_>, NmError> {
     let mut is_ipv6 = false;
     let mut dns_values = if let Some(dns_srv) = dns_srvs.first() {
         if dns_srv.contains(':') {
@@ -155,7 +155,7 @@ pub(crate) fn nm_ip_dns_to_value(
 
 pub(crate) fn nm_ip_dns_search_to_value(
     dns_searches: &[String],
-) -> Result<zvariant::Value, NmError> {
+) -> Result<zvariant::Value<'_>, NmError> {
     let mut values = zvariant::Array::new(&zvariant::Signature::Str);
     for search in dns_searches {
         values.append(zvariant::Value::new(search))?;
@@ -165,7 +165,7 @@ pub(crate) fn nm_ip_dns_search_to_value(
 
 pub(crate) fn nm_ip_dns_options_to_value(
     dns_options: &[String],
-) -> Result<zvariant::Value, NmError> {
+) -> Result<zvariant::Value<'_>, NmError> {
     let mut values = zvariant::Array::new(&zvariant::Signature::Str);
     for option in dns_options {
         values.append(zvariant::Value::new(option))?;

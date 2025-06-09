@@ -59,7 +59,7 @@ impl TryFrom<DbusDictionary> for NmSettingSriov {
 }
 
 impl ToDbusValue for NmSettingSriov {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.autoprobe_drivers {
             ret.insert(
@@ -119,7 +119,7 @@ impl TryFrom<DbusDictionary> for NmSettingSriovVf {
 }
 
 impl NmSettingSriovVf {
-    pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    pub(crate) fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(
             &zvariant::Signature::Str,
             &zvariant::Signature::Variant,
@@ -208,7 +208,7 @@ impl TryFrom<DbusDictionary> for NmSettingSriovVfVlan {
 }
 
 impl NmSettingSriovVfVlan {
-    pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    pub(crate) fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(
             &zvariant::Signature::Str,
             &zvariant::Signature::Variant,
