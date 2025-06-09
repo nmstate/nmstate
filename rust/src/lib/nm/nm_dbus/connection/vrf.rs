@@ -26,7 +26,7 @@ impl TryFrom<DbusDictionary> for NmSettingVrf {
 }
 
 impl ToDbusValue for NmSettingVrf {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.table {
             ret.insert("table", zvariant::Value::new(v));

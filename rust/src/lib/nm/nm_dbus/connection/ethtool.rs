@@ -268,7 +268,7 @@ impl NmSettingEthtool {
 }
 
 impl ToDbusValue for NmSettingEthtool {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.pause_rx {
             ret.insert("pause-rx", zvariant::Value::new(v));

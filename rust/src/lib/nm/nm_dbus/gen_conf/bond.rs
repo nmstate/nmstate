@@ -9,7 +9,9 @@ use super::super::{
 };
 
 impl ToKeyfile for NmSettingBond {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         for (key, value) in self.options.iter() {
             ret.insert(key.to_string(), Value::new(value));
@@ -19,7 +21,7 @@ impl ToKeyfile for NmSettingBond {
 }
 
 impl ToKeyfile for NmSettingBondPort {
-    fn to_keyfile(&self) -> Result<HashMap<String, Value>, NmError> {
+    fn to_keyfile(&self) -> Result<HashMap<String, Value<'_>>, NmError> {
         let mut ret = HashMap::new();
 
         for (k, v) in self.to_value()?.drain() {

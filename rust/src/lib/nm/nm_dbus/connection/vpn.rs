@@ -45,7 +45,7 @@ impl TryFrom<DbusDictionary> for NmSettingVpn {
 }
 
 impl ToDbusValue for NmSettingVpn {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.data {
             ret.insert("data", zvariant::Value::new(v.clone()));

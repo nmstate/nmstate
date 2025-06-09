@@ -9,7 +9,9 @@ use super::super::{
 };
 
 impl ToKeyfile for NmSettingSriov {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         for (k, v) in self.to_value()?.drain() {
             if k != "vfs" {

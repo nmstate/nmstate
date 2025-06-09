@@ -74,7 +74,7 @@ impl NmGlobalDnsConfig {
         }
     }
 
-    pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    pub(crate) fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(
             &zvariant::Signature::Str,
             &zvariant::Signature::Variant,
@@ -131,7 +131,7 @@ pub struct NmGlobalDnsDomainConfig {
 }
 
 impl NmGlobalDnsDomainConfig {
-    pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    pub(crate) fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(
             &zvariant::Signature::Str,
             &zvariant::Signature::Variant,
@@ -186,7 +186,7 @@ fn parse_global_dns_domain_configs(
 
 fn global_dns_domain_configs_to_value(
     configs: &HashMap<String, NmGlobalDnsDomainConfig>,
-) -> Result<zvariant::Value, NmError> {
+) -> Result<zvariant::Value<'_>, NmError> {
     let mut ret = zvariant::Dict::new(
         &zvariant::Signature::Str,
         &zvariant::Signature::Variant,

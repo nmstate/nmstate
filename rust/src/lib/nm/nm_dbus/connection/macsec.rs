@@ -42,7 +42,7 @@ impl TryFrom<DbusDictionary> for NmSettingMacSec {
 }
 
 impl ToDbusValue for NmSettingMacSec {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.parent {
             ret.insert("parent", zvariant::Value::new(v.clone()));

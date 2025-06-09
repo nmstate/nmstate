@@ -32,7 +32,7 @@ impl TryFrom<DbusDictionary> for NmSettingIpVlan {
 }
 
 impl ToDbusValue for NmSettingIpVlan {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.parent {
             ret.insert("parent", zvariant::Value::new(v.clone()));

@@ -80,7 +80,9 @@ fn zvariant_value_to_string(
 }
 
 pub(crate) trait ToKeyfile: ToDbusValue {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         for (k, v) in self.to_value()?.drain() {
             ret.insert(k.to_string(), v);

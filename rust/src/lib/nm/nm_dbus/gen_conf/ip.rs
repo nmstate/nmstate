@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use super::super::{NmError, NmSettingIp, ToDbusValue, ToKeyfile};
 
 impl ToKeyfile for NmSettingIp {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         for (k, v) in self.to_value()?.drain() {
             if !["address-data", "route-data", "dns", "routing-rules"]

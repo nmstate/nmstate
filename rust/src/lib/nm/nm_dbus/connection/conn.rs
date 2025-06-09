@@ -229,7 +229,9 @@ impl NmConnection {
     }
 
     #[cfg(feature = "query_apply")]
-    pub(crate) fn to_value(&self) -> Result<NmConnectionDbusValue, NmError> {
+    pub(crate) fn to_value(
+        &self,
+    ) -> Result<NmConnectionDbusValue<'_>, NmError> {
         let mut ret = HashMap::new();
         if let Some(con_set) = &self.connection {
             ret.insert("connection", con_set.to_value()?);
@@ -400,7 +402,7 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
 }
 
 impl ToDbusValue for NmSettingConnection {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.id {
             ret.insert("id", zvariant::Value::new(v.as_str()));
@@ -550,7 +552,7 @@ impl TryFrom<DbusDictionary> for NmRange {
 }
 
 impl NmRange {
-    pub fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    pub fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(&Signature::Str, &Signature::Variant);
         ret.append(
             zvariant::Value::new("start"),

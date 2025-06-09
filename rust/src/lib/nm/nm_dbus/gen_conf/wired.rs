@@ -6,7 +6,9 @@ use zvariant::Value;
 use super::super::{NmError, NmSettingWired, ToDbusValue, ToKeyfile};
 
 impl ToKeyfile for NmSettingWired {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         for (k, v) in self.to_value()?.drain() {
             if k != "cloned-mac-address" && k != "mac-address" {

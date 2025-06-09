@@ -15,7 +15,9 @@ impl ToKeyfile for NmSettingOvsPatch {}
 impl ToKeyfile for NmSettingOvsDpdk {}
 
 impl ToKeyfile for NmSettingOvsPort {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
 
         for (k, v) in self.to_value()?.drain() {
@@ -46,7 +48,9 @@ impl ToKeyfile for NmSettingOvsPort {
 }
 
 impl ToKeyfile for NmSettingOvsExtIds {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(data) = self.data.as_ref() {
             for (k, v) in data {
@@ -58,7 +62,9 @@ impl ToKeyfile for NmSettingOvsExtIds {
 }
 
 impl ToKeyfile for NmSettingOvsOtherConfig {
-    fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
+    fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(data) = self.data.as_ref() {
             for (k, v) in data {

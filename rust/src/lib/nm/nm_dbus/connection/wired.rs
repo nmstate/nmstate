@@ -57,7 +57,7 @@ impl TryFrom<DbusDictionary> for NmSettingWired {
 }
 
 impl ToDbusValue for NmSettingWired {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.cloned_mac_address {
             ret.insert(

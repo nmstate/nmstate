@@ -10,7 +10,7 @@ use super::super::{
 };
 
 impl ToKeyfile for NmSettingBridge {
-    fn to_keyfile(&self) -> Result<HashMap<String, Value>, NmError> {
+    fn to_keyfile(&self) -> Result<HashMap<String, Value<'_>>, NmError> {
         let mut ret = HashMap::new();
 
         for (k, v) in self.to_value()?.drain() {
@@ -50,7 +50,7 @@ impl NmSettingBridgeVlanRange {
 }
 
 impl ToKeyfile for NmSettingBridgePort {
-    fn to_keyfile(&self) -> Result<HashMap<String, Value>, NmError> {
+    fn to_keyfile(&self) -> Result<HashMap<String, Value<'_>>, NmError> {
         let mut ret = HashMap::new();
 
         for (k, v) in self.to_value()?.drain() {

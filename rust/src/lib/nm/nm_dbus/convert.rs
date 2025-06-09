@@ -60,5 +60,5 @@ pub(crate) fn mac_str_to_u8_array(mac: &str) -> Vec<u8> {
 }
 
 pub(crate) trait ToDbusValue {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError>;
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError>;
 }

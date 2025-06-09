@@ -548,7 +548,9 @@ impl NmDbus<'_> {
     }
 }
 
-fn str_to_obj_path(obj_path: &str) -> Result<zvariant::ObjectPath, NmError> {
+fn str_to_obj_path(
+    obj_path: &str,
+) -> Result<zvariant::ObjectPath<'_>, NmError> {
     zvariant::ObjectPath::try_from(obj_path).map_err(|e| {
         NmError::new(
             ErrorKind::InvalidArgument,

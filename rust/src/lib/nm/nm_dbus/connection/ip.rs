@@ -177,7 +177,7 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
 }
 
 impl ToDbusValue for NmSettingIp {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.method {
             ret.insert("method", zvariant::Value::new(format!("{v}")));

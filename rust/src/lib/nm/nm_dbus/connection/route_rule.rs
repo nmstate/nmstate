@@ -70,7 +70,7 @@ impl TryFrom<DbusDictionary> for NmIpRouteRule {
 }
 
 impl NmIpRouteRule {
-    pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    pub(crate) fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(
             &zvariant::Signature::Str,
             &zvariant::Signature::Variant,
@@ -170,7 +170,7 @@ pub(crate) fn parse_nm_ip_rule_data(
 
 pub(crate) fn nm_ip_rules_to_value(
     nm_rules: &[NmIpRouteRule],
-) -> Result<zvariant::Value, NmError> {
+) -> Result<zvariant::Value<'_>, NmError> {
     let mut rule_values = zvariant::Array::new(DBUS_ASV_SIGNATURE);
 
     for nm_rule in nm_rules {

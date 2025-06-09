@@ -26,7 +26,7 @@ impl TryFrom<DbusDictionary> for NmSettingVeth {
 }
 
 impl ToDbusValue for NmSettingVeth {
-    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.peer {
             ret.insert("peer", zvariant::Value::new(v.clone()));
