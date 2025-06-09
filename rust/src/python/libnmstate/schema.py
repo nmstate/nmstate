@@ -103,6 +103,7 @@ class InterfaceState:
     UP = "up"
     ABSENT = "absent"
     IGNORE = "ignore"
+    UNKNOWN = "unknown"
 
 
 class InterfaceType:
