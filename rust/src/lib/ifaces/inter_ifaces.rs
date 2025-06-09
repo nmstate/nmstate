@@ -356,6 +356,30 @@ impl Interfaces {
         Ok(())
     }
 
+    fn purge_unknown_state_iface(&mut self) {
+        self.user_ifaces.retain(|_, iface| {
+            iface.base_iface().state != InterfaceState::Unknown
+        });
+        self.kernel_ifaces.retain(|_, iface| {
+            iface.base_iface().state != InterfaceState::Unknown
+        });
+
+        // Clean up insert_order Vec by removing entries for interfaces that
+        // were purged. The `insert_order` is used for re-ordering
+        // interfaces based on their controller-port-parent relationship
+        // in `set_ifaces_up_priority()`. We must maintain consistency between
+        // `insert_order` and the HashMap collections to ensure proper interface
+        // dependency.
+        self.insert_order.retain(|(iface_name, iface_type)| {
+            if iface_type.is_userspace() {
+                self.user_ifaces
+                    .contains_key(&(iface_name.clone(), iface_type.clone()))
+            } else {
+                self.kernel_ifaces.contains_key(iface_name)
+            }
+        });
+    }
+
     // If any desired interface has `identifier: mac-address`:
     //  * Resolve interface.name to MAC address match interface name.
     //  * Store interface.name to interface.profile_name.
@@ -749,6 +773,8 @@ impl MergedInterfaces {
 
         desired.unify_veth_and_eth();
         current.unify_veth_and_eth();
+
+        desired.purge_unknown_state_iface();
 
         if mode == NetworkStateMode::GenerateConfig {
             desired.set_unknown_iface_to_eth()?;

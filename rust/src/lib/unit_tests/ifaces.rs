@@ -241,6 +241,55 @@ fn test_ifaces_ignore_iface_in_desire() {
 }
 
 #[test]
+fn test_ifaces_iface_in_unknown_state() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: unknown",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        current,
+        crate::NetworkStateMode::Apply,
+        false,
+    )
+    .unwrap();
+
+    assert!(
+        merged_ifaces
+            .get_iface("eth1", InterfaceType::Ethernet)
+            .unwrap()
+            .for_apply
+            .is_some(),
+        "eth1 should have for apply value"
+    );
+    assert!(
+        merged_ifaces
+            .get_iface("eth2", InterfaceType::Ethernet)
+            .unwrap()
+            .for_apply
+            .is_none(),
+        "eth2 should be purged"
+    );
+}
+
+#[test]
 fn test_ifaces_ignore_iface_in_current() {
     let current = serde_yaml::from_str::<Interfaces>(
         r"---

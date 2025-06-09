@@ -1626,3 +1626,34 @@ def test_bond_opt_ns_ip6_target(setup_remove_bond99):
     )
     libnmstate.apply(state)
     assertlib.assert_state_match(state)
+
+
+def test_eth1_state_unknown_with_controller_port_info_preserved(
+    eth1_up, eth2_up
+):
+    state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
+    unknown_state_eth1 = {
+        Interface.NAME: "eth1",
+        Interface.TYPE: InterfaceType.ETHERNET,
+        Interface.STATE: InterfaceState.UNKNOWN,
+    }
+    state[Interface.KEY].append(unknown_state_eth1)
+
+    libnmstate.apply(state)
+    eth1_state = statelib.show_only((state[Interface.KEY][1][Interface.NAME],))
+
+    assert eth1_state[Interface.KEY][0][Interface.CONTROLLER] == BOND99
+
+    remove_bond_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BOND99,
+                Interface.TYPE: InterfaceType.BOND,
+                Interface.STATE: InterfaceState.ABSENT,
+            }
+        ]
+    }
+
+    apply_with_description("Remove bond interface bond99", remove_bond_state)
+    bond_state = statelib.show_only((BOND99,))
+    assert not bond_state[Interface.KEY]
