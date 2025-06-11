@@ -81,7 +81,7 @@ pub(crate) fn set_running_hostname(hostname: &str) -> Result<(), NmstateError> {
             format!(
                 "Failed to set hostname {}, errno {}",
                 hostname,
-                nix::errno::errno()
+                nix::errno::Errno::last_raw(),
             ),
         );
         log::error!("{e}");
