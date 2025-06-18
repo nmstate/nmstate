@@ -28,7 +28,6 @@ use super::super::{
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
-    settings::iface_type_to_nm,
 };
 
 use crate::{
@@ -248,7 +247,7 @@ async fn delete_ifaces(
                     .filter(|c| c.iface_name() == Some(iface.name()))
                     .collect()
             } else {
-                let nm_iface_type = iface_type_to_nm(&iface.iface_type())?;
+                let nm_iface_type = NmIfaceType::from(&iface.iface_type());
                 nm_conns_name_type_index
                     .get(&(iface.name(), nm_iface_type))
                     .cloned()
@@ -372,7 +371,7 @@ async fn delete_remain_virtual_interface_as_desired(
         if iface.is_virtual() {
             if let Some(nm_dev) = nm_devs_indexed.get(&(
                 iface.name().to_string(),
-                iface_type_to_nm(&iface.iface_type())?,
+                NmIfaceType::from(&iface.iface_type()),
             )) {
                 log::info!(
                     "Deleting interface {}/{}: {}",
