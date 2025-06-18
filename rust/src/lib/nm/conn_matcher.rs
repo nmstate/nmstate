@@ -222,20 +222,24 @@ impl NmConnectionMatcher {
         nm_conns.pop()
     }
 
-    /// Get all connections can be used to activate specified interface
+    /// Get all connections can be used to activate specified interface.
+    /// If interface type is unknown, all profiles with desired interface
+    /// name will be included.
     pub(crate) fn get_saved(
         &self,
         base_iface: &BaseInterface,
     ) -> Vec<&NmConnection> {
-        let mut ret: Vec<&NmConnection> = if let Some(nm_conns) =
-            self.saved_by_name_and_type.get(&(
-                base_iface.name.to_string(),
-                NmIfaceType::from(&base_iface.iface_type),
-            )) {
-            nm_conns.iter().map(Rc::as_ref).collect()
-        } else {
-            Vec::new()
-        };
+        let mut ret: Vec<&NmConnection> = Vec::new();
+        if base_iface.iface_type == InterfaceType::Unknown {
+            if let Some(nm_conns) = self.saved_by_name.get(&base_iface.name) {
+                ret.extend(nm_conns.iter().map(Rc::as_ref));
+            }
+        } else if let Some(nm_conns) = self.saved_by_name_and_type.get(&(
+            base_iface.name.to_string(),
+            NmIfaceType::from(&base_iface.iface_type),
+        )) {
+            ret.extend(nm_conns.iter().map(Rc::as_ref));
+        }
         if base_iface.identifier == Some(InterfaceIdentifier::MacAddress) {
             if let Some(mac) = base_iface.mac_address.as_deref() {
                 if let Some(nm_conns) = self.saved_by_mac.get(&(
