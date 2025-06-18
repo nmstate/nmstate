@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use super::super::{
+    connection::{perpare_nm_conns, PerparedNmConnections},
     device::create_index_for_nm_devs,
     dns::{
         store_dns_config_to_desired_iface, store_dns_config_to_iface,
@@ -10,9 +11,10 @@ use super::super::{
     },
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection, NmIfaceType, NmVersion, NmVersionInfo},
-    profile::{perpare_nm_conns, PerparedNmConnections},
     query_apply::{
-        activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
+        activate_nm_connections,
+        connection::is_uuid,
+        deactivate_nm_connections, delete_exist_connections,
         delete_orphan_ovs_ports,
         dispatch::apply_dispatch_script,
         dns::{
@@ -21,9 +23,7 @@ use super::super::{
         },
         is_ipvlan_changed, is_mptcp_flags_changed, is_route_removed,
         is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
-        is_vxlan_changed,
-        profile::is_uuid,
-        save_nm_profiles,
+        is_vxlan_changed, save_nm_connections,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -166,20 +166,20 @@ pub(crate) async fn nm_apply(
         &conn_matcher,
         nm_route_remove_needs_deactivate,
     );
-    deactivate_nm_profiles(
+    deactivate_nm_connections(
         &mut nm_api,
         nm_conns_to_deactivate_first.as_slice(),
     )
     .await?;
 
-    save_nm_profiles(
+    save_nm_connections(
         &mut nm_api,
         nm_conns_to_store.as_slice(),
         merged_state.memory_only,
     )
     .await?;
     if !merged_state.memory_only {
-        delete_exist_profiles(
+        delete_exist_connections(
             &mut nm_api,
             &merged_state,
             &conn_matcher,
@@ -195,14 +195,14 @@ pub(crate) async fn nm_apply(
         .await?;
     }
 
-    activate_nm_profiles(
+    activate_nm_connections(
         &mut nm_api,
         nm_conns_to_activate.as_slice(),
         &conn_matcher,
     )
     .await?;
 
-    deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())
+    deactivate_nm_connections(&mut nm_api, nm_conns_to_deactivate.as_slice())
         .await?;
 
     apply_dispatch_script(&merged_state.interfaces)?;

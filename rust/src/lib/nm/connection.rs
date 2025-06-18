@@ -11,7 +11,7 @@ use crate::{
     NmstateError,
 };
 
-#[allow(dead_code)]
+#[cfg_attr(not(feature = "query_apply"), allow(dead_code))]
 pub(crate) struct PerparedNmConnections {
     pub(crate) to_store: Vec<NmConnection>,
     pub(crate) to_activate: Vec<NmConnection>,

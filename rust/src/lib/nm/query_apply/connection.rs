@@ -13,7 +13,7 @@ use crate::{ErrorKind, MergedNetworkState, NmstateError};
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
 
-pub(crate) async fn delete_exist_profiles(
+pub(crate) async fn delete_exist_connections(
     nm_api: &mut NmApi<'_>,
     merged_state: &MergedNetworkState,
     conn_matcher: &NmConnectionMatcher,
@@ -45,10 +45,10 @@ pub(crate) async fn delete_exist_profiles(
             }
         }
     }
-    delete_profiles(nm_api, &uuids_to_delete).await
+    delete_connections(nm_api, &uuids_to_delete).await
 }
 
-pub(crate) async fn save_nm_profiles(
+pub(crate) async fn save_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
     memory_only: bool,
@@ -79,7 +79,7 @@ pub(crate) async fn save_nm_profiles(
     Ok(())
 }
 
-pub(crate) async fn activate_nm_profiles(
+pub(crate) async fn activate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
     conn_matcher: &NmConnectionMatcher,
@@ -87,7 +87,7 @@ pub(crate) async fn activate_nm_profiles(
     let mut nm_conns = nm_conns.to_vec();
     for i in 1..ACTIVATION_RETRY_COUNT + 1 {
         if !nm_conns.is_empty() {
-            let remain_nm_conns = _activate_nm_profiles(
+            let remain_nm_conns = _activate_nm_connections(
                 nm_api,
                 nm_conns.as_slice(),
                 conn_matcher,
@@ -121,7 +121,7 @@ pub(crate) async fn activate_nm_profiles(
 }
 
 // Return list of activation failed `NmConnection` which we can retry
-async fn _activate_nm_profiles(
+async fn _activate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
     conn_matcher: &NmConnectionMatcher,
@@ -231,7 +231,7 @@ async fn _activate_nm_profiles(
     Ok(failed_nm_conns)
 }
 
-pub(crate) async fn deactivate_nm_profiles(
+pub(crate) async fn deactivate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
 ) -> Result<(), NmstateError> {
@@ -257,7 +257,7 @@ pub(crate) async fn deactivate_nm_profiles(
     Ok(())
 }
 
-pub(crate) async fn delete_profiles(
+pub(crate) async fn delete_connections(
     nm_api: &mut NmApi<'_>,
     uuids: &[&str],
 ) -> Result<(), NmstateError> {
