@@ -33,7 +33,7 @@ use super::{
 };
 
 use crate::{
-    ErrorKind, Interface, InterfaceIdentifier, InterfaceType, MergedInterface,
+    Interface, InterfaceIdentifier, InterfaceType, MergedInterface,
     MergedNetworkState, NmstateError, OvsBridgePortConfig,
 };
 
@@ -341,36 +341,6 @@ pub(crate) fn iface_to_nm_connections(
     Ok(ret)
 }
 
-pub(crate) fn iface_type_to_nm(
-    iface_type: &InterfaceType,
-) -> Result<NmIfaceType, NmstateError> {
-    match iface_type {
-        InterfaceType::LinuxBridge => Ok(NmIfaceType::Bridge),
-        InterfaceType::Bond => Ok(NmIfaceType::Bond),
-        InterfaceType::Ethernet => Ok(NmIfaceType::Ethernet),
-        InterfaceType::OvsBridge => Ok(NmIfaceType::OvsBridge),
-        InterfaceType::OvsInterface => Ok(NmIfaceType::OvsIface),
-        InterfaceType::Vlan => Ok(NmIfaceType::Vlan),
-        InterfaceType::Vxlan => Ok(NmIfaceType::Vxlan),
-        InterfaceType::Dummy => Ok(NmIfaceType::Dummy),
-        InterfaceType::MacVlan => Ok(NmIfaceType::Macvlan),
-        InterfaceType::MacVtap => Ok(NmIfaceType::Macvlan),
-        InterfaceType::Vrf => Ok(NmIfaceType::Vrf),
-        InterfaceType::Veth => Ok(NmIfaceType::Veth),
-        InterfaceType::InfiniBand => Ok(NmIfaceType::Infiniband),
-        InterfaceType::Loopback => Ok(NmIfaceType::Loopback),
-        InterfaceType::MacSec => Ok(NmIfaceType::Macsec),
-        InterfaceType::Hsr => Ok(NmIfaceType::Hsr),
-        InterfaceType::Ipsec => Ok(NmIfaceType::Vpn),
-        InterfaceType::IpVlan => Ok(NmIfaceType::Ipvlan),
-        InterfaceType::Other(s) => Ok(NmIfaceType::from(s.as_str())),
-        _ => Err(NmstateError::new(
-            ErrorKind::NotImplementedError,
-            format!("Does not support iface type: {iface_type:?} yet"),
-        )),
-    }
-}
-
 pub(crate) fn gen_nm_conn_setting(
     iface: &Interface,
     nm_conn: &mut NmConnection,
@@ -413,7 +383,7 @@ pub(crate) fn gen_nm_conn_setting(
             uuid::Uuid::new_v4().hyphenated().to_string()
         });
         new_nm_conn_set.iface_type =
-            Some(iface_type_to_nm(&iface.iface_type())?);
+            Some(NmIfaceType::from(&iface.iface_type()));
         if let Interface::Ethernet(eth_iface) = iface {
             if eth_iface.veth.is_some() {
                 new_nm_conn_set.iface_type = Some(NmIfaceType::Veth);
@@ -443,8 +413,7 @@ pub(crate) fn gen_nm_conn_setting(
         .base_iface()
         .controller_type
         .as_ref()
-        .map(iface_type_to_nm)
-        .transpose()?;
+        .map(NmIfaceType::from);
     let ctrl_name = iface.base_iface().controller.as_deref();
     if let Some(ctrl_name) = ctrl_name {
         if ctrl_name.is_empty() {
@@ -494,11 +463,7 @@ pub(crate) fn get_exist_profile<'a>(
     iface_type: &InterfaceType,
     nm_acs: &[NmActiveConnection],
 ) -> Option<&'a NmConnection> {
-    let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
-        t
-    } else {
-        return None;
-    };
+    let nm_iface_type = NmIfaceType::from(iface_type);
     if nm_iface_type == NmIfaceType::Vpn {
         // For VPN connection, we search `connection.id` and prefer activated
         let mut found_nm_conn = None;
@@ -554,11 +519,7 @@ fn get_exist_profile_by_profile_name<'a>(
     iface_type: &InterfaceType,
 ) -> Option<&'a NmConnection> {
     for exist_nm_conn in exist_nm_conns {
-        let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
-            t
-        } else {
-            continue;
-        };
+        let nm_iface_type = NmIfaceType::from(iface_type);
         if exist_nm_conn.id() == Some(profile_name)
             && exist_nm_conn.iface_type() == Some(&nm_iface_type)
         {

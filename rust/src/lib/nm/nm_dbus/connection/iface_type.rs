@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::super::NmError;
+use crate::InterfaceType;
 
 pub(crate) const NM_SETTING_BRIDGE_SETTING_NAME: &str = "bridge";
 pub(crate) const NM_SETTING_WIRED_SETTING_NAME: &str = "802-3-ethernet";
@@ -173,5 +174,64 @@ const CONTROLLER_IFACE_TYPES: [NmIfaceType; 5] = [
 impl NmIfaceType {
     pub fn is_controller(&self) -> bool {
         CONTROLLER_IFACE_TYPES.contains(self)
+    }
+}
+
+impl From<&NmIfaceType> for InterfaceType {
+    /// Please be aware `NmIfaceType::Macvlan` might be
+    /// `InterfaceType::MacVtap`, we need to check NmDevice.is_mac_vtap to
+    /// confirm.
+    fn from(nm_iface_type: &NmIfaceType) -> Self {
+        match *nm_iface_type {
+            NmIfaceType::Bridge => InterfaceType::LinuxBridge,
+            NmIfaceType::Bond => InterfaceType::Bond,
+            NmIfaceType::Ethernet => InterfaceType::Ethernet,
+            NmIfaceType::OvsBridge => InterfaceType::OvsBridge,
+            NmIfaceType::OvsIface => InterfaceType::OvsInterface,
+            NmIfaceType::Vlan => InterfaceType::Vlan,
+            NmIfaceType::Vxlan => InterfaceType::Vxlan,
+            NmIfaceType::Dummy => InterfaceType::Dummy,
+            NmIfaceType::Macvlan => InterfaceType::MacVlan,
+            NmIfaceType::Vrf => InterfaceType::Vrf,
+            // We unify the Veth to into InterfaceType::Ethernet to simplify
+            // work on using veth as plain ethernet interface
+            NmIfaceType::Veth => InterfaceType::Ethernet,
+            NmIfaceType::Infiniband => InterfaceType::InfiniBand,
+            NmIfaceType::Loopback => InterfaceType::Loopback,
+            NmIfaceType::Macsec => InterfaceType::MacSec,
+            NmIfaceType::Hsr => InterfaceType::Hsr,
+            NmIfaceType::Ipvlan => InterfaceType::IpVlan,
+            NmIfaceType::Tun => InterfaceType::Tun,
+            _ => InterfaceType::Other(nm_iface_type.to_string()),
+        }
+    }
+}
+
+impl From<&InterfaceType> for NmIfaceType {
+    fn from(iface_type: &InterfaceType) -> Self {
+        match iface_type {
+            InterfaceType::LinuxBridge => NmIfaceType::Bridge,
+            InterfaceType::Bond => NmIfaceType::Bond,
+            InterfaceType::Ethernet => NmIfaceType::Ethernet,
+            InterfaceType::OvsBridge => NmIfaceType::OvsBridge,
+            InterfaceType::OvsInterface => NmIfaceType::OvsIface,
+            InterfaceType::Vlan => NmIfaceType::Vlan,
+            InterfaceType::Vxlan => NmIfaceType::Vxlan,
+            InterfaceType::Dummy => NmIfaceType::Dummy,
+            InterfaceType::MacVlan => NmIfaceType::Macvlan,
+            InterfaceType::MacVtap => NmIfaceType::Macvlan,
+            InterfaceType::Vrf => NmIfaceType::Vrf,
+            InterfaceType::Veth => NmIfaceType::Veth,
+            InterfaceType::InfiniBand => NmIfaceType::Infiniband,
+            InterfaceType::Loopback => NmIfaceType::Loopback,
+            InterfaceType::MacSec => NmIfaceType::Macsec,
+            InterfaceType::Hsr => NmIfaceType::Hsr,
+            InterfaceType::Ipsec => NmIfaceType::Vpn,
+            InterfaceType::IpVlan => NmIfaceType::Ipvlan,
+            InterfaceType::Tun => NmIfaceType::Tun,
+            InterfaceType::Xfrm => NmIfaceType::Other("xfrm".to_string()),
+            InterfaceType::Unknown => NmIfaceType::Unknown,
+            InterfaceType::Other(s) => NmIfaceType::Other(s.to_string()),
+        }
     }
 }
