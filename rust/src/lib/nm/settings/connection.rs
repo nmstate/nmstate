@@ -24,7 +24,7 @@ use super::{
     },
     sriov::gen_nm_sriov_setting,
     user::gen_nm_user_setting,
-    veth::create_veth_peer_profile_if_not_found,
+    veth::create_veth_peer_connection_if_not_found,
     vlan::gen_nm_vlan_setting,
     vpn::gen_nm_ipsec_vpn_setting,
     wired::gen_nm_wired_setting,
@@ -189,7 +189,7 @@ pub(crate) fn iface_to_nm_connections(
                         veth_conf.peer.as_str(),
                         eth_iface.base.name.as_str()
                     );
-                    ret.push(create_veth_peer_profile_if_not_found(
+                    ret.push(create_veth_peer_connection_if_not_found(
                         veth_conf.peer.as_str(),
                         eth_iface.base.name.as_str(),
                         conn_matcher,

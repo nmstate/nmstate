@@ -3,6 +3,7 @@
 #[cfg(feature = "query_apply")]
 mod checkpoint;
 mod conn_matcher;
+mod connection;
 #[cfg(feature = "query_apply")]
 mod device;
 pub(crate) mod dns;
@@ -12,7 +13,6 @@ mod error;
 mod gen_conf;
 #[allow(unused_imports)]
 mod nm_dbus;
-mod profile;
 #[cfg(feature = "query_apply")]
 mod query_apply;
 pub(crate) mod route;

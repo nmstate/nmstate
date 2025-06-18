@@ -6,7 +6,7 @@ use super::{
     super::nm_dbus::{NmApi, NmConnection, NmIfaceType},
     super::show::fill_iface_by_nm_conn_data,
     super::NmConnectionMatcher,
-    profile::{delete_profiles, is_uuid},
+    connection::{delete_connections, is_uuid},
 };
 
 use crate::{
@@ -89,7 +89,7 @@ pub(crate) async fn delete_orphan_ovs_ports(
             }
         }
     }
-    delete_profiles(nm_api, orphan_ovs_port_uuids.as_slice()).await
+    delete_connections(nm_api, orphan_ovs_port_uuids.as_slice()).await
 }
 
 fn iface_was_ovs_sys_iface(iface: &MergedInterface) -> bool {

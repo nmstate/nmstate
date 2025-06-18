@@ -21,7 +21,7 @@ impl From<&VethConfig> for NmSettingVeth {
     }
 }
 
-pub(crate) fn create_veth_peer_profile_if_not_found(
+pub(crate) fn create_veth_peer_connection_if_not_found(
     peer_name: &str,
     end_name: &str,
     conn_matcher: &NmConnectionMatcher,

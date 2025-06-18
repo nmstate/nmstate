@@ -3,8 +3,8 @@
 use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 use super::{
+    connection::perpare_nm_conns,
     dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
-    profile::perpare_nm_conns,
     route::store_route_config,
     route_rule::store_route_rule_config,
     NmConnectionMatcher,
