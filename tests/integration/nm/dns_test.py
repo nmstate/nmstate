@@ -306,6 +306,7 @@ def test_reselect_iface_dns_if_desired(eth1_up):
 
 # https://issues.redhat.com/browse/RHEL-91250
 @pytest.mark.tier1
+@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_write_both_global_dns_and_iface_dns(eth1_up):
 
     state = load_yaml(
