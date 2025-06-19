@@ -4,6 +4,7 @@
 mod active_connection;
 #[cfg(feature = "query_apply")]
 mod checkpoint;
+mod conn_matcher;
 #[cfg(feature = "query_apply")]
 mod device;
 pub(crate) mod dns;
@@ -22,6 +23,7 @@ mod settings;
 #[cfg(feature = "query_apply")]
 mod show;
 
+pub(crate) use self::conn_matcher::NmConnectionMatcher;
 #[cfg(feature = "query_apply")]
 pub(crate) use checkpoint::{
     nm_checkpoint_create, nm_checkpoint_destroy, nm_checkpoint_rollback,
