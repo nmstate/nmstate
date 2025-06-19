@@ -19,11 +19,13 @@ const NM_DEVICE_TYPE_BT: u32 = 5;
 const NM_DEVICE_TYPE_OLPC_MESH: u32 = 6;
 // WIMAX is not supported by NM
 // const NM_DEVICE_TYPE_WIMAX: u32 = 7;
-const NM_DEVICE_TYPE_MODEM: u32 = 8;
+// Nmstate do not support MODEM
+// const NM_DEVICE_TYPE_MODEM: u32 = 8;
 const NM_DEVICE_TYPE_INFINIBAND: u32 = 9;
 const NM_DEVICE_TYPE_BOND: u32 = 10;
 const NM_DEVICE_TYPE_VLAN: u32 = 11;
-const NM_DEVICE_TYPE_ADSL: u32 = 12;
+// Nmstate do not support ADSL
+// const NM_DEVICE_TYPE_ADSL: u32 = 12;
 const NM_DEVICE_TYPE_BRIDGE: u32 = 13;
 const NM_DEVICE_TYPE_GENERIC: u32 = 14;
 // Team is not supported by nmstate
@@ -84,16 +86,14 @@ async fn nm_dev_iface_type_get(
     match proxy.get_property::<u32>("DeviceType").await {
         Ok(i) => Ok(match i {
             // Using the NM_SETTING_*_NAME string
-            NM_DEVICE_TYPE_UNKNOWN => NmIfaceType::Other("unknown".to_string()),
+            NM_DEVICE_TYPE_UNKNOWN => NmIfaceType::Unknown,
             NM_DEVICE_TYPE_ETHERNET => NmIfaceType::Ethernet,
             NM_DEVICE_TYPE_WIFI => NmIfaceType::Wireless,
             NM_DEVICE_TYPE_BT => NmIfaceType::Bluetooth,
             NM_DEVICE_TYPE_OLPC_MESH => NmIfaceType::OlpcMesh,
-            NM_DEVICE_TYPE_MODEM => NmIfaceType::Other("modem".to_string()),
             NM_DEVICE_TYPE_INFINIBAND => NmIfaceType::Infiniband,
             NM_DEVICE_TYPE_BOND => NmIfaceType::Bond,
             NM_DEVICE_TYPE_VLAN => NmIfaceType::Vlan,
-            NM_DEVICE_TYPE_ADSL => NmIfaceType::Other("adsl".to_string()),
             NM_DEVICE_TYPE_BRIDGE => NmIfaceType::Bridge,
             NM_DEVICE_TYPE_GENERIC => NmIfaceType::Generic,
             NM_DEVICE_TYPE_TUN => NmIfaceType::Tun,
@@ -115,7 +115,10 @@ async fn nm_dev_iface_type_get(
             NM_DEVICE_TYPE_LOOPBACK => NmIfaceType::Loopback,
             NM_DEVICE_TYPE_HSR => NmIfaceType::Hsr,
             NM_DEVICE_TYPE_IPVLAN => NmIfaceType::Ipvlan,
-            _ => NmIfaceType::Other(format!("unknown({i})")),
+            _ => {
+                log::debug!("Unknown NM_DEVICE_TYPE_XXX: {i}");
+                NmIfaceType::Unknown
+            }
         }),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,

@@ -9,10 +9,7 @@ pub(crate) fn create_index_for_nm_devs(
 ) -> HashMap<(String, NmIfaceType), &NmDevice> {
     let mut ret: HashMap<(String, NmIfaceType), &NmDevice> = HashMap::new();
     for nm_dev in nm_devs {
-        ret.insert(
-            (nm_dev.name.to_string(), nm_dev.iface_type.clone()),
-            nm_dev,
-        );
+        ret.insert((nm_dev.name.to_string(), nm_dev.iface_type), nm_dev);
     }
     ret
 }
