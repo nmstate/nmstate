@@ -7,6 +7,7 @@ use super::{
     profile::perpare_nm_conns,
     route::store_route_config,
     route_rule::store_route_rule_config,
+    NmConnectionMatcher,
 };
 
 pub(crate) fn nm_gen_conf(
@@ -34,10 +35,16 @@ pub(crate) fn nm_gen_conf(
         store_dns_config_to_iface(&mut merged_state, &[], &[])?;
     }
 
+    let conn_matcher = NmConnectionMatcher::new(
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        &merged_state.interfaces,
+    );
+
     let nm_conns = perpare_nm_conns(
         &merged_state,
-        &Vec::new(),
-        &Vec::new(),
+        &conn_matcher,
         true,  // gen_conf mode
         false, // is_retry
     )?

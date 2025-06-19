@@ -1,80 +1,46 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{hash_map::Entry, HashMap};
-
-use super::super::error::nm_error_to_nmstate;
-use super::super::nm_dbus::{
-    self, NmApi, NmConnection, NmIfaceType, NmSettingsConnectionFlag,
+use super::super::{
+    error::nm_error_to_nmstate,
+    nm_dbus::{
+        self, NmApi, NmConnection, NmIfaceType, NmSettingsConnectionFlag,
+    },
+    NmConnectionMatcher,
 };
-
-use crate::{ErrorKind, NmstateError};
+use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
 
 pub(crate) async fn delete_exist_profiles(
     nm_api: &mut NmApi<'_>,
-    exist_nm_conns: &[NmConnection],
-    nm_conns: &[NmConnection],
+    merged_state: &MergedNetworkState,
+    conn_matcher: &NmConnectionMatcher,
+    nm_conns_to_store: &[NmConnection],
 ) -> Result<(), NmstateError> {
-    let mut excluded_uuids: Vec<&str> = Vec::new();
-    let mut changed_iface_name_types: Vec<(&str, NmIfaceType)> = Vec::new();
-    let mut uuids_to_delete = Vec::new();
-    for nm_conn in nm_conns {
-        if let Some(uuid) = nm_conn.uuid() {
-            excluded_uuids.push(uuid);
-        }
-        if let Some(name) = nm_conn.iface_name() {
-            if let Some(nm_iface_type) = nm_conn.iface_type() {
-                changed_iface_name_types.push((name, nm_iface_type.clone()));
-            }
-        } else if nm_conn.iface_type() == Some(&NmIfaceType::Vpn) {
-            if let Some(name) = nm_conn.id() {
-                // For VPN, the we use connection id
-                changed_iface_name_types.push((name, NmIfaceType::Vpn));
-            }
-        }
-    }
-    for exist_nm_conn in exist_nm_conns {
-        let uuid = if let Some(u) = exist_nm_conn.uuid() {
-            u
-        } else {
-            continue;
-        };
-        let iface_name = if let Some(i) = exist_nm_conn.iface_name() {
-            i
-        } else if exist_nm_conn.iface_type() == Some(&NmIfaceType::Vpn) {
-            if let Some(i) = exist_nm_conn.id() {
-                i
-            } else {
-                continue;
-            }
-        } else {
-            continue;
-        };
-        let nm_iface_type = if let Some(t) = exist_nm_conn.iface_type() {
-            t
-        } else {
-            continue;
-        };
-        // Volatile nm_conn will be automatically removed once deactivated.
-        // Hence no need to deactivate.
-        if exist_nm_conn
-            .flags
-            .contains(&NmSettingsConnectionFlag::Volatile)
+    let excluded_uuids: Vec<&str> =
+        nm_conns_to_store.iter().filter_map(|c| c.uuid()).collect();
+    let mut uuids_to_delete: Vec<&str> = Vec::new();
+
+    for merged_iface in
+        merged_state.interfaces.iter().filter(|i| i.is_changed())
+    {
+        for saved_nm_conn in conn_matcher
+            .get_saved(merged_iface.merged.base_iface())
+            .into_iter()
+            .filter(|nm_conn| {
+                !nm_conn.flags.contains(&NmSettingsConnectionFlag::Volatile)
+            })
         {
-            continue;
-        }
-        if !excluded_uuids.contains(&uuid)
-            && changed_iface_name_types
-                .contains(&(iface_name, nm_iface_type.clone()))
-        {
-            if let Some(uuid) = exist_nm_conn.uuid() {
-                uuids_to_delete.push(uuid);
-                log::info!(
-                    "Deleting existing duplicate connection {uuid}: \
-                     {iface_name}/{nm_iface_type}",
-                );
+            if let Some(uuid) = saved_nm_conn.uuid() {
+                if !excluded_uuids.contains(&uuid) {
+                    uuids_to_delete.push(uuid);
+                    log::info!(
+                        "Deleting existing duplicate connection {uuid}: {}/{}",
+                        merged_iface.merged.name(),
+                        merged_iface.merged.iface_type(),
+                    );
+                }
             }
         }
     }
@@ -296,48 +262,6 @@ pub(crate) async fn deactivate_nm_profiles(
         }
     }
     Ok(())
-}
-
-pub(crate) fn create_index_for_nm_conns_by_name_type(
-    nm_conns: &[NmConnection],
-) -> HashMap<(&str, NmIfaceType), Vec<&NmConnection>> {
-    let mut ret: HashMap<(&str, NmIfaceType), Vec<&NmConnection>> =
-        HashMap::new();
-    for nm_conn in nm_conns {
-        if let Some(iface_name) = nm_conn.iface_name() {
-            if let Some(nm_iface_type) = nm_conn.iface_type() {
-                if nm_iface_type == &NmIfaceType::Veth {
-                    match ret.entry((iface_name, NmIfaceType::Ethernet)) {
-                        Entry::Occupied(o) => {
-                            o.into_mut().push(nm_conn);
-                        }
-                        Entry::Vacant(v) => {
-                            v.insert(vec![nm_conn]);
-                        }
-                    };
-                }
-                if nm_iface_type == &NmIfaceType::Ethernet {
-                    match ret.entry((iface_name, NmIfaceType::Veth)) {
-                        Entry::Occupied(o) => {
-                            o.into_mut().push(nm_conn);
-                        }
-                        Entry::Vacant(v) => {
-                            v.insert(vec![nm_conn]);
-                        }
-                    };
-                }
-                match ret.entry((iface_name, nm_iface_type.clone())) {
-                    Entry::Occupied(o) => {
-                        o.into_mut().push(nm_conn);
-                    }
-                    Entry::Vacant(v) => {
-                        v.insert(vec![nm_conn]);
-                    }
-                };
-            }
-        }
-    }
-    ret
 }
 
 pub(crate) async fn delete_profiles(

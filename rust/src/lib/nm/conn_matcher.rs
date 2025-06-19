@@ -8,7 +8,6 @@ use crate::{
     BaseInterface, InterfaceIdentifier, InterfaceType, MergedInterfaces,
 };
 
-#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub(crate) struct NmConnectionMatcher {
     saved_by_uuid: HashMap<String, Rc<NmConnection>>,
@@ -33,7 +32,7 @@ pub(crate) struct NmConnectionMatcher {
     saved_by_mac: HashMap<(String, NmIfaceType), Vec<Rc<NmConnection>>>,
 }
 
-#[allow(dead_code)]
+#[cfg_attr(not(feature = "query_apply"), allow(dead_code))]
 impl NmConnectionMatcher {
     pub(crate) fn new(
         nm_saved_cons: Vec<NmConnection>,

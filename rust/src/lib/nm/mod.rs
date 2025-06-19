@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(feature = "query_apply")]
-mod active_connection;
-#[cfg(feature = "query_apply")]
 mod checkpoint;
 mod conn_matcher;
 #[cfg(feature = "query_apply")]

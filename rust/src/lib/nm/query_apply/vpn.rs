@@ -1,43 +1,54 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
 use std::str::FromStr;
 
 use crate::{
-    Interface, InterfaceType, IpsecInterface, LibreswanAddressFamily,
-    LibreswanConfig, LibreswanConnectionType, NmstateError,
+    Interface, InterfaceState, InterfaceType, IpsecInterface,
+    LibreswanAddressFamily, LibreswanConfig, LibreswanConnectionType,
+    NmstateError,
 };
 
 use super::super::{
-    nm_dbus::{NmActiveConnection, NmConnection, NmIfaceType, NmSettingVpn},
-    show::nm_conn_to_base_iface,
+    nm_dbus::{NmIfaceType, NmSettingVpn},
+    show::fill_iface_by_nm_conn_data,
+    NmConnectionMatcher,
 };
 
 pub(crate) fn get_supported_vpn_ifaces(
-    nm_saved_conn_uuid_index: &HashMap<&str, &NmConnection>,
-    nm_acs: &[NmActiveConnection],
+    conn_matcher: &NmConnectionMatcher,
 ) -> Result<Vec<Interface>, NmstateError> {
     let mut ret = Vec::new();
-    for nm_conn in nm_acs.iter().filter_map(|nm_ac| {
-        if nm_ac.iface_type == NmIfaceType::Vpn {
-            nm_saved_conn_uuid_index.get(nm_ac.uuid.as_str())
-        } else {
-            None
-        }
+
+    for nm_conn in conn_matcher.saved_iter().filter(|nm_conn| {
+        nm_conn
+            .uuid()
+            .as_ref()
+            .map(|uuid| conn_matcher.is_uuid_activated(uuid))
+            .unwrap()
+            && nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
     }) {
         if let Some(nm_set_vpn) = nm_conn.vpn.as_ref() {
             if nm_set_vpn.service_type.as_deref()
                 == Some(NmSettingVpn::SERVICE_TYPE_LIBRESWAN)
             {
-                if let Some(mut base_iface) =
-                    nm_conn_to_base_iface(None, nm_conn, None, None)
-                {
-                    let mut iface = IpsecInterface::new();
-                    base_iface.iface_type = InterfaceType::Ipsec;
-                    iface.base = base_iface;
-                    iface.libreswan = Some(get_libreswan_conf(nm_set_vpn));
-                    ret.push(Interface::Ipsec(Box::new(iface)));
-                }
+                let name = match nm_conn.id() {
+                    Some(n) => n.to_string(),
+                    None => continue,
+                };
+                // taking profile name as interface name of VPN.
+                let mut iface = IpsecInterface::new();
+                iface.base.iface_type = InterfaceType::Ipsec;
+                iface.base.state = InterfaceState::Up;
+                iface.base.name = name;
+                iface.libreswan = Some(get_libreswan_conf(nm_set_vpn));
+                let mut iface = Interface::Ipsec(Box::new(iface));
+                fill_iface_by_nm_conn_data(
+                    &mut iface,
+                    None,
+                    Some(nm_conn),
+                    None,
+                );
+                ret.push(iface);
             }
         }
     }
@@ -93,19 +104,6 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
         ret.psk = secrets.get("pskvalue").cloned();
     }
     ret
-}
-
-pub(crate) fn get_match_ipsec_nm_conn<'a>(
-    iface_name: &str,
-    all_nm_conns: &'a [NmConnection],
-) -> Vec<&'a NmConnection> {
-    all_nm_conns
-        .iter()
-        .filter(|c| {
-            c.iface_type() == Some(&NmIfaceType::Vpn)
-                && c.id() == Some(iface_name)
-        })
-        .collect()
 }
 
 fn nm_libreswan_addr_family_to_nmstate(
