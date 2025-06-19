@@ -190,8 +190,7 @@ async fn _activate_nm_connections(
                 {
                     if nm_conn.iface_type() != Some(&NmIfaceType::OvsIface) {
                         // OVS port does not do auto port activation.
-                        if new_controllers
-                            .contains(&(ctrller, ctrller_type.clone()))
+                        if new_controllers.contains(&(ctrller, *ctrller_type))
                             && ctrller_type != &NmIfaceType::OvsPort
                         {
                             log::info!(

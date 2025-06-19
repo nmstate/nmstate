@@ -66,10 +66,8 @@ impl NmConnectionMatcher {
                 nm_ac.clone(),
             );
         }
-        self.acs_by_name_and_type.insert(
-            (nm_ac.iface_name.clone(), nm_ac.iface_type.clone()),
-            nm_ac,
-        );
+        self.acs_by_name_and_type
+            .insert((nm_ac.iface_name.clone(), nm_ac.iface_type), nm_ac);
     }
 
     fn add_nm_applied_conn(
@@ -94,10 +92,8 @@ impl NmConnectionMatcher {
                     nm_conn.clone(),
                 );
             }
-            self.applied_by_name_and_type.insert(
-                (name.to_string(), nm_iface_type.clone()),
-                nm_conn.clone(),
-            );
+            self.applied_by_name_and_type
+                .insert((name.to_string(), *nm_iface_type), nm_conn.clone());
         } else {
             // For all applied NmConnection, it should have existing
             // network interface defined, hence we ignore unexpected
@@ -137,7 +133,7 @@ impl NmConnectionMatcher {
                         .push(nm_conn.clone())
                 }
                 self.saved_by_name_and_type
-                    .entry((name, nm_iface_type.clone()))
+                    .entry((name, *nm_iface_type))
                     .or_default()
                     .push(nm_conn.clone())
             }
@@ -164,7 +160,7 @@ impl NmConnectionMatcher {
                         .push(nm_conn.clone())
                 }
                 self.saved_by_mac
-                    .entry((mac.to_uppercase(), nm_iface_type.clone()))
+                    .entry((mac.to_uppercase(), *nm_iface_type))
                     .or_default()
                     .push(nm_conn.clone())
             }
@@ -199,7 +195,7 @@ impl NmConnectionMatcher {
         // NmActiveConnection to search out the NmConnection.
         if let Some(nm_conn) = self
             .acs_by_name_and_type
-            .get(&(name.to_string(), nm_iface_type.clone()))
+            .get(&(name.to_string(), *nm_iface_type))
             .and_then(|nm_ac| self.saved_by_uuid.get(nm_ac.uuid.as_str()))
             .map(Rc::as_ref)
         {
@@ -208,7 +204,7 @@ impl NmConnectionMatcher {
 
         let nm_conns = self
             .saved_by_name_and_type
-            .get(&(name.to_string(), nm_iface_type.clone()))?;
+            .get(&(name.to_string(), *nm_iface_type))?;
 
         for nm_conn in nm_conns {
             if let Some(uuid) = nm_conn.uuid() {
@@ -241,7 +237,7 @@ impl NmConnectionMatcher {
         // NmActiveConnection to search out the NmConnection.
         if let Some(nm_conn) = self
             .acs_by_name_and_type
-            .get(&(base_iface.name.to_string(), nm_iface_type.clone()))
+            .get(&(base_iface.name.to_string(), nm_iface_type))
             .and_then(|nm_ac| self.saved_by_uuid.get(nm_ac.uuid.as_str()))
             .map(Rc::as_ref)
         {
@@ -335,7 +331,7 @@ impl NmConnectionMatcher {
         iface_type: &NmIfaceType,
     ) -> Option<&NmConnection> {
         self.applied_by_name_and_type
-            .get(&(name.to_string(), iface_type.clone()))
+            .get(&(name.to_string(), *iface_type))
             .map(Rc::as_ref)
     }
 
@@ -346,7 +342,7 @@ impl NmConnectionMatcher {
     ) -> Box<dyn Iterator<Item = &'a NmConnection> + 'a> {
         if let Some(nm_conns) = self
             .saved_by_name_and_type
-            .get(&(name.to_string(), iface_type.clone()))
+            .get(&(name.to_string(), *iface_type))
         {
             Box::new(nm_conns.iter().map(Rc::as_ref))
         } else {

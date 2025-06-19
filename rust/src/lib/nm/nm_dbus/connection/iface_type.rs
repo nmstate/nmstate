@@ -36,7 +36,7 @@ pub(crate) const NM_SETTING_WIFI_P2P_SETTING_NAME: &str = "wifi-p2p";
 pub(crate) const NM_SETTING_IPVLAN_SETTING_NAME: &str = "ipvlan";
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize, Serialize,
 )]
 #[non_exhaustive]
 pub enum NmIfaceType {
@@ -71,7 +71,9 @@ pub enum NmIfaceType {
     Wireguard,
     WifiP2p,
     Ipvlan,
-    Other(String),
+    // This one does not exist in NetworkManager code, just for nmstate
+    // internal usage
+    Xfrm,
 }
 
 impl std::fmt::Display for NmIfaceType {
@@ -106,8 +108,8 @@ impl std::fmt::Display for NmIfaceType {
             Self::Wireguard => NM_SETTING_WIREGUARD_SETTING_NAME,
             Self::WifiP2p => NM_SETTING_WIFI_P2P_SETTING_NAME,
             Self::Ipvlan => NM_SETTING_IPVLAN_SETTING_NAME,
+            Self::Xfrm => "xfrm",
             Self::Unknown => "unknown",
-            Self::Other(s) => s.as_str(),
         };
         write!(f, "{iface_str}")
     }
@@ -147,7 +149,7 @@ impl From<&str> for NmIfaceType {
             NM_SETTING_IPVLAN_SETTING_NAME => Self::Ipvlan,
             _ => {
                 log::debug!("Unknown interface type {s}");
-                Self::Other(s.to_string())
+                Self::Unknown
             }
         }
     }
@@ -202,6 +204,7 @@ impl From<&NmIfaceType> for InterfaceType {
             NmIfaceType::Hsr => InterfaceType::Hsr,
             NmIfaceType::Ipvlan => InterfaceType::IpVlan,
             NmIfaceType::Tun => InterfaceType::Tun,
+            NmIfaceType::Xfrm => InterfaceType::Xfrm,
             _ => InterfaceType::Other(nm_iface_type.to_string()),
         }
     }
@@ -229,9 +232,15 @@ impl From<&InterfaceType> for NmIfaceType {
             InterfaceType::Ipsec => NmIfaceType::Vpn,
             InterfaceType::IpVlan => NmIfaceType::Ipvlan,
             InterfaceType::Tun => NmIfaceType::Tun,
-            InterfaceType::Xfrm => NmIfaceType::Other("xfrm".to_string()),
+            InterfaceType::Xfrm => NmIfaceType::Xfrm,
             InterfaceType::Unknown => NmIfaceType::Unknown,
-            InterfaceType::Other(s) => NmIfaceType::Other(s.to_string()),
+            InterfaceType::Other(s) => {
+                if s == NM_SETTING_OVS_PORT_SETTING_NAME {
+                    NmIfaceType::OvsPort
+                } else {
+                    NmIfaceType::Unknown
+                }
+            }
         }
     }
 }
