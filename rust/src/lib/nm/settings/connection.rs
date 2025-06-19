@@ -52,10 +52,7 @@ pub(crate) fn iface_to_nm_connections(
     let exist_nm_conn = if merged_state.override_iface {
         None
     } else {
-        conn_matcher.get_prefered_saved(
-            iface.name(),
-            &NmIfaceType::from(&iface.iface_type()),
-        )
+        conn_matcher.get_prefered_saved(iface.base_iface())
     };
 
     if iface.is_up_exist_config() {
@@ -138,10 +135,11 @@ pub(crate) fn iface_to_nm_connections(
             gen_nm_ovs_br_setting(ovs_br_iface, &mut nm_conn);
             // For OVS Bridge, we should create its OVS port also
             for ovs_port_conf in ovs_br_iface.port_confs() {
-                let exist_nm_ovs_port_conn = conn_matcher.get_prefered_saved(
-                    &ovs_port_conf.name,
-                    &NmIfaceType::OvsPort,
-                );
+                let exist_nm_ovs_port_conn = conn_matcher
+                    .get_prefered_saved_by_name_type(
+                        &ovs_port_conf.name,
+                        &NmIfaceType::OvsPort,
+                    );
                 ret.push(create_ovs_port_nm_conn(
                     &ovs_br_iface.base.name,
                     ovs_port_conf,
@@ -288,7 +286,7 @@ pub(crate) fn iface_to_nm_connections(
                             })
                     {
                         let exist_nm_ovs_port_conn = conn_matcher
-                            .get_prefered_saved(
+                            .get_prefered_saved_by_name_type(
                                 &ovs_port_name,
                                 &NmIfaceType::OvsPort,
                             );
