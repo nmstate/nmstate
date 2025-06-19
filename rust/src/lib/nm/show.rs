@@ -88,6 +88,18 @@ pub(crate) async fn nm_retrieve(
             None => continue,
         };
 
+        // We copy MAc address of interface from current_state to help
+        // NmConnectionMatcher to find the correct one.
+        if let Some(cur_iface) = current_state
+            .interfaces
+            .get_iface(iface.name(), iface.iface_type())
+        {
+            iface
+                .base_iface_mut()
+                .mac_address
+                .clone_from(&cur_iface.base_iface().mac_address);
+        }
+
         if iface.is_ignore() {
             net_state.append_interface_data(iface);
             continue;
@@ -107,11 +119,14 @@ pub(crate) async fn nm_retrieve(
             }
         }
 
-        let nm_saved_conn = conn_matcher.get_prefered_saved(
-            iface.base_iface().name.as_str(),
-            &NmIfaceType::from(&iface.iface_type()),
-        );
-        let nm_applied_conn = conn_matcher.get_applied(iface.base_iface());
+        let nm_saved_conn = conn_matcher.get_prefered_saved(iface.base_iface());
+        let nm_applied_conn = if let Some(nm_ac) = nm_ac.as_ref() {
+            conn_matcher
+                .get_applied_by_uuid(nm_ac.uuid.as_str())
+                .or_else(|| conn_matcher.get_applied(iface.base_iface()))
+        } else {
+            conn_matcher.get_applied(iface.base_iface())
+        };
 
         let lldp_neighbors =
             if let Some(nm_applied_conn) = nm_applied_conn.as_ref() {

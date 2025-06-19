@@ -184,23 +184,26 @@ impl NmConnectionMatcher {
             .map(Rc::as_ref)
     }
 
-    /// Prefer activated in the order of:
+    /// Find the best saved NmConnection in the order of:
     /// * Currently activated
     /// * Biggest `connection.autoconnect-priority`
     /// * Biggest `connection.timestamp`
     /// * Biggest `connection.uuid`
-    pub(crate) fn get_prefered_saved<'s>(
+    pub(crate) fn get_prefered_saved_by_name_type<'s>(
         &'s self,
         name: &str,
         nm_iface_type: &NmIfaceType,
     ) -> Option<&'s NmConnection> {
-        if let Some(nm_ac) = self
+        // Prefer the current activated NmConnection by searching
+        // NmActiveConnection for specified interface, then use the UUID of
+        // NmActiveConnection to search out the NmConnection.
+        if let Some(nm_conn) = self
             .acs_by_name_and_type
             .get(&(name.to_string(), nm_iface_type.clone()))
+            .and_then(|nm_ac| self.saved_by_uuid.get(nm_ac.uuid.as_str()))
+            .map(Rc::as_ref)
         {
-            if let Some(nm_conn) = self.saved_by_uuid.get(nm_ac.uuid.as_str()) {
-                return Some(Rc::as_ref(nm_conn));
-            }
+            return Some(nm_conn);
         }
 
         let nm_conns = self
@@ -220,6 +223,56 @@ impl NmConnectionMatcher {
         nm_conns.sort_unstable_by_key(|c| nm_conn_activation_sort_keys(c));
 
         nm_conns.pop()
+    }
+
+    /// Find the best saved NmConnection in the order of:
+    /// * Currently activated
+    /// * Biggest `connection.autoconnect-priority`
+    /// * Biggest `connection.timestamp`
+    /// * Biggest `connection.uuid`
+    pub(crate) fn get_prefered_saved<'s>(
+        &'s self,
+        base_iface: &BaseInterface,
+    ) -> Option<&'s NmConnection> {
+        let nm_iface_type = NmIfaceType::from(&base_iface.iface_type);
+
+        // Prefer the current activated NmConnection by searching
+        // NmActiveConnection for specified interface, then use the UUID of
+        // NmActiveConnection to search out the NmConnection.
+        if let Some(nm_conn) = self
+            .acs_by_name_and_type
+            .get(&(base_iface.name.to_string(), nm_iface_type.clone()))
+            .and_then(|nm_ac| self.saved_by_uuid.get(nm_ac.uuid.as_str()))
+            .map(Rc::as_ref)
+        {
+            return Some(nm_conn);
+        }
+
+        match base_iface.identifier {
+            None | Some(InterfaceIdentifier::Name) => self
+                .get_prefered_saved_by_name_type(
+                    base_iface.name.as_str(),
+                    &nm_iface_type,
+                ),
+            Some(InterfaceIdentifier::MacAddress) => {
+                if let Some(mac) = base_iface.mac_address.as_deref() {
+                    let mut nm_conns: Vec<&NmConnection> = self
+                        .saved_by_mac
+                        .get(&(mac.to_string(), nm_iface_type))
+                        .map(|nm_conns| {
+                            nm_conns.iter().map(Rc::as_ref).collect()
+                        })
+                        .unwrap_or_default();
+                    nm_conns.sort_unstable_by(|a, b| {
+                        nm_conn_activation_sort_keys(a)
+                            .cmp(&nm_conn_activation_sort_keys(b))
+                    });
+                    nm_conns.pop()
+                } else {
+                    None
+                }
+            }
+        }
     }
 
     /// Get all connections can be used to activate specified interface.

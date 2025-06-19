@@ -27,8 +27,8 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
     conn_matcher: &NmConnectionMatcher,
     stable_uuid: bool,
 ) -> Result<NmConnection, NmstateError> {
-    if let Some(nm_conn) =
-        conn_matcher.get_prefered_saved(peer_name, &NmIfaceType::Ethernet)
+    if let Some(nm_conn) = conn_matcher
+        .get_prefered_saved_by_name_type(peer_name, &NmIfaceType::Ethernet)
     {
         return Ok(nm_conn.clone());
     }
