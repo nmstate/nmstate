@@ -309,6 +309,12 @@ impl<'de> Deserialize<'de> for Interface {
             if let Some(s) = v.get("state") {
                 new_value.insert("state".to_string(), s.clone());
             }
+            if let Some(s) = v.get("identifier") {
+                new_value.insert("identifier".to_string(), s.clone());
+            }
+            if let Some(s) = v.get("mac-address") {
+                new_value.insert("mac-address".to_string(), s.clone());
+            }
             v = serde_json::value::Value::Object(new_value);
         }
 
