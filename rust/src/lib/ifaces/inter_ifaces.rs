@@ -364,7 +364,9 @@ impl Interfaces {
     ) -> Result<(), NmstateError> {
         let mut changed_ifaces: Vec<Interface> = Vec::new();
         for iface in self.iter().filter(|i| {
-            i.base_iface().identifier == Some(InterfaceIdentifier::MacAddress)
+            (!i.is_absent())
+                && i.base_iface().identifier
+                    == Some(InterfaceIdentifier::MacAddress)
                 && i.base_iface().profile_name.is_none()
         }) {
             let mac_address = match iface.base_iface().mac_address.as_deref() {

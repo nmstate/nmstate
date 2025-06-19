@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 from contextlib import contextmanager
+from subprocess import SubprocessError
 
 import pytest
 
@@ -19,7 +20,7 @@ from ..testlib import statelib
 from ..testlib.genconf import gen_conf_apply
 from ..testlib.ifacelib import get_mac_address
 from ..testlib.ovslib import Bridge as OvsBridge
-
+from ..testlib.yaml import load_yaml
 
 DUMMY0_IFNAME = "dummy0"
 TEST_BRIDGE0 = "linux-br0"
@@ -712,3 +713,78 @@ def test_preserve_ip_settings_from_multiconnect(
         cmdlib.exec_cmd("nmcli -g ipv6.method c show eth1".split())[1].strip()
         == "auto"
     )
+
+
+@pytest.fixture
+def non_exist_down_mac_ref_eth():
+    non_exist_mac_address = "00:ff:ff:ff:ff:1a"
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet connection.id wan0 "
+        f"802-3-ethernet.mac-address {non_exist_mac_address} "
+        "ipv4.method disable ipv6.method disable".split(),
+        check=True,
+    )
+    yield non_exist_mac_address
+    cmdlib.exec_cmd("nmcli c del wan0".split(), check=False)
+
+
+def test_remove_non_exist_down_mac_ref_profile(non_exist_down_mac_ref_eth):
+    non_exist_mac_address = non_exist_down_mac_ref_eth
+    cmdlib.exec_cmd("nmcli -g connection.id c show wan0".split(), check=True)
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+              - name: wan0
+                type: ethernet
+                state: absent
+                identifier: mac-address
+                mac-address: {non_exist_mac_address}
+                description: port1
+            """
+        )
+    )
+
+    with pytest.raises(SubprocessError):
+        cmdlib.exec_cmd(
+            "nmcli -g connection.id c show wan0".split(), check=True
+        )
+
+
+@pytest.fixture
+def non_exist_down_profile_with_both_mac_and_name():
+    non_exist_mac_address = "00:ff:ff:ff:ff:1a"
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet connection.id wan0 "
+        "connection.interface-name not_exist "
+        f"802-3-ethernet.mac-address {non_exist_mac_address} "
+        "ipv4.method disable ipv6.method disable".split(),
+        check=True,
+    )
+    yield non_exist_mac_address
+    cmdlib.exec_cmd("nmcli c del wan0".split(), check=False)
+
+
+def test_remove_non_exist_down_profile_with_both_mac_and_name(
+    non_exist_down_profile_with_both_mac_and_name,
+):
+    non_exist_mac_address = non_exist_down_profile_with_both_mac_and_name
+    cmdlib.exec_cmd("nmcli -g connection.id c show wan0".split(), check=True)
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+              - name: wan0
+                type: ethernet
+                state: absent
+                identifier: mac-address
+                mac-address: {non_exist_mac_address}
+                description: port1
+            """
+        )
+    )
+
+    with pytest.raises(SubprocessError):
+        cmdlib.exec_cmd(
+            "nmcli -g connection.id c show wan0".split(), check=True
+        )
