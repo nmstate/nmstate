@@ -30,8 +30,8 @@ pub(crate) use self::lldp::{get_lldp, is_lldp_enabled};
 pub(crate) use self::mptcp::is_mptcp_flags_changed;
 pub(crate) use self::ovs::delete_orphan_ovs_ports;
 pub(crate) use self::profile::{
-    activate_nm_profiles, create_index_for_nm_conns_by_name_type,
-    deactivate_nm_profiles, delete_exist_profiles, save_nm_profiles,
+    activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
+    save_nm_profiles,
 };
 pub(crate) use self::route::is_route_removed;
 pub(crate) use self::user::get_description;

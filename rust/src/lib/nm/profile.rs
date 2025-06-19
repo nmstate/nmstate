@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::nm_dbus::{NmActiveConnection, NmConnection, NmIfaceType};
-use super::settings::{
-    fix_ip_dhcp_timeout, get_exist_profile, iface_to_nm_connections,
+use super::{
+    nm_dbus::{NmConnection, NmIfaceType},
+    settings::{fix_ip_dhcp_timeout, iface_to_nm_connections},
+    NmConnectionMatcher,
 };
 
 use crate::{
@@ -19,8 +20,7 @@ pub(crate) struct PerparedNmConnections {
 
 pub(crate) fn perpare_nm_conns(
     merged_state: &MergedNetworkState,
-    exist_nm_conns: &[NmConnection],
-    nm_acs: &[NmActiveConnection],
+    conn_matcher: &NmConnectionMatcher,
     gen_conf_mode: bool,
     is_retry: bool,
 ) -> Result<PerparedNmConnections, NmstateError> {
@@ -48,14 +48,7 @@ pub(crate) fn perpare_nm_conns(
         .as_slice()
         .iter()
         .filter(|iface| iface.merged.is_down())
-        .filter_map(|iface| {
-            get_exist_profile(
-                exist_nm_conns,
-                &iface.merged.base_iface().name,
-                &iface.merged.base_iface().iface_type,
-                nm_acs,
-            )
-        })
+        .filter_map(|iface| conn_matcher.get_applied(iface.merged.base_iface()))
         .cloned()
         .collect();
 
@@ -71,8 +64,7 @@ pub(crate) fn perpare_nm_conns(
         for mut nm_conn in iface_to_nm_connections(
             merged_iface,
             merged_state,
-            exist_nm_conns,
-            nm_acs,
+            conn_matcher,
             gen_conf_mode,
         )? {
             if iface.is_up()
@@ -81,7 +73,7 @@ pub(crate) fn perpare_nm_conns(
                         merged_iface,
                         &merged_state.interfaces,
                         &nm_conn,
-                        exist_nm_conns,
+                        conn_matcher,
                     ))
             {
                 nm_conns_to_activate.push(nm_conn.clone());
@@ -119,7 +111,7 @@ fn can_skip_activation(
     merged_iface: &MergedInterface,
     merged_ifaces: &MergedInterfaces,
     nm_conn: &NmConnection,
-    exist_nm_conns: &[NmConnection],
+    conn_matcher: &NmConnectionMatcher,
 ) -> bool {
     // if the controller is desired to be down or absent, activating the
     // connection on the port will risk making the controller activate again,
@@ -150,7 +142,7 @@ fn can_skip_activation(
     // Reapply of connection never reactivate its subordinates, hence we do not
     // skip activation when modifying the connection.
     if let Some(uuid) = nm_conn.uuid() {
-        if exist_nm_conns.iter().any(|c| c.uuid() == Some(uuid)) {
+        if conn_matcher.is_activated(uuid) {
             return false;
         }
     }

@@ -26,7 +26,7 @@ mod vrf;
 mod vxlan;
 mod wired;
 
-pub(crate) use self::connection::{get_exist_profile, iface_to_nm_connections};
+pub(crate) use self::connection::iface_to_nm_connections;
 pub(crate) use self::ip::fix_ip_dhcp_timeout;
 
 #[cfg(feature = "query_apply")]

@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::super::nm_dbus::{NmConnection, NmIfaceType, NmSettingVeth};
-
-use super::{connection::gen_nm_conn_setting, ip::gen_nm_ip_setting};
-
+use super::{
+    super::{
+        nm_dbus::{NmConnection, NmIfaceType, NmSettingVeth},
+        NmConnectionMatcher,
+    },
+    connection::gen_nm_conn_setting,
+    ip::gen_nm_ip_setting,
+};
 use crate::{
     BaseInterface, EthernetInterface, Interface, InterfaceIpv4, InterfaceIpv6,
     InterfaceState, InterfaceType, NmstateError, VethConfig,
@@ -20,18 +24,13 @@ impl From<&VethConfig> for NmSettingVeth {
 pub(crate) fn create_veth_peer_profile_if_not_found(
     peer_name: &str,
     end_name: &str,
-    exist_nm_conns: &[NmConnection],
+    conn_matcher: &NmConnectionMatcher,
     stable_uuid: bool,
 ) -> Result<NmConnection, NmstateError> {
-    for nm_conn in exist_nm_conns {
-        if let Some(iface_type) = nm_conn.iface_type() {
-            if nm_conn.iface_name() == Some(peer_name)
-                && [NmIfaceType::Ethernet, NmIfaceType::Veth]
-                    .contains(iface_type)
-            {
-                return Ok(nm_conn.clone());
-            }
-        }
+    if let Some(nm_conn) =
+        conn_matcher.get_prefered_saved(peer_name, &NmIfaceType::Ethernet)
+    {
+        return Ok(nm_conn.clone());
     }
     // Create new connection
     let mut eth_iface = EthernetInterface::new();

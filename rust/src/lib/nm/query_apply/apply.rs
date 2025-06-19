@@ -12,8 +12,8 @@ use super::super::{
     nm_dbus::{NmApi, NmConnection, NmIfaceType, NmVersion, NmVersionInfo},
     profile::{perpare_nm_conns, PerparedNmConnections},
     query_apply::{
-        activate_nm_profiles, create_index_for_nm_conns_by_name_type,
-        deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
+        activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
+        delete_orphan_ovs_ports,
         dispatch::apply_dispatch_script,
         dns::{
             cur_dns_ifaces_still_valid_for_dns, is_iface_dns_desired,
@@ -24,15 +24,14 @@ use super::super::{
         is_vxlan_changed,
         profile::is_uuid,
         save_nm_profiles,
-        vpn::get_match_ipsec_nm_conn,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
+    NmConnectionMatcher,
 };
 
 use crate::{
-    InterfaceIdentifier, InterfaceType, MergedInterfaces, MergedNetworkState,
-    NmstateError,
+    InterfaceType, MergedInterfaces, MergedNetworkState, NmstateError,
 };
 
 // There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
@@ -75,7 +74,7 @@ pub(crate) async fn nm_apply(
         }
     }
 
-    let exist_nm_conns = nm_api
+    let nm_saved_conns = nm_api
         .connections_get()
         .await
         .map_err(nm_error_to_nmstate)?;
@@ -83,6 +82,18 @@ pub(crate) async fn nm_apply(
         .active_connections_get()
         .await
         .map_err(nm_error_to_nmstate)?;
+    let nm_applied_conns = nm_api
+        .applied_connections_get()
+        .await
+        .map_err(nm_error_to_nmstate)?;
+
+    let conn_matcher = NmConnectionMatcher::new(
+        nm_saved_conns,
+        nm_applied_conns,
+        nm_acs.clone(),
+        &merged_state.interfaces,
+    );
+
     let nm_devs = nm_api.devices_get().await.map_err(nm_error_to_nmstate)?;
 
     let mut merged_state = merged_state.clone();
@@ -147,30 +158,12 @@ pub(crate) async fn nm_apply(
         to_store: nm_conns_to_store,
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_conns_to_deactivate,
-    } = perpare_nm_conns(
-        &merged_state,
-        exist_nm_conns.as_slice(),
-        nm_acs.as_slice(),
-        false,
-        is_retry,
-    )?;
+    } = perpare_nm_conns(&merged_state, &conn_matcher, false, is_retry)?;
 
-    let nm_ac_uuids: Vec<&str> =
-        nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
-    let activated_nm_conns: Vec<&NmConnection> = exist_nm_conns
-        .iter()
-        .filter(|c| {
-            if let Some(uuid) = c.uuid() {
-                nm_ac_uuids.contains(&uuid)
-            } else {
-                false
-            }
-        })
-        .collect();
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
         &merged_state.interfaces,
         nm_conns_to_activate.as_slice(),
-        activated_nm_conns.as_slice(),
+        &conn_matcher,
         nm_route_remove_needs_deactivate,
     );
     deactivate_nm_profiles(
@@ -186,12 +179,17 @@ pub(crate) async fn nm_apply(
     )
     .await?;
     if !merged_state.memory_only {
-        delete_exist_profiles(&mut nm_api, &exist_nm_conns, &nm_conns_to_store)
-            .await?;
+        delete_exist_profiles(
+            &mut nm_api,
+            &merged_state,
+            &conn_matcher,
+            &nm_conns_to_store,
+        )
+        .await?;
         delete_orphan_ovs_ports(
             &mut nm_api,
             &merged_state.interfaces,
-            &exist_nm_conns,
+            &conn_matcher,
             &nm_conns_to_activate,
         )
         .await?;
@@ -211,13 +209,18 @@ async fn delete_ifaces(
     nm_api: &mut NmApi<'_>,
     merged_state: &MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    let all_nm_conns = nm_api
+    let all_saved_nm_conns = nm_api
         .connections_get()
         .await
         .map_err(nm_error_to_nmstate)?;
 
-    let nm_conns_name_type_index =
-        create_index_for_nm_conns_by_name_type(&all_nm_conns);
+    let conn_matcher = NmConnectionMatcher::new(
+        all_saved_nm_conns,
+        Vec::new(),
+        Vec::new(),
+        &merged_state.interfaces,
+    );
+
     let mut uuids_to_delete: HashSet<&str> = HashSet::new();
 
     for merged_iface in merged_state
@@ -227,67 +230,8 @@ async fn delete_ifaces(
     {
         let iface = &merged_iface.merged;
 
-        if iface.iface_type() == InterfaceType::Ipsec {
-            for nm_conn in get_match_ipsec_nm_conn(iface.name(), &all_nm_conns)
-            {
-                if let Some(uuid) = nm_conn.uuid() {
-                    uuids_to_delete.insert(uuid);
-                }
-            }
-            continue;
-        }
+        let nm_conns_to_delete = conn_matcher.get_saved(iface.base_iface());
 
-        // If interface type not mentioned, we delete all profile with interface
-        // name
-        let mut nm_conns_to_delete: Vec<&NmConnection> =
-            if iface.iface_type() == InterfaceType::Unknown {
-                all_nm_conns
-                    .as_slice()
-                    .iter()
-                    .filter(|c| c.iface_name() == Some(iface.name()))
-                    .collect()
-            } else {
-                let nm_iface_type = NmIfaceType::from(&iface.iface_type());
-                nm_conns_name_type_index
-                    .get(&(iface.name(), nm_iface_type))
-                    .cloned()
-                    .unwrap_or_default()
-            };
-        // User might want to delete mac based interface using profile name
-        if let Some(cur_iface) = &merged_iface.current {
-            if cur_iface.base_iface().identifier
-                == Some(InterfaceIdentifier::MacAddress)
-                && cur_iface.base_iface().profile_name.as_deref()
-                    == Some(iface.name())
-            {
-                for nm_conn in &all_nm_conns {
-                    if nm_conn.id() == Some(iface.name()) {
-                        nm_conns_to_delete.push(nm_conn);
-                    }
-                }
-            }
-        }
-        // User might want to delete mac based interface using interface name
-        if let Some(cur_iface) = &merged_iface.current {
-            if cur_iface.base_iface().identifier
-                == Some(InterfaceIdentifier::MacAddress)
-                && cur_iface.base_iface().name.as_str() == iface.name()
-            {
-                if let Some(mac) = cur_iface.base_iface().mac_address.as_ref() {
-                    for nm_conn in &all_nm_conns {
-                        if nm_conn
-                            .wired
-                            .as_ref()
-                            .and_then(|w| w.mac_address.as_ref())
-                            .map(|s| s.to_uppercase())
-                            == Some(mac.to_uppercase())
-                        {
-                            nm_conns_to_delete.push(nm_conn);
-                        }
-                    }
-                }
-            }
-        }
         // Delete all existing connections for this interface
         for nm_conn in nm_conns_to_delete {
             if let Some(uuid) = nm_conn.uuid() {
@@ -315,9 +259,11 @@ async fn delete_ifaces(
                             );
                             uuids_to_delete.insert(ctrl);
                         }
-                    } else if let Some(nm_conns) = nm_conns_name_type_index
-                        .get(&(ctrl, NmIfaceType::OvsPort))
-                    {
+                    } else {
+                        let nm_conns = conn_matcher.get_saved_by_name_type(
+                            ctrl,
+                            &NmIfaceType::OvsPort,
+                        );
                         for nm_conn in nm_conns {
                             if let Some(uuid) = nm_conn.uuid() {
                                 if !uuids_to_delete.contains(uuid) {
@@ -443,7 +389,7 @@ async fn delete_orphan_ports(
 fn gen_nm_conn_need_to_deactivate_first(
     merged_iface: &MergedInterfaces,
     nm_conns_to_activate: &[NmConnection],
-    activated_nm_conns: &[&NmConnection],
+    conn_matcher: &NmConnectionMatcher,
     remove_routes_need_deactivate: bool,
 ) -> Vec<NmConnection> {
     let mut ret: Vec<NmConnection> = Vec::new();
@@ -455,23 +401,21 @@ fn gen_nm_conn_need_to_deactivate_first(
 
     for nm_conn in nm_conns_to_activate {
         if let Some(uuid) = nm_conn.uuid() {
-            if let Some(activated_nm_con) =
-                activated_nm_conns.iter().find(|c| {
-                    if let Some(cur_uuid) = c.uuid() {
-                        cur_uuid == uuid
-                    } else {
-                        false
-                    }
-                })
+            // VPN connection does not have applied NmConnection
+            if nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
+                && conn_matcher.is_uuid_activated(uuid)
+            {
+                ret.push(nm_conn.clone());
+            } else if let Some(nm_applied_conn) =
+                conn_matcher.get_applied_by_uuid(uuid)
             {
                 if (remove_routes_need_deactivate
-                    && is_route_removed(nm_conn, activated_nm_con))
-                    || is_vrf_table_id_changed(nm_conn, activated_nm_con)
-                    || is_vlan_changed(nm_conn, activated_nm_con)
-                    || is_vxlan_changed(nm_conn, activated_nm_con)
-                    || is_veth_peer_changed(nm_conn, activated_nm_con)
-                    || is_mptcp_flags_changed(nm_conn, activated_nm_con)
-                    || nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
+                    && is_route_removed(nm_conn, nm_applied_conn))
+                    || is_vrf_table_id_changed(nm_conn, nm_applied_conn)
+                    || is_vlan_changed(nm_conn, nm_applied_conn)
+                    || is_vxlan_changed(nm_conn, nm_applied_conn)
+                    || is_veth_peer_changed(nm_conn, nm_applied_conn)
+                    || is_mptcp_flags_changed(nm_conn, nm_applied_conn)
                     || is_bridge_port_changed_default_pvid(
                         nm_conn,
                         &default_pvid_changed_brs,
@@ -480,9 +424,9 @@ fn gen_nm_conn_need_to_deactivate_first(
                         nm_conn,
                         &bond_queue_id_changed_ports,
                     )
-                    || is_ipvlan_changed(nm_conn, activated_nm_con)
+                    || is_ipvlan_changed(nm_conn, nm_applied_conn)
                 {
-                    ret.push((*activated_nm_con).clone());
+                    ret.push((*nm_applied_conn).clone());
                 }
             }
         }

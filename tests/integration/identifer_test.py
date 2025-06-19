@@ -574,3 +574,38 @@ def test_macsec_parent_ref_by_mac(eth1_up, clean_up):
     )
 
     assert_state_match(expected_state)
+
+
+# https://issues.redhat.com/browse/RHEL-86240
+@pytest.mark.tier1
+def test_description_on_down_interface_ref_by_mac(eth1_up):
+    port1_mac = get_mac_address("eth1")
+
+    state = load_yaml(
+        f"""---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {port1_mac}
+          description: port1
+          state: down
+        """
+    )
+
+    libnmstate.apply(state)
+
+    expected_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: {port1_mac}
+          description: port1
+          state: down
+          profile-name: port1
+          """
+    )
+    assert_state_match(expected_state)

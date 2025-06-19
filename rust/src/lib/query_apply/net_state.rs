@@ -119,7 +119,7 @@ impl NetworkState {
             }
         }
         if !self.kernel_only {
-            let nm_state = nm_retrieve(self.running_config_only).await?;
+            let nm_state = nm_retrieve(self.running_config_only, self).await?;
             // TODO: Priority handling
             self.update_state(&nm_state);
         }
