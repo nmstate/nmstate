@@ -288,8 +288,13 @@ pub(crate) fn gen_merged_ifaces_for_route_test(
     current.push(new_eth_iface("eth1"));
     current.push(new_eth_iface("eth2"));
 
-    let merged =
-        MergedInterfaces::new(ifaces, current.clone(), false, false).unwrap();
+    let merged = MergedInterfaces::new(
+        ifaces,
+        current.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     (merged, current)
 }

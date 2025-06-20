@@ -268,8 +268,8 @@ async fn apply_state_async(
             match net_state.gen_diff(&cur_state) {
                 Ok(s) => Ok(s),
                 Err(e) => {
-                    log::warn!(
-                        "Failed to generate difference: {e}, \
+                    log::error!(
+                        "BUG: Failed to generate difference: {e}, \
                         returning full desired state");
                     Ok(net_state.clone())
                 }

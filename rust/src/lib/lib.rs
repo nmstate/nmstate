@@ -168,8 +168,8 @@ pub use crate::lldp::{
     LldpVlans,
 };
 pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
-pub(crate) use crate::net_state::MergedNetworkState;
 pub use crate::net_state::NetworkState;
+pub(crate) use crate::net_state::{MergedNetworkState, NetworkStateMode};
 pub(crate) use crate::ovn::MergedOvnConfiguration;
 pub use crate::ovn::{
     OvnBridgeMapping, OvnBridgeMappingState, OvnConfiguration,

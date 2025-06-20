@@ -3,7 +3,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    nm::nm_gen_conf, Interface, MergedNetworkState, NetworkState, NmstateError,
+    nm::nm_gen_conf, Interface, MergedNetworkState, NetworkState,
+    NetworkStateMode, NmstateError,
 };
 
 impl NetworkState {
@@ -29,7 +30,7 @@ impl NetworkState {
         let merged_state = MergedNetworkState::new(
             self.clone(),
             cur_state,
-            true,  // gen_conf mode
+            NetworkStateMode::GenerateConfig,
             false, // memory only
         )?;
         ret.insert("NetworkManager".to_string(), nm_gen_conf(&merged_state)?);

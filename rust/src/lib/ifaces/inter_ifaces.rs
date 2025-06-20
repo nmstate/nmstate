@@ -8,7 +8,8 @@ use serde::{
 
 use crate::{
     ErrorKind, EthernetInterface, Interface, InterfaceIdentifier,
-    InterfaceState, InterfaceType, MergedInterface, NmstateError,
+    InterfaceState, InterfaceType, MergedInterface, NetworkStateMode,
+    NmstateError,
 };
 
 // The max loop count for Interfaces.set_ifaces_up_priority()
@@ -659,7 +660,7 @@ pub(crate) struct MergedInterfaces {
     pub(crate) insert_order: Vec<(String, InterfaceType)>,
     pub(crate) ignored_ifaces: Vec<(String, InterfaceType)>,
     pub(crate) memory_only: bool,
-    pub(crate) gen_conf_mode: bool,
+    pub(crate) mode: NetworkStateMode,
 }
 
 impl MergedInterfaces {
@@ -669,7 +670,7 @@ impl MergedInterfaces {
     pub(crate) fn new(
         mut desired: Interfaces,
         mut current: Interfaces,
-        gen_conf_mode: bool,
+        mode: NetworkStateMode,
         memory_only: bool,
     ) -> Result<Self, NmstateError> {
         let mut merged_kernel_ifaces: HashMap<String, MergedInterface> =
@@ -682,12 +683,16 @@ impl MergedInterfaces {
         desired.unify_veth_and_eth();
         current.unify_veth_and_eth();
 
-        if gen_conf_mode {
+        if mode == NetworkStateMode::GenerateConfig {
             desired.set_unknown_iface_to_eth()?;
             desired.set_missing_port_to_eth();
             desired.handle_gen_conf_mac_identifer();
         } else {
-            desired.resolve_sriov_reference(&current)?;
+            // SRIOV VF might not exist in pre-apply current, hence
+            // we do not resolve SRIOV refer for gen_diff() call.
+            if mode != NetworkStateMode::GenerateDiff {
+                desired.resolve_sriov_reference(&current)?;
+            }
             desired.resolve_mac_identifider_in_current(&current)?;
             desired.resolve_unknown_ifaces(&current)?;
             desired.resolve_mac_identifider_in_desired(&current)?;
@@ -763,7 +768,7 @@ impl MergedInterfaces {
             insert_order: desired.insert_order,
             ignored_ifaces,
             memory_only,
-            gen_conf_mode,
+            mode,
         };
 
         ret.process()?;

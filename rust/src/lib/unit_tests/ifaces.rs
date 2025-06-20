@@ -21,7 +21,8 @@ fn test_resolve_unknown_type_absent_eth() {
     ifaces.push(absent_iface);
 
     let merged_ifaces =
-        MergedInterfaces::new(ifaces, cur_ifaces, false, false).unwrap();
+        MergedInterfaces::new(ifaces, cur_ifaces, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .get_iface("eth1", InterfaceType::Ethernet)
@@ -46,7 +47,8 @@ fn test_resolve_unknown_type_absent_multiple() {
     ifaces.push(absent_iface);
 
     let merged_ifaces =
-        MergedInterfaces::new(ifaces, cur_ifaces, false, false).unwrap();
+        MergedInterfaces::new(ifaces, cur_ifaces, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .get_iface("br0", InterfaceType::OvsBridge)
@@ -79,7 +81,8 @@ fn test_vlan_over_ethernet_can_exist_after_ethernet_absent() {
     desired.push(eth0);
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .get_iface("eth0", InterfaceType::Ethernet)
@@ -110,7 +113,8 @@ fn test_check_orphan_vlan_change_parent() {
     desired.push(new_eth_iface("eth1"));
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
     let iface = merged_ifaces
         .get_iface("eth0", InterfaceType::Ethernet)
         .unwrap()
@@ -169,8 +173,13 @@ fn test_ifaces_resolve_unknown_bond_iface() {
 ",
     )
     .unwrap();
-    let merged_iface =
-        MergedInterfaces::new(desired.clone(), current, false, false).unwrap();
+    let merged_iface = MergedInterfaces::new(
+        desired.clone(),
+        current,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let iface = merged_iface
         .get_iface("bond99", InterfaceType::Bond)
@@ -215,7 +224,8 @@ fn test_ifaces_ignore_iface_in_desire() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let mut ignored_ifaces = merged_ifaces.ignored_ifaces;
     ignored_ifaces.sort_unstable();
@@ -252,7 +262,8 @@ fn test_ifaces_ignore_iface_in_current() {
     )
     .unwrap();
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let mut ignored_ifaces = merged_ifaces.ignored_ifaces;
     ignored_ifaces.sort_unstable();
@@ -298,7 +309,8 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
     )
     .unwrap();
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let mut ignored_ifaces = merged_ifaces.ignored_ifaces;
     ignored_ifaces.sort_unstable();

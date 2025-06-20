@@ -35,7 +35,8 @@ fn test_ib_autoremove_pkey_if_base_iface_removed() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .get_iface("mlx5_ib2", InterfaceType::InfiniBand)
@@ -124,8 +125,12 @@ fn test_ib_port_of_bridge_in_desire() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(desired, Interfaces::new(), false, false);
+    let result = MergedInterfaces::new(
+        desired,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    );
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -158,7 +163,8 @@ fn test_ib_port_of_bridge_in_current() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(desired, current, false, false);
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -193,7 +199,8 @@ fn test_ib_port_of_bond_mode_in_desire() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(desired, current, false, false);
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -233,7 +240,8 @@ fn test_ib_port_of_bond_mode_in_current() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(desired, current, false, false);
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -273,7 +281,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_current() {
     )
     .unwrap();
 
-    MergedInterfaces::new(desired, current, false, false).unwrap();
+    MergedInterfaces::new(desired, current, Default::default(), false).unwrap();
 }
 
 #[test]
@@ -311,7 +319,8 @@ fn test_ib_port_of_active_backup_bond_mode_in_both() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .get_iface("bond0", InterfaceType::Bond)
@@ -358,7 +367,8 @@ fn test_ib_port_of_active_backup_bond_mode_in_desire() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .get_iface("mlx5_ib2", InterfaceType::InfiniBand)

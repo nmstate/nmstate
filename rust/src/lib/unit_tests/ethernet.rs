@@ -75,7 +75,12 @@ fn test_veth_change_peer_away_from_ignored_peer() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(des_ifaces, cur_ifaces, false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    );
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -106,7 +111,12 @@ fn test_veth_change_peer_away_from_missing_peer() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(des_ifaces, cur_ifaces, false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    );
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -132,9 +142,13 @@ fn test_eth_verify_absent_ignore_current_up() {
 ",
     )
     .unwrap();
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces.clone(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&cur_ifaces).unwrap();
 }
@@ -168,8 +182,13 @@ fn test_eth_change_veth_peer() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let old_peer_iface = merged_ifaces
         .get_iface("veth1peer", InterfaceType::Unknown)
@@ -192,8 +211,12 @@ fn test_new_veth_without_peer_config() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(des_ifaces, Interfaces::new(), false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    );
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -231,8 +254,13 @@ fn test_mac_identifer_use_permanent_mac_first() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let des_iface = merged_ifaces
         .kernel_ifaces
@@ -282,8 +310,13 @@ fn test_mac_identifer_use_fallback_to_mac() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let des_iface = merged_ifaces
         .kernel_ifaces
@@ -338,8 +371,13 @@ fn test_mac_identifer_check_iface_type_also() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let des_iface = merged_ifaces
         .kernel_ifaces

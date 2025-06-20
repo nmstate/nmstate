@@ -351,7 +351,7 @@ impl MergedNetworkState {
     pub(crate) fn new(
         desired: NetworkState,
         current: NetworkState,
-        gen_conf_mode: bool,
+        mode: NetworkStateMode,
         memory_only: bool,
     ) -> Result<Self, NmstateError> {
         let mut current = current;
@@ -362,7 +362,7 @@ impl MergedNetworkState {
         let interfaces = MergedInterfaces::new(
             desired.interfaces,
             current.interfaces,
-            gen_conf_mode,
+            mode,
             memory_only,
         )?;
         let ignored_ifaces = interfaces.ignored_ifaces.as_slice();
@@ -402,4 +402,12 @@ impl MergedNetworkState {
 
         Ok(ret)
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum NetworkStateMode {
+    #[default]
+    Apply,
+    GenerateConfig,
+    GenerateDiff,
 }

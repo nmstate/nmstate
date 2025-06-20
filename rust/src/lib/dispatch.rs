@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ErrorKind, MergedInterfaces, NmstateError};
+use crate::{ErrorKind, MergedInterfaces, NetworkStateMode, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -35,7 +35,7 @@ impl MergedInterfaces {
                     .map(|f| f.base_iface().dispatch.is_some())
                     .unwrap_or_default()
         }) {
-            if self.gen_conf_mode {
+            if self.mode == NetworkStateMode::GenerateConfig {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     "Dispatch script is not supported in gc(gen_conf) mode"

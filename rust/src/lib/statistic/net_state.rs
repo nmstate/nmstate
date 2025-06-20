@@ -2,7 +2,10 @@
 
 use serde::Serialize;
 
-use crate::{MergedNetworkState, NetworkState, NmstateError, NmstateFeature};
+use crate::{
+    MergedNetworkState, NetworkState, NetworkStateMode, NmstateError,
+    NmstateFeature,
+};
 
 #[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
 #[non_exhaustive]
@@ -36,8 +39,12 @@ impl NetworkState {
             self.interfaces
                 .use_pseudo_sriov_vf_name(&mut current.interfaces);
         }
-        let merged_state =
-            MergedNetworkState::new(self.clone(), current, false, false)?;
+        let merged_state = MergedNetworkState::new(
+            self.clone(),
+            current,
+            NetworkStateMode::default(),
+            false,
+        )?;
 
         features.append(&mut merged_state.interfaces.get_features());
         features.append(&mut merged_state.dns.get_features());

@@ -46,9 +46,13 @@ fn test_vlan_get_parent_up_priority_plus_one() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(desired, Interfaces::new(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let vrf0_iface = merged_ifaces
         .get_iface("vrf0", InterfaceType::Vrf)
@@ -98,7 +102,8 @@ fn test_vlan_orphan_check_auto_absent() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let vlan_iface = merged_ifaces
         .get_iface("bond0.100", InterfaceType::Vlan)
@@ -134,7 +139,8 @@ fn test_vlan_orphan_but_desired() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(desired, current, false, false);
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -180,7 +186,7 @@ fn test_vlan_orphan_has_now_parent() {
     )
     .unwrap();
 
-    MergedInterfaces::new(desired, current, false, false).unwrap();
+    MergedInterfaces::new(desired, current, Default::default(), false).unwrap();
 }
 
 #[test]
