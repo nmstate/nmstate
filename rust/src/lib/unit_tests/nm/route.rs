@@ -23,9 +23,13 @@ fn test_add_routes_to_new_interface() {
     des_net_state.interfaces = des_ifaces;
     des_net_state.routes = gen_test_routes_conf();
 
-    let mut merged_state =
-        MergedNetworkState::new(des_net_state, cur_net_state, false, false)
-            .unwrap();
+    let mut merged_state = MergedNetworkState::new(
+        des_net_state,
+        cur_net_state,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     store_route_config(&mut merged_state).unwrap();
 
@@ -88,9 +92,13 @@ fn test_wildcard_absent_routes() {
 
     des_net_state.routes.config = Some(absent_routes);
 
-    let mut merged_state =
-        MergedNetworkState::new(des_net_state, cur_net_state, false, false)
-            .unwrap();
+    let mut merged_state = MergedNetworkState::new(
+        des_net_state,
+        cur_net_state,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     store_route_config(&mut merged_state).unwrap();
 
@@ -124,9 +132,13 @@ fn test_absent_routes_with_iface_only() {
     absent_routes.push(absent_route);
     des_net_state.routes.config = Some(absent_routes);
 
-    let mut merged_state =
-        MergedNetworkState::new(des_net_state, cur_net_state, false, false)
-            .unwrap();
+    let mut merged_state = MergedNetworkState::new(
+        des_net_state,
+        cur_net_state,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     store_route_config(&mut merged_state).unwrap();
 
@@ -192,7 +204,8 @@ routes:
     .unwrap();
 
     let mut merged_state =
-        MergedNetworkState::new(desired, current, false, false).unwrap();
+        MergedNetworkState::new(desired, current, Default::default(), false)
+            .unwrap();
     store_route_config(&mut merged_state).unwrap();
 
     let br0_iface = merged_state

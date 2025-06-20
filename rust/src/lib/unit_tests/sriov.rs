@@ -47,9 +47,13 @@ fn test_sriov_vf_mac_mix_case() {
     }
     des_ifaces.push(des_iface);
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&cur_ifaces).unwrap();
 }
@@ -91,9 +95,13 @@ fn test_ignore_sriov_if_not_desired() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(desired, pre_apply_cur_ifaces, false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
 }
@@ -230,8 +238,13 @@ fn test_verify_sriov_name() {
         ",
     )
     .unwrap();
-    let merged_ifaces =
-        MergedInterfaces::new(desired, current.clone(), false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        current.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
 }
@@ -381,9 +394,13 @@ fn test_verify_sriov_port_name_linux_bridge() {
         )
         .unwrap(),
     );
-    let merged_ifaces =
-        MergedInterfaces::new(desired, pre_apply_current, false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_current,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
 }
@@ -419,9 +436,13 @@ fn test_verify_sriov_port_name_bond() {
         .unwrap(),
     );
 
-    let merged_ifaces =
-        MergedInterfaces::new(desired, pre_apply_current, false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_current,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
 }
@@ -454,9 +475,13 @@ fn test_verify_sriov_port_name_ovs_bridge() {
         )
         .unwrap(),
     );
-    let merged_ifaces =
-        MergedInterfaces::new(desired, pre_apply_current, false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_current,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
 }
@@ -499,9 +524,13 @@ fn test_verify_sriov_port_name_ovs_bond() {
         )
         .unwrap(),
     );
-    let merged_ifaces =
-        MergedInterfaces::new(desired, pre_apply_current, false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_current,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
 }
@@ -566,9 +595,13 @@ fn test_sriov_vf_auto_fill_vf_conf() {
     }
     des_ifaces.push(des_iface);
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, pre_apply_current, false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_current,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&cur_ifaces).unwrap();
 
@@ -753,7 +786,8 @@ fn test_sriov_vf_revert_to_default() {
     .unwrap();
 
     let mut merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .kernel_ifaces
@@ -838,7 +872,8 @@ fn test_get_sriov_vf_count() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     assert_eq!(merged_ifaces.get_sriov_vf_count(), 32);
 }

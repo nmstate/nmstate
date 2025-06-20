@@ -43,8 +43,13 @@ fn test_ovs_bridge_ignore_port() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let mut ignored_ifaces = merged_ifaces.ignored_ifaces.clone();
     ignored_ifaces.sort_unstable();
@@ -122,9 +127,13 @@ fn test_ovs_bridge_verify_ignore_port() {
     )
     .unwrap();
 
-    let merged_iface =
-        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
-            .unwrap();
+    let merged_iface = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_iface.verify(&cur_ifaces).unwrap();
 }
@@ -190,7 +199,8 @@ fn test_ovs_bridge_same_name_absent() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let br1_iface = merged_ifaces
         .get_iface("br1", InterfaceType::OvsBridge)
@@ -241,7 +251,8 @@ fn test_ovs_bridge_resolve_user_space_iface_type() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let iface = merged_ifaces
         .get_iface("ovs-br1", InterfaceType::OvsBridge)
@@ -605,7 +616,8 @@ fn test_ovs_orphan_check_on_bridge_with_same_name_iface() {
     )
     .unwrap();
 
-    MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    MergedInterfaces::new(des_ifaces, cur_ifaces, Default::default(), false)
+        .unwrap();
 }
 
 #[test]
@@ -639,7 +651,8 @@ fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
     )
     .unwrap();
 
-    MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    MergedInterfaces::new(des_ifaces, cur_ifaces, Default::default(), false)
+        .unwrap();
 }
 
 #[test]
@@ -749,9 +762,13 @@ fn test_ignore_patch_ports_for_verify() {
     )
     .unwrap();
 
-    let merged_iface =
-        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
-            .unwrap();
+    let merged_iface = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_iface.verify(&cur_ifaces).unwrap();
 }
@@ -821,9 +838,13 @@ fn test_ignore_patch_ports_for_apply() {
     )
     .unwrap();
 
-    let merged_iface =
-        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
-            .unwrap();
+    let merged_iface = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let patch0_iface = merged_iface
         .get_iface("patch0", InterfaceType::OvsInterface)

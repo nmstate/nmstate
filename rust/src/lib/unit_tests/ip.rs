@@ -126,9 +126,13 @@ fn test_ip_allow_extra_address_by_default() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(desired, gen_test_eth_ifaces(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
 }
@@ -167,9 +171,13 @@ fn test_ipv4_not_allow_extra_address() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(desired, gen_test_eth_ifaces(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let result = merged_ifaces.verify(&current);
     assert!(result.is_err());
@@ -212,9 +220,13 @@ fn test_ipv6_not_allow_extra_address() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(desired, gen_test_eth_ifaces(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let result = merged_ifaces.verify(&current);
     assert!(result.is_err());
@@ -274,9 +286,13 @@ fn test_ipv6_verify_emtpy() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     merged_ifaces.verify(&cur_ifaces).unwrap();
 }
@@ -297,8 +313,12 @@ fn test_should_not_have_ipv6_in_ipv4_section() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    );
     assert!(result.is_err());
 
     if let Err(e) = result {
@@ -322,8 +342,12 @@ fn test_should_not_have_ipv4_in_ipv6_section() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    );
     assert!(result.is_err());
 
     if let Err(e) = result {
@@ -347,8 +371,12 @@ fn test_ipv4_verify_valid_prefix() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    );
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidArgument);
@@ -370,8 +398,12 @@ fn test_ipv6_verify_valid_prefix() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    );
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidArgument);

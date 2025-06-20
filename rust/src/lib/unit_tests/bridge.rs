@@ -43,8 +43,13 @@ fn test_linux_bridge_ignore_port() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let ignored_ifaces = merged_ifaces.ignored_ifaces.as_slice();
 
@@ -104,9 +109,13 @@ fn test_linux_bridge_verify_ignore_port() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces.clone(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
     merged_ifaces.verify(&cur_ifaces).unwrap();
 }
 
@@ -234,8 +243,13 @@ fn test_linux_bridge_partial_ignored() {
 ",
     )
     .unwrap();
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let ignored_ifaces = merged_ifaces.ignored_ifaces.as_slice();
 

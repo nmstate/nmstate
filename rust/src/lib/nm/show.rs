@@ -24,8 +24,8 @@ use crate::{
     InterfaceIdentifier, InterfaceState, InterfaceType, IpVlanInterface,
     LinuxBridgeInterface, LoopbackInterface, MacSecConfig, MacSecInterface,
     MacVlanInterface, MacVtapInterface, MergedNetworkState, NetworkState,
-    NmstateError, OvsBridgeInterface, OvsInterface, UnknownInterface,
-    VlanInterface, VrfInterface, VxlanInterface,
+    NetworkStateMode, NmstateError, OvsBridgeInterface, OvsInterface,
+    UnknownInterface, VlanInterface, VrfInterface, VxlanInterface,
 };
 
 /// The `current_state` is NetworkState retrieved by nispor, and will be used
@@ -57,7 +57,7 @@ pub(crate) async fn nm_retrieve(
         &MergedNetworkState::new(
             NetworkState::default(),
             current_state.clone(),
-            false,
+            NetworkStateMode::default(),
             false,
         )?
         .interfaces,

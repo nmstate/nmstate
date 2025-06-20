@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{MergedNetworkState, NetworkState, NmstateError};
+use crate::{MergedNetworkState, NetworkState, NetworkStateMode, NmstateError};
 
 impl NetworkState {
     pub fn generate_revert(
@@ -10,7 +10,7 @@ impl NetworkState {
         let merged_state = MergedNetworkState::new(
             self.clone(),
             current.clone(),
-            false,
+            NetworkStateMode::default(),
             false,
         )?;
         Ok(Self {

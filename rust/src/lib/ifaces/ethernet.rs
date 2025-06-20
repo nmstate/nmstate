@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceType, Interfaces,
-    MergedInterfaces, NmstateError, SrIovConfig,
+    MergedInterfaces, NetworkStateMode, NmstateError, SrIovConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -192,8 +192,11 @@ impl MergedInterfaces {
         }) {
             if let Some(Interface::Ethernet(eth_iface)) = &iface.desired {
                 if eth_iface.veth.is_none()
-                    && !self.gen_conf_mode
+                    && self.mode != NetworkStateMode::GenerateConfig
                     && !veth_peers.contains(&eth_iface.base.name.as_str())
+                    // The `resolve_sriov_reference()` will raise error if
+                    // SRIOV VF not found, so we skip check on them here.
+                    && !eth_iface.base.name.starts_with("sriov:")
                 {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,

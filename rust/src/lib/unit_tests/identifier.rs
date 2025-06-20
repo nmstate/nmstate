@@ -53,7 +53,7 @@ fn test_can_have_dup_profile_name_when_not_refered() {
     )
     .unwrap();
 
-    MergedInterfaces::new(desired, current, false, false).unwrap();
+    MergedInterfaces::new(desired, current, Default::default(), false).unwrap();
 }
 
 #[test]
@@ -79,9 +79,13 @@ fn test_port_refer_to_kernel_interface() {
     )
     .unwrap();
 
-    let mut merged =
-        MergedInterfaces::new(desired, Interfaces::default(), false, false)
-            .unwrap();
+    let mut merged = MergedInterfaces::new(
+        desired,
+        Interfaces::default(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let dummy1 = merged
         .kernel_ifaces
@@ -131,7 +135,8 @@ fn test_port_cannot_refer_to_interfaces_holding_profile_name() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(desired, current, false, false);
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
 
     assert!(result.is_err());
 
@@ -166,7 +171,8 @@ fn test_port_ref_not_found() {
     )
     .unwrap();
 
-    let result = MergedInterfaces::new(desired, current, false, false);
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
 
     assert!(result.is_err());
 
@@ -202,7 +208,8 @@ fn test_vlan_parent_ref_by_profile_name() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let merged_iface = merged_ifaces.kernel_ifaces.get("vlan0").unwrap();
 
@@ -268,7 +275,8 @@ fn test_vxlan_parent_ref_by_profile_name() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let merged_iface = merged_ifaces.kernel_ifaces.get("vxlan0").unwrap();
 
@@ -316,7 +324,8 @@ fn test_macsec_parent_ref_by_profile_name() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let merged_iface = merged_ifaces.kernel_ifaces.get("macsec0").unwrap();
 
@@ -358,7 +367,8 @@ fn test_macvlan_parent_ref_by_profile_name() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let merged_iface = merged_ifaces.kernel_ifaces.get("macvlan0").unwrap();
 
@@ -405,7 +415,8 @@ fn test_macvtap_parent_ref_by_profile_name() {
     .unwrap();
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let merged_iface = merged_ifaces.kernel_ifaces.get("macvtap0").unwrap();
 

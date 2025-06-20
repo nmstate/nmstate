@@ -74,8 +74,13 @@ fn test_vrf_on_bond_vlan_got_auto_remove() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let iface = merged_ifaces
         .get_iface("test-bond0.100", InterfaceType::Vlan)

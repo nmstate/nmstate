@@ -13,7 +13,7 @@ use crate::{
         DEFAULT_OVS_DB_SOCKET_PATH,
     },
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
-    NmstateError,
+    NetworkStateMode, NmstateError,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
@@ -224,7 +224,7 @@ impl NetworkState {
             merged_state = Some(MergedNetworkState::new(
                 self.clone(),
                 cur_net_state.clone(),
-                false,
+                NetworkStateMode::Apply,
                 self.memory_only,
             )?);
         }
@@ -260,7 +260,7 @@ impl NetworkState {
                 let pf_merged_state = MergedNetworkState::new(
                     pf_state,
                     cur_net_state.clone(),
-                    false,
+                    NetworkStateMode::Apply,
                     self.memory_only,
                 )?;
                 let verify_count =
@@ -278,7 +278,7 @@ impl NetworkState {
                 merged_state = Some(MergedNetworkState::new(
                     self.clone(),
                     cur_net_state.clone(),
-                    false,
+                    NetworkStateMode::Apply,
                     self.memory_only,
                 )?);
             }
@@ -365,7 +365,7 @@ impl NetworkState {
         let merged_state = MergedNetworkState::new(
             self.clone(),
             cur_net_state.clone(),
-            false,
+            NetworkStateMode::Apply,
             self.memory_only,
         )?;
 
@@ -417,7 +417,7 @@ impl NetworkState {
         let merged_state = MergedNetworkState::new(
             self.clone(),
             current.clone(),
-            false,
+            NetworkStateMode::GenerateDiff,
             false,
         )?;
 

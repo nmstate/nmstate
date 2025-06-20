@@ -19,7 +19,8 @@ fn test_ifaces_up_order_no_ctrler_reserse_order() {
     ifaces.push(new_eth_iface("eth1"));
 
     let merged_ifaces =
-        MergedInterfaces::new(ifaces, cur_ifaces, false, false).unwrap();
+        MergedInterfaces::new(ifaces, cur_ifaces, Default::default(), false)
+            .unwrap();
 
     let eth1_iface = merged_ifaces
         .get_iface("eth1", InterfaceType::Ethernet)
@@ -59,9 +60,13 @@ fn test_ifaces_up_order_nested_4_depth_worst_case() {
     ifaces.push(br1);
     ifaces.push(br0);
 
-    let merged_ifaces =
-        MergedInterfaces::new(ifaces, gen_test_eth_ifaces(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     assert_eq!(
         merged_ifaces.kernel_ifaces["br0"]
@@ -139,8 +144,12 @@ fn test_ifaces_up_order_nested_5_depth_worst_case() {
     ifaces.push(br0);
     ifaces.push(br4);
 
-    let result =
-        MergedInterfaces::new(ifaces, gen_test_eth_ifaces(), false, false);
+    let result = MergedInterfaces::new(
+        ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    );
 
     assert!(result.is_err());
 
@@ -168,9 +177,13 @@ fn test_ifaces_up_order_nested_5_depth_good_case() {
     ifaces.push(p2);
     ifaces.push(p1);
 
-    let merged_ifaces =
-        MergedInterfaces::new(ifaces, gen_test_eth_ifaces(), false, false)
-            .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        ifaces,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     assert_eq!(
         merged_ifaces.kernel_ifaces["br4"]
@@ -242,8 +255,13 @@ fn test_auto_include_ovs_interface() {
     let mut ifaces = Interfaces::new();
     ifaces.push(new_ovs_br_iface("br0", &["p1", "p2"]));
 
-    let merged_ifaces =
-        MergedInterfaces::new(ifaces, Interfaces::new(), false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        ifaces,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let p1_iface = merged_ifaces
         .get_iface("p1", InterfaceType::OvsInterface)
@@ -304,7 +322,8 @@ fn test_auto_absent_ovs_interface() {
     ifaces.push(Interface::OvsBridge(Box::new(absent_br0)));
 
     let merged_ifaces =
-        MergedInterfaces::new(ifaces, cur_ifaces, false, false).unwrap();
+        MergedInterfaces::new(ifaces, cur_ifaces, Default::default(), false)
+            .unwrap();
 
     let p1_iface = merged_ifaces
         .get_iface("p1", InterfaceType::OvsInterface)
@@ -352,7 +371,10 @@ fn test_overbook_port_in_single_bridge() {
     let mut current = Interfaces::new();
     current.push(new_eth_iface("eth0"));
 
-    assert!(MergedInterfaces::new(desired, current, false, false).is_ok());
+    assert!(
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -365,7 +387,8 @@ fn test_overbook_port_in_two_bridges() {
     let mut current = Interfaces::new();
     current.push(new_eth_iface("eth0"));
 
-    let result = MergedInterfaces::new(desired, current, false, false);
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 }
@@ -383,7 +406,10 @@ fn test_overbook_port_moves_between_bridges() {
     desired.push(bridge_with_ports("br0", &[]));
     desired.push(bridge_with_ports("br1", &["eth0"]));
 
-    assert!(MergedInterfaces::new(desired, current, false, false).is_ok());
+    assert!(
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -398,7 +424,7 @@ fn test_overbook_current_bridge_is_deleted() {
     absent_iface.base_iface_mut().state = InterfaceState::Absent;
     desired.push(absent_iface);
 
-    MergedInterfaces::new(desired, current, false, false).unwrap();
+    MergedInterfaces::new(desired, current, Default::default(), false).unwrap();
 }
 
 #[test]
@@ -413,7 +439,10 @@ fn test_overbook_port_used_in_current_bridge() {
     let mut desired = Interfaces::new();
     desired.push(bridge_with_ports("br1", &["eth0"]));
 
-    assert!(MergedInterfaces::new(desired, current, false, false).is_ok());
+    assert!(
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -428,7 +457,10 @@ fn test_overbook_port_used_in_current_bond() {
     let mut desired = Interfaces::new();
     desired.push(bond_with_ports("bond1", &["eth0"]));
 
-    assert!(MergedInterfaces::new(desired, current, false, false).is_ok());
+    assert!(
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -449,7 +481,10 @@ fn test_overbook_swap_port_of_bond() {
     desired.push(bond_with_ports("bond1", &["eth0"]));
     desired.push(bond_with_ports("bond0", &["eth1"]));
 
-    assert!(MergedInterfaces::new(desired, current, false, false).is_ok());
+    assert!(
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -472,8 +507,12 @@ fn test_iface_controller_not_conflict_with_bond_ports() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(des_ifaces, Interfaces::new(), false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    );
     assert!(result.is_ok());
 }
 
@@ -487,7 +526,12 @@ fn test_iface_controller_conflict_with_bond_ports() {
     iface.base_iface_mut().controller = Some("bond0".to_string());
     ifaces.push(iface);
 
-    let result = MergedInterfaces::new(ifaces, Interfaces::new(), false, false);
+    let result = MergedInterfaces::new(
+        ifaces,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    );
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -507,7 +551,8 @@ fn test_iface_controller_conflict_with_br_ports() {
     iface.base_iface_mut().controller = Some("br0".to_string());
     ifaces.push(iface);
 
-    let result = MergedInterfaces::new(ifaces, cur_ifaces, false, false);
+    let result =
+        MergedInterfaces::new(ifaces, cur_ifaces, Default::default(), false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -526,7 +571,8 @@ fn test_iface_controller_prop_only_in_desire() {
     desired.push(iface);
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let eth1_iface = merged_ifaces
         .get_iface("eth1", InterfaceType::Ethernet)
@@ -558,7 +604,8 @@ fn test_iface_controller_prop_only_in_desire_dup_ovs_br() {
     desired.push(iface);
 
     let merged_ifaces =
-        MergedInterfaces::new(desired, current, false, false).unwrap();
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
 
     let eth1_iface = merged_ifaces
         .get_iface("eth1", InterfaceType::Ethernet)
@@ -589,7 +636,8 @@ fn test_iface_controller_been_list_in_other_port_list() {
     iface.base_iface_mut().controller = Some("bond0".to_string());
     ifaces.push(iface);
 
-    let result = MergedInterfaces::new(ifaces, current, false, false);
+    let result =
+        MergedInterfaces::new(ifaces, current, Default::default(), false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -604,7 +652,12 @@ fn test_iface_detach_controller_been_list_in_other_port_list() {
     iface.base_iface_mut().controller = Some("".to_string());
     ifaces.push(iface);
 
-    let result = MergedInterfaces::new(ifaces, Interfaces::new(), false, false);
+    let result = MergedInterfaces::new(
+        ifaces,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    );
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -632,8 +685,12 @@ fn test_iface_controller_conflict_with_empty_br_ports() {
     )
     .unwrap();
 
-    let result =
-        MergedInterfaces::new(des_ifaces, Interfaces::new(), false, false);
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    );
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -666,8 +723,13 @@ fn test_auto_manage_ports() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let br_iface = merged_ifaces
         .get_iface("br0", InterfaceType::LinuxBridge)
@@ -724,8 +786,13 @@ fn test_auto_manage_ovs_bond_ports() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let br_iface = merged_ifaces
         .get_iface("br0", InterfaceType::OvsBridge)
@@ -789,8 +856,13 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let br_iface = merged_ifaces
         .get_iface("br0", InterfaceType::LinuxBridge)
@@ -844,8 +916,13 @@ fn test_absent_iface_holding_controller_and_ip() {
             Some(InterfaceType::LinuxBridge);
     }
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let iface = merged_ifaces.kernel_ifaces.get("eth1").unwrap();
 
@@ -898,8 +975,13 @@ fn test_gen_topoligies_bridge_over_vlan() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let top = merged_ifaces.gen_topoligies();
 
@@ -955,8 +1037,13 @@ fn test_gen_topoligies_ovs_bridge() {
     )
     .unwrap();
 
-    let merged_ifaces =
-        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
 
     let top = merged_ifaces.gen_topoligies();
 
