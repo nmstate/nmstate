@@ -1,4 +1,18 @@
 # Changelog
+## [2.2.46] - 2025-06-20
+### Breaking changes
+ - N/A
+
+### New features
+ - Store DNS to interface also when global DNS been used. (2fd371f6)
+
+### Bug fixes
+ - Can delete non-exist mac-ref connection. (f9f98bf8)
+ - Delete deactivated NM connection also. (963d6533)
+ - Fix HSR support. (23804cba)
+ - nm: Do not skip activation on failure retry. (cdcc03bc)
+ - nm: route rules: don't duplicate rules in NM profile. (f2e38dc4)
+
 ## [2.2.45] - 2025-05-28
 ### Breaking changes
  - N/A
