@@ -27,8 +27,7 @@ pub(crate) use self::connection::{
 pub(crate) use self::dns::retrieve_dns_info;
 pub(crate) use self::ieee8021x::nm_802_1x_to_nmstate;
 pub(crate) use self::ip::{
-    is_forwarding_supported, nm_ip_setting_to_nmstate4,
-    nm_ip_setting_to_nmstate6, query_nmstate_wait_ip,
+    nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6, query_nmstate_wait_ip,
 };
 pub(crate) use self::ipvlan::is_ipvlan_changed;
 pub(crate) use self::lldp::{get_lldp, is_lldp_enabled};
