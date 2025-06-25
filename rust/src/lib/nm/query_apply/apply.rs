@@ -21,9 +21,9 @@ use super::super::{
             cur_dns_ifaces_still_valid_for_dns, is_iface_dns_desired,
             purge_global_dns_config, store_dns_config_via_global_api,
         },
-        is_forwarding_supported, is_ipvlan_changed, is_mptcp_flags_changed,
-        is_route_removed, is_veth_peer_changed, is_vlan_changed,
-        is_vrf_table_id_changed, is_vxlan_changed, save_nm_connections,
+        is_ipvlan_changed, is_mptcp_flags_changed, is_route_removed,
+        is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
+        is_vxlan_changed, save_nm_connections,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -45,8 +45,14 @@ pub(crate) async fn nm_apply(
 ) -> Result<(), NmstateError> {
     let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
     let mut nm_route_remove_needs_deactivate = true;
+    let mut forwarding_supported = false;
 
-    check_nm_version(&nm_api, &mut nm_route_remove_needs_deactivate).await;
+    check_nm_version(
+        &nm_api,
+        &mut nm_route_remove_needs_deactivate,
+        &mut forwarding_supported,
+    )
+    .await;
 
     nm_api.set_checkpoint(checkpoint, timeout);
     nm_api.set_checkpoint_auto_refresh(true);
@@ -156,8 +162,6 @@ pub(crate) async fn nm_apply(
             store_dns_config_to_desired_iface(&mut merged_state);
         }
     }
-
-    let forwarding_supported = is_forwarding_supported(&nm_api).await;
 
     let PerparedNmConnections {
         to_store: nm_conns_to_store,
@@ -451,15 +455,19 @@ fn gen_nm_conn_need_to_deactivate_first(
 async fn check_nm_version(
     nm_api: &NmApi<'_>,
     route_remove_needs_deactivate: &mut bool,
+    forwarding_supported: &mut bool,
 ) {
     let version = if let Ok(ver_info) = nm_api.version_info().await {
         *route_remove_needs_deactivate = !ver_info
             .has_capability(NmVersionInfo::CAPABILITY_SYNC_ROUTE_WITH_TABLE);
+        *forwarding_supported =
+            ver_info.has_capability(NmVersionInfo::CAPABILITY_IP4_FORWARDING);
         Ok(ver_info.version())
     } else {
         // VersionInfo was added to NM 1.42. For older version we fallback to
         // parsing from Version string if VersionInfo is not available.
         *route_remove_needs_deactivate = true;
+        *forwarding_supported = false;
         nm_api.version().await
     };
 

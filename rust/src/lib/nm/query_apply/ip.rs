@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::ops::BitXor;
 
 use super::super::nm_dbus::{
-    NmApi, NmIpRouteRuleAction, NmSettingIp, NmSettingIpMethod,
+    NmIpRouteRuleAction, NmSettingIp, NmSettingIpMethod,
 };
 
 use super::dns::nm_dns_to_nmstate;
@@ -311,32 +311,4 @@ fn nm_rules_to_nmstate(
         ret.insert(rule);
     }
     Some(ret)
-}
-
-#[cfg(feature = "query_apply")]
-pub(crate) async fn is_forwarding_supported(nm_api: &NmApi<'_>) -> bool {
-    let version_str = nm_api
-        .version()
-        .await
-        .map(|v| v.to_string())
-        .unwrap_or_default();
-
-    let versions: Vec<&str> = version_str.split('.').collect();
-
-    if versions.len() < 2 {
-        return false;
-    }
-
-    if let (Ok(major), Ok(minor)) =
-        (versions[0].parse::<i32>(), versions[1].parse::<i32>())
-    {
-        major > 1 || (major == 1 && minor >= 54)
-    } else {
-        false
-    }
-}
-
-#[cfg(not(feature = "query_apply"))]
-pub(crate) fn is_forwarding_supported(_nm_api: &NmApi<'_>) -> bool {
-    true
 }
