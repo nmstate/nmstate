@@ -25,7 +25,7 @@ use crate::{
     LinuxBridgeInterface, LoopbackInterface, MacSecConfig, MacSecInterface,
     MacVlanInterface, MacVtapInterface, MergedNetworkState, NetworkState,
     NetworkStateMode, NmstateError, OvsBridgeInterface, OvsInterface,
-    UnknownInterface, VlanInterface, VrfInterface, VxlanInterface,
+    PciAddress, UnknownInterface, VlanInterface, VrfInterface, VxlanInterface,
 };
 
 /// The `current_state` is NetworkState retrieved by nispor, and will be used
@@ -229,8 +229,7 @@ pub(crate) fn fill_iface_by_nm_conn_data(
     if let Some(nm_conn) = nm_applied_conn.or(nm_saved_conn) {
         fill_ip_settings(base_iface, nm_conn);
         base_iface.description = get_description(nm_conn);
-        (base_iface.identifier, base_iface.mac_address) =
-            get_identifier_and_mac(nm_conn);
+        fill_identifier(base_iface, nm_conn);
         base_iface.profile_name = get_connection_name(nm_conn, nm_saved_conn);
         if base_iface.profile_name.as_ref() == Some(&base_iface.name) {
             base_iface.profile_name = None;
@@ -416,24 +415,37 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
 // queried by nispor, otherwise applying back the queried state will
 // be different for bond ports as their MAC address will change after
 // attached to bond.
-// For InterfaceIdentifier::Name, we set mac address to None.
+// For InterfaceIdentifier::Name, we set mac and pci address to None.
+// For InterfaceIdentifier::PciAddress, we override pci address queried by
+// nispor.
 // TODO: Once we have dedicate section for `identifier`, we should
 //       not override runtime MAC address.
-fn get_identifier_and_mac(
-    nm_conn: &NmConnection,
-) -> (Option<InterfaceIdentifier>, Option<String>) {
+fn fill_identifier(base_iface: &mut BaseInterface, nm_conn: &NmConnection) {
+    base_iface.identifier = Some(InterfaceIdentifier::Name);
+    base_iface.mac_address = None;
+    base_iface.pci_address = None;
+
     if let Some(nm_set) = nm_conn.wired.as_ref() {
         if let Some(mac) = nm_set.mac_address.as_deref() {
             if !mac.is_empty() {
-                return (
-                    Some(InterfaceIdentifier::MacAddress),
-                    Some(mac.to_string()),
-                );
+                base_iface.identifier = Some(InterfaceIdentifier::MacAddress);
+                base_iface.mac_address = Some(mac.to_string());
             }
         }
     }
 
-    (Some(InterfaceIdentifier::Name), None)
+    if let Some(pci_addr_str) = nm_conn
+        .iface_match
+        .as_ref()
+        .and_then(|s| s.path.as_ref())
+        .and_then(|p| p.first())
+        .and_then(|p| p.strip_prefix("pci-"))
+    {
+        if let Ok(pci_addr) = PciAddress::try_from(pci_addr_str) {
+            base_iface.identifier = Some(InterfaceIdentifier::PciAddress);
+            base_iface.pci_address = Some(pci_addr);
+        }
+    }
 }
 
 // The applied connection will not update `connection.id` when reapply due to

@@ -1176,6 +1176,9 @@ pub enum InterfaceIdentifier {
     /// Use interface MAC address to match the network interface.
     /// Deserialize and serialize from/to 'mac-address'.
     MacAddress,
+    /// Use PCI Address to match the network interface.
+    /// Deserialize and serialize from/to 'pci-address'.
+    PciAddress,
 }
 
 impl Default for InterfaceIdentifier {

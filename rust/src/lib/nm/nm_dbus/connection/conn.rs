@@ -14,6 +14,7 @@ use super::super::{
     connection::ethtool::NmSettingEthtool,
     connection::hsr::NmSettingHsr,
     connection::ieee8021x::NmSetting8021X,
+    connection::iface_match::NmSettingMatch,
     connection::infiniband::NmSettingInfiniBand,
     connection::ip::NmSettingIp,
     connection::ipvlan::NmSettingIpVlan,
@@ -120,6 +121,8 @@ pub struct NmConnection {
     pub hsr: Option<NmSettingHsr>,
     pub vpn: Option<NmSettingVpn>,
     pub ipvlan: Option<NmSettingIpVlan>,
+    #[serde(rename = "match")]
+    pub iface_match: Option<NmSettingMatch>,
     #[serde(skip)]
     pub obj_path: String,
     #[serde(skip)]
@@ -198,6 +201,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             hsr: _from_map!(v, "hsr", NmSettingHsr::try_from)?,
             vpn: _from_map!(v, "vpn", NmSettingVpn::try_from)?,
             ipvlan: _from_map!(v, "ipvlan", NmSettingIpVlan::try_from)?,
+            iface_match: _from_map!(v, "match", NmSettingMatch::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -322,6 +326,9 @@ impl NmConnection {
         }
         if let Some(ipvlan) = &self.ipvlan {
             ret.insert("ipvlan", ipvlan.to_value()?);
+        }
+        if let Some(iface_match) = &self.iface_match {
+            ret.insert("match", iface_match.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =

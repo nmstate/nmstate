@@ -14,6 +14,7 @@ class Interface:
     MPTCP = "mptcp"
 
     MAC = "mac-address"
+    PCI = "pci-address"
     MTU = "mtu"
     MIN_MTU = "min-mtu"
     MAX_MTU = "max-mtu"
@@ -25,6 +26,7 @@ class Interface:
     IDENTIFIER = "identifier"
     IDENTIFIER_NAME = "name"
     IDENTIFIER_MAC = "mac-address"
+    IDENTIFIER_PCI = "pci-address"
 
 
 class Route:
