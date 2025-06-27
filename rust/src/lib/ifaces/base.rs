@@ -6,7 +6,7 @@ use crate::{
     DispatchConfig, ErrorKind, EthtoolConfig, Ieee8021XConfig,
     InterfaceIdentifier, InterfaceIpv4, InterfaceIpv6, InterfaceState,
     InterfaceType, LldpConfig, MergedInterface, MptcpConfig, NmstateError,
-    OvsDbIfaceConfig, RouteEntry, WaitIp,
+    OvsDbIfaceConfig, PciAddress, RouteEntry, WaitIp,
 };
 
 const MINIMUM_IPV6_MTU: u64 = 1280;
@@ -55,6 +55,12 @@ pub struct BaseInterface {
     /// network interface). Using the same format as `mac_address` property.
     /// Ignored during apply.
     pub permanent_mac_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// The PCI address of interface. For [InterfaceIdentifier::PciAddress],
+    /// this PCI address will be used for searching interface.
+    /// The accepted formats are: `00:14.3` and `0000:00:1f.4`.
+    /// Serialize and deserialize to/from `pci-address`.
+    pub pci_address: Option<PciAddress>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
@@ -375,26 +381,58 @@ impl MergedInterface {
             if let (Some(apply_iface), Some(cur_iface)) =
                 (self.for_apply.as_mut(), self.current.as_ref())
             {
-                if cur_iface.base_iface().identifier
-                    == Some(InterfaceIdentifier::MacAddress)
-                    && apply_iface.base_iface().identifier.is_none()
-                {
-                    apply_iface
-                        .base_iface_mut()
-                        .identifier
-                        .clone_from(&cur_iface.base_iface().identifier);
-                    if apply_iface.base_iface().mac_address.is_none() {
-                        apply_iface
-                            .base_iface_mut()
-                            .mac_address
-                            .clone_from(&cur_iface.base_iface().mac_address);
+                match cur_iface.base_iface().identifier {
+                    Some(InterfaceIdentifier::MacAddress) => {
+                        if apply_iface.base_iface().identifier.is_none() {
+                            apply_iface
+                                .base_iface_mut()
+                                .identifier
+                                .clone_from(&cur_iface.base_iface().identifier);
+                            if apply_iface.base_iface().mac_address.is_none() {
+                                apply_iface
+                                    .base_iface_mut()
+                                    .mac_address
+                                    .clone_from(
+                                        &cur_iface.base_iface().mac_address,
+                                    );
+                            }
+                            if apply_iface.base_iface().profile_name.is_none() {
+                                apply_iface
+                                    .base_iface_mut()
+                                    .profile_name
+                                    .clone_from(
+                                        &cur_iface.base_iface().profile_name,
+                                    );
+                            }
+                        }
                     }
-                    if apply_iface.base_iface().profile_name.is_none() {
-                        apply_iface
-                            .base_iface_mut()
-                            .profile_name
-                            .clone_from(&cur_iface.base_iface().profile_name);
+                    Some(InterfaceIdentifier::PciAddress) => {
+                        if apply_iface.base_iface().identifier.is_none() {
+                            apply_iface
+                                .base_iface_mut()
+                                .identifier
+                                .clone_from(&cur_iface.base_iface().identifier);
+                            if apply_iface.base_iface().pci_address.is_none() {
+                                apply_iface
+                                    .base_iface_mut()
+                                    .pci_address
+                                    .clone_from(
+                                        &cur_iface.base_iface().pci_address,
+                                    );
+                            }
+                            if apply_iface.base_iface().profile_name.is_none() {
+                                apply_iface
+                                    .base_iface_mut()
+                                    .profile_name
+                                    .clone_from(
+                                        &cur_iface.base_iface().profile_name,
+                                    );
+                            }
+                        }
                     }
+                    // Do not use _ match here, we want developer to be
+                    // notified by compiler when new identifier been added.
+                    Some(InterfaceIdentifier::Name) | None => (),
                 }
             }
         }

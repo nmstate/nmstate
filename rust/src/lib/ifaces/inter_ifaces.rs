@@ -359,7 +359,7 @@ impl Interfaces {
     // If any desired interface has `identifier: mac-address`:
     //  * Resolve interface.name to MAC address match interface name.
     //  * Store interface.name to interface.profile_name.
-    fn resolve_mac_identifider_in_desired(
+    fn resolve_mac_identifier_in_desired(
         &mut self,
         current: &Self,
     ) -> Result<(), NmstateError> {
@@ -461,10 +461,77 @@ impl Interfaces {
         Ok(())
     }
 
+    // If any desired interface has `identifier: mac-address`:
+    //  * Resolve interface.name to MAC address match interface name.
+    //  * Store interface.name to interface.profile_name.
+    fn resolve_pci_identifier(
+        &mut self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        let mut name_changed_ifaces: Vec<String> = Vec::new();
+        for iface in self.iter_mut().filter(|i| {
+            (!i.is_absent())
+                && i.base_iface().identifier
+                    == Some(InterfaceIdentifier::PciAddress)
+        }) {
+            let pci_address = match iface.base_iface().pci_address.as_ref() {
+                Some(p) => p,
+                None => {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Desired interface {} has `identifier: \
+                             mac-address` but not MAC address defined",
+                            iface.name()
+                        ),
+                    ));
+                }
+            };
+            if let Some(cur_iface) =
+                current.kernel_ifaces.values().find(|cur_iface| {
+                    cur_iface.base_iface().pci_address.as_ref()
+                        == Some(pci_address)
+                })
+            {
+                if iface.base_iface().profile_name.is_none() {
+                    // Since profile name is undefined, we should set kernel
+                    // name as interface name and use the original name
+                    // as profile name instead.
+                    // In this case, the HashMap key of `self.kernel_ifaces()`
+                    // should be changed.
+                    name_changed_ifaces
+                        .push(iface.base_iface_mut().name.clone());
+                    iface.base_iface_mut().profile_name =
+                        Some(iface.base_iface_mut().name.clone());
+                    iface.base_iface_mut().name = cur_iface.name().to_string();
+                } else {
+                    iface.base_iface_mut().name = cur_iface.name().to_string();
+                }
+            } else {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired interface {} has `identifier: pci-address` \
+                         with PCI address {pci_address}, but no interface is \
+                         holding that PCI address",
+                        iface.name()
+                    ),
+                ));
+            }
+        }
+        for profile_name in name_changed_ifaces {
+            if let Some(iface) = self.kernel_ifaces.remove(&profile_name) {
+                self.push(iface);
+            }
+        }
+
+        Ok(())
+    }
+
     // If any desired interface is referring to a mac-based current interface:
     //  * Resolve interface.name to MAC address match interface name.
     //  * Store interface.name to interface.profile_name(if not define).
-    fn resolve_mac_identifider_in_current(
+    fn resolve_mac_identifier_in_current(
         &mut self,
         current: &Self,
     ) -> Result<(), NmstateError> {
@@ -693,9 +760,10 @@ impl MergedInterfaces {
             if mode != NetworkStateMode::GenerateDiff {
                 desired.resolve_sriov_reference(&current)?;
             }
-            desired.resolve_mac_identifider_in_current(&current)?;
+            desired.resolve_mac_identifier_in_current(&current)?;
+            desired.resolve_pci_identifier(&current)?;
             desired.resolve_unknown_ifaces(&current)?;
-            desired.resolve_mac_identifider_in_desired(&current)?;
+            desired.resolve_mac_identifier_in_desired(&current)?;
         }
 
         desired.auto_managed_controller_ports(&current);

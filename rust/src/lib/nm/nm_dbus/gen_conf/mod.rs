@@ -5,6 +5,7 @@ mod bridge;
 mod conn;
 mod ethtool;
 mod ieee8021x;
+mod iface_match;
 mod infiniband;
 mod ip;
 mod ipvlan;

@@ -11,6 +11,7 @@ use super::{
     ethtool::gen_ethtool_setting,
     hsr::gen_nm_hsr_setting,
     ieee8021x::gen_nm_802_1x_setting,
+    iface_match::apply_iface_match,
     infiniband::gen_nm_ib_setting,
     ip::gen_nm_ip_setting,
     ipvlan::gen_nm_ipvlan_setting,
@@ -418,6 +419,8 @@ pub(crate) fn gen_nm_conn_setting(
     if let Some(mptcp_conf) = iface.base_iface().mptcp.as_ref() {
         apply_mptcp_conf(&mut nm_conn_set, mptcp_conf)?;
     }
+
+    apply_iface_match(nm_conn, iface.base_iface());
 
     nm_conn.connection = Some(nm_conn_set);
 

@@ -2,10 +2,12 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use super::nm_dbus::{NmActiveConnection, NmConnection, NmIfaceType};
 use crate::{
     BaseInterface, InterfaceIdentifier, InterfaceType, MergedInterfaces,
+    PciAddress,
 };
 
 #[derive(Debug, Default)]
@@ -30,6 +32,9 @@ pub(crate) struct NmConnectionMatcher {
     // identifier connection.
     // Veth will also stored into `NmIfaceType::Ethernet`
     saved_by_mac: HashMap<(String, NmIfaceType), Vec<Rc<NmConnection>>>,
+
+    // Veth will also stored into `NmIfaceType::Ethernet`
+    saved_by_pci: HashMap<(PciAddress, NmIfaceType), Vec<Rc<NmConnection>>>,
 }
 
 #[cfg_attr(not(feature = "query_apply"), allow(dead_code))]
@@ -165,6 +170,31 @@ impl NmConnectionMatcher {
                     .push(nm_conn.clone())
             }
         }
+
+        if let (Some(nm_pci_addr), Some(nm_iface_type)) = (
+            nm_conn
+                .iface_match
+                .as_ref()
+                .and_then(|m| m.path.as_deref())
+                .and_then(|s| s.first()),
+            nm_conn.iface_type(),
+        ) {
+            if let Some(pci) = nm_pci_addr
+                .strip_prefix("pci-")
+                .and_then(|s| PciAddress::from_str(s).ok())
+            {
+                if nm_iface_type == &NmIfaceType::Veth {
+                    self.saved_by_pci
+                        .entry((pci, NmIfaceType::Ethernet))
+                        .or_default()
+                        .push(nm_conn.clone())
+                }
+                self.saved_by_pci
+                    .entry((pci, *nm_iface_type))
+                    .or_default()
+                    .push(nm_conn.clone())
+            }
+        }
     }
 
     /// Activated NmConnection (including in-memory)
@@ -268,6 +298,24 @@ impl NmConnectionMatcher {
                     None
                 }
             }
+            Some(InterfaceIdentifier::PciAddress) => {
+                if let Some(pci) = base_iface.pci_address {
+                    let mut nm_conns: Vec<&NmConnection> = self
+                        .saved_by_pci
+                        .get(&(pci, nm_iface_type))
+                        .map(|nm_conns| {
+                            nm_conns.iter().map(Rc::as_ref).collect()
+                        })
+                        .unwrap_or_default();
+                    nm_conns.sort_unstable_by(|a, b| {
+                        nm_conn_activation_sort_keys(a)
+                            .cmp(&nm_conn_activation_sort_keys(b))
+                    });
+                    nm_conns.pop()
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -283,19 +331,45 @@ impl NmConnectionMatcher {
             if let Some(nm_conns) = self.saved_by_name.get(&base_iface.name) {
                 ret.extend(nm_conns.iter().map(Rc::as_ref));
             }
+            // also check `connection.id`
+            ret.extend(
+                self.saved_by_uuid
+                    .values()
+                    .filter(|nm_conn| {
+                        nm_conn
+                            .connection
+                            .as_ref()
+                            .and_then(|c| c.id.as_deref())
+                            == Some(base_iface.name.as_str())
+                    })
+                    .map(Rc::as_ref),
+            );
         } else if let Some(nm_conns) = self.saved_by_name_and_type.get(&(
             base_iface.name.to_string(),
             NmIfaceType::from(&base_iface.iface_type),
         )) {
             ret.extend(nm_conns.iter().map(Rc::as_ref));
         }
-        if base_iface.identifier == Some(InterfaceIdentifier::MacAddress) {
-            if let Some(mac) = base_iface.mac_address.as_deref() {
-                if let Some(nm_conns) = self.saved_by_mac.get(&(
-                    mac.to_uppercase(),
-                    NmIfaceType::from(&base_iface.iface_type),
-                )) {
-                    ret.extend(nm_conns.iter().map(Rc::as_ref));
+        match base_iface.identifier {
+            None | Some(InterfaceIdentifier::Name) => (),
+            Some(InterfaceIdentifier::MacAddress) => {
+                if let Some(mac) = base_iface.mac_address.as_deref() {
+                    if let Some(nm_conns) = self.saved_by_mac.get(&(
+                        mac.to_uppercase(),
+                        NmIfaceType::from(&base_iface.iface_type),
+                    )) {
+                        ret.extend(nm_conns.iter().map(Rc::as_ref));
+                    }
+                }
+            }
+            Some(InterfaceIdentifier::PciAddress) => {
+                if let Some(pci) = base_iface.pci_address {
+                    if let Some(nm_conns) = self
+                        .saved_by_pci
+                        .get(&(pci, NmIfaceType::from(&base_iface.iface_type)))
+                    {
+                        ret.extend(nm_conns.iter().map(Rc::as_ref));
+                    }
                 }
             }
         }

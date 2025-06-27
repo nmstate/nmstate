@@ -4,7 +4,7 @@ use crate::{
     nispor::ethtool::np_ethtool_to_nmstate,
     nispor::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
     nispor::mptcp::get_iface_mptcp_conf,
-    BaseInterface, InterfaceState, InterfaceType,
+    BaseInterface, InterfaceState, InterfaceType, PciAddress,
 };
 
 fn np_iface_type_to_nmstate(
@@ -63,6 +63,7 @@ pub(crate) fn np_iface_to_base_iface(
         ipv6: np_ipv6_to_nmstate(np_iface, running_config_only),
         mac_address: Some(np_iface.mac_address.to_uppercase()),
         permanent_mac_address: get_permanent_mac_address(np_iface),
+        pci_address: np_iface.pci_address.map(PciAddress::from),
         controller: np_iface.controller.as_ref().map(|c| c.to_string()),
         mtu: if np_iface.mtu >= 0 {
             Some(np_iface.mtu as u64)
@@ -135,5 +136,16 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
         }
     } else {
         Some(iface.permanent_mac_address.as_str().to_uppercase())
+    }
+}
+
+impl From<nispor::PciAddress> for PciAddress {
+    fn from(np_pci: nispor::PciAddress) -> Self {
+        Self {
+            domain: np_pci.domain,
+            bus: np_pci.bus,
+            slot: np_pci.slot,
+            function: np_pci.function,
+        }
     }
 }
