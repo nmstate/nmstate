@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-import time
 import yaml
 
 import libnmstate
@@ -976,9 +975,8 @@ def test_ipsec_require_id_on_certificate(ipsec_srv_cert_gw, load_both_keys):
     desired_iface = desired_state[Interface.KEY][0]
 
     desired_iface["libreswan"]["rightid"] = "other.fail"
-    libnmstate.apply(desired_state)
-    time.sleep(5)
-    assert not _check_ipsec(IpsecTestEnv.CLI_ADDR_V4, IpsecTestEnv.SRV_ADDR_V4)
+    with pytest.raises(libnmstate.error.NmstateVerificationError):
+        libnmstate.apply(desired_state)
 
     desired_iface["libreswan"]["require-id-on-certificate"] = False
     libnmstate.apply(desired_state)

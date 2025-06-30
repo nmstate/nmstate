@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::super::{
-    nm_dbus::{NmIfaceType, NmSettingVpn},
+    nm_dbus::{NmActiveConnection, NmIfaceType, NmSettingVpn},
     show::fill_iface_by_nm_conn_data,
     NmConnectionMatcher,
 };
@@ -18,7 +18,6 @@ pub(crate) fn get_supported_vpn_ifaces(
     conn_matcher: &NmConnectionMatcher,
 ) -> Result<Vec<Interface>, NmstateError> {
     let mut ret = Vec::new();
-
     for nm_conn in conn_matcher.saved_iter().filter(|nm_conn| {
         nm_conn
             .uuid()
@@ -27,6 +26,14 @@ pub(crate) fn get_supported_vpn_ifaces(
             .unwrap()
             && nm_conn.iface_type() == Some(&NmIfaceType::Vpn)
     }) {
+        let nm_ac = if let Some(nm_ac) = nm_conn
+            .uuid()
+            .and_then(|uuid| conn_matcher.get_nm_ac_by_uuid(uuid))
+        {
+            nm_ac
+        } else {
+            continue;
+        };
         if let Some(nm_set_vpn) = nm_conn.vpn.as_ref() {
             if nm_set_vpn.service_type.as_deref()
                 == Some(NmSettingVpn::SERVICE_TYPE_LIBRESWAN)
@@ -38,7 +45,15 @@ pub(crate) fn get_supported_vpn_ifaces(
                 // taking profile name as interface name of VPN.
                 let mut iface = IpsecInterface::new();
                 iface.base.iface_type = InterfaceType::Ipsec;
-                iface.base.state = InterfaceState::Up;
+                // We are solely depend on NetworkManager reporting IPSec
+                // connection status, hence use NmActiveConnection.state
+                // for interface.state
+                iface.base.state =
+                    if nm_ac.state == NmActiveConnection::STATE_ACTIVATED {
+                        InterfaceState::Up
+                    } else {
+                        InterfaceState::Down
+                    };
                 iface.base.name = name;
                 iface.libreswan = Some(get_libreswan_conf(nm_set_vpn));
                 let mut iface = Interface::Ipsec(Box::new(iface));

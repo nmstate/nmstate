@@ -9,15 +9,23 @@ use super::{
     ErrorKind, NmError,
 };
 
-pub const NM_ACTIVATION_STATE_FLAG_EXTERNAL: u32 = 0x80;
-
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmActiveConnection {
     pub uuid: String,
     pub iface_type: NmIfaceType,
     pub iface_name: String,
+    pub state: u32,
     pub state_flags: u32,
     pub dev_obj_path: Option<String>,
+}
+
+#[cfg_attr(not(feature = "query_apply"), allow(dead_code))]
+impl NmActiveConnection {
+    // NM_ACTIVATION_STATE_FLAG_EXTERNAL
+    pub const STATE_FLAG_EXTERNAL: u32 = 0x80;
+
+    // NM_ACTIVE_CONNECTION_STATE_ACTIVATED
+    pub const STATE_ACTIVATED: u32 = 2;
 }
 
 #[cfg(feature = "query_apply")]
@@ -124,6 +132,7 @@ pub(crate) async fn get_nm_ac_by_obj_path(
             uuid: nm_ac_obj_path_uuid_get(connection, obj_path).await?,
             iface_name,
             iface_type,
+            state: nm_ac_obj_path_state_get(connection, obj_path).await?,
             state_flags: nm_ac_obj_path_state_flags_get(connection, obj_path)
                 .await?,
             dev_obj_path: nm_dev_obj_path,
@@ -155,5 +164,28 @@ async fn nm_ac_obj_path_nm_dev_obj_path_get(
     {
         Ok(mut p) => Ok(p.pop().map(obj_path_to_string)),
         Err(_) => Ok(None),
+    }
+}
+
+#[cfg(feature = "query_apply")]
+async fn nm_ac_obj_path_state_get(
+    dbus_conn: &zbus::Connection,
+    obj_path: &str,
+) -> Result<u32, NmError> {
+    let proxy = zbus::Proxy::new(
+        dbus_conn,
+        NM_DBUS_INTERFACE_ROOT,
+        obj_path,
+        NM_DBUS_INTERFACE_AC,
+    )
+    .await?;
+    match proxy.get_property::<u32>("State").await {
+        Ok(uuid) => Ok(uuid),
+        Err(e) => Err(NmError::new(
+            ErrorKind::Bug,
+            format!(
+                "Failed to retrieve State of active connection {obj_path}: {e}"
+            ),
+        )),
     }
 }
