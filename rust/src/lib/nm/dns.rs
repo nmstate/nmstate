@@ -8,7 +8,6 @@ use crate::{
 
 use super::nm_dbus::{
     NmActiveConnection, NmDevice, NmDeviceState, NmIfaceType,
-    NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
@@ -538,7 +537,7 @@ fn is_external_managed(
     for nm_ac in nm_acs {
         if nm_ac.iface_name.as_str() == iface_name
             && is_supported_kernel_iface(&nm_ac.iface_type)
-            && nm_ac.state_flags & NM_ACTIVATION_STATE_FLAG_EXTERNAL > 0
+            && nm_ac.state_flags & NmActiveConnection::STATE_FLAG_EXTERNAL > 0
         {
             return true;
         }

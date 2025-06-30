@@ -19,9 +19,7 @@ mod gen_conf;
 #[cfg(feature = "query_apply")]
 mod query_apply;
 
-pub use self::active_connection::{
-    NmActiveConnection, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
-};
+pub use self::active_connection::NmActiveConnection;
 pub use self::connection::{
     NmConnection, NmConnectionMultiConnect, NmIfaceType, NmIpRoute,
     NmIpRouteRule, NmIpRouteRuleAction, NmRange, NmSetting8021X, NmSettingBond,

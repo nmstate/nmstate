@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::nm::nm_dbus::{
-    NmApi, NmConnection, NmDevice, NmDeviceState, NmIfaceType, NmLldpNeighbor,
-    NM_ACTIVATION_STATE_FLAG_EXTERNAL,
+    NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
+    NmIfaceType, NmLldpNeighbor,
 };
 
 use super::{
@@ -108,7 +108,7 @@ pub(crate) async fn nm_retrieve(
         let nm_ac = conn_matcher.get_nm_ac(iface.base_iface());
 
         if let Some(state_flag) = nm_ac.map(|nm_ac| nm_ac.state_flags) {
-            if (state_flag & NM_ACTIVATION_STATE_FLAG_EXTERNAL) > 0 {
+            if (state_flag & NmActiveConnection::STATE_FLAG_EXTERNAL) > 0 {
                 log::debug!(
                     "Found external managed interface {}/{}",
                     iface.name(),
