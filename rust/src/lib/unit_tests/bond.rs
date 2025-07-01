@@ -662,3 +662,24 @@ link-aggregation:
 
     assert_eq!(iface.bond.unwrap().mode, Some(BondMode::LACP));
 }
+
+#[test]
+fn test_bond_link_aggregation_alias() {
+    let mut des_iface: BondInterface = serde_yaml::from_str(
+        r"---
+        name: bond99
+        type: bond
+        state: up
+        bond:
+          mode: active-backup
+          ports-config:
+          - name: eth1
+            queue-id: 0
+          - name: eth2
+            queue-id: 0
+        ",
+    )
+    .unwrap();
+
+    assert_eq!(des_iface.bond.unwrap().mode, Some(BondMode::ActiveBackup));
+}
