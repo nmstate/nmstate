@@ -50,6 +50,9 @@ impl NmIpRoute {
             if let Some(v) = self.quickack.as_ref() {
                 write!(opt_string, ",quickack={v}").ok();
             }
+            if let Some(v) = self.advmss.as_ref() {
+                write!(opt_string, ",advmss={v}").ok();
+            }
             ret.insert("options".to_string(), opt_string);
         }
         ret

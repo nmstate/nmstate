@@ -270,6 +270,13 @@ pub struct RouteEntry {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub quickack: Option<bool>,
+    /// Maximal Segment Size to advertise for TCP connections
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    pub advmss: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -373,6 +380,9 @@ impl RouteEntry {
         if self.quickack.is_some() && self.quickack != other.quickack {
             return false;
         }
+        if self.advmss.is_some() && self.advmss != other.advmss {
+            return false;
+        }
         true
     }
 
@@ -411,6 +421,7 @@ impl RouteEntry {
                     .map(|t| u8::from(*t))
                     .unwrap_or_default()
                     .into(),
+                self.advmss.unwrap_or_default(),
             ],
         )
     }
@@ -485,6 +496,12 @@ impl RouteEntry {
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 "The value of 'mtu' cannot be 0".to_string(),
+            ));
+        }
+        if self.advmss == Some(0) {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "The value of 'advmss' cannot be 0".to_string(),
             ));
         }
         Ok(())
@@ -572,6 +589,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.quickack {
             props.push(format!("quickack: {v}"));
+        }
+        if let Some(v) = self.advmss {
+            props.push(format!("advmss: {v}"));
         }
 
         write!(f, "{}", props.join(" "))

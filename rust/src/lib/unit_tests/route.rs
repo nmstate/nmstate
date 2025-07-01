@@ -795,3 +795,72 @@ fn test_route_mtu_deserilize_from_string() {
 
     assert_eq!(route.mtu, Some(1280));
 }
+
+#[test]
+fn test_route_advmss_not_equal() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        advmss: 1500
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        advmss: 1501
+        "#,
+    )
+    .unwrap();
+
+    assert!(route1 != route2);
+}
+
+#[test]
+fn test_route_advmss_is_match() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        advmss: 1500
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        state: absent
+        advmss: 1500
+        "#,
+    )
+    .unwrap();
+
+    assert!(route2.is_match(&route1));
+}
+
+#[test]
+fn test_route_advmss_display() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        advmss: 1500
+        "#,
+    )
+    .unwrap();
+
+    let route1_str = route1.to_string();
+
+    assert!(route1_str.contains("advmss: 1500"));
+}
+
+#[test]
+fn test_route_advmss_deserialize_from_string() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r#"
+        advmss: "1500"
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(route.advmss, Some(1500));
+}
