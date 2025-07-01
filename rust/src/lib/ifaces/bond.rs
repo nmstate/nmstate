@@ -60,7 +60,8 @@ pub struct BondInterface {
     pub base: BaseInterface,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        rename = "link-aggregation"
+        rename = "link-aggregation",
+        alias = "bond"
     )]
     /// Bond specific settings.
     pub bond: Option<BondConfig>,

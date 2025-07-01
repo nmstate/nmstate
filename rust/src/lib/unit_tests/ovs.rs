@@ -2,7 +2,7 @@
 
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
-    MergedInterfaces, OvsBridgeInterface, OvsInterface,
+    MergedInterfaces, OvsBridgeBondMode, OvsBridgeInterface, OvsInterface,
 };
 
 #[test]
@@ -993,4 +993,32 @@ fn test_deny_unknown_field_in_ovs_bond() {
     );
 
     assert!(result.is_err());
+}
+
+#[test]
+fn test_ovs_bond_alias() {
+    let iface: OvsBridgeInterface = serde_yaml::from_str(
+        r"---
+name: br0
+type: ovs-bridge
+state: up
+bridge:
+  ports:
+  - name: eth1
+  - name: bond1
+    bond:
+      mode: balance-slb
+      ports:
+        - name: eth2
+",
+    )
+    .unwrap();
+
+    let br_conf = iface.bridge.as_ref().unwrap();
+    let port_conf = &br_conf.ports.as_ref().unwrap()[1];
+    let bond_conf = port_conf.bond.as_ref().unwrap();
+
+    assert_eq!(iface.ports(), Some(vec!["eth1", "eth2"]));
+
+    assert_eq!(bond_conf.mode, Some(OvsBridgeBondMode::BalanceSlb));
 }

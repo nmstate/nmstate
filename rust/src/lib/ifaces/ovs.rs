@@ -328,7 +328,8 @@ pub struct OvsBridgePortConfig {
     pub name: String,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        rename = "link-aggregation"
+        rename = "link-aggregation",
+        alias = "bond"
     )]
     pub bond: Option<OvsBridgeBondConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
