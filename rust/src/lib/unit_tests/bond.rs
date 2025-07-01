@@ -646,3 +646,19 @@ fn test_bond_port_queue_id_not_overlap_on_default() {
 
     des_iface.sanitize().unwrap();
 }
+
+#[test]
+fn test_bond_mode_lacp_alias() {
+    let iface: BondInterface = serde_yaml::from_str(
+        r#"---
+name: bond99
+type: bond
+state: up
+link-aggregation:
+  mode: lacp
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(iface.bond.unwrap().mode, Some(BondMode::LACP));
+}
