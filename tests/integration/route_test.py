@@ -2447,3 +2447,30 @@ def test_add_route_with_quickack(eth1_up):
     )
     cur_state = libnmstate.show()
     assert_routes(routes, cur_state)
+
+
+# https://github.com/nmstate/nmstate/issues/2881
+@pytest.mark.tier1
+def test_add_route_with_advmss(eth1_up):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS1,
+            Route.ADVMSS: 1500,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+            Route.ADVMSS: 1580,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)

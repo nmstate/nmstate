@@ -27,6 +27,7 @@ pub struct NmIpRoute {
     pub initrwnd: Option<u32>,
     pub mtu: Option<u32>,
     pub quickack: Option<bool>,
+    pub advmss: Option<u32>,
     _other: DbusDictionary,
 }
 
@@ -54,6 +55,7 @@ impl TryFrom<DbusDictionary> for NmIpRoute {
             initrwnd: _from_map!(v, "initrwnd", u32::try_from)?,
             mtu: _from_map!(v, "mtu", u32::try_from)?,
             quickack: _from_map!(v, "quickack", bool::try_from)?,
+            advmss: _from_map!(v, "advmss", u32::try_from)?,
             _other: v,
         })
     }
@@ -146,6 +148,12 @@ impl NmIpRoute {
         if let Some(v) = &self.quickack {
             ret.append(
                 zvariant::Value::new("quickack"),
+                zvariant::Value::new(zvariant::Value::new(v)),
+            )?;
+        }
+        if let Some(v) = &self.advmss {
+            ret.append(
+                zvariant::Value::new("advmss"),
                 zvariant::Value::new(zvariant::Value::new(v)),
             )?;
         }
