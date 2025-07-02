@@ -665,7 +665,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_link_aggregation_alias() {
-    let mut des_iface: BondInterface = serde_yaml::from_str(
+    let des_iface: BondInterface = serde_yaml::from_str(
         r"---
         name: bond99
         type: bond
