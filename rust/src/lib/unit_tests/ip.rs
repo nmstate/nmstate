@@ -626,5 +626,5 @@ ipv6:
     let err = result.unwrap_err();
     let err_str = err.to_string();
 
-    assert!(err_str.starts_with("InvalidArgument:"));
+    assert!(err_str.starts_with("NotSupportedError:"));
 }
