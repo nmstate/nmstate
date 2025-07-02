@@ -923,8 +923,7 @@ def test_merge_ip_enabled_property_from_current(setup_eth1_static_ip):
 
 @pytest.mark.skipif(
     nm_minor_version() < 54,
-    reason="NetworkManager 1.54- does not support configuring per-device "
-    "IPv4 sysctl forwarding",
+    reason="IPv4 forwarding is not supported on NM 1.54-",
 )
 def test_ipv4_sysctl_forwarding(setup_eth1_static_ip):
     desired_state = {
@@ -960,9 +959,8 @@ def test_ipv4_sysctl_forwarding(setup_eth1_static_ip):
 
 
 @pytest.mark.skipif(
-    nm_minor_version() >= 53,
-    reason="On NM < 1.53, attempting to set per-interface IPv4 forwarding "
-    "should raise an error",
+    nm_minor_version() >= 54,
+    reason="IPv4 forwarding is supported on NM 1.54+",
 )
 def test_ipv4_sysctl_forwarding_unsupported_error(setup_eth1_static_ip):
     cmdlib.exec_cmd(
@@ -985,12 +983,46 @@ def test_ipv4_sysctl_forwarding_unsupported_error(setup_eth1_static_ip):
             }
         ]
     }
-    with pytest.raises(libnmstate.error.NmstateVerificationError):
+    with pytest.raises(libnmstate.error.NmstateVerificationError) as exc_info:
         apply_with_description(
             "Configure the ethernet device eth1 with IPv4 sysctl forwarding "
             "enabled",
             desired_state,
         )
+
+    assert "eth1.interface.ipv4.forwarding" in str(exc_info.value)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() >= 54,
+    reason="IPv4 forwarding is supported on NM 1.54+",
+)
+def test_applying_current_forwarding_value_on_older_NM(setup_eth1_static_ip):
+    cmdlib.exec_cmd(
+        "sysctl -w net.ipv4.conf.eth1.forwarding=1".split(), check=True
+    )
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                    InterfaceIPv4.FORWARDING: True,
+                },
+            }
+        ]
+    }
+    apply_with_description(
+        "Enable IPv4 forwarding on eth1",
+        desired_state,
+    )
+    assertlib.assert_state_match(desired_state)
 
 
 def test_preserve_ipv4_addresses_order(eth1_up):
