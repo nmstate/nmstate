@@ -312,8 +312,11 @@ def start_ipsec_srv_container():
             "/bin/bash",
             "-c",
             "systemctl start NetworkManager.service;"
-            "while ! systemctl is-active NetworkManager.service;"
-            "do sleep 1; done",
+            "for i in {0..30}; do"
+            "   if systemctl is-active NetworkManager.service; then exit; fi;"
+            "   sleep 1;"
+            "done;"
+            "exit 1",
         ],
         check=True,
     )
@@ -326,8 +329,11 @@ def start_ipsec_srv_container():
             "/bin/bash",
             "-c",
             "systemctl start nmstate.service; "
-            "while ! systemctl is-active nmstate.service; "
-            "do sleep 1; done",
+            "for i in {0..30}; do"
+            "   if systemctl is-active nmstate.service; then exit; fi;"
+            "   sleep 1;"
+            "done;"
+            "exit 1",
         ],
         check=True,
     )
@@ -356,10 +362,11 @@ def _start_ipsec_connection(conf_path):
             "-c",
             "systemctl reset-failed ipsec.service;"
             "systemctl restart ipsec.service;"
-            "for i in {0..10}; do "
-            "   if systemctl is-active ipsec.service; then break; fi;"
+            "for i in {0..30}; do"
+            "   if systemctl is-active ipsec.service; then exit; fi;"
             "   sleep 1;"
-            "done",
+            "done;"
+            "exit 1",
         ],
         check=True,
     )
