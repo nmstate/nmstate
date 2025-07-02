@@ -449,7 +449,8 @@ pub enum BondMode {
     Broadcast,
     #[serde(rename = "802.3ad", alias = "lacp", alias = "4")]
     /// Deserialize and serialize from/to `802.3ad`.
-    /// You can use integer 4, or the alias "lacp" for deserializing to this mode.
+    /// You can use integer 4, or the alias "lacp" for deserializing to this
+    /// mode.
     LACP,
     #[serde(rename = "balance-tlb", alias = "5")]
     /// Deserialize and serialize from/to `balance-tlb`.
