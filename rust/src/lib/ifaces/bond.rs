@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
+use std::net::Ipv6Addr;
 
 use serde::{
     de::IntoDeserializer, Deserialize, Deserializer, Serialize, Serializer,
@@ -95,6 +96,11 @@ impl BondInterface {
                 if let Some(ref mut arp_ip_target) = bond_opts.arp_ip_target {
                     if arp_ip_target.is_empty() {
                         bond_opts.arp_ip_target = None;
+                    }
+                }
+                if let Some(ref mut v) = bond_opts.ns_ip6_target {
+                    if v.is_empty() {
+                        bond_opts.ns_ip6_target = None;
                     }
                 }
             }
@@ -715,17 +721,17 @@ impl From<BondAllPortsActive> for u8 {
 
 /// The `arp_all_targets` kernel bond option.
 ///
-/// Specifies the quantity of arp_ip_targets that must be reachable in order for
+/// Specifies the quantity of arp_ip_target that must be reachable in order for
 /// the ARP monitor to consider a port as being up. This option affects only
 /// active-backup mode for ports with arp_validation enabled.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case", remote = "BondArpAllTargets")]
 #[non_exhaustive]
 pub enum BondArpAllTargets {
-    /// consider the port up only when any of the `arp_ip_targets` is reachable
+    /// consider the port up only when any of the `arp_ip_target` is reachable
     #[serde(alias = "0")]
     Any,
-    /// consider the port up only when all of the `arp_ip_targets` are
+    /// consider the port up only when all of the `arp_ip_target` are
     /// reachable
     #[serde(alias = "1")]
     All,
@@ -1118,7 +1124,7 @@ pub struct BondOptions {
     /// is nice to allow duplicate frames to be delivered.
     pub all_slaves_active: Option<BondAllPortsActive>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    /// Specifies the quantity of arp_ip_targets that must be reachable in
+    /// Specifies the quantity of arp_ip_target that must be reachable in
     /// order for the ARP monitor to consider a port as being up. This
     /// option affects only active-backup mode for ports with
     /// arp_validation enabled.
@@ -1147,6 +1153,10 @@ pub struct BondOptions {
     /// team members to fail. ARP monitoring should not be used in conjunction
     /// with miimon. A value of 0 disables ARP monitoring. The default value
     /// is 0.
+    /// Invalid for setting `arp_interval` bigger than 0 for bond in mode:
+    ///  * `802.3ad`
+    ///  * `balance-tlb`
+    ///  * `balance-alb`
     pub arp_interval: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Specifies the IP addresses to use as ARP monitoring peers when
@@ -1377,6 +1387,18 @@ pub struct BondOptions {
         deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
     pub arp_missed_max: Option<u8>,
+    /// Whether send LACPDU frames periodically. Only valid for bond in
+    /// `802.3ad` mode.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub lacp_active: Option<bool>,
+    /// Specifies the IPv6 addresses to use as IPv6 monitoring peers when
+    /// `arp_interval` is > 0.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ns_ip6_target: Option<Vec<Ipv6Addr>>,
 }
 
 impl BondOptions {
@@ -1443,6 +1465,79 @@ impl BondOptions {
         }
         Ok(())
     }
+
+    fn validate_lacp_opts(&self, mode: BondMode) -> Result<(), NmstateError> {
+        if mode != BondMode::LACP {
+            if self.lacp_rate.is_some() {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "The `lacp_rate` option is only valid for bond in \
+                     '802.3ad' mode"
+                        .to_string(),
+                ));
+            }
+            if self.lacp_active.is_some() {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "The `lacp_active` option is only valid for bond in \
+                     '802.3ad' mode"
+                        .to_string(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    // `arp_interval` should bigger than 0 when `arp_ip_target` or
+    // `ns_ip6_target` defined.
+    // The `arp_interval` cannot be used in `802.3ad`, `balance-tlb`
+    // `balance-alb` mode.
+    fn validate_arp_interval(
+        &self,
+        current: Option<&Self>,
+        mode: BondMode,
+    ) -> Result<(), NmstateError> {
+        if let Some(arp_interval) = self
+            .arp_interval
+            .or_else(|| current.and_then(|c| c.arp_interval))
+        {
+            if arp_interval > 0 {
+                if mode == BondMode::LACP
+                    || mode == BondMode::TLB
+                    || mode == BondMode::ALB
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "The `arp_interval` option is invalid for bond in \
+                         '802.3ad', 'balance-tlb' or 'balance-alb' mode"
+                            .to_string(),
+                    ));
+                }
+            } else {
+                if let Some(arp_ip_target) = self.arp_ip_target.as_ref() {
+                    if !arp_ip_target.is_empty() {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            "The `arp_ip_target` option is only valid when \
+                             'arp_interval' is enabled(>0)."
+                                .to_string(),
+                        ));
+                    }
+                }
+                if let Some(ns_ip6_target) = self.ns_ip6_target.as_ref() {
+                    if !ns_ip6_target.is_empty() {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            "The `ns_ip6_target` option is only valid when \
+                             'arp_interval' is enabled(>0)."
+                                .to_string(),
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl MergedInterface {
@@ -1476,7 +1571,9 @@ impl MergedInterface {
                             } else {
                                 None
                             };
-                        bond_opts.validate_balance_slb(cur_bond_opts, mode)?
+                        bond_opts.validate_balance_slb(cur_bond_opts, mode)?;
+                        bond_opts.validate_lacp_opts(mode)?;
+                        bond_opts.validate_arp_interval(cur_bond_opts, mode)?;
                     }
                 }
             }
