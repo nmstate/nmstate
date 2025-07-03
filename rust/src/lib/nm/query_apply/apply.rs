@@ -51,6 +51,8 @@ pub(crate) async fn nm_apply(
     nm_api.set_checkpoint(checkpoint, timeout);
     nm_api.set_checkpoint_auto_refresh(true);
 
+    apply_dispatch_script(&merged_state.interfaces)?;
+
     if !merged_state.memory_only {
         delete_ifaces(&mut nm_api, merged_state).await?;
     }
@@ -204,8 +206,6 @@ pub(crate) async fn nm_apply(
 
     deactivate_nm_connections(&mut nm_api, nm_conns_to_deactivate.as_slice())
         .await?;
-
-    apply_dispatch_script(&merged_state.interfaces)?;
 
     Ok(())
 }
