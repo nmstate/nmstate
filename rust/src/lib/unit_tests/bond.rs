@@ -683,3 +683,101 @@ fn test_bond_link_aggregation_alias() {
 
     assert_eq!(des_iface.bond.unwrap().mode, Some(BondMode::ActiveBackup));
 }
+
+#[test]
+fn test_bond_opt_lacp_active() {
+    let iface: Interface = serde_yaml::from_str(
+        r"---
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: active-backup
+          options:
+            lacp_active: true
+        ",
+    )
+    .unwrap();
+    let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
+
+    let result = merged_iface.post_inter_ifaces_process_bond();
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bond_opt_arp_interval() {
+    for mode in ["balance-tlb", "802.3ad", "balance-alb"] {
+        let iface: Interface = serde_yaml::from_str(&format!(
+            r"---
+            name: bond99
+            type: bond
+            state: up
+            link-aggregation:
+              mode: {mode}
+              options:
+                arp_interval: 50
+        ",
+        ))
+        .unwrap();
+        let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
+
+        let result = merged_iface.post_inter_ifaces_process_bond();
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        }
+    }
+}
+
+#[test]
+fn test_bond_opt_arp_ip_target() {
+    let iface: Interface = serde_yaml::from_str(
+        r"---
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: balance-xor
+          options:
+            arp_interval: 0
+            arp_ip_target: 192.168.1.1
+        ",
+    )
+    .unwrap();
+    let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
+
+    let result = merged_iface.post_inter_ifaces_process_bond();
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bond_opt_ns_ip6_target() {
+    let iface: Interface = serde_yaml::from_str(
+        r"---
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: balance-rr
+          options:
+            arp_interval: 0
+            ns_ip6_target:
+            - 2001:db8:a::3
+            - 2001:db8:a::2
+        ",
+    )
+    .unwrap();
+    let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
+
+    let result = merged_iface.post_inter_ifaces_process_bond();
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}

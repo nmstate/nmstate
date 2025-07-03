@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
+use std::net::Ipv6Addr;
 
 use crate::nm::nm_dbus::{NmConnection, NmSettingBond};
 
@@ -100,6 +101,9 @@ fn apply_bond_options(
             nm_bond_set
                 .options
                 .insert("arp_ip_target".to_string(), String::new());
+            nm_bond_set
+                .options
+                .insert("arp_ip6_target".to_string(), String::new());
         }
         nm_bond_set
             .options
@@ -211,6 +215,23 @@ fn apply_bond_options(
             nm_bond_set
                 .options
                 .insert("arp_missed_max".to_string(), v.to_string());
+        }
+    }
+
+    if let Some(v) = bond_opts.lacp_active {
+        nm_bond_set.options.insert(
+            "lacp_active".to_string(),
+            if v { "1".to_string() } else { "0".to_string() },
+        );
+    }
+    if let Some(v) = bond_opts.ns_ip6_target.as_ref() {
+        if !v.is_empty() {
+            let ip6_targets: Vec<String> =
+                v.iter().map(Ipv6Addr::to_string).collect();
+            nm_bond_set.options.insert(
+                "ns_ip6_target".to_string(),
+                ip6_targets.join(",").to_string(),
+            );
         }
     }
 

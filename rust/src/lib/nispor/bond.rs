@@ -219,6 +219,8 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                 }
             });
         options.arp_missed_max = np_bond.arp_missed_max;
+        options.lacp_active = np_bond.lacp_active;
+        options.ns_ip6_target = np_bond.ns_ip6_target.clone();
     }
     options
 }

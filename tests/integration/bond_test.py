@@ -1560,3 +1560,69 @@ def test_reapply_bond_port_ref_by_mac(bond0_with_eth1_ref_by_mac):
         Loader=yaml.SafeLoader,
     )
     libnmstate.apply(state)
+
+
+@pytest.fixture
+def lacp_bond99_with_2_ports(eth1_up, eth2_up, setup_remove_bond99):
+    state = yaml.load(
+        """---
+        interfaces:
+         - name: bond99
+           type: bond
+           state: up
+           link-aggregation:
+             options:
+               lacp_active: true
+             mode: 802.3ad
+             port:
+             - eth1
+             - eth2
+           """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
+    yield state
+
+
+# https://issues.redhat.com/browse/RHEL-1415
+@pytest.mark.tier1
+def test_bond_opt_lacp_active(lacp_bond99_with_2_ports):
+    state = lacp_bond99_with_2_ports
+    bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bond_config[Bond.OPTIONS_SUBTREE]["lacp_active"] = True
+
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)
+
+
+# https://issues.redhat.com/browse/RHEL-1415
+@pytest.mark.tier1
+def test_bond_opt_ns_ip6_target(setup_remove_bond99):
+    state = yaml.load(
+        """---
+        interfaces:
+         - name: bond99
+           type: bond
+           state: up
+           ipv6:
+             enabled: true
+             autoconf: false
+             dhcp: false
+             address:
+               - ip: 2001:db8:a::1
+                 prefix-length: 64
+           link-aggregation:
+             mode: balance-rr
+             options:
+               arp_interval: 50
+               ns_ip6_target:
+               - 2001:db8:a::3
+               - 2001:db8:a::2
+             port:
+             - eth1
+             - eth2
+           """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)

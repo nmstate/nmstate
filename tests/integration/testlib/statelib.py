@@ -241,7 +241,7 @@ class State:
                 options = bond_state.get(Bond.OPTIONS_SUBTREE)
                 if options:
                     for option_name, option_value in options.items():
-                        with contextlib.suppress(ValueError):
+                        with contextlib.suppress(ValueError, TypeError):
                             option_value = int(option_value)
                         options[option_name] = option_value
 
