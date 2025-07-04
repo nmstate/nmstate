@@ -103,7 +103,7 @@ fn apply_bond_options(
                 .insert("arp_ip_target".to_string(), String::new());
             nm_bond_set
                 .options
-                .insert("arp_ip6_target".to_string(), String::new());
+                .insert("ns_ip6_target".to_string(), String::new());
         }
         nm_bond_set
             .options

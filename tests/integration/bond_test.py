@@ -1582,9 +1582,8 @@ def test_bond_opt_lacp_active(lacp_bond99_with_2_ports):
     assertlib.assert_state_match(state)
 
 
-# https://issues.redhat.com/browse/RHEL-1415
-@pytest.mark.tier1
-def test_bond_opt_ns_ip6_target(setup_remove_bond99):
+@pytest.fixture
+def bond99_with_ns_ip6_target(setup_remove_bond99):
     state = yaml.load(
         """---
         interfaces:
@@ -1612,6 +1611,13 @@ def test_bond_opt_ns_ip6_target(setup_remove_bond99):
         Loader=yaml.SafeLoader,
     )
     libnmstate.apply(state)
+    yield state
+
+
+# https://issues.redhat.com/browse/RHEL-1415
+@pytest.mark.tier1
+def test_bond_opt_ns_ip6_target(bond99_with_ns_ip6_target):
+    state = bond99_with_ns_ip6_target
     assertlib.assert_state_match(state)
 
 
@@ -1644,3 +1650,22 @@ def test_eth1_state_unknown_with_controller_port_info_preserved(
     apply_with_description("Remove bond interface bond99", remove_bond_state)
     bond_state = statelib.show_only((BOND99,))
     assert not bond_state[Interface.KEY]
+
+
+def test_bond_disable_arp_interval_with_existing_ns_ip6_target(
+    bond99_with_ns_ip6_target,
+):
+    state = yaml.load(
+        """---
+        interfaces:
+         - name: bond99
+           type: bond
+           state: up
+           link-aggregation:
+             options:
+               arp_interval: 0
+           """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)
