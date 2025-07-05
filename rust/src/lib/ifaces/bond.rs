@@ -109,16 +109,16 @@ impl BondInterface {
 
     fn sort_ports(&mut self) {
         if let Some(ref mut bond_conf) = self.bond {
-            if let Some(ref mut port_conf) = &mut bond_conf.port {
-                port_conf.sort_unstable_by_key(|p| p.clone())
+            if let Some(port_list) = bond_conf.port.as_mut() {
+                port_list.sort_unstable_by_key(|p| p.clone())
             }
         }
     }
 
     fn sort_ports_config(&mut self) {
         if let Some(ref mut bond_conf) = self.bond {
-            if let Some(ref mut port_conf) = &mut bond_conf.ports_config {
-                port_conf.sort_unstable_by_key(|p| p.name.clone())
+            if let Some(ports_conf_list) = bond_conf.ports_config.as_mut() {
+                ports_conf_list.sort_unstable_by_key(|p| p.name.clone())
             }
         }
     }
@@ -167,24 +167,18 @@ impl BondInterface {
         Ok(())
     }
 
-    // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
-        let config = self.bond.clone().unwrap_or_default();
-        if config.port.is_some() {
-            self.bond
+        self.bond.as_ref().and_then(|bond_conf| {
+            bond_conf
+                .port
                 .as_ref()
-                .and_then(|bond_conf| bond_conf.port.as_ref())
                 .map(|ports| {
                     ports.as_slice().iter().map(|p| p.as_str()).collect()
                 })
-        } else {
-            self.bond
-                .as_ref()
-                .and_then(|bond_conf| bond_conf.ports_config.as_ref())
-                .map(|ports| {
+                .or(bond_conf.ports_config.as_ref().map(|ports| {
                     ports.as_slice().iter().map(|p| p.name.as_str()).collect()
-                })
-        }
+                }))
+        })
     }
 
     pub(crate) fn get_port_conf(
@@ -289,39 +283,34 @@ impl BondInterface {
     fn validate_conflict_in_port_and_port_configs(
         &self,
     ) -> Result<(), NmstateError> {
-        let bond_config = self.bond.clone().unwrap_or_default();
-        if bond_config.port.is_some() && bond_config.ports_config.is_some() {
-            let mut port_list = bond_config.port.unwrap_or_default();
-            let mut port_config_list: Vec<String> = bond_config
-                .ports_config
-                .unwrap_or_default()
-                .into_iter()
-                .map(|p| p.name)
-                .collect();
-            port_list.sort_unstable();
-            port_config_list.sort_unstable();
-            let matching = port_list
-                .iter()
-                .zip(port_config_list.iter())
-                .filter(|&(port_name, port_config_name)| {
-                    port_name == port_config_name
-                })
-                .count();
-            if matching != port_list.len() || matching != port_config_list.len()
+        if let Some(bond_conf) = self.bond.as_ref() {
+            if let (Some(ports), Some(ports_config)) =
+                (&bond_conf.port, &bond_conf.ports_config)
             {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "The port names specified in `port` conflict with the \
-                         port names specified in `ports-config` for bond \
-                         interface: {}",
-                        &self.base.name
-                    ),
-                );
-                log::error!("{e}");
-                return Err(e);
+                let mut ports: Vec<&str> =
+                    ports.iter().map(String::as_str).collect();
+                let mut port_confs: Vec<&str> =
+                    ports_config.iter().map(|p| p.name.as_str()).collect();
+
+                ports.sort_unstable();
+                port_confs.sort_unstable();
+
+                if ports != port_confs {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "The port names specified in `port` conflict with \
+                             the port names specified in `ports-config` for \
+                             bond interface: {}",
+                            &self.base.name
+                        ),
+                    );
+                    log::error!("{e}");
+                    return Err(e);
+                }
             }
         }
+
         Ok(())
     }
 
