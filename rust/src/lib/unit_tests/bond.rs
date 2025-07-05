@@ -781,3 +781,32 @@ fn test_bond_opt_ns_ip6_target() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_bond_ports_ports_config_conflict() {
+    let iface: Interface = serde_yaml::from_str(
+        r"---
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: active-backup
+          ports:
+          - eth1
+          - eth3
+          ports-config:
+          - name: eth1
+            queue-id: 0
+          - name: eth2
+            queue-id: 0
+        ",
+    )
+    .unwrap();
+
+    let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
