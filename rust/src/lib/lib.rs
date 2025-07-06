@@ -194,15 +194,12 @@ pub use crate::statistic::{NmstateFeature, NmstateStatistic};
 #[cfg(feature = "query_apply")]
 pub fn validate(state: &str, policy: &str) -> Result<(), NmstateError> {
     if !state.trim().is_empty() {
-        NetworkState::new_from_yaml(state).map_err(|e| {
-            NmstateError::new(e.kind(), format!("State validation failed: {e}"))
-        })?;
+        NetworkState::validate(state)?;
     }
-    serde_yaml::from_str::<NetworkPolicy>(policy).map_err(|e| {
-        NmstateError::new(
-            ErrorKind::InvalidArgument,
-            format!("Policy validation failed: {e}"),
-        )
-    })?;
+
+    if !policy.trim().is_empty() {
+        NetworkPolicy::validate(policy)?;
+    }
+
     Ok(())
 }

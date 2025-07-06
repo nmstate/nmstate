@@ -332,6 +332,13 @@ impl NetworkState {
                 .into(),
         ))
     }
+
+    pub fn validate(state_yaml: &str) -> Result<(), NmstateError> {
+        Self::new_from_yaml(state_yaml).map_err(|e| {
+            NmstateError::new(e.kind(), format!("State validation failed: {e}"))
+        })?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

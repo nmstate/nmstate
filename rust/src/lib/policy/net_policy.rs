@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{NetworkState, NmstateError};
+use crate::{ErrorKind, NetworkState, NmstateError};
 
 use super::{NetworkCaptureRules, NetworkStateTemplate};
 
@@ -52,5 +52,15 @@ impl TryFrom<NetworkPolicy> for NetworkState {
 impl NetworkPolicy {
     pub fn is_empty(&self) -> bool {
         self.capture.is_empty() && self.desired.is_empty()
+    }
+
+    pub fn validate(policy_yaml: &str) -> Result<(), NmstateError> {
+        serde_yaml::from_str::<NetworkPolicy>(policy_yaml).map_err(|e| {
+            NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!("Policy validation failed: {e}"),
+            )
+        })?;
+        Ok(())
     }
 }
