@@ -193,6 +193,7 @@ def setup_cli_ip():
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
                     IPv4.ENABLED: True,
+                    IPv4.DHCP: False,
                     IPv4.ADDRESS: [
                         {
                             IPv4.ADDRESS_IP: IpsecTestEnv.CLI_ADDR_V4,
@@ -202,6 +203,8 @@ def setup_cli_ip():
                 },
                 Interface.IPV6: {
                     IPv6.ENABLED: True,
+                    IPv6.DHCP: False,
+                    IPv6.AUTOCONF: False,
                     IPv6.ADDRESS: [
                         {
                             IPv6.ADDRESS_IP: IpsecTestEnv.CLI_ADDR_V6,
@@ -216,6 +219,7 @@ def setup_cli_ip():
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
                     IPv4.ENABLED: True,
+                    IPv4.DHCP: False,
                     IPv4.ADDRESS: [
                         {
                             IPv4.ADDRESS_IP: IpsecTestEnv.CLI_SUBADDR_V4,
@@ -225,6 +229,8 @@ def setup_cli_ip():
                 },
                 Interface.IPV6: {
                     IPv6.ENABLED: True,
+                    IPv6.DHCP: False,
+                    IPv6.AUTOCONF: False,
                     IPv6.ADDRESS: [
                         {
                             IPv6.ADDRESS_IP: IpsecTestEnv.CLI_SUBADDR_V6,
