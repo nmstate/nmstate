@@ -297,6 +297,7 @@ def start_ipsec_srv_container():
     )
     exec_cmd(
         "podman run -d --privileged --replace "
+        "--pull=never "
         f"--name {SRV_CONTAINER_NAME} "
         "--hostname ipsec-srv.example.org "
         f"--network ns:/run/netns/{SRV_NAMESPACE} "
