@@ -216,17 +216,14 @@ def _dump_state(
 ):
     path = Path(DUMP_STATES_DIR)
     path.mkdir(exist_ok=True)
-    test_name = (
-        os.environ.get("PYTEST_CURRENT_TEST")
-        .split(":")[-1]
-        .split(" ")[0]
-        .lower()
-    )
-    state_file = tempfile.NamedTemporaryFile(
-        dir=path, prefix=test_name + "-", suffix=".yml", delete=False
-    )
-    with open(state_file.name, "a") as outfile:
-        outfile.write(libnmstate.PrettyState(state).yaml)
+    test_name = os.environ.get("PYTEST_CURRENT_TEST")
+    if test_name:
+        test_name = test_name.split(":")[-1].split(" ")[0].lower()
+        state_file = tempfile.NamedTemporaryFile(
+            dir=path, prefix=test_name + "-", suffix=".yml", delete=False
+        )
+        with open(state_file.name, "a") as outfile:
+            outfile.write(libnmstate.PrettyState(state).yaml)
 
 
 def _custom_apply_with_dump_state(
