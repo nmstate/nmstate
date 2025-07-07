@@ -17,7 +17,7 @@ IFS='-' read -r -a array <<< "$JOB_TYPE"
 OS_TYPE="${array[0]}"
 NM_TYPE="${array[1]}"
 TEST_TYPE="${array[2]}"
-TEST_ARG="--test-type $TEST_TYPE"
+TEST_ARG="--test-type $TEST_TYPE --pytest-args='-x'"
 
 PRETEST_EXEC="true"
 COPR_ARG=""
