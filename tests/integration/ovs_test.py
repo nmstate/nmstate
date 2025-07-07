@@ -32,7 +32,6 @@ from .testlib import statelib
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
-from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
@@ -465,19 +464,11 @@ def bridge_port_with_trunks():
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason="OVS VLAN trunks was not supported in NM",
-)
 def test_ovs_vlan_trunks(bridge_port_with_trunks):
     assertlib.assert_state_match(bridge_port_with_trunks)
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason="OVS VLAN trunks was not supported in NM",
-)
 def test_remove_ovs_vlan_trunks(bridge_port_with_trunks):
     br1_state = statelib.show_only((BRIDGE1,))[Interface.KEY][0]
     port_state = br1_state[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE][0]
@@ -1893,10 +1884,6 @@ def test_ovs_detach_2_ports_from_4_ports_ovs_bond(
 
 # OpenStack use case
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason="OVS interface level other_config is not supported in NM 1.40-",
-)
 def test_ovs_bond_other_config_and_remove(
     cleanup_ovs_bridge, eth1_up, eth2_up
 ):
@@ -1952,10 +1939,6 @@ def test_ovs_bond_other_config_and_remove(
 
 # OpenStack use case
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason="OVS interface level other_config is not supported in NM 1.40-",
-)
 def test_ovs_bridge_other_config_and_remove(
     cleanup_ovs_bridge, eth1_up, eth2_up
 ):
@@ -2007,10 +1990,6 @@ def test_ovs_bridge_other_config_and_remove(
 
 # OpenStack use case
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason="OVS interface level other_config is not supported in NM 1.40-",
-)
 def test_ovs_sys_iface_other_config_and_remove(
     cleanup_ovs_bridge, eth1_up, eth2_up
 ):

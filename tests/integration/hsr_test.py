@@ -9,8 +9,6 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Hsr
 
 from .testlib import assertlib
-from .testlib.env import is_el8
-from .testlib.env import nm_minor_version
 
 
 ETH1 = "eth1"
@@ -18,10 +16,6 @@ ETH2 = "eth2"
 HSR0 = "hsr0"
 
 
-@pytest.mark.skipif(
-    nm_minor_version() < 45 or is_el8(),
-    reason=("HSR is only supported by NetworkManager 1.45+ and RHEL 9+"),
-)
 @pytest.mark.tier1
 def test_add_hsr_and_remove(eth1_up, eth2_up):
     desired_state = {

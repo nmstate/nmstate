@@ -30,7 +30,6 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
-from .testlib.env import nm_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
@@ -177,10 +176,6 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     assert not state[Interface.KEY]
 
 
-@pytest.mark.skipif(
-    nm_minor_version() <= 44,
-    reason="Bond port config is not supported on NetworkManager 1.44-",
-)
 def test_add_and_remove_bond_with_port_config(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     try:
@@ -197,10 +192,6 @@ def test_add_and_remove_bond_with_port_config(eth1_up, eth2_up):
         apply_with_description("Delete the bond device bond99", state)
 
 
-@pytest.mark.skipif(
-    nm_minor_version() <= 44,
-    reason="Bond port config is not supported on NetworkManager 1.44-",
-)
 def test_add_bond_with_port_config_and_modify(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     try:
@@ -232,10 +223,6 @@ def test_add_bond_with_port_config_and_modify(eth1_up, eth2_up):
         apply_with_description("Delete bond interface bond99", state)
 
 
-@pytest.mark.skipif(
-    nm_minor_version() <= 44,
-    reason="Bond port config is not supported on NetworkManager 1.44-",
-)
 def test_conflict_port_name_between_port_and_ports_config(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] = ["eth1"]
@@ -1426,7 +1413,7 @@ def test_remove_bond_and_assign_ip_to_bond_port(bond99_with_2_port):
 
 
 @pytest.mark.skipif(
-    os.environ.get("CI") == "true" or nm_minor_version() < 43,
+    os.environ.get("CI") == "true",
     reason="bond arp_missed_max is not supported by "
     "Github CI Ubuntu 5.15 kernel",
 )

@@ -4,7 +4,6 @@ import libnmstate
 import pytest
 import yaml
 
-from ..testlib.env import nm_minor_version
 from ..testlib.cmdlib import exec_cmd
 
 
@@ -24,10 +23,6 @@ def cleanup_loopback():
     )
 
 
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason=("Loopback is only supported by NetworkManager 1.41+"),
-)
 def test_store_route_table_local_rule_to_loopback(cleanup_loopback):
     libnmstate.apply(
         yaml.load(

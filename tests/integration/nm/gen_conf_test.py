@@ -190,9 +190,6 @@ def verify_ovs_ports(bridge_name, port_names):
     assert cur_ports == port_names
 
 
-@pytest.mark.skipif(
-    nm_minor_version() < 41, reason="ECMP route is only support on NM 1.41+"
-)
 def test_gen_conf_ecmp_routes():
     desired_state = load_yaml(
         """---

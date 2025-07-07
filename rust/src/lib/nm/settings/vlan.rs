@@ -21,12 +21,7 @@ pub(crate) fn gen_nm_vlan_setting(
                     nm_vlan.protocol = Some(NM_802_1_AD.to_string());
                 }
                 VlanProtocol::Ieee8021Q => {
-                    // To support old NetworkManager 1.41- which VLAN protocol
-                    // is not supported, we only set 802.1q protocol explicitly
-                    // when protocol is already defined in NM connection.
-                    if nm_vlan.protocol.is_some() {
-                        nm_vlan.protocol = Some(NM_802_1_Q.to_string());
-                    }
+                    nm_vlan.protocol = Some(NM_802_1_Q.to_string());
                 }
             }
         }

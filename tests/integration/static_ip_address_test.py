@@ -16,7 +16,6 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.apply import apply_with_description
 from .testlib.dummy import nm_unmanaged_dummy
-from .testlib.env import is_el8
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.iproutelib import iproute_get_ip_addrs_with_order
@@ -951,11 +950,6 @@ def test_preserve_ipv4_addresses_order(eth1_up):
     assert ip_addrs[1] == IPV4_ADDRESS1
 
 
-@pytest.mark.skipif(
-    is_el8(),
-    reason="RHEL 8 hold different IPv6 address order in rpm between "
-    "downstream shipped and copr main branch built",
-)
 def test_preserve_ipv6_addresses_order(eth1_up):
     desired_state = {
         Interface.KEY: [
