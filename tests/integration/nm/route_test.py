@@ -11,7 +11,6 @@ import yaml
 
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import dummy_interface
-from ..testlib.env import nm_minor_version
 from ..testlib.ifacelib import get_mac_address
 from ..testlib.iproutelib import ip_monitor_assert_stable_link_up
 from ..testlib.route import assert_routes
@@ -102,10 +101,6 @@ def test_preserve_old_gateway(eth1_with_old_gateway_format):
     )
 
 
-@pytest.mark.skipif(
-    nm_minor_version() <= 42,
-    reason="NM does not wait DHCP to assign static route",
-)
 @pytest.mark.tier1
 def test_route_delayed_by_nm_fails(eth1_up):
     with pytest.raises(NmstateVerificationError):

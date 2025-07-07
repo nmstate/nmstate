@@ -20,9 +20,7 @@ from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
 from ..testlib.bondlib import bond_interface
-from ..testlib.env import is_el8
 from ..testlib.env import is_k8s
-from ..testlib.env import nm_minor_version
 from ..testlib.ifacelib import get_mac_address
 from ..testlib.nmplugin import nm_service_restart
 from ..testlib.retry import retry_till_true_or_timeout
@@ -63,7 +61,7 @@ def test_bond_all_zero_ad_actor_system():
 
 
 @pytest.mark.skipif(
-    nm_minor_version() <= 40 or os.environ.get("CI") == "true",
+    os.environ.get("CI") == "true",
     reason="Bond SLB is only supported by NM 1.41 with patched kernel",
 )
 def test_bond_balance_slb():
@@ -207,9 +205,6 @@ def vlan_is_up_with_ip():
     is_k8s(), reason="K8S cannot restart NetworkManager daemon"
 )
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    is_el8(), reason="CentOS Stream 8 does not have the fix yet"
-)
 # Detailed context is https://bugzilla.redhat.com/show_bug.cgi?id=2207690
 def test_vlan_over_bond_reconnect_on_link_revive(
     ignore_carrier_no, vlan_over_bond_with_port_down

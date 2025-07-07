@@ -312,10 +312,6 @@ def test_preserve_existing_vlan_conf(eth1_up):
         assertlib.assert_state(desired_state)
 
 
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason="Modifying VLAN protocol is not supported on NM 1.41-.",
-)
 def test_change_vlan_protocol(vlan_on_eth1):
     dot1q_state = {
         Interface.KEY: [
@@ -360,10 +356,6 @@ def test_change_vlan_protocol(vlan_on_eth1):
     assertlib.assert_state_match(dot1q_state)
 
 
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason="Modifying VLAN protocol is not supported on NM 1.41-.",
-)
 def test_add_qinq_vlan(eth1_up):
     with vlan_interface(
         VLAN_IFNAME,

@@ -9,7 +9,6 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import MacSec
 
 from .testlib import assertlib
-from .testlib.env import nm_minor_version
 
 MKA_CAK = "50b71a8ef0bd5751ea76de6d6c98c03a"
 MKA_CKN = "f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550"
@@ -83,10 +82,6 @@ def test_add_macsec_and_modify(eth1_up):
 
 
 # https://issues.redhat.com/browse/RHEL-24337
-@pytest.mark.xfail(
-    nm_minor_version() < 46,
-    reason="NetworkManager 1.46- does not support MacSec offload",
-)
 @pytest.mark.tier1
 def test_macsec_offload(eth1_up):
     desired_state = {

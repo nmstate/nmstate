@@ -448,13 +448,13 @@ async fn check_nm_version(
             .has_capability(NmVersionInfo::CAPABILITY_SYNC_ROUTE_WITH_TABLE);
         Ok(ver_info.version())
     } else {
-        // VersionInfo was added to NM 1.42. As we support 1.40+, fallback to
+        // VersionInfo was added to NM 1.42. For older version we fallback to
         // parsing from Version string if VersionInfo is not available.
         *route_remove_needs_deactivate = true;
         nm_api.version().await
     };
 
-    let min = NmVersion::new(1, 40, 0);
+    let min = NmVersion::new(1, 46, 0);
     if let Ok(version) = version {
         if version < min {
             log::warn!(

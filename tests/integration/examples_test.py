@@ -18,7 +18,6 @@ from libnmstate.schema import DNS
 from libnmstate.schema import HostNameState
 from libnmstate.schema import RouteRule
 
-from .testlib.env import is_el8
 from .testlib.env import is_k8s
 from .testlib.env import nm_minor_version
 
@@ -129,11 +128,6 @@ def test_add_remove_routes(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 42,
-    reason="Loopback is only support on NM 1.42+, and blackhole type route "
-    "is stored in loopback",
-)
 def test_add_remove_special_routes(eth1_up):
     """
     Test adding an special route and removing it.
@@ -268,10 +262,6 @@ def test_add_macsec_and_remove_example(eth1_up):
     assertlib.assert_absent("macsec0")
 
 
-@pytest.mark.skipif(
-    nm_minor_version() < 45 or is_el8(),
-    reason="HSR is supported only in NetworkManager 1.45+",
-)
 @pytest.mark.tier1
 def test_add_hsr_and_remove_example(eth1_up):
     with example_state(
@@ -282,10 +272,6 @@ def test_add_hsr_and_remove_example(eth1_up):
     assertlib.assert_absent("hsr0")
 
 
-@pytest.mark.skipif(
-    nm_minor_version() <= 44,
-    reason="Bond port config is not supported on NetworkManager 1.44-",
-)
 def test_bond_port(eth1_up, eth2_up):
     with example_state(
         "bond_port_up.yml",

@@ -2,9 +2,6 @@
 
 import pytest
 
-import libnmstate
-
-from libnmstate.error import NmstateDependencyError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -14,7 +11,6 @@ from libnmstate.schema import InterfaceState
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.apply import apply_with_description
-from .testlib.env import nm_minor_version
 from .testlib.retry import retry_till_true_or_timeout
 
 IPV4_ADDRESS1 = "192.0.2.251"
@@ -41,29 +37,6 @@ def loopback_cleanup():
     )
 
 
-@pytest.mark.skipif(
-    nm_minor_version() >= 41,
-    reason=("Loopback is supported by NetworkManager 1.41+"),
-)
-def test_loopback_not_supported_by_nm():
-    with pytest.raises(NmstateDependencyError):
-        libnmstate.apply(
-            {
-                Interface.KEY: [
-                    {
-                        Interface.NAME: "lo",
-                        Interface.TYPE: InterfaceType.LOOPBACK,
-                        Interface.STATE: InterfaceState.UP,
-                    }
-                ]
-            }
-        )
-
-
-@pytest.mark.skipif(
-    nm_minor_version() < 41,
-    reason=("Loopback is only supported by NetworkManager 1.41+"),
-)
 class TestLoopback:
     def test_change_loopback_mtu_and_restore_back(self, loopback_cleanup):
         cur_state = statelib.show_only(("lo",))

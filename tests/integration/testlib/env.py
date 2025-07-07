@@ -21,10 +21,6 @@ def is_k8s():
     return os.getenv("RUN_K8S") == "true"
 
 
-def is_el8():
-    return exec_cmd("rpm -E %{?rhel}".split())[1].strip() == "8"
-
-
 def nm_libreswan_version_int():
     ret_code, version_str, _ = exec_cmd(
         "rpm -q NetworkManager-libreswan --qf %{VERSION}".split()

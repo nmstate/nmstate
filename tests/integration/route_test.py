@@ -20,7 +20,6 @@ from .testlib import cmdlib
 from .testlib import iprule
 from .testlib.bridgelib import linux_bridge
 from .testlib.dummy import dummy_interface
-from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
@@ -153,11 +152,6 @@ def test_add_static_route_without_next_hop_address(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 42,
-    reason="Loopback is only support on NM 1.42+, and blackhole type route "
-    "is stored in loopback",
-)
 def test_add_static_route_with_route_type(eth1_up):
     route = [
         {
@@ -196,11 +190,6 @@ def test_add_static_route_with_route_type(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 42,
-    reason="Loopback is only support on NM 1.42+, and blackhole type route "
-    "is stored in loopback",
-)
 def test_add_static_route_and_apply_route_absent(eth1_up):
     routes = [
         {
@@ -238,11 +227,6 @@ def test_add_static_route_and_apply_route_absent(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 42,
-    reason="Loopback is only support on NM 1.42+, and blackhole type route "
-    "is stored in loopback",
-)
 def test_add_static_Ipv4_route_with_route_type(eth1_up):
     routes = [
         {
@@ -265,11 +249,6 @@ def test_add_static_Ipv4_route_with_route_type(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 42,
-    reason="Loopback is only support on NM 1.42+, and blackhole type route "
-    "is stored in loopback",
-)
 def test_route_type_with_next_hop_interface(eth1_up):
     route = [
         {
@@ -288,11 +267,6 @@ def test_route_type_with_next_hop_interface(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 42,
-    reason="Loopback is only support on NM 1.42+, and blackhole type route "
-    "is stored in loopback",
-)
 def test_apply_route_with_route_type_multiple_times(eth1_up):
     routes = [
         {
@@ -694,11 +668,6 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 46,
-    reason="Assigning static route to device without IP addresses is only "
-    "support on NM 1.46+",
-)
 def test_static_route_with_empty_ip(eth1_up):
     eth1_state = copy.deepcopy(ETH1_INTERFACE_STATE)
     eth1_state[Interface.IPV4] = {
@@ -1353,9 +1322,6 @@ def test_route_rule_from_all_to_all_ipv6(route_rule_test_env):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 42, reason="Loopback is only support on NM 1.42+"
-)
 def test_route_rule_add_and_remove_using_loopback():
     desired_state = {
         RouteRule.KEY: {
@@ -1913,9 +1879,6 @@ def test_preserve_unmanaged_routes(eth1_static_ip):
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    nm_minor_version() < 41, reason="ECMP route is only support on NM 1.41+"
-)
 def test_add_and_remove_ecmp_route(eth1_static_ip):
     routes = [
         {
