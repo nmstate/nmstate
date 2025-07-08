@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ErrorKind, NmstateError};
+use crate::{ErrorKind, InterfaceType, MergedInterfaces, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -65,6 +65,45 @@ impl OvnConfiguration {
                             map.localnet
                         ),
                     ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn validate_local_bridge(
+        &self,
+        merged_ifaces: &MergedInterfaces,
+    ) -> Result<(), NmstateError> {
+        if let Some(maps) = self.bridge_mappings.as_ref() {
+            for map in maps
+                .iter()
+                .filter(|map| map.state != Some(OvnBridgeMappingState::Absent))
+            {
+                if let Some(br_name) = map.bridge.as_deref() {
+                    if let Some(ovs_br_iface) = merged_ifaces
+                        .get_iface(br_name, InterfaceType::OvsBridge)
+                    {
+                        if ovs_br_iface.merged.is_absent() {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "The OVS bridge {br_name} used for OVN \
+                                     localnet {} is marked as absent",
+                                    map.localnet
+                                ),
+                            ));
+                        }
+                    } else {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "There is no OVS bridge holding name desired \
+                                 by OVN bridge {br_name} localnet {}",
+                                map.localnet
+                            ),
+                        ));
+                    }
                 }
             }
         }
@@ -134,9 +173,12 @@ impl MergedOvnConfiguration {
     pub(crate) fn new(
         desired: OvnConfiguration,
         current: OvnConfiguration,
+        merged_ifaces: &MergedInterfaces,
     ) -> Result<Self, NmstateError> {
         let mut desired = desired;
         desired.sanitize()?;
+
+        desired.validate_local_bridge(merged_ifaces)?;
 
         let empty_vec: Vec<OvnBridgeMapping> = Vec::new();
         let deleted_localnets: HashSet<&str> = desired

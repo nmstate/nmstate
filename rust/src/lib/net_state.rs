@@ -377,7 +377,8 @@ impl MergedNetworkState {
         let hostname =
             MergedHostNameState::new(desired.hostname, current.hostname);
 
-        let ovn = MergedOvnConfiguration::new(desired.ovn, current.ovn)?;
+        let ovn =
+            MergedOvnConfiguration::new(desired.ovn, current.ovn, &interfaces)?;
 
         let ovsdb = MergedOvsDbGlobalConfig::new(
             desired.ovsdb,

@@ -1,4 +1,30 @@
 ---
+interfaces:
+ - name: eth1
+   type: ethernet
+   state: up
+ - name: eth2
+   type: ethernet
+   state: up
+ - name: eth3
+   type: ethernet
+   state: up
+ - name: ovsbr1
+   type: ovs-bridge
+   state: up
+   bridge:
+     options:
+       stp: true
+     port:
+     - name: eth1
+ - name: ovsbr2
+   type: ovs-bridge
+   state: up
+   bridge:
+     options:
+       stp: true
+     port:
+     - name: eth2
 ovn:
   bridge-mappings:
     - localnet: blue
