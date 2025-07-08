@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::net::Ipv6Addr;
 
 use serde::{
@@ -108,18 +109,16 @@ impl BondInterface {
     }
 
     fn sort_ports(&mut self) {
-        if let Some(ref mut bond_conf) = self.bond {
-            if let Some(port_list) = bond_conf.port.as_mut() {
-                port_list.sort_unstable_by_key(|p| p.clone())
-            }
+        if let Some(ports) = self.bond.as_mut().and_then(|b| b.port.as_mut()) {
+            ports.sort_unstable_by_key(|p| p.clone());
         }
     }
 
     fn sort_ports_config(&mut self) {
-        if let Some(ref mut bond_conf) = self.bond {
-            if let Some(ports_conf_list) = bond_conf.ports_config.as_mut() {
-                ports_conf_list.sort_unstable_by_key(|p| p.name.clone())
-            }
+        if let Some(port_confs) =
+            self.bond.as_mut().and_then(|b| b.ports_config.as_mut())
+        {
+            port_confs.sort_unstable_by_key(|p| p.name.clone());
         }
     }
 
@@ -175,9 +174,15 @@ impl BondInterface {
                 .map(|ports| {
                     ports.as_slice().iter().map(|p| p.as_str()).collect()
                 })
-                .or(bond_conf.ports_config.as_ref().map(|ports| {
-                    ports.as_slice().iter().map(|p| p.name.as_str()).collect()
-                }))
+                .or_else(|| {
+                    bond_conf.ports_config.as_ref().map(|ports| {
+                        ports
+                            .as_slice()
+                            .iter()
+                            .map(|p| p.name.as_str())
+                            .collect()
+                    })
+                })
         })
     }
 
@@ -287,22 +292,38 @@ impl BondInterface {
             if let (Some(ports), Some(ports_config)) =
                 (&bond_conf.port, &bond_conf.ports_config)
             {
-                let mut ports: Vec<&str> =
+                let ports: HashSet<&str> =
                     ports.iter().map(String::as_str).collect();
-                let mut port_confs: Vec<&str> =
+                let port_confs: HashSet<&str> =
                     ports_config.iter().map(|p| p.name.as_str()).collect();
 
-                ports.sort_unstable();
-                port_confs.sort_unstable();
-
                 if ports != port_confs {
+                    let missing_in_config: Vec<&str> =
+                        ports.difference(&port_confs).copied().collect();
+                    let missing_in_ports: Vec<&str> =
+                        port_confs.difference(&ports).copied().collect();
+
+                    let mut error_msg_detail = String::new();
+
+                    if !missing_in_config.is_empty() {
+                        error_msg_detail.push_str(&format!(
+                            "Ports in `port`` but not in `ports_config`: {}",
+                            missing_in_config.join(", ")
+                        ));
+                    } else if !missing_in_ports.is_empty() {
+                        error_msg_detail.push_str(&format!(
+                            "Ports in `ports_config`` but not in `port`: {}",
+                            missing_in_config.join(", ")
+                        ));
+                    }
+
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
                             "The port names specified in `port` conflict with \
                              the port names specified in `ports-config` for \
-                             bond interface: {}",
-                            &self.base.name
+                             bond interface: {}. {}",
+                            &self.base.name, error_msg_detail
                         ),
                     );
                     log::error!("{e}");
