@@ -1,4 +1,11 @@
 ---
+interfaces:
+- name: eth3
+  type: ethernet
+  state: up
+- name: ovsbr3
+  type: ovs-bridge
+  state: absent
 ovn:
   bridge-mappings:
     - localnet: green

@@ -304,6 +304,27 @@ fn test_statistic_feature_ovs_patch_with_iface_ovsdb() {
 fn test_statistic_feature_ovn_map() {
     let desired: NetworkState = serde_yaml::from_str(
         r#"---
+        interfaces:
+         - name: eth1
+           type: ethernet
+         - name: eth2
+           type: ethernet
+         - name: ovsbr1
+           type: ovs-bridge
+           state: up
+           bridge:
+             options:
+               stp: true
+             port:
+             - name: eth1
+         - name: ovsbr2
+           type: ovs-bridge
+           state: up
+           bridge:
+             options:
+               stp: true
+             port:
+             - name: eth2
         ovn:
           bridge-mappings:
             - localnet: blue

@@ -1,4 +1,13 @@
 ---
+interfaces:
+ - name: ovsbr3
+   type: ovs-bridge
+   state: up
+   bridge:
+     options:
+       stp: true
+     port:
+     - name: eth3
 ovn:
   bridge-mappings:
     - localnet: red

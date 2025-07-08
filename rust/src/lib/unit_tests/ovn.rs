@@ -1,9 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ErrorKind, MergedOvnConfiguration, OvnBridgeMapping, OvnBridgeMappingState,
-    OvnConfiguration,
+    ErrorKind, Interfaces, MergedInterfaces, MergedNetworkState,
+    MergedOvnConfiguration, NetworkState, OvnBridgeMapping,
+    OvnBridgeMappingState, OvnConfiguration,
 };
+
+fn gen_br1_merged_ifaces() -> MergedInterfaces {
+    let desired_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+         - name: br1
+           type: ovs-bridge
+           state: up
+           bridge:
+             options:
+               stp: true
+             port:
+             - name: eth1
+        ",
+    )
+    .unwrap();
+    let current_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+         - name: eth1
+           type: ethernet
+           state: up
+        ",
+    )
+    .unwrap();
+    MergedInterfaces::new(
+        desired_ifaces,
+        current_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap()
+}
 
 #[test]
 fn test_ovsdb_merge_with_mappings() {
@@ -22,7 +54,9 @@ bridge-mappings: []
     )
     .unwrap();
 
-    let merged_ovsdb = MergedOvnConfiguration::new(desired, current).unwrap();
+    let merged_ovsdb =
+        MergedOvnConfiguration::new(desired, current, &gen_br1_merged_ifaces())
+            .unwrap();
 
     assert_eq!(
         merged_ovsdb.to_ovsdb_external_id_value().unwrap(),
@@ -49,7 +83,9 @@ fn test_ovsdb_merge_delete_existing_mappings() {
     )
     .unwrap();
 
-    let merged_ovsdb = MergedOvnConfiguration::new(desired, current).unwrap();
+    let merged_ovsdb =
+        MergedOvnConfiguration::new(desired, current, &gen_br1_merged_ifaces())
+            .unwrap();
     assert_eq!(merged_ovsdb.to_ovsdb_external_id_value(), None);
 }
 
@@ -73,7 +109,8 @@ fn test_ovn_duplicate_localnet_keys_are_forbidden_on_desired_state() {
     )
     .unwrap();
 
-    let result = MergedOvnConfiguration::new(desired, current);
+    let result =
+        MergedOvnConfiguration::new(desired, current, &gen_br1_merged_ifaces());
 
     assert!(result.is_err());
 
@@ -285,4 +322,122 @@ fn test_ovn_serialize_state_absent() {
             .unwrap();
 
     assert_eq!(desired, new);
+}
+
+#[test]
+fn test_ovn_bridge_not_found() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        interfaces:
+        - name: br1
+          type: ovs-bridge
+          state: up
+          bridge:
+            options:
+              stp: true
+            port:
+            - name: eth1
+        ovn:
+          bridge-mappings:
+          - localnet: vlan-99
+            bridge: ovs-not-exist
+            state: present"#,
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    let result =
+        MergedNetworkState::new(desired, current, Default::default(), false);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovn_ref_to_absent_bridge() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        interfaces:
+        - name: br1
+          type: ovs-bridge
+          state: absent
+        ovn:
+          bridge-mappings:
+          - localnet: vlan-99
+            bridge: br1
+            state: present"#,
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+        - name: br1
+          type: ovs-bridge
+          state: up
+          bridge:
+            options:
+              stp: true
+            port:
+            - name: eth1
+        ",
+    )
+    .unwrap();
+
+    let result =
+        MergedNetworkState::new(desired, current, Default::default(), false);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovn_absent_ref_to_absent_bridge() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        interfaces:
+        - name: br1
+          type: ovs-bridge
+          state: absent
+        ovn:
+          bridge-mappings:
+          - localnet: vlan-99
+            bridge: br1
+            state: absent"#,
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+        - name: br1
+          type: ovs-bridge
+          state: up
+          bridge:
+            options:
+              stp: true
+            port:
+            - name: eth1
+        ",
+    )
+    .unwrap();
+
+    MergedNetworkState::new(desired, current, Default::default(), false)
+        .unwrap();
 }
