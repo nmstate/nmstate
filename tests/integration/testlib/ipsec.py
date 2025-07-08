@@ -83,6 +83,21 @@ class IpsecTestEnv:
         "ZM9ZiX2oLC6i+osr2u2UhvQ6PXVvOwdn19u310kyH+T6T4wQLnZZ68="
     )
 
+    def prepare():
+        """
+        Pull the container image, please run this when you still
+        have internet access.
+        """
+        i = 0
+        while i < 5:
+            try:
+                exec_cmd(
+                    f"podman pull {SRV_CONTAINER_IMG}".split(), check=True
+                )
+                break
+            except SubprocessError:
+                i += 1
+
     def setup():
         try:
             start_ipsec_srv_container()
@@ -377,17 +392,6 @@ def _start_ipsec_connection(conf_path):
         ],
         check=True,
     )
-
-
-def pull_ipsec_srv_container_image():
-    i = 0
-    while i < 5:
-        try:
-            exec_cmd(f"podman pull {SRV_CONTAINER_IMG}".split(), check=True)
-            break
-        except SubprocessError:
-            i += 1
-            pass
 
 
 def _restart_ipsec_service():
