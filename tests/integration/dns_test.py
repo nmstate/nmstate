@@ -20,6 +20,7 @@ from .testlib import cmdlib
 from .testlib.bondlib import bond_interface
 from .testlib.genconf import gen_conf_apply
 from .testlib.servicelib import disable_service
+from .testlib.statelib import show_only
 from .testlib.yaml import load_yaml
 
 
@@ -669,3 +670,54 @@ def test_kernel_mode_dns_and_purge():
         libnmstate.apply(desired_state, kernel_only=True)
         cur_state = libnmstate.show(kernel_only=True)
         assert not cur_state[DNS.KEY][DNS.CONFIG]
+
+
+@pytest.fixture
+def down_eth1_eth2_with_dns(static_dns):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.DOWN,
+                },
+                {
+                    Interface.NAME: "eth2",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.DOWN,
+                },
+            ]
+        }
+    )
+    yield
+
+
+# https://issues.redhat.com/browse/RHEL-102333
+@pytest.mark.tier1
+def test_do_not_activate_down_iface_with_dns_when_purging(
+    down_eth1_eth2_with_dns,
+):
+    eth1_state = show_only(("eth1",))[Interface.KEY][0]
+    eth2_state = show_only(("eth2",))[Interface.KEY][0]
+
+    assert eth1_state[Interface.STATE] == InterfaceState.DOWN
+    assert eth2_state[Interface.STATE] == InterfaceState.DOWN
+
+    purge_dns = {
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [],
+                DNS.SEARCH: [],
+                DNS.OPTIONS: [],
+            }
+        }
+    }
+
+    libnmstate.apply(purge_dns)
+
+    eth1_state = show_only(("eth1",))[Interface.KEY][0]
+    eth2_state = show_only(("eth2",))[Interface.KEY][0]
+
+    assert eth1_state[Interface.STATE] == InterfaceState.DOWN
+    assert eth2_state[Interface.STATE] == InterfaceState.DOWN

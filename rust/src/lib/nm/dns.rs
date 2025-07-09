@@ -253,6 +253,12 @@ pub(crate) fn purge_dns_config(
             }
             if !iface.is_changed() {
                 iface.mark_as_changed();
+                // For DNS stored in deactivate NmConnection, we should not
+                // activate it
+                if let Some(apply_iface) = iface.for_apply.as_mut() {
+                    apply_iface.base_iface_mut().state =
+                        iface.merged.base_iface().state;
+                }
             }
             if let Some(apply_iface) = iface.for_apply.as_mut() {
                 if apply_iface.base_iface().can_have_ip() {
