@@ -1,4 +1,24 @@
 # Changelog
+## [2.2.47] - 2025-07-09
+### Breaking changes
+ - Bump minimum supported NetworkManager version 1.46. (92f6f1cf)
+
+### New features
+ - Add support of bond option `lacp_active` and `ns_ip6_target`. (5c776ed0)
+ - Add support for route advmss option. (29a1ab8f)
+ - bond, ovs: add `bond` alias for `link-aggregation`. (925c44dc)
+ - bond: add "lacp" alias for 802.3ad. (1cc69ef2)
+ - Support referring interface via PCI-address. (7e4388c1)
+
+### Bug fixes
+ - bond: Fix failure when disable `arp_interval`. (abfcf81e)
+ - ovn: Raise error if OVN map bridge not exist or marked as absent. (77dc729c)
+ - interface: Ignore interface with state 'unknown'. (97b98b71)
+ - nm dispatch: Fix race when modifying dispatch script. (138aa711)
+ - nm ipsec: Wait `NmActiveConnection::STATE_ACTIVATED`. (84d84b95)
+ - sriov: Do not resolve sriov refer in `gen_diff`. (67181c7c)
+ - cli: Do not fail the apply action on `gen_diff` error. (4526d5d3)
+
 ## [2.2.46] - 2025-06-20
 ### Breaking changes
  - N/A
