@@ -200,3 +200,22 @@ class TestPciIdentifer:
             """
         )
         assert_state_match(expected_state)
+
+    def test_delete_pci_ref_eth(self, eth_pci_ref):
+        iface_name = _test_nic_name()
+        pci_address = _test_nic_pci()
+        desired_state = load_yaml(
+            f"""---
+            interfaces:
+            - name: {ETH_PROFILE_NAME}
+              type: ethernet
+              state: absent
+              identifier: pci-address
+              pci-address: "{pci_address}"
+            """
+        )
+        libnmstate.apply(desired_state)
+
+        # the profile name should not be found any more in current
+        iface_state = show_only((iface_name,))[Interface.KEY][0]
+        assert Interface.PROFILE_NAME not in iface_state
