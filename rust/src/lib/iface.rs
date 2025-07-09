@@ -293,7 +293,7 @@ impl<'de> Deserialize<'de> for Interface {
     {
         let mut v = serde_json::Value::deserialize(deserializer)?;
 
-        // Ignore all properties except type if state: absent
+        // Only included minimum properties for state: absent
         if matches!(
             Option::deserialize(&v["state"])
                 .map_err(serde::de::Error::custom)?,
@@ -314,6 +314,9 @@ impl<'de> Deserialize<'de> for Interface {
             }
             if let Some(s) = v.get("mac-address") {
                 new_value.insert("mac-address".to_string(), s.clone());
+            }
+            if let Some(s) = v.get("pci-address") {
+                new_value.insert("pci-address".to_string(), s.clone());
             }
             v = serde_json::value::Value::Object(new_value);
         }
