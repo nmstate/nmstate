@@ -1554,6 +1554,9 @@ impl MergedInterface {
     pub(crate) fn post_inter_ifaces_process_bond(
         &mut self,
     ) -> Result<(), NmstateError> {
+        if self.merged.is_absent() {
+            return Ok(());
+        }
         if let Some(Interface::Bond(apply_iface)) = self.for_apply.as_ref() {
             apply_iface
                 .validate_new_iface_with_no_mode(self.current.as_ref())?;
