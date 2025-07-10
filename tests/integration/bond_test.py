@@ -1669,3 +1669,42 @@ def test_bond_disable_arp_interval_with_existing_ns_ip6_target(
     )
     libnmstate.apply(state)
     assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def bond99_with_mac_restriction(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        port=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
+            },
+        },
+    ) as state:
+        yield state
+
+
+# https://issues.redhat.com/browse/RHEL-102600
+@pytest.mark.tier1
+def test_delete_bond_with_mac_restriction(bond99_with_mac_restriction):
+    bond99_mac = get_mac_address(BOND99)
+    state = yaml.load(
+        f"""---
+        interfaces:
+         - name: {BOND99}
+           type: bond
+           state: absent
+           mac-address: {bond99_mac}
+           identifier: name
+           bond:
+             mode: active_backup
+             options:
+               fail_over_mac: active
+           """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(state)
+
+    assertlib.assert_absent(BOND99)
