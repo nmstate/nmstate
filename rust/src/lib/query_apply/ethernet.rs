@@ -13,6 +13,13 @@ impl EthernetInterface {
         {
             sriov_conf.sanitize_desired_for_verify();
         }
+
+        if let Some(eth_conf) = self.ethernet.as_mut() {
+            if eth_conf.auto_neg == Some(true) {
+                eth_conf.speed = None;
+                eth_conf.duplex = None;
+            }
+        }
     }
 
     pub(crate) fn sriov_is_enabled(&self) -> bool {

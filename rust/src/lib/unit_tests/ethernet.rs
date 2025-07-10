@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ErrorKind, EthernetInterface, InterfaceIdentifier, InterfaceType,
-    Interfaces, MergedInterfaces,
+    ErrorKind, EthernetConfig, EthernetDuplex, EthernetInterface, Interface,
+    InterfaceIdentifier, InterfaceType, Interfaces, MergedInterfaces,
 };
 
 #[test]
@@ -392,4 +392,68 @@ fn test_mac_identifer_check_iface_type_also() {
         Some(InterfaceIdentifier::MacAddress).as_ref()
     );
     assert_eq!(des_iface.base_iface().profile_name.as_deref(), Some("wan0"))
+}
+
+#[test]
+fn test_ignore_speed_duplex_when_auto_negotiate() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            auto-negotiation: true
+            speed: 900
+            duplex: half
+        ",
+    )
+    .unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            auto-negotiation: true
+            speed: 1000
+            duplex: full
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            auto-negotiation: false
+            speed: 1000
+            duplex: full
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let result = merged_ifaces.verify(&cur_ifaces);
+
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::VerificationError);
 }
