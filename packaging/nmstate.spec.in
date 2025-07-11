@@ -29,7 +29,12 @@ Source3:        %{url}/releases/download/v%{version}/%{srcname}-vendor-%{version
 %endif
 %endif
 BuildRequires:  python3-devel
+%if 0%{?fedora} >= 43
+%define use_pyproject 1
+%else
+%define use_pyproject 0
 BuildRequires:  python3-setuptools
+%endif
 BuildRequires:  gnupg2
 BuildRequires:  systemd-rpm-macros
 %if 0%{?rhel}
@@ -59,6 +64,13 @@ BuildRequires:  (crate(tokio/net) >= 1.3 with crate(tokio/net) < 2.0)
 BuildRequires:  (crate(tokio/rt) >= 1.3 with crate(tokio/rt) < 2.0)
 BuildRequires:  (crate(tokio/signal) >= 1.3 with crate(tokio/signal) < 2.0)
 %endif
+%endif
+
+%if %{use_pyproject}
+%generate_buildrequires
+pushd rust/src/python >/dev/null
+%pyproject_buildrequires
+popd >/dev/null
 %endif
 
 %description
@@ -188,7 +200,11 @@ pushd rust
 popd
 
 pushd rust/src/python
+%if %{use_pyproject}
+%pyproject_wheel
+%else
 %py3_build
+%endif
 popd
 
 %install
@@ -199,7 +215,11 @@ env SKIP_PYTHON_INSTALL=1 \
     %make_install
 
 pushd rust/src/python
+%if %{use_pyproject}
+%pyproject_install
+%else
 %py3_install
+%endif
 popd
 
 %if ! 0%{?rhel} && ! %{is_snapshot}
@@ -241,7 +261,11 @@ popd
 %files -n python3-%{libname}
 %license LICENSE
 %{python3_sitelib}/%{libname}
+%if %{use_pyproject}
+%{python3_sitelib}/%{srcname}-*.dist-info/
+%else
 %{python3_sitelib}/%{srcname}-*.egg-info/
+%endif
 
 %files static
 %{_libdir}/libnmstate.a
