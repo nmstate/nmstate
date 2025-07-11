@@ -505,7 +505,7 @@ impl Interfaces {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Desired interface {} has `identifier: \
-                             mac-address` but not MAC address defined",
+                             pci-address` but not PCI address defined",
                             iface.name()
                         ),
                     ));
