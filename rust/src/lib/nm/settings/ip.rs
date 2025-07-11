@@ -64,7 +64,6 @@ fn gen_nm_ipv4_setting(
     }
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
-    nm_setting.forwarding = iface_ip.forwarding.map(i32::from);
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());

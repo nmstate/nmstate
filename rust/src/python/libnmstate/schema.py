@@ -172,7 +172,6 @@ class InterfaceIP:
 
 class InterfaceIPv4(InterfaceIP):
     DHCP_CLIENT_ID = "dhcp-client-id"
-    FORWARDING = "forwarding"
 
 
 class InterfaceIPv6(InterfaceIP):

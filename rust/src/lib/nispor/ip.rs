@@ -58,9 +58,6 @@ pub(crate) fn np_ipv4_to_nmstate(
             }
         }
         ip.addresses = Some(addresses);
-
-        ip.forwarding = np_iface.ipv4.as_ref().and_then(|v| v.forwarding);
-
         Some(ip)
     } else {
         // IP might just disabled

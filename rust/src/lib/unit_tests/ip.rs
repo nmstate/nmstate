@@ -598,33 +598,3 @@ fn test_ip_serlize_allow_extra_address() {
 
     assert_eq!(desired, new);
 }
-
-#[test]
-fn test_forwarding_ipv6_deserialize_error() {
-    let desired = r#"---
-name: eth1
-type: ethernet
-state: up
-ipv6:
-  enabled: true
-  dhcp: false
-  autoconf: false
-  forwarding: true
-  address:
-  - ip: 2001:db8:1::1
-    prefix-length: 64
-"#;
-
-    let value = serde_yaml::from_str::<serde_yaml::Value>(desired).unwrap();
-
-    let result = serde_json::from_value::<Interface>(
-        serde_json::to_value(value).unwrap(),
-    );
-
-    assert!(result.is_err());
-
-    let err = result.unwrap_err();
-    let err_str = err.to_string();
-
-    assert!(err_str.starts_with("InvalidArgument:"));
-}
