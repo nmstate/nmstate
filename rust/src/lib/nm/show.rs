@@ -206,8 +206,17 @@ pub(crate) async fn nm_retrieve(
     Ok(net_state)
 }
 
-fn fill_ip_settings(base_iface: &mut BaseInterface, nm_conn: &NmConnection) {
-    base_iface.ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
+fn fill_ip_settings(
+    base_iface: &mut BaseInterface,
+    nm_conn: &NmConnection,
+    nm_saved_conn: Option<&NmConnection>,
+) {
+    base_iface.ipv4 = nm_conn.ipv4.as_ref().map(|nm_conn| {
+        nm_ip_setting_to_nmstate4(
+            nm_conn,
+            nm_saved_conn.and_then(|c| c.ipv4.as_ref()),
+        )
+    });
     base_iface.ipv6 = nm_conn.ipv6.as_ref().map(|nm_ip_set| {
         nm_ip_setting_to_nmstate6(base_iface.name.as_str(), nm_ip_set)
     });
@@ -227,7 +236,7 @@ pub(crate) fn fill_iface_by_nm_conn_data(
 
     // Fallback to saved NmConnection when applied is empty
     if let Some(nm_conn) = nm_applied_conn.or(nm_saved_conn) {
-        fill_ip_settings(base_iface, nm_conn);
+        fill_ip_settings(base_iface, nm_conn, nm_saved_conn);
         base_iface.description = get_description(nm_conn);
         fill_identifier(base_iface, nm_conn);
         base_iface.profile_name = get_connection_name(nm_conn, nm_saved_conn);

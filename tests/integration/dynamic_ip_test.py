@@ -32,6 +32,7 @@ from .testlib import bondlib
 from .testlib import ifacelib
 from .testlib import statelib
 from .testlib.env import is_k8s
+from .testlib.env import nm_minor_version
 from .testlib.apply import apply_with_description
 from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
@@ -2371,3 +2372,55 @@ def get_dhcp_addr(iface_state):
         and addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
     ]
     return (DHCPV4_ADDRS, DHCPV6_ADDRS)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 54,
+    reason="IPv4 forwarding is not supported on NM 1.54-",
+)
+@pytest.mark.parametrize(
+    "forward_val",
+    [True, False],
+    ids=["forward_on", "forward_off"],
+)
+def test_ip_forwarding_with_dhcp_enabled_on_dummy_interface(
+    forward_val, dummy00
+):
+    """
+    NetworkManager only apply ip forwarding after DHCP done.
+    Nmstate should not wait DHCP and should pass the verification even DHCP
+    server is down.
+    """
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+          - name: dummy00
+            type: dummy
+            ipv4:
+              dhcp: true
+              enabled: true
+              forwarding: {forward_val}
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() >= 54,
+    reason="IPv4 forwarding is supported on NM 1.54+",
+)
+def test_ip_forwarding_on_dhcp_dummy_interface_with_old_nm(dummy00):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+          - name: dummy00
+            type: dummy
+            ipv4:
+              dhcp: true
+              enabled: true
+              forwarding: false
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)

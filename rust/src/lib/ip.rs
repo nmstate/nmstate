@@ -303,16 +303,11 @@ impl InterfaceIpv4 {
             }
         }
 
-        if let Some(forwarding) = self.forwarding {
-            if !self.enabled && forwarding {
-                if is_desired {
-                    log::warn!(
-                        "Ignoring `forwarding: {forwarding}` as IPv4 is \
-                         disabled",
-                    );
-                }
-                self.forwarding = None;
+        if !self.enabled {
+            if is_desired && self.forwarding == Some(true) {
+                log::warn!("Ignoring `forwarding: true` as IPv4 is disabled",);
             }
+            self.forwarding = None;
         }
 
         if let Some(addrs) = self.addresses.as_mut() {

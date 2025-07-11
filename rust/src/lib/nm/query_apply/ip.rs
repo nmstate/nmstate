@@ -21,6 +21,7 @@ const ADDR_GEN_MODE_STABLE_DEFAULT: i32 = 3;
 
 pub(crate) fn nm_ip_setting_to_nmstate4(
     nm_ip_setting: &NmSettingIp,
+    saved_nm_ip_setting: Option<&NmSettingIp>,
 ) -> InterfaceIpv4 {
     if let Some(nm_ip_method) = &nm_ip_setting.method {
         let (enabled, dhcp) = match nm_ip_method {
@@ -38,6 +39,19 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             nm_ip_setting.dhcp_send_hostname.unwrap_or(true)
         } else {
             false
+        };
+
+        // When interface been set to DHCP, NetworkManager only set IP
+        // forwarding after DHCP lease acquired.
+        // During DHCP process, the kernel will have no IP show as disabled,
+        // NM backend should provide forwarding value to override nispor
+        // data when DHCP enabled.
+        let forwarding = if dhcp == Some(true) {
+            saved_nm_ip_setting
+                .and_then(|s| s.forwarding)
+                .map(|f| f > 0)
+        } else {
+            None
         };
 
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
@@ -75,6 +89,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             } else {
                 None
             },
+            forwarding,
             ..Default::default()
         }
     } else {

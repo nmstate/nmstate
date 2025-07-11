@@ -22,6 +22,11 @@ impl InterfaceIpv4 {
         if self.dhcp.is_none() {
             self.dhcp = Some(false);
         }
+
+        // No forwarding means off
+        if self.forwarding.is_none() {
+            self.forwarding = Some(false);
+        }
     }
 
     // Sort addresses and dedup
@@ -81,6 +86,9 @@ impl InterfaceIpv4 {
         if other.dhcp_custom_hostname.is_some() {
             self.dhcp_custom_hostname
                 .clone_from(&other.dhcp_custom_hostname);
+        }
+        if other.forwarding.is_some() {
+            self.forwarding = other.forwarding;
         }
     }
 }
