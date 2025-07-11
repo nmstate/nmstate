@@ -442,7 +442,6 @@ impl NmApi<'_> {
 
 impl NmVersionInfo {
     pub const CAPABILITY_SYNC_ROUTE_WITH_TABLE: usize = 0;
-    pub const CAPABILITY_IP4_FORWARDING: usize = 1;
 
     fn from(ver_info_arr: &[u32]) -> Self {
         Self {
