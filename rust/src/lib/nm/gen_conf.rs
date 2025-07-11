@@ -47,7 +47,6 @@ pub(crate) fn nm_gen_conf(
         &conn_matcher,
         true,  // gen_conf mode
         false, // is_retry
-        true,  // forwarding supported
     )?
     .to_store;
 
