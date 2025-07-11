@@ -86,8 +86,8 @@ pub(crate) fn perpare_nm_conns(
 
                     if forwarding_desired {
                         log::warn!(
-                            "Clearing ipv4.forwarding for interface '{}': \
-                             NetworkManager is too old to support this feature",
+                            "Clearing unsupported ipv4.forwarding for \
+                             interface '{}'",
                             desired_iface.name()
                         );
                     }

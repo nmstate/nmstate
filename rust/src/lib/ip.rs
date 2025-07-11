@@ -149,7 +149,11 @@ pub struct InterfaceIpv4 {
     /// which result the IP addresses after first one holding the `secondary`
     /// flag.
     pub addresses: Option<Vec<InterfaceIpAddr>>,
-    /// Whether per‐interface IPv4 packets forwarding is enabled.
+    /// Whether per‐interface IPv4 sysctl forwarding is enabled.
+    /// When applying with `Some(true)`, nmstate will enable forwarding.
+    /// When applying with `Some(false)`, nmstate will disable forwarding.
+    /// When applying with `None`, the existing sysctl forwarding setting
+    /// is left untouched.
     pub forwarding: Option<bool>,
     /// Whether to apply DNS resolver information retrieved from DHCP server.
     /// Serialize and deserialize to/from `auto-dns`.
@@ -304,13 +308,10 @@ impl InterfaceIpv4 {
         }
 
         if let Some(forwarding) = self.forwarding {
-            if !self.enabled && forwarding {
-                if is_desired {
-                    log::warn!(
-                        "Ignoring `forwarding: {forwarding}` as IPv4 is \
-                         disabled",
-                    );
-                }
+            if !self.enabled && forwarding && is_desired {
+                log::warn!(
+                    "Ignoring `forwarding: {forwarding}` as IPv4 is disabled",
+                );
                 self.forwarding = None;
             }
         }
@@ -802,7 +803,7 @@ impl<'de> Deserialize<'de> for InterfaceIpv6 {
             }
             if v_map.contains_key("forwarding") {
                 return Err(serde::de::Error::custom(NmstateError::new(
-                    ErrorKind::NotSupportedError,
+                    ErrorKind::InvalidArgument,
                     "forwarding is not supported for IPv6".to_string(),
                 )));
             }
