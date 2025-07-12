@@ -37,11 +37,11 @@ pub(crate) async fn nispor_apply(
 
     let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
     for merged_iface in ifaces.iter().filter(|i| {
-        i.merged.iface_type() != InterfaceType::Unknown && !i.merged.is_absent()
+        i.merged.iface_type() != InterfaceType::Unknown
+            && !i.merged.is_absent()
+            && i.for_apply.as_ref().is_some()
     }) {
-        if let Some(iface) = merged_iface.for_apply.as_ref() {
-            np_ifaces.push(nmstate_iface_to_np(iface)?);
-        }
+        np_ifaces.push(nmstate_iface_to_np(merged_iface)?);
     }
 
     let mut net_conf = nispor::NetConf::default();
@@ -88,9 +88,17 @@ fn nmstate_iface_type_to_np(
 }
 
 fn nmstate_iface_to_np(
-    nms_iface: &Interface,
+    nms_merged_iface: &MergedInterface,
 ) -> Result<nispor::IfaceConf, NmstateError> {
     let mut np_iface = nispor::IfaceConf::default();
+    let nms_iface = match nms_merged_iface.for_apply.as_ref() {
+        Some(iface) => iface,
+        None => {
+            let error =
+                NmstateError::new(ErrorKind::Bug, "BUG: merged_interface.for_apply was assumed to be Some but None was found".to_string());
+            return Err(error);
+        }
+    };
 
     let mut np_iface_type = nmstate_iface_type_to_np(&nms_iface.iface_type());
 
@@ -113,9 +121,10 @@ fn nmstate_iface_to_np(
     if let Some(ctrl_name) = &base_iface.controller {
         np_iface.controller = Some(ctrl_name.to_string())
     }
+
     if base_iface.can_have_ip() {
-        np_iface.ipv4 = Some(nmstate_ipv4_to_np(base_iface.ipv4.as_ref()));
-        np_iface.ipv6 = Some(nmstate_ipv6_to_np(base_iface.ipv6.as_ref()));
+        np_iface.ipv4 = Some(nmstate_ipv4_to_np(nms_merged_iface));
+        np_iface.ipv6 = Some(nmstate_ipv6_to_np(nms_merged_iface));
     }
 
     np_iface.mac_address.clone_from(&base_iface.mac_address);
@@ -154,8 +163,9 @@ async fn delete_ifaces(
                 deleted_veths.push(peer_name);
             }
         }
-        if let Some(apply_iface) = iface.for_apply.as_ref() {
-            np_ifaces.push(nmstate_iface_to_np(apply_iface)?);
+
+        if iface.for_apply.as_ref().is_some() {
+            np_ifaces.push(nmstate_iface_to_np(iface)?);
         }
     }
 
