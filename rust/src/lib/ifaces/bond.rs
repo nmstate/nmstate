@@ -110,7 +110,7 @@ impl BondInterface {
 
     fn sort_ports(&mut self) {
         if let Some(ports) = self.bond.as_mut().and_then(|b| b.port.as_mut()) {
-            ports.sort_unstable_by_key(|p| p.clone());
+            ports.sort_unstable();
         }
     }
 
@@ -306,13 +306,14 @@ impl BondInterface {
 
                     if !missing_in_config.is_empty() {
                         error_msg_detail.push_str(&format!(
-                            "Ports in `port`` but not in `ports_config`: {}",
+                            "Ports in `port` but not in `ports_config`: {}. ",
                             missing_in_config.join(", ")
                         ));
-                    } else if !missing_in_ports.is_empty() {
+                    }
+                    if !missing_in_ports.is_empty() {
                         error_msg_detail.push_str(&format!(
-                            "Ports in `ports_config`` but not in `port`: {}",
-                            missing_in_config.join(", ")
+                            "Ports in `ports_config` but not in `port`: {}. ",
+                            missing_in_ports.join(", ")
                         ));
                     }
 
