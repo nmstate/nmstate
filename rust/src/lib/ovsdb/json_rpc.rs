@@ -18,13 +18,6 @@ pub(crate) struct OvsDbJsonRpc {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
-struct OvsDbRpcRequest {
-    method: String,
-    params: Value,
-    id: u64,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 struct OvsDbRpcError {
     error: String,
     details: Option<String>,
