@@ -2,10 +2,10 @@
 
 use crate::{
     unit_tests::testlib::{
-        new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
-        new_vlan_iface,
+        get_mac, new_eth_iface, new_ovs_br_iface, new_ovs_iface,
+        new_unknown_iface, new_vlan_iface,
     },
-    BondMode, Interface, InterfaceState, InterfaceType, Interfaces,
+    BondMode, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
     MergedInterfaces,
 };
 
@@ -424,5 +424,424 @@ fn test_unknown_iface_type() {
         serde_yaml::to_string(&InterfaceType::Other("foo_type".to_string()))
             .unwrap(),
         "foo_type\n"
+    );
+}
+
+#[test]
+fn test_hsr_mac_sync_no_mac_addresses_defined() {
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: AA:BB:CC:DD:EE:FF
+  - name: eth2
+    type: ethernet
+    state: up
+    ",
+    )
+    .unwrap();
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp
+",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        crate::NetworkStateMode::Apply,
+        false,
+    )
+    .unwrap();
+
+    let hsr_iface =
+        merged_ifaces.get_iface("hsr0", InterfaceType::Hsr).unwrap();
+    assert_eq!(
+        get_mac(&hsr_iface.for_apply),
+        Some("AA:BB:CC:DD:EE:FF".to_string())
+    );
+
+    let port2_iface = merged_ifaces
+        .get_iface("eth2", InterfaceType::Ethernet)
+        .unwrap();
+    assert_eq!(
+        get_mac(&port2_iface.for_apply),
+        Some("AA:BB:CC:DD:EE:FF".to_string())
+    );
+}
+
+#[test]
+fn test_hsr_mac_sync_mac_address_defined() {
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: aa:bb:cc:dd:ee:ff
+  - name: eth2
+    type: ethernet
+    state: up
+    mac-address: bb:cc:dd:ee:ff:00
+    ",
+    )
+    .unwrap();
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up
+  - name: hsr0
+    type: hsr
+    state: up
+    mac-address: bb:cc:ee:ff:00:11
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp
+",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        crate::NetworkStateMode::Apply,
+        false,
+    )
+    .unwrap();
+
+    let hsr_iface =
+        merged_ifaces.get_iface("hsr0", InterfaceType::Hsr).unwrap();
+    assert_eq!(
+        hsr_iface
+            .for_apply
+            .as_ref()
+            .unwrap()
+            .base_iface()
+            .mac_address,
+        Some("BB:CC:EE:FF:00:11".to_string())
+    );
+
+    let port1_iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap();
+    assert_eq!(
+        get_mac(&port1_iface.for_apply),
+        Some("BB:CC:EE:FF:00:11".to_string())
+    );
+
+    let port2_iface = merged_ifaces
+        .get_iface("eth2", InterfaceType::Ethernet)
+        .unwrap();
+    assert_eq!(
+        get_mac(&port2_iface.for_apply),
+        Some("BB:CC:EE:FF:00:11".to_string())
+    );
+}
+
+#[test]
+fn test_hsr_conflicting_desired_port_macs() {
+    let current = Interfaces::new();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: 00:23:45:67:89:1a
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: eth2
+    type: ethernet
+    state: up
+    mac-address: 00:23:45:67:89:1b
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp
+",
+    )
+    .unwrap();
+
+    let merged_err =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap_err();
+    assert_eq!(merged_err.kind(), ErrorKind::InvalidArgument);
+    assert!(merged_err.msg().contains("ports on interface hsr0"));
+}
+
+#[test]
+fn test_hsr_both_port_desired_macs() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up
+    ",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: 00:23:45:67:89:1b
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: eth2
+    type: ethernet
+    state: up
+    mac-address: 00:23:45:67:89:1b
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let port1_iface =
+        merged.get_iface("eth1", InterfaceType::Ethernet).unwrap();
+
+    let hsr_iface = merged.get_iface("hsr0", InterfaceType::Ethernet).unwrap();
+
+    assert_eq!(
+        get_mac(&port1_iface.for_apply),
+        Some("00:23:45:67:89:1B".to_string())
+    );
+    assert_eq!(
+        get_mac(&hsr_iface.for_apply),
+        Some("00:23:45:67:89:1B".to_string())
+    );
+}
+
+#[test]
+fn test_hsr_all_ifaces_desired_macs() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up
+    ",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: 00:23:45:67:89:1c
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: eth2
+    type: ethernet
+    state: up
+    mac-address: 00:23:45:67:89:1c
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: hsr0
+    type: hsr
+    state: up
+    mac-address: 00:23:45:67:89:1c
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let port1_iface =
+        merged.get_iface("eth1", InterfaceType::Ethernet).unwrap();
+
+    let hsr_iface = merged.get_iface("hsr0", InterfaceType::Ethernet).unwrap();
+
+    assert_eq!(
+        get_mac(&port1_iface.for_apply),
+        Some("00:23:45:67:89:1C".to_string())
+    );
+    assert_eq!(
+        get_mac(&hsr_iface.for_apply),
+        Some("00:23:45:67:89:1C".to_string())
+    );
+}
+
+#[test]
+fn test_hsr_port2_desired_mac() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    permanent-mac-address: 00:23:45:67:89:1c
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up
+    ",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: eth2
+    type: ethernet
+    state: up
+    mac-address: aa:bb:cc:dd:ee:ff
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let port1_iface =
+        merged.get_iface("eth1", InterfaceType::Ethernet).unwrap();
+
+    let hsr_iface = merged.get_iface("hsr0", InterfaceType::Ethernet).unwrap();
+
+    assert_eq!(
+        get_mac(&port1_iface.for_apply),
+        Some("AA:BB:CC:DD:EE:FF".to_string())
+    );
+    assert_eq!(
+        get_mac(&hsr_iface.for_apply),
+        Some("AA:BB:CC:DD:EE:FF".to_string())
+    );
+}
+
+#[test]
+fn test_hsr_all_ifaces_only_permanent_mac() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    permanent-mac-address: aa:bb:cc:dd:ee:ff
+    state: up
+  - name: eth2
+    type: ethernet
+    permanent-mac-address: 11:22:33:44:55:66
+    state: up
+    ",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: prp
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let port1_iface =
+        merged.get_iface("eth1", InterfaceType::Ethernet).unwrap();
+    let port2_iface =
+        merged.get_iface("eth2", InterfaceType::Ethernet).unwrap();
+    let hsr_iface = merged.get_iface("hsr0", InterfaceType::Ethernet).unwrap();
+
+    assert_eq!(
+        get_mac(&port1_iface.for_apply),
+        Some("AA:BB:CC:DD:EE:FF".to_string())
+    );
+    assert_eq!(
+        get_mac(&port2_iface.for_apply),
+        Some("AA:BB:CC:DD:EE:FF".to_string())
+    );
+    assert_eq!(
+        get_mac(&hsr_iface.for_apply),
+        Some("AA:BB:CC:DD:EE:FF".to_string())
     );
 }

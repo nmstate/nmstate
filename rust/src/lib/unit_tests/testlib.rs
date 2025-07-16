@@ -125,6 +125,13 @@ pub(crate) fn bond_with_ports(name: &str, ports: &[&str]) -> Interface {
     iface
 }
 
+pub(crate) fn get_mac(iface: &Option<Interface>) -> Option<String> {
+    iface
+        .as_ref()
+        .map(|i| i.base_iface().mac_address.clone())
+        .flatten()
+}
+
 pub(crate) const TEST_NIC: &str = "eth1";
 pub(crate) const TEST_IPV4_NET1: &str = "192.0.2.0/24";
 pub(crate) const TEST_IPV4_ADDR1: &str = "198.51.100.1";
