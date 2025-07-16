@@ -904,6 +904,8 @@ impl MergedInterfaces {
     fn process(&mut self) -> Result<(), NmstateError> {
         self.process_allow_extra_ovs_patch_ports_for_apply();
         self.apply_copy_mac_from()?;
+        self.validate_hsr_mac()?;
+        self.copy_hsr_mac()?;
         self.validate_controller_and_port_list_confliction()?;
         self.resolve_port_name_ref()?;
         self.resolve_parent_name_ref()?;

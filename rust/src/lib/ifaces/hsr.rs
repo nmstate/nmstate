@@ -2,7 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, InterfaceType, NmstateError};
+use crate::{
+    BaseInterface, ErrorKind, Interface, InterfaceType, MergedInterfaces,
+    NmstateError,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -21,6 +24,13 @@ use crate::{BaseInterface, InterfaceType, NmstateError};
 ///       multicast-spec: 40
 ///       protocol: prp
 /// ```
+///
+/// nmstate will configure the MAC addresses of HSR ports
+/// to be matching, to retain failover ability. It will
+/// use the MAC address of port1 by default, and apply it
+/// to port2 and the HSR interface. The MAC address can
+/// be overridden by setting the `mac-address` property
+/// on the HSR interface itself.
 pub struct HsrInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -61,6 +71,156 @@ impl HsrInterface {
                 }
             }
         }
+        Ok(())
+    }
+}
+
+impl MergedInterfaces {
+    pub(crate) fn get_hsr_mac(&self, iface: &HsrInterface) -> Option<String> {
+        if iface.base.mac_address.is_some() {
+            return iface.base.mac_address.clone();
+        }
+
+        let hsr_conf = iface.hsr.as_ref()?;
+
+        for use_permanent in [false, true] {
+            for port in [&hsr_conf.port1, &hsr_conf.port2] {
+                let mac = self
+                    .get_iface(port, InterfaceType::Unknown)
+                    .and_then(|iface| {
+                        let base = iface.merged.base_iface();
+                        if use_permanent {
+                            base.permanent_mac_address.clone()
+                        } else {
+                            base.mac_address.clone()
+                        }
+                    });
+                if mac.is_some() {
+                    return mac;
+                }
+            }
+        }
+
+        None
+    }
+
+    pub(crate) fn validate_hsr_mac(&self) -> Result<(), NmstateError> {
+        for hsr_iface in self.kernel_ifaces.iter().filter_map(|(_, iface)| {
+            if let Interface::Hsr(hsr_iface) = iface.desired.as_ref()? {
+                let hsr_conf = hsr_iface.hsr.as_ref()?;
+
+                if hsr_conf.protocol == HsrProtocol::Prp {
+                    return Some(hsr_iface);
+                }
+            }
+
+            None
+        }) {
+            let macs = [
+                hsr_iface.base.mac_address.as_deref(),
+                hsr_iface
+                    .hsr
+                    .as_ref()
+                    .and_then(|hsr_conf| {
+                        self.get_iface(&hsr_conf.port1, InterfaceType::Unknown)
+                    })
+                    .and_then(|iface| iface.desired.as_ref())
+                    .and_then(|iface| {
+                        iface.base_iface().mac_address.as_deref()
+                    }),
+                hsr_iface
+                    .hsr
+                    .as_ref()
+                    .and_then(|hsr_conf| {
+                        self.get_iface(&hsr_conf.port2, InterfaceType::Unknown)
+                    })
+                    .and_then(|iface| iface.desired.as_ref())
+                    .and_then(|iface| {
+                        iface.base_iface().mac_address.as_deref()
+                    }),
+            ];
+
+            let mut acc = None;
+
+            for &mac in macs.iter().flatten() {
+                if acc.is_some() && Some(mac) != acc {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "HSR ports on interface {} cannot have different \
+                             MAC addresses",
+                            hsr_iface.base.name
+                        ),
+                    ));
+                }
+
+                acc = Some(mac);
+            }
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn copy_hsr_mac(&mut self) -> Result<(), NmstateError> {
+        let mut pending_changes = Vec::new();
+
+        for (hsr_iface, hsr_conf, mac) in
+            self.kernel_ifaces.iter().filter_map(|(_, iface)| {
+                if !iface.is_desired() {
+                    return None;
+                }
+
+                if let Interface::Hsr(hsr_iface) = &iface.merged {
+                    let mac = self.get_hsr_mac(hsr_iface)?;
+                    let hsr_conf = hsr_iface.hsr.as_ref()?;
+
+                    if hsr_conf.protocol != HsrProtocol::Prp {
+                        return None;
+                    }
+
+                    if iface.current.is_some() {
+                        if Some(mac.as_str())
+                            != self.kernel_ifaces.get(&hsr_conf.port2).and_then(
+                                |iface| {
+                                    iface
+                                        .merged
+                                        .base_iface()
+                                        .mac_address
+                                        .as_deref()
+                                },
+                            )
+                        {
+                            log::warn!(
+                                "Existing HSR PRP interface {} has \
+                                 mismatching MAC addresses on port1 and \
+                                 port2, which may break functionality",
+                                iface.merged.name()
+                            );
+                        }
+
+                        return None;
+                    }
+
+                    return Some((hsr_iface, hsr_conf, mac));
+                }
+
+                None
+            })
+        {
+            for ifname in
+                [&hsr_iface.base.name, &hsr_conf.port1, &hsr_conf.port2]
+            {
+                pending_changes.push((ifname.clone(), mac.clone()));
+            }
+        }
+
+        for (ifname, mac) in pending_changes {
+            if let Some(iface) = self.kernel_ifaces.get_mut(&ifname) {
+                iface.mark_as_changed();
+                iface.set_copy_from_mac(mac.clone());
+            }
+        }
+
         Ok(())
     }
 }
