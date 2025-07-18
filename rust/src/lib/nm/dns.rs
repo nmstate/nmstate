@@ -693,13 +693,14 @@ fn store_dns_search_or_options_to_auto_iface(
                 Some(i) => i,
                 None => continue,
             };
-        if iface
-            .merged
-            .base_iface()
-            .ipv6
-            .as_ref()
-            .map(|i| i.is_auto())
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(true)
+            && iface
+                .merged
+                .base_iface()
+                .ipv6
+                .as_ref()
+                .map(|i| i.is_auto())
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
@@ -708,13 +709,14 @@ fn store_dns_search_or_options_to_auto_iface(
                 true,
             );
         }
-        if iface
-            .merged
-            .base_iface()
-            .ipv4
-            .as_ref()
-            .map(|i| i.is_auto())
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(false)
+            && iface
+                .merged
+                .base_iface()
+                .ipv4
+                .as_ref()
+                .map(|i| i.is_auto())
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
@@ -754,13 +756,14 @@ fn store_dns_search_or_options_to_auto_iface(
                 Some(i) => i,
                 None => continue,
             };
-        if iface
-            .merged
-            .base_iface()
-            .ipv6
-            .as_ref()
-            .map(|i| i.is_auto())
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(true)
+            && iface
+                .merged
+                .base_iface()
+                .ipv6
+                .as_ref()
+                .map(|i| i.is_auto())
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
@@ -769,13 +772,14 @@ fn store_dns_search_or_options_to_auto_iface(
                 true,
             );
         }
-        if iface
-            .merged
-            .base_iface()
-            .ipv4
-            .as_ref()
-            .map(|i| i.is_auto())
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(false)
+            && iface
+                .merged
+                .base_iface()
+                .ipv4
+                .as_ref()
+                .map(|i| i.is_auto())
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
@@ -821,13 +825,14 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
                 Some(i) => i,
                 None => continue,
             };
-        if iface
-            .merged
-            .base_iface()
-            .ipv6
-            .as_ref()
-            .map(|i| i.enabled)
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(true)
+            && iface
+                .merged
+                .base_iface()
+                .ipv6
+                .as_ref()
+                .map(|i| i.enabled)
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
@@ -836,13 +841,14 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
                 true,
             );
         }
-        if iface
-            .merged
-            .base_iface()
-            .ipv4
-            .as_ref()
-            .map(|i| i.enabled)
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(false)
+            && iface
+                .merged
+                .base_iface()
+                .ipv4
+                .as_ref()
+                .map(|i| i.enabled)
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
@@ -882,13 +888,14 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
                 Some(i) => i,
                 None => continue,
             };
-        if iface
-            .merged
-            .base_iface()
-            .ipv6
-            .as_ref()
-            .map(|i| i.enabled)
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(true)
+            && iface
+                .merged
+                .base_iface()
+                .ipv6
+                .as_ref()
+                .map(|i| i.enabled)
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
@@ -897,13 +904,14 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
                 true,
             );
         }
-        if iface
-            .merged
-            .base_iface()
-            .ipv4
-            .as_ref()
-            .map(|i| i.enabled)
-            .unwrap_or_default()
+        if iface.is_iface_valid_for_dns(false)
+            && iface
+                .merged
+                .base_iface()
+                .ipv4
+                .as_ref()
+                .map(|i| i.enabled)
+                .unwrap_or_default()
         {
             return set_iface_dns_search_or_option(
                 iface,
