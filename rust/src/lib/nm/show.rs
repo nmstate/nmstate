@@ -285,7 +285,9 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
                 base_iface.state = InterfaceState::Ignore;
             }
         }
-        NmDeviceState::Disconnected => base_iface.state = InterfaceState::Down,
+        NmDeviceState::Disconnected | NmDeviceState::Unavailable => {
+            base_iface.state = InterfaceState::Down
+        }
         _ => base_iface.state = InterfaceState::Up,
     }
     base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
