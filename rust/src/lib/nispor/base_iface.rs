@@ -37,8 +37,11 @@ fn np_iface_type_to_nmstate(
 impl From<(&nispor::IfaceState, &[nispor::IfaceFlag])> for InterfaceState {
     fn from(tuple: (&nispor::IfaceState, &[nispor::IfaceFlag])) -> Self {
         let (state, flags) = tuple;
+        // nispor::IfaceState::Up means operational up.
+        // Check also the Running flag with, according to [1], means operational
+        // state Up or Unknown.
+        // [1] https://www.kernel.org/doc/Documentation/networking/operstates.txt
         if *state == nispor::IfaceState::Up
-            || flags.contains(&nispor::IfaceFlag::Up)
             || flags.contains(&nispor::IfaceFlag::Running)
         {
             InterfaceState::Up
