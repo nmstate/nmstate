@@ -579,6 +579,10 @@ pub(crate) fn store_dns_search_or_option_to_iface(
     let (cur_v4_ifaces, cur_v6_ifaces) =
         get_cur_dns_ifaces(&merged_state.interfaces);
 
+    // First purge existing configs
+    purge_dns_config(false, &cur_v4_ifaces, merged_state)?;
+    purge_dns_config(true, &cur_v6_ifaces, merged_state)?;
+
     // Use current DNS interface if they are desired
     for iface_name in cur_v6_ifaces {
         if let Some(iface) =
