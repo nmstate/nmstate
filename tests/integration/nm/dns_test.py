@@ -328,3 +328,36 @@ def test_write_both_global_dns_and_iface_dns(eth1_up):
     assert cmdlib.exec_cmd(
         "nmcli -g ipv4.dns c show eth1".split(), check=True
     )[1].strip() == ",".join(TEST_DNS_SRVS)
+
+
+# https://issues.redhat.com/browse/RHEL-102333
+def test_set_dns_search_only_in_down_iface(auto_eth1, eth2_up):
+    # Add a DNS search domain to a down interface
+    cmdlib.exec_cmd("nmcli device down eth2".split(), check=True)
+    cmdlib.exec_cmd("nmcli c modify eth2 ipv4.method auto".split(), check=True)
+    cmdlib.exec_cmd(
+        "nmcli c modify eth2 ipv4.dns-search 'example.com'".split(),
+        check=True,
+    )
+
+    # Assert that the DNS searches configuration can change correctly
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {DNS.SEARCH: ["example2.com"]}},
+        }
+    )
+
+    # Assert that the old configuration has been purged from the down interface
+    # and the new one hasn't been added to it.
+    _r, search4, _e = cmdlib.exec_cmd(
+        "nmcli -g ipv4.dns-search c show eth2".split(), check=True
+    )
+    _r, search6, _e = cmdlib.exec_cmd(
+        "nmcli -g ipv6.dns-search c show eth2".split(), check=True
+    )
+    assert "example.com" not in search4 and "example.com" not in search6
+    assert "example2.com" not in search4 and "example2.com" not in search6
+
+    # It is not possible to assert that the new configuration has been put into
+    # eth1 because, if there are more interfaces in the host, it might be in
+    # any of them
