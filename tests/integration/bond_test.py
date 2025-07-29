@@ -642,7 +642,7 @@ def test_bond_mac_restriction_with_mac_in_desire(eth1_up, eth2_up):
         },
         create=False,
     ) as state:
-        with pytest.raises(NmstateValueError):
+        with pytest.raises((NmstateVerificationError)):
             libnmstate.apply(state)
 
 
@@ -673,7 +673,7 @@ def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
         },
     ) as state:
         assertlib.assert_state_match(state)
-        with pytest.raises(NmstateValueError):
+        with pytest.raises(NmstateVerificationError):
             libnmstate.apply(
                 {
                     Interface.KEY: [
