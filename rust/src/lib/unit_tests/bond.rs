@@ -41,11 +41,7 @@ link-aggregation:
     )
     .unwrap();
     let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
-    let result = merged_iface.post_inter_ifaces_process_bond();
-    assert!(result.is_err());
-    if let Err(e) = result {
-        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
-    }
+    merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
 
 #[test]
@@ -73,11 +69,7 @@ link-aggregation:
     .unwrap();
     let mut merged_iface =
         MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
-    let result = merged_iface.post_inter_ifaces_process_bond();
-    assert!(result.is_err());
-    if let Err(e) = result {
-        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
-    }
+    merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
 
 #[test]

@@ -254,35 +254,34 @@ impl BondInterface {
         Ok(())
     }
 
-    // Fail on
-    // * Desire mac restricted mode with mac defined
+    // Remove desired MAC address with warning message when:
+    // * New bond desired in mac restricted mode with mac defined
     // * Desire mac address with current interface in mac restricted mode with
     //   desired not changing mac restricted mode
-    fn validate_mac_restricted_mode(
-        &self,
-        current: Option<&Interface>,
-    ) -> Result<(), NmstateError> {
-        let e = NmstateError::new(
-            ErrorKind::InvalidArgument,
-            "MAC address cannot be specified in bond interface along with \
-             fail_over_mac active on active backup mode"
-                .to_string(),
+    // The verification process will fail the apply action when desired MAC
+    // address differ from port MAC.
+    fn sanitize_mac_restricted_mode(&mut self, current: Option<&Interface>) {
+        let warn_msg = format!(
+            "The bond interface {} with fail_over_mac:active and \
+             mode:active-backup is determined by its ports, hence ignoring \
+             desired MAC address",
+            self.base.name.as_str()
         );
-        if self.is_mac_restricted_mode() && self.base.mac_address.is_some() {
-            log::error!("{e}");
-            return Err(e);
-        }
 
         if let Some(Interface::Bond(current)) = current {
             if current.is_mac_restricted_mode()
                 && self.base.mac_address.is_some()
                 && !self.is_not_mac_restricted_mode_explicitly()
             {
-                log::error!("{e}");
-                return Err(e);
+                self.base.mac_address = None;
+                log::warn!("{warn_msg}");
             }
+        } else if self.is_mac_restricted_mode()
+            && self.base.mac_address.is_some()
+        {
+            self.base.mac_address = None;
+            log::warn!("{warn_msg}");
         }
-        Ok(())
     }
 
     fn validate_conflict_in_port_and_port_configs(
@@ -1557,10 +1556,10 @@ impl MergedInterface {
         if self.merged.is_absent() {
             return Ok(());
         }
-        if let Some(Interface::Bond(apply_iface)) = self.for_apply.as_ref() {
+        if let Some(Interface::Bond(apply_iface)) = self.for_apply.as_mut() {
             apply_iface
                 .validate_new_iface_with_no_mode(self.current.as_ref())?;
-            apply_iface.validate_mac_restricted_mode(self.current.as_ref())?;
+            apply_iface.sanitize_mac_restricted_mode(self.current.as_ref());
             apply_iface.validate_conflict_in_port_and_port_configs()?;
 
             if let Some(bond_opts) =
