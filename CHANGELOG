@@ -1,4 +1,18 @@
 # Changelog
+## [2.2.49] - 2025-08-01
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - bond: Ignore desired MAC when in MAC restricted mode. (c6922f34)
+ - nm dns: purge ifaces before saving new config. (7c498d1e)
+ - dns: don't add DNS search and/or options to down NM connection. (282b5b9e)
+ - Fix interface state detection in kernel mode. (f59571eb)
+ - Fix interface state detection when NM device is `unavailable`. (1d1a5f8a)
+
 ## [2.2.48] - 2025-07-11
 ### Breaking changes
  - Reverted IP forwarding support, will add back later. (7d1da41d)
