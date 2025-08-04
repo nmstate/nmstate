@@ -3,7 +3,7 @@
 use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 use super::{
-    connection::perpare_nm_conns,
+    connection::prepare_nm_conns,
     dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -42,7 +42,7 @@ pub(crate) fn nm_gen_conf(
         &merged_state.interfaces,
     );
 
-    let nm_conns = perpare_nm_conns(
+    let nm_conns = prepare_nm_conns(
         &merged_state,
         &conn_matcher,
         true,  // gen_conf mode

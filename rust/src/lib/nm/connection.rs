@@ -12,18 +12,18 @@ use crate::{
 };
 
 #[cfg_attr(not(feature = "query_apply"), allow(dead_code))]
-pub(crate) struct PerparedNmConnections {
+pub(crate) struct PreparedNmConnections {
     pub(crate) to_store: Vec<NmConnection>,
     pub(crate) to_activate: Vec<NmConnection>,
     pub(crate) to_deactivate: Vec<NmConnection>,
 }
 
-pub(crate) fn perpare_nm_conns(
+pub(crate) fn prepare_nm_conns(
     merged_state: &MergedNetworkState,
     conn_matcher: &NmConnectionMatcher,
     gen_conf_mode: bool,
     is_retry: bool,
-) -> Result<PerparedNmConnections, NmstateError> {
+) -> Result<PreparedNmConnections, NmstateError> {
     let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
 
@@ -98,7 +98,7 @@ pub(crate) fn perpare_nm_conns(
 
     fix_ip_dhcp_timeout(&mut nm_conns_to_update);
 
-    Ok(PerparedNmConnections {
+    Ok(PreparedNmConnections {
         to_store: nm_conns_to_update,
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_conns_to_deactivate,

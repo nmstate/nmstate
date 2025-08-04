@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 
 use super::super::{
-    connection::{perpare_nm_conns, PerparedNmConnections},
+    connection::{prepare_nm_conns, PreparedNmConnections},
     device::create_index_for_nm_devs,
     dns::{
         store_dns_config_to_desired_iface, store_dns_config_to_iface,
@@ -156,11 +156,12 @@ pub(crate) async fn nm_apply(
             store_dns_config_to_desired_iface(&mut merged_state);
         }
     }
-    let PerparedNmConnections {
+
+    let PreparedNmConnections {
         to_store: nm_conns_to_store,
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_conns_to_deactivate,
-    } = perpare_nm_conns(&merged_state, &conn_matcher, false, is_retry)?;
+    } = prepare_nm_conns(&merged_state, &conn_matcher, false, is_retry)?;
 
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
         &merged_state.interfaces,
