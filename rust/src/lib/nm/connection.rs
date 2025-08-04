@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    nm_dbus::{NmConnection, NmIfaceType},
+    device::create_index_for_nm_devs,
+    nm_dbus::{NmConnection, NmDevice, NmIfaceType},
     settings::{fix_ip_dhcp_timeout, iface_to_nm_connections},
     NmConnectionMatcher,
 };
@@ -15,12 +16,13 @@ use crate::{
 pub(crate) struct PreparedNmConnections {
     pub(crate) to_store: Vec<NmConnection>,
     pub(crate) to_activate: Vec<NmConnection>,
-    pub(crate) to_deactivate: Vec<NmConnection>,
+    pub(crate) to_deactivate: Vec<NmDevice>,
 }
 
 pub(crate) fn prepare_nm_conns(
     merged_state: &MergedNetworkState,
     conn_matcher: &NmConnectionMatcher,
+    nm_devs: &[NmDevice],
     gen_conf_mode: bool,
     is_retry: bool,
 ) -> Result<PreparedNmConnections, NmstateError> {
@@ -44,11 +46,15 @@ pub(crate) fn prepare_nm_conns(
         }
     });
 
-    let mut nm_conns_to_deactivate: Vec<NmConnection> = ifaces
-        .as_slice()
+    let nm_devs_indexed = create_index_for_nm_devs(nm_devs);
+    let mut nm_devs_to_deactivate: Vec<NmDevice> = ifaces
         .iter()
         .filter(|iface| iface.merged.is_down())
-        .filter_map(|iface| conn_matcher.get_applied(iface.merged.base_iface()))
+        .filter_map(|iface| {
+            nm_devs_indexed
+                .get(&(iface.merged.name(), iface.merged.iface_type()))
+                .copied()
+        })
         .cloned()
         .collect();
 
@@ -85,7 +91,11 @@ pub(crate) fn prepare_nm_conns(
                     == Some(true)
             {
                 nm_conns_to_activate.push(nm_conn.clone());
-                nm_conns_to_deactivate.push(nm_conn.clone());
+                if let Some(&nm_dev) =
+                    nm_devs_indexed.get(&(iface.name(), iface.iface_type()))
+                {
+                    nm_devs_to_deactivate.push(nm_dev.clone());
+                }
             }
             if iface.is_down() && gen_conf_mode {
                 if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
@@ -101,7 +111,7 @@ pub(crate) fn prepare_nm_conns(
     Ok(PreparedNmConnections {
         to_store: nm_conns_to_update,
         to_activate: nm_conns_to_activate,
-        to_deactivate: nm_conns_to_deactivate,
+        to_deactivate: nm_devs_to_deactivate,
     })
 }
 

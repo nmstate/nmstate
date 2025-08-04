@@ -4,7 +4,6 @@
 mod checkpoint;
 mod conn_matcher;
 mod connection;
-#[cfg(feature = "query_apply")]
 mod device;
 pub(crate) mod dns;
 #[cfg(feature = "query_apply")]

@@ -45,6 +45,7 @@ pub(crate) fn nm_gen_conf(
     let nm_conns = prepare_nm_conns(
         &merged_state,
         &conn_matcher,
+        &[],
         true,  // gen_conf mode
         false, // is_retry
     )?
