@@ -24,6 +24,7 @@ pub(crate) use self::connection::{
     activate_nm_connections, deactivate_nm_connections,
     delete_exist_connections, save_nm_connections,
 };
+pub(crate) use self::device::deactivate_nm_devices;
 pub(crate) use self::dns::retrieve_dns_info;
 pub(crate) use self::ieee8021x::nm_802_1x_to_nmstate;
 pub(crate) use self::ip::{

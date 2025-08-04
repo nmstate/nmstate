@@ -14,8 +14,8 @@ use super::super::{
     query_apply::{
         activate_nm_connections,
         connection::is_uuid,
-        deactivate_nm_connections, delete_exist_connections,
-        delete_orphan_ovs_ports,
+        deactivate_nm_connections, deactivate_nm_devices,
+        delete_exist_connections, delete_orphan_ovs_ports,
         dispatch::apply_dispatch_script,
         dns::{
             cur_dns_ifaces_still_valid_for_dns, is_iface_dns_desired,
@@ -160,8 +160,14 @@ pub(crate) async fn nm_apply(
     let PreparedNmConnections {
         to_store: nm_conns_to_store,
         to_activate: nm_conns_to_activate,
-        to_deactivate: nm_conns_to_deactivate,
-    } = prepare_nm_conns(&merged_state, &conn_matcher, false, is_retry)?;
+        to_deactivate: nm_devs_to_deactivate,
+    } = prepare_nm_conns(
+        &merged_state,
+        &conn_matcher,
+        &nm_devs,
+        false,
+        is_retry,
+    )?;
 
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
         &merged_state.interfaces,
@@ -205,8 +211,12 @@ pub(crate) async fn nm_apply(
     )
     .await?;
 
-    deactivate_nm_connections(&mut nm_api, nm_conns_to_deactivate.as_slice())
-        .await?;
+    // Deactivate the devices, not their connections. According to NM's
+    // documentation, this prevents automatic connection activations.
+    // We have deleted most of the other matching connections, but we cannot
+    // delete some connections with "multiconnect". This would lead to unwanted
+    // connection activations if we use deactivate_nm_connections.
+    deactivate_nm_devices(&mut nm_api, &nm_devs_to_deactivate).await?;
 
     Ok(())
 }

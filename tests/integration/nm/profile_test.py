@@ -5,6 +5,8 @@ from subprocess import SubprocessError
 
 import pytest
 
+import time
+
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -421,7 +423,7 @@ def test_ovs_profile_been_delete_by_state_absent(
 
 
 @pytest.fixture
-def multiconnect_profile_with_ip_disabled():
+def multiconnect_profile_with_ip_disabled(eth1_up):
     cmdlib.exec_cmd("nmcli c del eth1".split(), check=True)
     cmdlib.exec_cmd(
         "nmcli c add type ethernet connection.id nmstate-test-default "
@@ -436,7 +438,6 @@ def multiconnect_profile_with_ip_disabled():
 # We cannot use eth1_up which create a dedicate profile for eth1.
 # In order to test the multiconnect feature, we should do it manually.
 def test_set_static_ip_with_multiconnect_profile(
-    eth1_up,
     multiconnect_profile_with_ip_disabled,
 ):
     desired_state = {
@@ -788,3 +789,37 @@ def test_remove_non_exist_down_profile_with_both_mac_and_name(
         cmdlib.exec_cmd(
             "nmcli -g connection.id c show wan0".split(), check=True
         )
+
+
+@pytest.fixture
+def multiconnect_profile_matchall():
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet connection.id nmstate-test-default "
+        "connection.multi-connect multiple "
+        "ipv4.method disabled ipv6.method disabled".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd("nmcli c del nmstate-test-default".split(), check=False)
+
+
+def test_down_iface_with_multiconnect_profile(
+    eth1_up, multiconnect_profile_matchall
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.STATE: InterfaceState.DOWN,
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+    time.sleep(1)  # Give some time to NetworkManager to auto-activate profiles
+    assert (
+        cmdlib.exec_cmd(
+            "nmcli -g GENERAL.CONNECTION d show eth1".split(), check=True
+        )[1]
+        == "\n"
+    )
