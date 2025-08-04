@@ -321,10 +321,9 @@ async fn delete_remain_virtual_interface_as_desired(
         .map(|i| &i.merged)
     {
         if iface.is_virtual() {
-            if let Some(nm_dev) = nm_devs_indexed.get(&(
-                iface.name().to_string(),
-                NmIfaceType::from(&iface.iface_type()),
-            )) {
+            if let Some(nm_dev) =
+                nm_devs_indexed.get(&(iface.name(), iface.iface_type()))
+            {
                 log::info!(
                     "Deleting interface {}/{}: {}",
                     &iface.name(),
