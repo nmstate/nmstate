@@ -215,6 +215,32 @@ pub(crate) async fn nm_dev_from_obj_path(
     Ok(dev)
 }
 
+pub(crate) async fn nm_dev_disconnect(
+    dbus_conn: &zbus::Connection,
+    obj_path: &str,
+) -> Result<(), NmError> {
+    let proxy = zbus::Proxy::new(
+        dbus_conn,
+        NM_DBUS_INTERFACE_ROOT,
+        obj_path,
+        NM_DBUS_INTERFACE_DEV,
+    )
+    .await?;
+    match proxy.call::<&str, (), ()>("Disconnect", &()).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            let nm_err: NmError = e.into();
+            Err(NmError::new(
+                nm_err.kind,
+                format!(
+                    "Failed to disconnect device {obj_path}: {}",
+                    nm_err.msg
+                ),
+            ))
+        }
+    }
+}
+
 pub(crate) async fn nm_dev_delete(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
