@@ -17,7 +17,7 @@ use super::{
     error::{ErrorKind, NmError},
     lldp::NmLldpNeighbor,
     query_apply::device::{
-        nm_dev_delete, nm_dev_from_obj_path, nm_dev_get_llpd,
+        nm_dev_delete, nm_dev_disconnect, nm_dev_from_obj_path, nm_dev_get_llpd,
     },
     NmIfaceType,
 };
@@ -323,6 +323,14 @@ impl NmApi<'_> {
             }
         }
         Ok(ret)
+    }
+
+    pub async fn device_disconnect(
+        &mut self,
+        nm_dev_obj_path: &str,
+    ) -> Result<(), NmError> {
+        self.extend_timeout_if_required().await?;
+        nm_dev_disconnect(&self.dbus.connection, nm_dev_obj_path).await
     }
 
     pub async fn device_delete(
