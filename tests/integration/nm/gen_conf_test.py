@@ -105,6 +105,29 @@ interfaces:
         assertlib.assert_state_match(desired_state)
 
 
+def test_gen_conf_mac_sec(eth1_eth2_up_with_no_config):
+    desired_state = load_yaml(
+        """
+interfaces:
+- name: eth1
+  type: ethernet
+- name: macsec0
+  type: macsec
+  state: up
+  macsec:
+    encrypt: true
+    base-iface: eth1
+    mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+    mka-ckn: f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
+    port: 0
+    validation: strict
+    send-sci: true"""
+    )
+
+    with gen_conf_apply(desired_state):
+        assertlib.assert_state_match(desired_state)
+
+
 @pytest.mark.tier1
 def test_gen_conf_routes_rules():
     desired_state = load_yaml(

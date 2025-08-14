@@ -64,6 +64,9 @@ impl NmConnection {
         if let Some(mac_vlan) = &self.mac_vlan {
             sections.push(("macvlan", mac_vlan.to_keyfile()?));
         }
+        if let Some(macsec) = &self.macsec {
+            sections.push(("macsec", macsec.to_keyfile()?));
+        }
         if let Some(vrf) = &self.vrf {
             sections.push(("vrf", vrf.to_keyfile()?));
         }

@@ -11,6 +11,7 @@ mod ip;
 mod ipvlan;
 mod keyfile;
 mod mac_vlan;
+mod macsec;
 mod ovs;
 mod route;
 mod route_rule;
