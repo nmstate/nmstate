@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 import time
+import os
 
 import pytest
 import yaml
@@ -764,5 +765,67 @@ def test_gen_conf_macsec_parent_ref_by_mac(eth1_eth2_up_with_no_config):
                 port: 0
                 validation: strict
                 send-sci: true"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def _test_nic_name():
+    return os.environ["TEST_REAL_NIC"]
+
+
+def _test_nic_pci():
+    iface_name = _test_nic_name()
+    iface_state = show_only((iface_name,))[Interface.KEY][0]
+    return iface_state[Interface.PCI]
+
+
+@pytest.fixture
+def real_nic_without_nm_connection():
+    libnmstate.apply(
+        load_yaml(
+            f"""
+            interfaces:
+            - name: {_test_nic_name()}
+              type: ethernet
+              state: absent
+            """
+        )
+    )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for PCI identifier test",
+)
+def test_ref_vlan_parent_via_pci_address(real_nic_without_nm_connection):
+    iface_name = _test_nic_name()
+    pci_address = _test_nic_pci()
+
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: pci-address
+          pci-address: "{pci_address}"
+        - name: vlan100
+          type: vlan
+          state: up
+          vlan:
+            id: 100
+            base-iface: port1
+            """
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            f"""---
+            interfaces:
+            - name: vlan100
+              type: vlan
+              state: up
+              vlan:
+                id: 100
+                base-iface: {iface_name}"""
         )
         assertlib.assert_state_match(expected_state)
