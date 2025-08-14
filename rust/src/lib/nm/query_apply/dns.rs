@@ -3,9 +3,16 @@
 use std::str::FromStr;
 
 use super::super::{
-    dns::{extract_ipv6_link_local_iface_from_dns_srv, get_cur_dns_ifaces},
+    dns::{
+        extract_ipv6_link_local_iface_from_dns_srv, get_cur_dns_ifaces,
+        store_dns_config_to_desired_iface, store_dns_config_to_iface,
+        store_dns_search_or_option_to_iface,
+    },
     error::nm_error_to_nmstate,
-    nm_dbus::{NmApi, NmDnsEntry, NmGlobalDnsConfig, NmSettingIp},
+    nm_dbus::{
+        NmActiveConnection, NmApi, NmDevice, NmDnsEntry, NmGlobalDnsConfig,
+        NmSettingIp,
+    },
 };
 
 use crate::{
@@ -170,7 +177,63 @@ fn nm_dns_srvs_to_nmstate(nm_dns_entry: &NmDnsEntry) -> Vec<String> {
     srvs
 }
 
-pub(crate) async fn store_dns_config_via_global_api(
+pub(crate) async fn store_dns_config(
+    merged_state: &mut MergedNetworkState,
+    nm_api: &mut NmApi<'_>,
+    nm_acs: &[NmActiveConnection],
+    nm_devs: &[NmDevice],
+) -> Result<(), NmstateError> {
+    if merged_state.dns.is_changed()
+        || merged_state.dns.is_desired()
+        || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
+    {
+        purge_global_dns_config(nm_api).await?;
+
+        if merged_state.dns.is_search_or_option_only() {
+            log::info!(
+                "Using interface level DNS for special use case: only static \
+                 DNS search and/or DNS option desired"
+            );
+            // we cannot use global DNS in this case because global DNS suppress
+            // DNS nameserver learn from DHCP/autoconf.
+            store_dns_search_or_option_to_iface(merged_state, nm_acs, nm_devs)?;
+        } else if is_iface_dns_desired(merged_state) {
+            if let Err(e) =
+                store_dns_config_to_iface(merged_state, nm_acs, nm_devs)
+            {
+                log::info!(
+                    "Cannot store DNS to interface profile: {e}, will try to \
+                     set via global DNS"
+                );
+                store_dns_config_via_global_api(
+                    nm_api,
+                    merged_state.dns.servers.as_slice(),
+                    merged_state.dns.searches.as_slice(),
+                    merged_state.dns.options.as_slice(),
+                )
+                .await?;
+            }
+        } else if merged_state.dns.is_purge() {
+            // Also need to purge interface level DNS
+            store_dns_config_to_iface(merged_state, nm_acs, nm_devs).ok();
+        } else {
+            store_dns_config_via_global_api(
+                nm_api,
+                merged_state.dns.servers.as_slice(),
+                merged_state.dns.searches.as_slice(),
+                merged_state.dns.options.as_slice(),
+            )
+            .await?;
+            // Still store DNS into desired interface to provides backwards
+            // compatibility for user who uses NM keyfiles only:
+            // https://github.com/coreos/fedora-coreos-tracker/issues/1947
+            store_dns_config_to_desired_iface(merged_state);
+        }
+    }
+    Ok(())
+}
+
+async fn store_dns_config_via_global_api(
     nm_api: &mut NmApi<'_>,
     servers: &[String],
     searches: &[String],
@@ -194,7 +257,7 @@ pub(crate) async fn store_dns_config_via_global_api(
     Ok(())
 }
 
-pub(crate) async fn purge_global_dns_config(
+async fn purge_global_dns_config(
     nm_api: &mut NmApi<'_>,
 ) -> Result<(), NmstateError> {
     let cur_dns = nm_api
@@ -243,7 +306,7 @@ pub(crate) fn nm_global_dns_to_nmstate(
 //  3. User want to force DNS server stored in interface for static IP
 //     interface. This case, user need to state static DNS config along with
 //     static IP config.
-pub(crate) fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
+fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
     if extract_ipv6_link_local_iface_from_dns_srv(
         merged_state.dns.servers.as_slice(),
     )
@@ -296,7 +359,7 @@ pub(crate) fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
     false
 }
 
-pub(crate) fn cur_dns_ifaces_still_valid_for_dns(
+fn cur_dns_ifaces_still_valid_for_dns(
     merged_ifaces: &MergedInterfaces,
 ) -> bool {
     let (cur_v4_ifaces, cur_v6_ifaces) = get_cur_dns_ifaces(merged_ifaces);
