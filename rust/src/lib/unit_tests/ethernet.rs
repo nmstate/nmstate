@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ErrorKind, EthernetConfig, EthernetDuplex, EthernetInterface, Interface,
-    InterfaceIdentifier, InterfaceType, Interfaces, MergedInterfaces,
+    ErrorKind, EthernetInterface, InterfaceIdentifier, InterfaceType,
+    Interfaces, MergedInterfaces,
 };
 
 #[test]
