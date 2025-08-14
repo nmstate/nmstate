@@ -97,6 +97,9 @@ impl NmConnection {
                 sections.push(("vpn-secrets", s));
             }
         }
+        if let Some(iface_match) = &self.iface_match {
+            sections.push(("match", iface_match.to_keyfile()?));
+        }
 
         keyfile_sections_to_string(&sections)
     }
