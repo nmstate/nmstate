@@ -5,22 +5,13 @@ use std::collections::HashSet;
 use super::super::{
     connection::{prepare_nm_conns, PreparedNmConnections},
     device::create_index_for_nm_devs,
-    dns::{
-        store_dns_config_to_desired_iface, store_dns_config_to_iface,
-        store_dns_search_or_option_to_iface,
-    },
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection, NmIfaceType, NmVersion, NmVersionInfo},
     query_apply::{
-        activate_nm_connections,
-        connection::is_uuid,
+        activate_nm_connections, connection::is_uuid,
         deactivate_nm_connections, deactivate_nm_devices,
         delete_exist_connections, delete_orphan_ovs_ports,
-        dispatch::apply_dispatch_script,
-        dns::{
-            cur_dns_ifaces_still_valid_for_dns, is_iface_dns_desired,
-            purge_global_dns_config, store_dns_config_via_global_api,
-        },
+        dispatch::apply_dispatch_script, dns::store_dns_config,
         is_ipvlan_changed, is_mptcp_flags_changed, is_route_removed,
         is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
         is_vxlan_changed, save_nm_connections,
@@ -104,58 +95,7 @@ pub(crate) async fn nm_apply(
 
     store_route_rule_config(&mut merged_state)?;
 
-    if merged_state.dns.is_changed()
-        || merged_state.dns.is_desired()
-        || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
-    {
-        purge_global_dns_config(&mut nm_api).await?;
-
-        if merged_state.dns.is_search_or_option_only() {
-            log::info!(
-                "Using interface level DNS for special use case: only static \
-                 DNS search and/or DNS option desired"
-            );
-            // we cannot use global DNS in this case because global DNS suppress
-            // DNS nameserver learn from DHCP/autoconf.
-            store_dns_search_or_option_to_iface(
-                &mut merged_state,
-                &nm_acs,
-                &nm_devs,
-            )?;
-        } else if is_iface_dns_desired(&merged_state) {
-            if let Err(e) =
-                store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
-            {
-                log::info!(
-                    "Cannot store DNS to interface profile: {e}, will try to \
-                     set via global DNS"
-                );
-                store_dns_config_via_global_api(
-                    &mut nm_api,
-                    merged_state.dns.servers.as_slice(),
-                    merged_state.dns.searches.as_slice(),
-                    merged_state.dns.options.as_slice(),
-                )
-                .await?;
-            }
-        } else if merged_state.dns.is_purge() {
-            // Also need to purge interface level DNS
-            store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
-                .ok();
-        } else {
-            store_dns_config_via_global_api(
-                &mut nm_api,
-                merged_state.dns.servers.as_slice(),
-                merged_state.dns.searches.as_slice(),
-                merged_state.dns.options.as_slice(),
-            )
-            .await?;
-            // Still store DNS into desired interface to provides backwards
-            // compatibility for user who uses NM keyfiles only:
-            // https://github.com/coreos/fedora-coreos-tracker/issues/1947
-            store_dns_config_to_desired_iface(&mut merged_state);
-        }
-    }
+    store_dns_config(&mut merged_state, &mut nm_api, &nm_acs, &nm_devs).await?;
 
     let PreparedNmConnections {
         to_store: nm_conns_to_store,
