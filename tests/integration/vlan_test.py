@@ -714,11 +714,27 @@ def test_vlan_add_qos_map_to_existing(vlan_on_eth1):
     assertlib.assert_state_match(desired_state)
 
 
+@pytest.fixture
+def clean_up_test_vlan():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: VLAN_IFNAME,
+                    Interface.TYPE: InterfaceType.VLAN,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+
+
 @pytest.mark.skipif(
     nm_minor_version() < 51,
     reason=("VLAN QoS map is only fixed by NetworkManager 1.51+"),
 )
-def test_vlan_add_multiple_qos_map_in_mixed_order(eth1_up):
+def test_vlan_add_multiple_qos_map_in_mixed_order(eth1_up, clean_up_test_vlan):
     state = {
         Interface.KEY: [
             {
