@@ -427,7 +427,7 @@ pub(crate) fn gen_nm_conn_setting(
     Ok(())
 }
 
-fn uuid_from_name_and_type(
+pub(crate) fn uuid_from_name_and_type(
     iface_name: &str,
     iface_type: &InterfaceType,
 ) -> String {
