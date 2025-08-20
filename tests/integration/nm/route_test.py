@@ -2,8 +2,9 @@
 
 from subprocess import SubprocessError
 
-from libnmstate.schema import InterfaceState
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 import libnmstate
 import pytest
@@ -14,18 +15,22 @@ from ..testlib.dummy import dummy_interface
 from ..testlib.ifacelib import get_mac_address
 from ..testlib.iproutelib import ip_monitor_assert_stable_link_up
 from ..testlib.route import assert_routes
+from ..testlib.dummy import nm_unmanaged_dummy
 
 
 from libnmstate.error import NmstateVerificationError
 
 IPV4_ADDRESS1 = "192.0.2.251"
+IPV4_ADDRESS2 = "192.0.2.252"
 IPV4_TEST_NET1 = "203.0.113.0/24"
 IPV4_GATEWAY1 = "192.0.2.1"
 IPV6_ADDRESS1 = "2001:db8:1::1"
+IPV6_ADDRESS2 = "2001:db8:1::2"
 IPV6_TEST_NET1 = "2001:db8:e::/64"
 IPV6_GATEWAY1 = "2001:db8:1::f"
 TEST_GATEAY4 = "192.0.2.1"
 TEST_GATEAY6 = "2001:db8:2::"
+DUMMY1 = "dummy1"
 
 
 @pytest.fixture
@@ -384,3 +389,102 @@ def test_route_delete_next_hop_iface_by_profile_name_no_leftover(
     )
     with pytest.raises(SubprocessError):
         exec_cmd("nmcli c show port1".split(), check=True)
+
+
+@pytest.fixture
+def unmanged_dummy1_with_static_routes():
+    with nm_unmanaged_dummy(DUMMY1):
+        exec_cmd(
+            f"ip addr add {IPV4_ADDRESS1}/24 dev {DUMMY1}".split(), check=True
+        )
+        exec_cmd(
+            f"ip addr add {IPV6_ADDRESS1}/64 dev {DUMMY1}".split(), check=True
+        )
+        exec_cmd(
+            f"ip -6 route add {IPV6_TEST_NET1} via {IPV6_ADDRESS2} "
+            f"dev {DUMMY1}".split(),
+            check=True,
+        )
+        exec_cmd(
+            f"ip route add {IPV4_TEST_NET1} via {IPV4_ADDRESS2} dev {DUMMY1} "
+            "metric 101".split(),
+            check=True,
+        )
+        yield
+
+
+# https://issues.redhat.com/browse/RHEL-107130
+@pytest.mark.tier1
+def test_show_route_as_ignored(unmanged_dummy1_with_static_routes):
+    cur_state = libnmstate.show()
+    for routes in (
+        cur_state[Route.KEY][Route.RUNNING],
+        cur_state[Route.KEY][Route.CONFIG],
+    ):
+        found = False
+        for route in routes:
+            if route[Route.NEXT_HOP_INTERFACE] == DUMMY1:
+                found = True
+                assert route[Route.STATE] == Route.STATE_IGNORE
+        assert found
+
+
+def test_apply_static_routes_to_ignored_iface(
+    unmanged_dummy1_with_static_routes,
+):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: DUMMY1,
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: DUMMY1,
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.TABLE_ID: 254,
+        },
+    ]
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Route.KEY: {Route.CONFIG: routes},
+            },
+        )
+
+
+def test_apply_absent_routes_to_ignored_iface(
+    unmanged_dummy1_with_static_routes,
+):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: DUMMY1,
+            Route.STATE: Route.STATE_ABSENT,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: DUMMY1,
+            Route.STATE: Route.STATE_ABSENT,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        },
+    )
+
+    cur_state = libnmstate.show()
+    for routes in (
+        cur_state[Route.KEY][Route.RUNNING],
+        cur_state[Route.KEY][Route.CONFIG],
+    ):
+        assert any(
+            route[Route.NEXT_HOP_INTERFACE] == DUMMY1
+            and route[Route.DESTINATION] == IPV4_TEST_NET1
+            for route in routes
+        )
+        assert any(
+            route[Route.NEXT_HOP_INTERFACE] == DUMMY1
+            and route[Route.DESTINATION] == IPV6_TEST_NET1
+            for route in routes
+        )

@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use crate::{
     ErrorKind, InterfaceType, Interfaces, MergedRoutes, NmstateError,
-    RouteEntry, Routes,
+    RouteEntry, RouteState, Routes,
 };
 
 impl MergedRoutes {
@@ -210,6 +210,38 @@ impl RouteEntry {
     fn sanitize_current_route_for_verify(&mut self) {
         if self.quickack.is_none() {
             self.quickack = Some(false);
+        }
+    }
+}
+
+impl Routes {
+    pub(crate) fn apply_ignored_ifaces(&mut self, ifaces: &Interfaces) {
+        let ignored_ifaces: HashSet<&str> = ifaces
+            .kernel_ifaces
+            .iter()
+            .filter_map(|(name, iface)| {
+                if iface.is_ignore() {
+                    Some(name.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for rts in [self.running.as_mut(), self.config.as_mut()]
+            .into_iter()
+            .flatten()
+        {
+            for rt in rts {
+                if Some(true)
+                    == rt
+                        .next_hop_iface
+                        .as_deref()
+                        .map(|iface| ignored_ifaces.contains(&iface))
+                {
+                    rt.state = Some(RouteState::Ignore);
+                }
+            }
         }
     }
 }

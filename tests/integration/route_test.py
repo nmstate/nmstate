@@ -2437,3 +2437,71 @@ def test_add_route_with_advmss(eth1_up):
     )
     cur_state = libnmstate.show()
     assert_routes(routes, cur_state)
+
+
+# https://issues.redhat.com/browse/RHEL-107130
+@pytest.mark.tier1
+def test_apply_ignored_routes_to_ignored_iface(eth1_static_ip):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.STATE: Route.STATE_IGNORE,
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.STATE: Route.STATE_IGNORE,
+            Route.TABLE_ID: 254,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.IGNORE,
+                }
+            ],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+
+    ipv4_routes_output = _get_routes_from_iproute(4, 254)
+    assert IPV4_ADDRESS2 not in ipv4_routes_output
+    ipv6_routes_output = _get_routes_from_iproute(6, 254)
+    assert IPV6_ADDRESS2 not in ipv6_routes_output
+
+
+# https://issues.redhat.com/browse/RHEL-107130
+@pytest.mark.tier1
+def test_apply_ignored_routes_to_iface(eth1_static_ip):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.STATE: Route.STATE_IGNORE,
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.STATE: Route.STATE_IGNORE,
+            Route.TABLE_ID: 254,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+
+    ipv4_routes_output = _get_routes_from_iproute(4, 254)
+    assert IPV4_ADDRESS2 not in ipv4_routes_output
+    ipv6_routes_output = _get_routes_from_iproute(6, 254)
+    assert IPV6_ADDRESS2 not in ipv6_routes_output
