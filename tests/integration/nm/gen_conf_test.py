@@ -588,3 +588,181 @@ def test_gen_conf_ovs_bridge_port_ref_by_mac(eth1_eth2_up_with_no_config):
                 - name: eth2"""
         )
         assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_vlan_parent_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {port1_mac}
+        - name: vlan100
+          type: vlan
+          state: up
+          vlan:
+            id: 100
+            base-iface: port1
+            """
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: vlan100
+              type: vlan
+              state: up
+              vlan:
+                id: 100
+                base-iface: eth1"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_vxlan_parent_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {port1_mac}
+        - name: vxlan100
+          type: vxlan
+          state: up
+          vxlan:
+            id: 100
+            base-iface: port1
+            """
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: vxlan100
+              type: vxlan
+              state: up
+              vxlan:
+                id: 100
+                base-iface: eth1"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_macvlan_parent_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {port1_mac}
+        - name: macvlan100
+          type: mac-vlan
+          state: up
+          mac-vlan:
+            base-iface: port1
+            mode: passthru
+            promiscuous: true
+            """
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: macvlan100
+              type: mac-vlan
+              state: up
+              mac-vlan:
+                base-iface: eth1
+                mode: passthru
+                promiscuous: true"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_macvtap_parent_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {port1_mac}
+        - name: macvtap100
+          type: mac-vtap
+          state: up
+          mac-vtap:
+            base-iface: port1
+            mode: passthru
+            promiscuous: true
+            """
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: macvtap100
+              type: mac-vtap
+              state: up
+              mac-vtap:
+                base-iface: eth1
+                mode: passthru
+                promiscuous: true"""
+        )
+        assertlib.assert_state_match(expected_state)
+
+
+def test_gen_conf_macsec_parent_ref_by_mac(eth1_eth2_up_with_no_config):
+    port1_mac = get_mac_address("eth1")
+
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: port1
+          type: ethernet
+          identifier: mac-address
+          mac-address: {port1_mac}
+        - name: macsec100
+          type: macsec
+          state: up
+          macsec:
+            encrypt: true
+            base-iface: port1
+            mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+            mka-ckn: f2b4297d39da7330910a74abc0449feb
+            port: 0
+            validation: strict
+            send-sci: true"""
+    )
+
+    with gen_conf_apply(desired_state):
+        expected_state = load_yaml(
+            """---
+            interfaces:
+            - name: macsec100
+              type: macsec
+              state: up
+              macsec:
+                encrypt: true
+                base-iface: eth1
+                mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
+                mka-ckn: f2b4297d39da7330910a74abc0449feb
+                port: 0
+                validation: strict
+                send-sci: true"""
+        )
+        assertlib.assert_state_match(expected_state)
