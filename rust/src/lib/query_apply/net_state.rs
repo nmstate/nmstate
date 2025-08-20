@@ -132,6 +132,9 @@ impl NetworkState {
             .user_ifaces
             .retain(|_, iface| !iface.is_ignore());
 
+        // Mark routes next hop to ignored interface as ignored
+        self.routes.apply_ignored_ifaces(&self.interfaces);
+
         Ok(self)
     }
 

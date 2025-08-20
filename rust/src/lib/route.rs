@@ -106,6 +106,15 @@ impl Routes {
         Ok(())
     }
 
+    pub(crate) fn remove_ignored_routes(&mut self) {
+        for rts in [self.running.as_mut(), self.config.as_mut()]
+            .into_iter()
+            .flatten()
+        {
+            rts.retain(|rt| !rt.is_ignore());
+        }
+    }
+
     pub(crate) fn resolve_next_hop_iface_ref(
         &mut self,
         merged_ifaces: &MergedInterfaces,
@@ -163,6 +172,8 @@ impl Routes {
 pub enum RouteState {
     /// Mark a route entry as absent to remove it.
     Absent,
+    /// Mark a route as ignored
+    Ignore,
 }
 
 impl Default for RouteState {
@@ -328,6 +339,10 @@ impl RouteEntry {
 
     pub(crate) fn is_absent(&self) -> bool {
         matches!(self.state, Some(RouteState::Absent))
+    }
+
+    pub(crate) fn is_ignore(&self) -> bool {
+        matches!(self.state, Some(RouteState::Ignore))
     }
 
     /// Whether the desired route (self) matches with another
@@ -620,6 +635,7 @@ impl MergedRoutes {
         current: Routes,
         merged_ifaces: &MergedInterfaces,
     ) -> Result<Self, NmstateError> {
+        desired.remove_ignored_routes();
         desired.validate()?;
         desired.resolve_next_hop_iface_ref(merged_ifaces)?;
 
