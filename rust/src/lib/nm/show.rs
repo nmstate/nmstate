@@ -9,11 +9,10 @@ use super::{
     error::nm_error_to_nmstate,
     query_apply::{
         device::nm_dev_iface_type_to_nmstate, dispatch::get_dispatches,
-        dns::nm_global_dns_to_nmstate, get_description, get_lldp,
-        is_lldp_enabled, nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
-        nm_ip_setting_to_nmstate6, ovs::merge_ovs_netdev_tun_iface,
-        query_nmstate_wait_ip, retrieve_dns_info,
-        vpn::get_supported_vpn_ifaces,
+        get_description, get_lldp, is_lldp_enabled, nm_802_1x_to_nmstate,
+        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
+        ovs::merge_ovs_netdev_tun_iface, query_nmstate_wait_ip,
+        retrieve_dns_state, vpn::get_supported_vpn_ifaces,
     },
     settings::get_bond_balance_slb,
     NmConnectionMatcher,
@@ -174,19 +173,8 @@ pub(crate) async fn nm_retrieve(
         }
     }
 
-    let mut dns_config = if let Ok(Some(nm_global_dns_conf)) = nm_api
-        .get_global_dns_configuration()
-        .await
-        .map_err(nm_error_to_nmstate)
-    {
-        if nm_global_dns_conf.is_empty() {
-            retrieve_dns_info(&mut nm_api, &net_state.interfaces).await?
-        } else {
-            nm_global_dns_to_nmstate(&nm_global_dns_conf)
-        }
-    } else {
-        retrieve_dns_info(&mut nm_api, &net_state.interfaces).await?
-    };
+    let mut dns_config =
+        retrieve_dns_state(&mut nm_api, &net_state.interfaces).await?;
     dns_config.sanitize().ok();
     if running_config_only {
         dns_config.running = None;

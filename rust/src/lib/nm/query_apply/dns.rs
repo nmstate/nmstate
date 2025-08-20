@@ -51,110 +51,161 @@ pub(crate) fn nm_dns_to_nmstate(
     }
 }
 
-pub(crate) async fn retrieve_dns_info(
+pub(crate) async fn retrieve_dns_state(
     nm_api: &mut NmApi<'_>,
     ifaces: &Interfaces,
 ) -> Result<DnsState, NmstateError> {
-    let mut nm_dns_entires = nm_api
+    let config_dns_info = retrieve_configured_dns_info(nm_api, ifaces).await?;
+    let running_dns_servers = retrieve_running_dns_servers(nm_api).await?;
+    let running_dns_info = DnsClientState {
+        server: Some(running_dns_servers),
+        search: config_dns_info.search.clone(),
+        options: config_dns_info.options.clone(),
+        ..Default::default()
+    };
+
+    Ok(DnsState {
+        running: Some(running_dns_info),
+        config: Some(config_dns_info),
+    })
+}
+
+async fn retrieve_running_dns_servers(
+    nm_api: &mut NmApi<'_>,
+) -> Result<Vec<String>, NmstateError> {
+    let mut servers: Vec<String> = Vec::new();
+    let mut has_split_dns = false;
+
+    let mut nm_dns_entries = nm_api
         .get_dns_configuration()
         .await
         .map_err(nm_error_to_nmstate)?;
-    nm_dns_entires.sort_unstable_by_key(|d| d.priority);
-    let mut running_srvs: Vec<String> = Vec::new();
-    let mut running_schs: Vec<String> = Vec::new();
-    for nm_dns_entry in nm_dns_entires {
-        running_srvs.extend(nm_dns_srvs_to_nmstate(&nm_dns_entry));
-        running_schs.extend_from_slice(nm_dns_entry.domains.as_slice());
+    nm_dns_entries.sort_unstable_by_key(|d| d.priority);
+
+    // If there are global nameservers, only those are used
+    for nm_dns_entry in nm_dns_entries
+        .iter()
+        .filter(|entry| entry.interface.is_empty())
+    {
+        if !nm_dns_entry.domains.is_empty() {
+            has_split_dns = true;
+        }
+        servers.extend(nm_dns_srvs_to_nmstate(nm_dns_entry));
     }
 
-    let mut dns_confs: Vec<&DnsClientState> = Vec::new();
-    for iface in ifaces.kernel_ifaces.values() {
-        if let Some(ip_conf) = iface.base_iface().ipv6.as_ref() {
-            if let Some(dns_conf) = ip_conf.dns.as_ref() {
-                dns_confs.push(dns_conf);
-            }
-        }
-        if let Some(ip_conf) = iface.base_iface().ipv4.as_ref() {
-            if let Some(dns_conf) = ip_conf.dns.as_ref() {
-                dns_confs.push(dns_conf);
-            }
-        }
+    if has_split_dns {
+        log::warn!(
+            "Running DNS config has split-DNS, but nmstate doesn't support \
+             it. Its info may be inaccurate."
+        );
     }
-    dns_confs.sort_unstable_by_key(|d| d.priority.unwrap_or_default());
-    let mut config_srvs: Vec<String> = Vec::new();
-    let mut config_schs: Vec<String> = Vec::new();
-    for dns_conf in dns_confs {
-        if let Some(srvs) = dns_conf.server.as_ref() {
-            config_srvs.extend_from_slice(srvs);
-        }
-        if let Some(schs) = dns_conf.search.as_ref() {
-            config_schs.extend_from_slice(schs);
+
+    if !servers.is_empty() {
+        return Ok(servers);
+    }
+
+    // If there are no global nameservers, those from connections are used
+    for nm_dns_entry in nm_dns_entries {
+        servers.extend(nm_dns_srvs_to_nmstate(&nm_dns_entry));
+        if nm_dns_entry.priority < 0 {
+            // Per NM's doc, ignore remaining entries if priority<0
+            break;
         }
     }
 
-    // The DNS options is not provided via `NmApi.get_dns_configuration()`,
-    // The data stored in active connections will not be refreshed after
-    // reapply.
-    // The data stored in applied connection will not do validation.
-    let mut dns_options: Vec<String> = Vec::new();
+    Ok(servers)
+}
 
-    let nm_conns = nm_api
-        .applied_connections_get()
+async fn retrieve_configured_dns_info(
+    nm_api: &mut NmApi<'_>,
+    ifaces: &Interfaces,
+) -> Result<DnsClientState, NmstateError> {
+    let mut use_global_servers = false;
+    let mut use_global_searches_and_options = false;
+    let mut servers: Vec<String> = Vec::new();
+    let mut searches: Vec<String> = Vec::new();
+    let mut options: Vec<String> = Vec::new();
+
+    // First fill from global config
+    let nm_global_dns_conf = nm_api
+        .get_global_dns_configuration()
         .await
         .map_err(nm_error_to_nmstate)?;
-    for nm_conn in &nm_conns {
-        if let Some(opts) =
-            nm_conn.ipv4.as_ref().and_then(|i| i.dns_options.as_deref())
-        {
-            for opt in opts {
-                if !dns_options.contains(opt) {
-                    dns_options.push(opt.clone());
+
+    if let Some(nm_global_dns_conf) = nm_global_dns_conf {
+        use_global_searches_and_options = true;
+        searches.extend_from_slice(&nm_global_dns_conf.searches);
+        options.extend_from_slice(&nm_global_dns_conf.options);
+
+        if let Some(nm_domain_conf) = nm_global_dns_conf.domains.get("*") {
+            use_global_servers = true;
+            servers.extend_from_slice(&nm_domain_conf.servers)
+        }
+
+        if nm_global_dns_conf.domains.len() > 1 {
+            log::warn!("Ignoring split-DNS nameservers (not supported)");
+        }
+    }
+
+    // Fill servers from ifaces only if they are not defined in global config.
+    // Fill searches and options from ifaces only if neither them nor servers
+    // are defined in global config.
+    if !use_global_servers {
+        let mut nm_ifaces_dns_confs: Vec<&DnsClientState> = Vec::new();
+        for iface in ifaces.kernel_ifaces.values() {
+            if let Some(ip_conf) = iface.base_iface().ipv6.as_ref() {
+                if let Some(dns_conf) = ip_conf.dns.as_ref() {
+                    nm_ifaces_dns_confs.push(dns_conf);
+                }
+            }
+            if let Some(ip_conf) = iface.base_iface().ipv4.as_ref() {
+                if let Some(dns_conf) = ip_conf.dns.as_ref() {
+                    nm_ifaces_dns_confs.push(dns_conf);
                 }
             }
         }
-        if let Some(opts) =
-            nm_conn.ipv6.as_ref().and_then(|i| i.dns_options.as_deref())
-        {
-            for opt in opts {
-                if !dns_options.contains(opt) {
-                    dns_options.push(opt.clone());
+        nm_ifaces_dns_confs
+            .sort_unstable_by_key(|d| d.priority.unwrap_or_default());
+
+        for dns_conf in nm_ifaces_dns_confs {
+            if let Some(srvs) = dns_conf.server.as_ref() {
+                servers.extend_from_slice(srvs);
+            }
+
+            if !use_global_searches_and_options {
+                if let Some(schs) = dns_conf.search.as_ref() {
+                    for sch in schs {
+                        if sch.starts_with("~") {
+                            // Ignore routing only domains
+                            continue;
+                        }
+                        if !searches.contains(sch) {
+                            searches.push(sch.clone())
+                        }
+                    }
                 }
+                if let Some(opts) = dns_conf.options.as_ref() {
+                    for opt in opts {
+                        if !options.contains(opt) {
+                            options.push(opt.clone());
+                        }
+                    }
+                }
+            }
+
+            if dns_conf.priority.unwrap_or(0) < 0 {
+                // Per NM's doc, ignore remaining entries if priority<0
+                break;
             }
         }
     }
-    // The order of DNS options does not matters, hence no need to sort the
-    // DNS option using DNS priority.
-    dns_options.sort_unstable();
 
-    Ok(DnsState {
-        running: Some(DnsClientState {
-            server: Some(running_srvs),
-            search: Some(running_schs),
-            options: if dns_options.is_empty() {
-                None
-            } else {
-                Some(dns_options.clone())
-            },
-            ..Default::default()
-        }),
-        config: Some(DnsClientState {
-            server: if config_srvs.is_empty() && config_schs.is_empty() {
-                None
-            } else {
-                Some(config_srvs.clone())
-            },
-            search: if config_srvs.is_empty() && config_schs.is_empty() {
-                None
-            } else {
-                Some(config_schs)
-            },
-            options: if dns_options.is_empty() {
-                None
-            } else {
-                Some(dns_options)
-            },
-            ..Default::default()
-        }),
+    let servers_or_searches_set = !servers.is_empty() || !searches.is_empty();
+    Ok(DnsClientState {
+        server: servers_or_searches_set.then_some(servers),
+        search: servers_or_searches_set.then_some(searches),
+        options: (!options.is_empty()).then_some(options),
+        ..Default::default()
     })
 }
 
@@ -272,30 +323,6 @@ async fn purge_global_dns_config(
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
-}
-
-pub(crate) fn nm_global_dns_to_nmstate(
-    nm_global_dns_conf: &NmGlobalDnsConfig,
-) -> DnsState {
-    let mut config = DnsClientState::new();
-
-    config.options = if nm_global_dns_conf.options.is_empty() {
-        None
-    } else {
-        Some(nm_global_dns_conf.options.clone())
-    };
-    config.search = Some(nm_global_dns_conf.searches.clone());
-    config.server =
-        if let Some(nm_domain_conf) = nm_global_dns_conf.domains.get("*") {
-            Some(nm_domain_conf.servers.clone())
-        } else {
-            Some(Vec::new())
-        };
-
-    DnsState {
-        running: Some(config.clone()),
-        config: Some(config),
-    }
 }
 
 // To save us from NM iface-DNS mess, we prefer global DNS over iface DNS,
