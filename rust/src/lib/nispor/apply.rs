@@ -94,8 +94,12 @@ fn nmstate_iface_to_np(
     let nms_iface = match nms_merged_iface.for_apply.as_ref() {
         Some(iface) => iface,
         None => {
-            let error =
-                NmstateError::new(ErrorKind::Bug, "BUG: merged_interface.for_apply was assumed to be Some but None was found".to_string());
+            let error = NmstateError::new(
+                ErrorKind::Bug,
+                "BUG: merged_interface.for_apply was assumed to be Some but \
+                 None was found"
+                    .to_string(),
+            );
             return Err(error);
         }
     };
