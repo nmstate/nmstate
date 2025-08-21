@@ -132,14 +132,32 @@ impl Routes {
                         continue;
                     }
                     if kernel_names.is_empty() && !route.is_absent() {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Route '{}': next hop interface {} not found",
-                                route,
-                                next_hop_iface.as_str()
-                            ),
-                        ));
+                        if merged_ifaces.ignored_ifaces.iter().any(
+                            |(name, iface_type)| {
+                                name == next_hop_iface
+                                    && !iface_type.is_userspace()
+                            },
+                        ) {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Route '{}': next hop interface {} is \
+                                     marked as ignored",
+                                    route,
+                                    next_hop_iface.as_str()
+                                ),
+                            ));
+                        } else {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Route '{}': next hop interface {} not \
+                                     found",
+                                    route,
+                                    next_hop_iface.as_str()
+                                ),
+                            ));
+                        }
                     } else if kernel_names.len() > 1 {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
