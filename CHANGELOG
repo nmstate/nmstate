@@ -1,4 +1,24 @@
 # Changelog
+## [2.2.50] - 2025-08-26
+### Breaking changes
+ - N/A
+
+### New features
+ - gen_conf: Support PCI address matching. (89358379)
+ - gen_conf: Add support of MacSec interface. (a917cbff)
+ - route: Introduce `state: ignore` for route. (7c70e486)
+
+### Bug fixes
+ - route: Better error message for routes to ignored interface. (00e13a6d)
+ - gen_conf: Use UUID for non-name-ref parent. (16913104)
+ - nispor: delete ip addr not in desired state. (eb11b782)
+ - route: detect nexthop conflicts and raise error. (48b139c8)
+ - query_apply: ethernet: ignore speed when auto-negotiation is true. (93645e94)
+ - nm: use device's Disconnect instead of DeactivateConnection. (f632625f)
+ - nm: device: refactor create_index_for_nm_devs. (9f5d0660)
+ - Fix typo: perpare -> prepare. (f228c8c7)
+ - rpm: don't call to setup.py directly. (632a16f1)
+
 ## [2.2.49] - 2025-08-01
 ### Breaking changes
  - N/A
