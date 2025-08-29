@@ -30,4 +30,4 @@ jobs:
       run: cd rust && cargo +${{ matrix.msrv }} build --ignore-rust-version
 
     - name: Unit tests
-      run: cd rust && cargo +${{ matrix.msrv }} test
+      run: cd rust && cargo +${{ matrix.msrv }} test --ignore-rust-version
