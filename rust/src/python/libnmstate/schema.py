@@ -597,3 +597,10 @@ class Mptcp:
 
 class Description:
     KEY = "description"
+
+
+class InterfaceAltName:
+    KEY = "alt-names"
+    NAME = "name"
+    STATE = "state"
+    STATE_ABSENT = "absent"

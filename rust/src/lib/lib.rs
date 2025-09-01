@@ -136,12 +136,13 @@ pub use crate::iface::{
 };
 pub(crate) use crate::ifaces::MergedInterfaces;
 pub use crate::ifaces::{
-    BaseInterface, BondAdSelect, BondAllPortsActive, BondArpAllTargets,
-    BondArpValidate, BondConfig, BondFailOverMac, BondInterface, BondLacpRate,
-    BondMode, BondOptions, BondPortConfig, BondPrimaryReselect,
-    BondXmitHashPolicy, BridgePortTrunkTag, BridgePortVlanConfig,
-    BridgePortVlanMode, BridgePortVlanRange, DummyInterface, EthernetConfig,
-    EthernetDuplex, EthernetInterface, EthtoolCoalesceConfig, EthtoolConfig,
+    AltNameEntry, AltNameState, BaseInterface, BondAdSelect,
+    BondAllPortsActive, BondArpAllTargets, BondArpValidate, BondConfig,
+    BondFailOverMac, BondInterface, BondLacpRate, BondMode, BondOptions,
+    BondPortConfig, BondPrimaryReselect, BondXmitHashPolicy,
+    BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortVlanRange, DummyInterface, EthernetConfig, EthernetDuplex,
+    EthernetInterface, EthtoolCoalesceConfig, EthtoolConfig,
     EthtoolFeatureConfig, EthtoolFecConfig, EthtoolFecMode, EthtoolPauseConfig,
     EthtoolRingConfig, HsrConfig, HsrInterface, HsrProtocol, InfiniBandConfig,
     InfiniBandInterface, InfiniBandMode, Interfaces, IpVlanConfig,

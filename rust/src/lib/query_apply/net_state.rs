@@ -3,7 +3,10 @@
 use std::future::Future;
 
 use crate::{
-    nispor::{nispor_apply, nispor_retrieve, set_running_hostname},
+    nispor::{
+        apply_ifaces_alt_names, nispor_apply, nispor_retrieve,
+        persist_alt_name_config, set_running_hostname,
+    },
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
@@ -286,7 +289,8 @@ impl NetworkState {
                 )?);
             }
 
-            let merged_state = if let Some(merged_state) = merged_state {
+            let merged_state = if let Some(merged_state) = merged_state.as_ref()
+            {
                 merged_state
             } else {
                 return Err(NmstateError::new(
@@ -302,7 +306,7 @@ impl NetworkState {
             self.interfaces.check_sriov_capability()?;
 
             self.apply_with_nm_backend_and_under_checkpoint(
-                &merged_state,
+                merged_state,
                 &cur_net_state,
                 &checkpoint,
                 verify_count,
@@ -310,7 +314,9 @@ impl NetworkState {
             )
             .await
         })
-        .await
+        .await?;
+
+        Ok(())
     }
 
     async fn apply_with_nm_backend_and_under_checkpoint(
@@ -337,6 +343,10 @@ impl NetworkState {
                 {
                     set_running_hostname(running_hostname)?;
                 }
+
+                apply_ifaces_alt_names(&merged_state.interfaces).await?;
+                persist_alt_name_config(&merged_state.interfaces).await?;
+
                 if !self.no_verify {
                     with_retry(
                         VERIFY_RETRY_INTERVAL_MILLISECONDS,
@@ -356,7 +366,8 @@ impl NetworkState {
                 }
             },
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn apply_without_nm_backend(&self) -> Result<(), NmstateError> {

@@ -915,6 +915,7 @@ impl MergedInterfaces {
         self.mark_orphan_interface_as_absent()?;
         self.process_veth_peer_changes()?;
         self.validate_dispatch_script_has_no_checkpoint()?;
+        self.validate_alt_names()?;
         for iface in self
             .kernel_ifaces
             .values_mut()

@@ -2,6 +2,7 @@
 
 use crate::{
     nispor::{
+        apply_ifaces_alt_names,
         dns::apply_dns_conf_to_etc,
         hostname::set_running_hostname,
         ip::{nmstate_ipv4_to_np, nmstate_ipv6_to_np},
@@ -34,6 +35,8 @@ pub(crate) async fn nispor_apply(
             u32::MAX
         }
     });
+
+    apply_ifaces_alt_names(&merged_state.interfaces).await?;
 
     let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
     for merged_iface in ifaces.iter().filter(|i| {
@@ -79,7 +82,7 @@ pub(crate) async fn nispor_apply(
     Ok(())
 }
 
-fn nmstate_iface_type_to_np(
+pub(crate) fn nmstate_iface_type_to_np(
     nms_iface_type: &InterfaceType,
 ) -> nispor::IfaceType {
     match nms_iface_type {

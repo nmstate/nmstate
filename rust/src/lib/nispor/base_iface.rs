@@ -4,7 +4,7 @@ use crate::{
     nispor::ethtool::np_ethtool_to_nmstate,
     nispor::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
     nispor::mptcp::get_iface_mptcp_conf,
-    BaseInterface, InterfaceState, InterfaceType, PciAddress,
+    AltNameEntry, BaseInterface, InterfaceState, InterfaceType, PciAddress,
 };
 
 fn np_iface_type_to_nmstate(
@@ -68,6 +68,7 @@ pub(crate) fn np_iface_to_base_iface(
         permanent_mac_address: get_permanent_mac_address(np_iface),
         pci_address: np_iface.pci_address.map(PciAddress::from),
         controller: np_iface.controller.as_ref().map(|c| c.to_string()),
+        alt_names: get_alt_names(np_iface),
         mtu: if np_iface.mtu >= 0 {
             Some(np_iface.mtu as u64)
         } else {
@@ -150,5 +151,22 @@ impl From<nispor::PciAddress> for PciAddress {
             slot: np_pci.slot,
             function: np_pci.function,
         }
+    }
+}
+
+fn get_alt_names(np_iface: &nispor::Iface) -> Option<Vec<AltNameEntry>> {
+    let ret: Vec<AltNameEntry> = np_iface
+        .alt_names
+        .iter()
+        .map(|n| AltNameEntry {
+            name: n.to_string(),
+            ..Default::default()
+        })
+        .collect();
+
+    if ret.is_empty() {
+        None
+    } else {
+        Some(ret)
     }
 }

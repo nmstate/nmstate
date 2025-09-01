@@ -74,3 +74,8 @@ def iproute_get_ip_addrs_with_order(iface, is_ipv6):
         exec_cmd(f"ip -d -j -{family} addr show dev {iface}".split())[1]
     )
     return [addr_info["local"] for addr_info in output[0]["addr_info"]]
+
+
+def get_ip_link_alt_names(iface):
+    output = json.loads(exec_cmd(f"ip -j link show dev {iface}".split())[1])
+    return sorted(output[0].get("altnames", []))
