@@ -76,6 +76,8 @@ def lldpifaces_env():
     ), veth_interface(LLDPTEST3, LLDPTEST3_PEER):
         yield
         _iface_cleanup(BOND50)
+        _iface_cleanup(VLAN_MGMTNET)
+        _iface_cleanup(VLAN_PRODNET)
 
 
 def test_autoconf_prodnet_and_mgmtnet(lldpifaces_env):
