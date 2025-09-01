@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+mod alt_name;
 mod base;
 mod bond;
 mod bridge_vlan;
@@ -25,6 +26,7 @@ mod ovs;
 mod sriov;
 mod vlan;
 
+pub use self::alt_name::{AltNameEntry, AltNameState};
 pub(crate) use self::inter_ifaces::{InterfaceNameSearch, MergedInterfaces};
 pub use self::xfrm::XfrmInterface;
 pub use base::*;

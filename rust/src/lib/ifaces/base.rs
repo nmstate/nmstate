@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DispatchConfig, ErrorKind, EthtoolConfig, Ieee8021XConfig,
+    AltNameEntry, DispatchConfig, ErrorKind, EthtoolConfig, Ieee8021XConfig,
     InterfaceIdentifier, InterfaceIpv4, InterfaceIpv6, InterfaceState,
     InterfaceType, LldpConfig, MergedInterface, MptcpConfig, NmstateError,
     OvsDbIfaceConfig, PciAddress, RouteEntry, WaitIp,
@@ -133,6 +133,9 @@ pub struct BaseInterface {
     /// Dispatch script configurations
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dispatch: Option<DispatchConfig>,
+    /// Alternative names
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alt_names: Option<Vec<AltNameEntry>>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -294,7 +297,7 @@ impl BaseInterface {
         if let Some(ethtool) = self.ethtool.as_mut() {
             ethtool.sanitize(is_desired);
         }
-
+        self.sanitize_alt_names()?;
         Ok(())
     }
 }
@@ -376,6 +379,7 @@ impl MergedInterface {
     }
 
     /// Copy MAC address when identifier is [InterfaceIdentifier::MacAddress]
+    /// Copy PCI address when identifier is [InterfaceIdentifier::PciAddress]
     pub(crate) fn preserve_current_identifer_info(&mut self) {
         if self.for_apply.as_ref().map(|i| i.is_up()) == Some(true) {
             if let (Some(apply_iface), Some(cur_iface)) =

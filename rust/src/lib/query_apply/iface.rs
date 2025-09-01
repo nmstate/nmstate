@@ -33,6 +33,7 @@ impl Interface {
     ) -> Result<(), NmstateError> {
         let mut current = current.clone();
         self.process_allow_extra_address(&mut current);
+        self.alt_name_pre_verify(&mut current);
 
         let self_value = serde_json::to_value(self.clone())?;
         let current_value = serde_json::to_value(current.clone())?;
