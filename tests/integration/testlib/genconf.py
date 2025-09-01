@@ -27,7 +27,8 @@ def gen_conf_apply(desire_state):
         )
         for conn in conns:
             file_paths.append(save_nmconnection(conn[0], conn[1]))
-        reload_nm_connection()
+        for file_path in file_paths:
+            load_nm_connection(file_path)
         activate_all_nm_connections()
         yield
     finally:
@@ -58,14 +59,13 @@ def save_nmconnection(file_name, content):
     file_path = f"{NM_CONN_FOLDER}/{file_name}"
     with open(file_path, "w") as fd:
         fd.write(content)
-
     os.chmod(file_path, 0o600)
     os.chown(file_path, 0, 0)
     return file_path
 
 
-def reload_nm_connection():
-    exec_cmd("nmcli c reload".split(), check=True)
+def load_nm_connection(file_path):
+    exec_cmd(f"nmcli c load {file_path}".split(), check=True)
 
 
 def activate_all_nm_connections():
