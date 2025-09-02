@@ -1,9 +1,74 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::{HashMap, HashSet};
+use std::sync::OnceLock;
+
 use crate::{
     EthtoolCoalesceConfig, EthtoolConfig, EthtoolFecConfig, EthtoolFecMode,
     EthtoolPauseConfig, EthtoolRingConfig,
 };
+
+static SUPPORTED_ETHTOOL_FEATURES: OnceLock<HashSet<&'static str>> =
+    OnceLock::new();
+
+// The list of ethtool features supported by NetworkManager
+const _SUPPORTED_ETHTOOL_FEATURES: [&str; 55] = [
+    "esp-hw-offload",
+    "esp-tx-csum-hw-offload",
+    "fcoe-mtu",
+    "highdma",
+    "hw-tc-offload",
+    "l2-fwd-offload",
+    "loopback",
+    "macsec-hw-offload",
+    "rx-all",
+    "rx-checksum",
+    "rx-fcs",
+    "rx-gro",
+    "rx-gro-hw",
+    "rx-gro-list",
+    "rx-hashing",
+    "rx-lro",
+    "rx-ntuple-filter",
+    "rx-udp-gro-forwarding",
+    "rx-udp_tunnel-port-offload",
+    "rx-vlan-filter",
+    "rx-vlan-hw-parse",
+    "rx-vlan-stag-filter",
+    "rx-vlan-stag-hw-parse",
+    "tls-hw-record",
+    "tls-hw-rx-offload",
+    "tls-hw-tx-offload",
+    "tx-checksum-fcoe-crc",
+    "tx-checksum-ip-generic",
+    "tx-checksum-ipv4",
+    "tx-checksum-ipv6",
+    "tx-checksum-sctp",
+    "tx-esp-segmentation",
+    "tx-fcoe-segmentation",
+    "tx-generic-segmentation",
+    "tx-gre-csum-segmentation",
+    "tx-gre-segmentation",
+    "tx-gso-list",
+    "tx-gso-partial",
+    "tx-gso-robust",
+    "tx-ipxip4-segmentation",
+    "tx-ipxip6-segmentation",
+    "tx-nocache-copy",
+    "tx-scatter-gather",
+    "tx-scatter-gather-fraglist",
+    "tx-sctp-segmentation",
+    "tx-tcp-ecn-segmentation",
+    "tx-tcp-mangleid-segmentation",
+    "tx-tcp-segmentation",
+    "tx-tcp6-segmentation",
+    "tx-tunnel-remcsum-segmentation",
+    "tx-udp-segmentation",
+    "tx-udp_tnl-csum-segmentation",
+    "tx-udp_tnl-segmentation",
+    "tx-vlan-hw-insert",
+    "tx-vlan-stag-hw-insert",
+];
 
 pub(crate) fn np_ethtool_to_nmstate(
     np_iface: &nispor::Iface,
@@ -20,8 +85,25 @@ fn gen_ethtool_config(ethtool_info: &nispor::EthtoolInfo) -> EthtoolConfig {
         pause_config.autoneg = Some(pause.auto_negotiate);
         ret.pause = Some(pause_config);
     }
+
+    let supported_features = SUPPORTED_ETHTOOL_FEATURES
+        .get_or_init(|| _SUPPORTED_ETHTOOL_FEATURES.iter().copied().collect());
+
     if let Some(feature) = &ethtool_info.features {
-        ret.feature = Some(feature.changeable.clone().into());
+        ret.feature = Some(
+            feature
+                .changeable
+                .iter()
+                .filter_map(|(name, value)| {
+                    if supported_features.contains(&name.as_str()) {
+                        Some((name.to_string(), *value))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<HashMap<String, bool>>()
+                .into(),
+        );
     }
     if let Some(coalesce) = &ethtool_info.coalesce {
         let mut coalesce_config = EthtoolCoalesceConfig::new();

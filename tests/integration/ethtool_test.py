@@ -16,6 +16,8 @@ from libnmstate.schema import Veth
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib.env import is_fedora
+from .testlib.env import kernel_newer_than
+from .testlib.statelib import show_only
 
 MAX_NETDEVSIM_WAIT_TIME = 5
 
@@ -274,3 +276,18 @@ def test_ethtool_fec_on_netdevsim():
         libnmstate.apply({Interface.KEY: [desire_iface_state]})
         assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
     assertlib.assert_absent(TEST_NETDEVSIM_NIC)
+
+
+@pytest.mark.skipif(
+    not kernel_newer_than(6, 15),
+    reason=(
+        "Ethtool tx-tcp-accecn-segmentation is only support by kernel 6.15+"
+    ),
+)
+def test_ethtool_hide_unsupported_feature(eth1_up):
+    ethtool_info = show_only(["eth1"])["interfaces"][0][Ethtool.CONFIG_SUBTREE]
+
+    assert (
+        "tx-tcp-accecn-segmentation"
+        not in ethtool_info[Ethtool.Feature.CONFIG_SUBTREE]
+    )

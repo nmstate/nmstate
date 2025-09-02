@@ -30,6 +30,15 @@ def nm_libreswan_version_int():
     return version_str_to_int(version_str)
 
 
+def version_int(major, minor, micro=0):
+    return major * 10000 + minor * 100 + micro
+
+
 def version_str_to_int(version_str):
     versions = version_str.split(".")
-    return int(versions[0]) * 10000 + int(versions[1]) * 100 + int(versions[2])
+    return version_int(int(versions[0]), int(versions[1]), int(versions[2]))
+
+
+def kernel_newer_than(major, minor):
+    version_str = exec_cmd("uname -r".split(), check=True)[1].split("-")[0]
+    return version_str_to_int(version_str) > version_int(major, minor)
