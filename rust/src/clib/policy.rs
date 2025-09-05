@@ -134,6 +134,17 @@ pub extern "C" fn nmstate_net_state_from_policy(
     }
 }
 
+pub(crate) fn c_str_to_net_policy(
+    policy: *const c_char,
+    err_kind: *mut *mut c_char,
+    err_msg: *mut *mut c_char,
+) -> Result<NetworkPolicy, c_int> {
+    match deserilize_from_c_char::<NetworkPolicy>(policy, err_kind, err_msg) {
+        Some(p) => Ok(p),
+        None => Err(NMSTATE_FAIL),
+    }
+}
+
 fn deserilize_from_c_char<T>(
     content: *const c_char,
     err_kind: *mut *mut c_char,

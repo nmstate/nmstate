@@ -19,7 +19,7 @@ pub struct NetworkPolicy {
     #[serde(alias = "desiredState", default)]
     pub desired: NetworkStateTemplate,
     /// Current network state which the capture rules should run against
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub current: Option<NetworkState>,
 }
 

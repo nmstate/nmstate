@@ -236,3 +236,30 @@ func (n *Nmstate) GenerateConfiguration(state string) (string, error) {
 	}
 	return C.GoString(config), nil
 }
+
+func (n *Nmstate) Validate(state_or_policy string, current_state string) error {
+	var (
+		c_cur_state       *C.char
+		c_state_or_policy *C.char
+		log               *C.char
+		err_kind          *C.char
+		err_msg           *C.char
+	)
+	c_cur_state = C.CString(current_state)
+	c_state_or_policy = C.CString(state_or_policy)
+	rc := C.nmstate_validate(c_state_or_policy, c_cur_state, &err_kind, &err_msg)
+
+	defer func() {
+		C.nmstate_cstring_free(c_state_or_policy)
+		C.nmstate_cstring_free(c_cur_state)
+		C.nmstate_cstring_free(err_msg)
+		C.nmstate_cstring_free(err_kind)
+	}()
+	if rc != 0 {
+		return fmt.Errorf("failed when validating the configuration %s with rc: %d, err_msg: %s, err_kind: %s", state_or_policy, rc, C.GoString(err_msg), C.GoString(err_kind))
+	}
+	if err := n.writeLog(log); err != nil {
+		return fmt.Errorf("failed when validating the configuration: %v", err)
+	}
+	return nil
+}

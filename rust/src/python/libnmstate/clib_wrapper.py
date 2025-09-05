@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-from ctypes import c_int, c_char_p, c_uint32, POINTER, byref, cdll
+from ctypes import c_int, c_char_p, c_uint32, POINTER, byref, cdll, c_char
 import json
 import logging
 import yaml
@@ -333,3 +333,26 @@ def parse_log(logs):
             logger.info(msg)
         else:
             logger.debug(msg)
+
+
+def validate(state_or_policy, cur_state=None):
+    c_err_msg = c_char_p()
+    c_err_kind = c_char_p()
+    c_state_or_policy = c_char_p(json.dumps(state_or_policy).encode("utf-8"))
+    if cur_state is None:
+        c_cur_state = POINTER(c_char)()
+    else:
+        c_cur_state = c_char_p(json.dumps(cur_state).encode("utf-8"))
+
+    rc = lib.nmstate_validate(
+        c_state_or_policy,
+        c_cur_state,
+        byref(c_err_kind),
+        byref(c_err_msg),
+    )
+    err_msg = c_err_msg.value
+    err_kind = c_err_kind.value
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
+    if rc != NMSTATE_PASS:
+        raise map_error(err_kind, err_msg)
