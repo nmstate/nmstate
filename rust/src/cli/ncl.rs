@@ -395,12 +395,20 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_VALIDATE)
                 .about("Validate network state or network policy")
+                .alias("v")
                 .arg(
                     clap::Arg::new("STATE_FILE")
                         .required(false)
                         .multiple_occurrences(false)
                         .index(1)
                         .help("Network state file"),
+                )
+                .arg(
+                    clap::Arg::new("CURRENT_STATE")
+                        .short('c')
+                        .long("current")
+                        .takes_value(true)
+                        .help("Read current network state from file"),
                 ),
         )
         .subcommand(clap::Command::new(SUB_CMD_VERSION).about("Show version"));

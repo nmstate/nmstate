@@ -119,6 +119,8 @@ mod state;
 #[cfg(feature = "query_apply")]
 mod statistic;
 mod unit_tests;
+#[cfg(feature = "query_apply")]
+mod validate;
 
 pub use crate::dispatch::DispatchConfig;
 pub(crate) use crate::dns::MergedDnsState;

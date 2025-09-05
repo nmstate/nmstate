@@ -15,6 +15,8 @@ mod policy;
 #[cfg(feature = "query_apply")]
 mod query;
 mod state;
+#[cfg(feature = "query_apply")]
+mod validate;
 
 use std::ffi::CString;
 
@@ -36,6 +38,8 @@ pub use crate::gen_conf::nmstate_generate_configurations;
 pub use crate::policy::nmstate_net_state_from_policy;
 #[cfg(feature = "query_apply")]
 pub use crate::query::nmstate_net_state_retrieve;
+#[cfg(feature = "query_apply")]
+pub use crate::validate::nmstate_validate;
 
 pub(crate) const NMSTATE_PASS: c_int = 0;
 pub(crate) const NMSTATE_FAIL: c_int = 1;

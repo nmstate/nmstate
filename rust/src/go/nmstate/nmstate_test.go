@@ -74,3 +74,15 @@ func TestGenerateConfiguration(t *testing.T) {
 	assert.NoError(t, err, "must succeed calling nmstate_generate_configurations c binding")
 	assert.NotEmpty(t, config, "config should not be empty")
 }
+
+func TestValidate(t *testing.T) {
+	nms := New()
+	err := nms.Validate(`{
+"interfaces": [{
+  "name": "dummy1",
+  "state": "up",
+  "type": "dummy"
+}]}
+`, "")
+	assert.NoError(t, err, "must succeed calling nmstate_generate_configurations c binding")
+}

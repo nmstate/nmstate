@@ -359,6 +359,37 @@ int nmstate_net_state_format(const char *state,
                              char **err_kind,
                              char **err_msg);
 
-
+/**
+ * nmstate_validate - Validate network state or network policy without applying
+ *
+ * Version:
+ *      2.2.50
+ *
+ * Description:
+ *      Validate specified network state or network policy without applying.
+ *
+ * @state_or_policy:
+ *      Pointer of char array for network state or network policy in JSON or
+ *      YAML format.
+ * @current_state:
+ *      Pointer of char array for current network configures in JSON or
+ *      YAML format. It is OK to define this a NULL pointer where nmstate
+ *      will do best-effort validation.
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_err_msg_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_validate(const char *state_or_policy, const char *current_state,
+                     char **err_kind, char **err_msg);
 
 #endif // _LIBNMSTATE_H_
