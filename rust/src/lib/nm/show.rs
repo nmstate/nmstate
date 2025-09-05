@@ -174,7 +174,7 @@ pub(crate) async fn nm_retrieve(
         }
     }
 
-    let mut dns_config = if let Ok(nm_global_dns_conf) = nm_api
+    let mut dns_config = if let Ok(Some(nm_global_dns_conf)) = nm_api
         .get_global_dns_configuration()
         .await
         .map_err(nm_error_to_nmstate)

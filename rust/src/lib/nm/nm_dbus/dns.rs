@@ -105,21 +105,26 @@ impl NmGlobalDnsConfig {
         }
         Ok(zvariant::Value::Dict(ret))
     }
-}
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmGlobalDnsConfig {
-    type Error = NmError;
-    fn try_from(
+    pub(crate) fn from_value(
         mut v: HashMap<String, zvariant::OwnedValue>,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            searches: _from_map!(v, "searches", Vec::<String>::try_from)?
-                .unwrap_or_default(),
-            options: _from_map!(v, "options", Vec::<String>::try_from)?
-                .unwrap_or_default(),
-            domains: _from_map!(v, "domains", parse_global_dns_domain_configs)?
-                .unwrap_or_default(),
-        })
+    ) -> Result<Option<NmGlobalDnsConfig>, NmError> {
+        let searches = _from_map!(v, "searches", Vec::<String>::try_from)?;
+        let options = _from_map!(v, "options", Vec::<String>::try_from)?;
+        let domains =
+            _from_map!(v, "domains", parse_global_dns_domain_configs)?
+                .unwrap_or_default();
+        if searches.is_some() || options.is_some() || !domains.is_empty() {
+            Ok(Some(Self {
+                searches: searches.unwrap_or_default(),
+                options: options.unwrap_or_default(),
+                domains,
+            }))
+        } else {
+            // If searches and options are missing, it means that no
+            // [global-dns] section is defined in NM
+            Ok(None)
+        }
     }
 }
 
