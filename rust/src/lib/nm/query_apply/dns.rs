@@ -264,7 +264,7 @@ async fn purge_global_dns_config(
         .get_global_dns_configuration()
         .await
         .map_err(nm_error_to_nmstate)?;
-    if !cur_dns.is_empty() {
+    if cur_dns.is_none() || cur_dns.is_some_and(|cur_dns| !cur_dns.is_empty()) {
         log::debug!("Purging NM Global DNS config");
         nm_api
             .set_global_dns_configuration(&NmGlobalDnsConfig::default())

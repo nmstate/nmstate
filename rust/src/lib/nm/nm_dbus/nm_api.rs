@@ -431,10 +431,17 @@ impl NmApi<'_> {
         Ok(())
     }
 
+    /// Get the global DNS configuration.
+    /// If no global DNS configuration exists, `Ok(None)` is returned. The
+    /// distinction from an empty global DNS configuration is important,
+    /// because an empty global config overwrites connections' DNS configs.
+    /// If no global DNS config exists, then connections' DNS configs matter.
     pub async fn get_global_dns_configuration(
         &self,
-    ) -> Result<NmGlobalDnsConfig, NmError> {
-        NmGlobalDnsConfig::try_from(self.dbus.global_dns_configuration().await?)
+    ) -> Result<Option<NmGlobalDnsConfig>, NmError> {
+        NmGlobalDnsConfig::from_value(
+            self.dbus.global_dns_configuration().await?,
+        )
     }
 
     pub async fn set_global_dns_configuration(
