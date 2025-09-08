@@ -796,8 +796,6 @@ impl MergedRoutes {
         merged_routes.sort_unstable();
         merged_routes.dedup();
 
-        validate_conflicting_routes(&merged_routes, &desired_routes)?;
-
         let mut merged: HashMap<String, Vec<RouteEntry>> = HashMap::new();
 
         for rt in merged_routes {
@@ -905,64 +903,5 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
             return Ok(());
         }
     }
-    Ok(())
-}
-
-fn validate_conflicting_routes(
-    merged: &[RouteEntry],
-    desired: &[RouteEntry],
-) -> Result<(), NmstateError> {
-    let mut conflict_map = HashMap::new();
-    let desired: HashSet<&RouteEntry> = HashSet::from_iter(desired.iter());
-
-    for route in merged.iter() {
-        let destination =
-            if let Some(destination) = route.destination.as_deref() {
-                destination
-            } else {
-                return Err(NmstateError::new(
-                    ErrorKind::Bug,
-                    format!(
-                        "Route to {} is present, but has no destination",
-                        route.next_hop_addr.as_deref().unwrap_or("")
-                    ),
-                ));
-            };
-
-        let nexthop = route.next_hop_addr.as_deref().unwrap_or("");
-        let existing_nexthop = conflict_map.insert(
-            (
-                destination,
-                route.metric.unwrap_or_default(),
-                route.table_id.unwrap_or(DEFAULT_TABLE_ID),
-                route
-                    .route_type
-                    .as_ref()
-                    .map(|t| u8::from(*t))
-                    .unwrap_or_default(),
-            ),
-            nexthop,
-        );
-
-        if existing_nexthop.is_some()
-            && existing_nexthop != Some(nexthop)
-            && route.weight.is_none()
-            && desired.contains(route)
-        {
-            let nexthop_a = existing_nexthop.unwrap_or("");
-            let nexthop_b = route.next_hop_addr.as_deref().unwrap_or("");
-
-            return Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Route to {destination} has conflicting nexthop \
-                     ({nexthop_a}; {nexthop_b}). Either set the existing \
-                     route to 'absent', or set their 'weight' (for ECMP) or \
-                     'metric' value"
-                ),
-            ));
-        }
-    }
-
     Ok(())
 }
