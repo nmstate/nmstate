@@ -708,16 +708,12 @@ impl LinuxBridgeStpOptions {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum LinuxBridgeMulticastRouterType {
+    #[default]
     Auto = 1,
     Disabled = 0,
     Enabled = 2,
-}
-
-impl Default for LinuxBridgeMulticastRouterType {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 impl FromStr for LinuxBridgeMulticastRouterType {

@@ -18,7 +18,9 @@ const NM_DEVICE_STATE_FAILED: u32 = 120;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum NmDeviceState {
+    #[default]
     Unknown,
     Unmanaged,
     Unavailable,
@@ -32,12 +34,6 @@ pub enum NmDeviceState {
     Activated,
     Deactivating,
     Failed,
-}
-
-impl Default for NmDeviceState {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 impl From<u32> for NmDeviceState {
@@ -135,8 +131,10 @@ const NM_DEVICE_STATE_REASON_PEER_NOT_FOUND: u32 = 67;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum NmDeviceStateReason {
     Null,
+    #[default]
     Unknown,
     NowManaged,
     NowUnmanaged,
@@ -204,12 +202,6 @@ pub enum NmDeviceStateReason {
     IpMethodUnsupported,
     SriovConfigurationFailed,
     PeerNotFound,
-}
-
-impl Default for NmDeviceStateReason {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 impl From<u32> for NmDeviceStateReason {

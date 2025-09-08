@@ -315,16 +315,12 @@ impl NetworkCaptureCommand {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum NetworkCaptureAction {
+    #[default]
     None,
     Equal,
     Replace,
-}
-
-impl Default for NetworkCaptureAction {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 impl std::fmt::Display for NetworkCaptureAction {

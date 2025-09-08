@@ -26,7 +26,9 @@ use super::super::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "zvariant::OwnedValue")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum NmSettingIpMethod {
+    #[default]
     Auto,
     Disabled,
     LinkLocal,
@@ -34,12 +36,6 @@ pub enum NmSettingIpMethod {
     Shared,
     Dhcp,   // IPv6 only,
     Ignore, // Ipv6 only,
-}
-
-impl Default for NmSettingIpMethod {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 impl std::fmt::Display for NmSettingIpMethod {

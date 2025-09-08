@@ -93,13 +93,9 @@ impl HsrConfig {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum HsrProtocol {
+    #[default]
     Hsr,
     Prp,
-}
-
-impl Default for HsrProtocol {
-    fn default() -> Self {
-        Self::Hsr
-    }
 }

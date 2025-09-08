@@ -446,10 +446,12 @@ impl BondInterface {
 #[non_exhaustive]
 #[serde(remote = "BondMode")]
 /// Bond mode
+#[derive(Default)]
 pub enum BondMode {
     #[serde(rename = "balance-rr", alias = "0")]
     /// Deserialize and serialize from/to `balance-rr`.
     /// You can use integer 0 for deserializing to this mode.
+    #[default]
     RoundRobin,
     #[serde(rename = "active-backup", alias = "1")]
     /// Deserialize and serialize from/to `active-backup`.
@@ -499,12 +501,6 @@ impl Serialize for BondMode {
         S: Serializer,
     {
         BondMode::serialize(self, serializer)
-    }
-}
-
-impl Default for BondMode {
-    fn default() -> Self {
-        Self::RoundRobin
     }
 }
 

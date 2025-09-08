@@ -187,17 +187,13 @@ impl Routes {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum RouteState {
     /// Mark a route entry as absent to remove it.
+    #[default]
     Absent,
     /// Mark a route as ignored
     Ignore,
-}
-
-impl Default for RouteState {
-    fn default() -> Self {
-        Self::Absent
-    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

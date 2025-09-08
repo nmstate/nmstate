@@ -5,9 +5,11 @@ use std::error::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 #[allow(dead_code)]
+#[derive(Default)]
 pub enum ErrorKind {
     InvalidArgument,
     PluginFailure,
+    #[default]
     Bug,
     VerificationError,
     NotImplementedError,
@@ -36,12 +38,6 @@ impl ErrorKind {
     // SR-IOV configure all the VFs
     pub(crate) fn can_ignore(&self) -> bool {
         matches!(self, ErrorKind::SrIovVfNotFound)
-    }
-}
-
-impl Default for ErrorKind {
-    fn default() -> Self {
-        Self::Bug
     }
 }
 

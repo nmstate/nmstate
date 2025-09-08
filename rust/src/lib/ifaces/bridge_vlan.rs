@@ -162,17 +162,13 @@ impl BridgePortVlanConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum BridgePortVlanMode {
     /// Trunk mode
     Trunk,
     /// Access mode
+    #[default]
     Access,
-}
-
-impl Default for BridgePortVlanMode {
-    fn default() -> Self {
-        Self::Access
-    }
 }
 
 impl std::fmt::Display for BridgePortVlanMode {

@@ -132,15 +132,11 @@ const NM_VLAN_PROTOCOL_802_1AD: &str = "802.1ad";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum NmVlanProtocol {
+    #[default]
     Dot1Q,
     Dot1Ad,
-}
-
-impl Default for NmVlanProtocol {
-    fn default() -> Self {
-        Self::Dot1Q
-    }
 }
 
 impl From<crate::VlanProtocol> for NmVlanProtocol {
