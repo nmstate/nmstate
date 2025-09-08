@@ -173,16 +173,12 @@ impl std::fmt::Debug for MacSecConfig {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum MacSecValidate {
+    #[default]
     Disabled,
     Check,
     Strict,
-}
-
-impl Default for MacSecValidate {
-    fn default() -> Self {
-        Self::Disabled
-    }
 }
 
 impl From<MacSecValidate> for u32 {

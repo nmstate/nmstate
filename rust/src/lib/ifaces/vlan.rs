@@ -162,20 +162,17 @@ pub struct VlanConfig {
     pub egress_qos_map: Option<Vec<VlanQosMapping>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
 pub enum VlanProtocol {
     #[serde(rename = "802.1q")]
     /// Deserialize and serialize from/to `802.1q`.
+    #[default]
     Ieee8021Q,
     #[serde(rename = "802.1ad")]
     /// Deserialize and serialize from/to `802.1ad`.
     Ieee8021Ad,
-}
-
-impl Default for VlanProtocol {
-    fn default() -> Self {
-        Self::Ieee8021Q
-    }
 }
 
 impl std::fmt::Display for VlanProtocol {

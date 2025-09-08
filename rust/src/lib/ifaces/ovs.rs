@@ -585,21 +585,17 @@ impl OvsBridgeBondPortConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum OvsBridgeBondMode {
     /// Deserialize and serialize from/to `active-backup`.
     ActiveBackup,
     /// Deserialize and serialize from/to `balance-slb`.
+    #[default]
     BalanceSlb,
     /// Deserialize and serialize from/to `balance-tcp`.
     BalanceTcp,
     /// Deserialize and serialize from/to `lacp`.
     Lacp,
-}
-
-impl Default for OvsBridgeBondMode {
-    fn default() -> Self {
-        Self::BalanceSlb
-    }
 }
 
 impl TryFrom<&str> for OvsBridgeBondMode {

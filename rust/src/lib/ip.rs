@@ -1243,7 +1243,9 @@ fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum AddressFamily {
+    #[default]
     IPv4,
     IPv6,
     Unknown,
@@ -1256,12 +1258,6 @@ impl From<u8> for AddressFamily {
             AF_INET6 => AddressFamily::IPv6,
             _ => AddressFamily::Unknown,
         }
-    }
-}
-
-impl Default for AddressFamily {
-    fn default() -> Self {
-        Self::IPv4
     }
 }
 

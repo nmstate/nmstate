@@ -45,17 +45,13 @@ impl InfiniBandInterface {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum InfiniBandMode {
     /// Deserialize and serialize from/to `datagram`.
+    #[default]
     Datagram,
     /// Deserialize and serialize from/to `connected`.
     Connected,
-}
-
-impl Default for InfiniBandMode {
-    fn default() -> Self {
-        Self::Datagram
-    }
 }
 
 impl std::fmt::Display for InfiniBandMode {

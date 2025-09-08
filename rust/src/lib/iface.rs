@@ -20,6 +20,7 @@ use crate::state::merge_json_value;
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 /// Interface type
+#[derive(Default)]
 pub enum InterfaceType {
     /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
     /// Deserialize and serialize from/to 'bond'
@@ -82,16 +83,11 @@ pub enum InterfaceType {
     #[serde(rename = "ipvlan")]
     IpVlan,
     /// Unknown interface.
+    #[default]
     Unknown,
     /// Reserved for future use.
     #[serde(untagged)]
     Other(String),
-}
-
-impl Default for InterfaceType {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 //NOTE: Remember to add new interface types also here
@@ -151,9 +147,11 @@ impl InterfaceType {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The state of interface
+#[derive(Default)]
 pub enum InterfaceState {
     /// Interface is up and running.
     /// Deserialize and serialize from/to 'up'.
+    #[default]
     Up,
     /// For apply action, down means configuration still exist but
     /// deactivate. The virtual interface will be removed and other interface
@@ -178,12 +176,6 @@ pub enum InterfaceState {
     ///
     /// Deserialize and serialize from/to 'ignore'.
     Ignore,
-}
-
-impl Default for InterfaceState {
-    fn default() -> Self {
-        Self::Up
-    }
 }
 
 impl From<&str> for InterfaceState {
@@ -1172,9 +1164,11 @@ fn merge_desire_with_current(
 #[non_exhaustive]
 /// Interface Identifier defines the method for network backend on matching
 /// network interface
+#[derive(Default)]
 pub enum InterfaceIdentifier {
     /// Use interface name to match the network interface, default value.
     /// Deserialize and serialize from/to 'name'.
+    #[default]
     Name,
     /// Use interface MAC address to match the network interface.
     /// Deserialize and serialize from/to 'mac-address'.
@@ -1182,12 +1176,6 @@ pub enum InterfaceIdentifier {
     /// Use PCI Address to match the network interface.
     /// Deserialize and serialize from/to 'pci-address'.
     PciAddress,
-}
-
-impl Default for InterfaceIdentifier {
-    fn default() -> Self {
-        Self::Name
-    }
 }
 
 impl InterfaceIdentifier {

@@ -90,10 +90,12 @@ pub struct IpVlanConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum IpVlanMode {
     /// Deserialize and serialize from/to `l2`.
     L2,
     /// Deserialize and serialize from/to `l3`.
+    #[default]
     L3,
     #[serde(rename = "l3s")]
     /// Deserialize and serialize from/to `l3s`.
@@ -107,11 +109,5 @@ impl From<IpVlanMode> for u32 {
             IpVlanMode::L3 => 2,
             IpVlanMode::L3S => 3,
         }
-    }
-}
-
-impl Default for IpVlanMode {
-    fn default() -> Self {
-        Self::L3
     }
 }

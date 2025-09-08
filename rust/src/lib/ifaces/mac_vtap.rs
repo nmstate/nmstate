@@ -99,6 +99,7 @@ pub struct MacVtapConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum MacVtapMode {
     /// Deserialize and serialize from/to `vepa`.
     Vepa,
@@ -110,6 +111,7 @@ pub enum MacVtapMode {
     Passthru,
     /// Deserialize and serialize from/to `source`.
     Source,
+    #[default]
     Unknown,
 }
 
@@ -123,11 +125,5 @@ impl From<MacVtapMode> for u32 {
             MacVtapMode::Passthru => 4,
             MacVtapMode::Source => 5,
         }
-    }
-}
-
-impl Default for MacVtapMode {
-    fn default() -> Self {
-        Self::Unknown
     }
 }

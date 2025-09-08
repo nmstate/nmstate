@@ -47,15 +47,11 @@ impl RouteRules {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum RouteRuleState {
     /// Used for delete route rule
+    #[default]
     Absent,
-}
-
-impl Default for RouteRuleState {
-    fn default() -> Self {
-        Self::Absent
-    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

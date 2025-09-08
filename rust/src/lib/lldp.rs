@@ -172,7 +172,9 @@ impl LldpChassisId {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[repr(u8)]
 #[serde(into = "u8")]
+#[derive(Default)]
 pub enum LldpChassisIdType {
+    #[default]
     Reserved = 0,
     ChassisComponent = 1,
     InterfaceAlias = 2,
@@ -224,12 +226,6 @@ impl From<LldpChassisIdType> for String {
             LldpChassisIdType::LocallyAssigned => "Locally assigned",
         }
         .to_string()
-    }
-}
-
-impl Default for LldpChassisIdType {
-    fn default() -> Self {
-        Self::Reserved
     }
 }
 
@@ -293,7 +289,9 @@ impl From<u16> for LldpSystemCapabilities {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum LldpSystemCapability {
+    #[default]
     Other,
     Repeater,
     #[serde(rename = "MAC Bridge component")]
@@ -314,12 +312,6 @@ pub enum LldpSystemCapability {
     TwoPortMacRelayComponent,
 }
 
-impl Default for LldpSystemCapability {
-    fn default() -> Self {
-        Self::Other
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -335,7 +327,9 @@ pub struct LldpPortId {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[repr(u8)]
 #[serde(into = "u8")]
+#[derive(Default)]
 pub enum LldpPortIdType {
+    #[default]
     Reserved = 0,
     InterfaceAlias = 1,
     PortComponent = 2,
@@ -396,12 +390,6 @@ impl LldpPortId {
             description: port_id_type.into(),
             ty: LldpNeighborTlvType::Port,
         }
-    }
-}
-
-impl Default for LldpPortIdType {
-    fn default() -> Self {
-        Self::Reserved
     }
 }
 
@@ -525,7 +513,9 @@ pub struct LldpMgmtAddr {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum LldpAddressFamily {
+    #[default]
     Unknown,
     #[serde(rename = "IPv4")]
     Ipv4,
@@ -533,12 +523,6 @@ pub enum LldpAddressFamily {
     Ipv6,
     #[serde(rename = "MAC")]
     Mac,
-}
-
-impl Default for LldpAddressFamily {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 const ADDRESS_FAMILY_IP4: u16 = 1;

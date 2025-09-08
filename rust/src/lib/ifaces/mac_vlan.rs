@@ -99,6 +99,7 @@ pub struct MacVlanConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum MacVlanMode {
     /// Deserialize and serialize from/to `vepa`.
     Vepa,
@@ -110,6 +111,7 @@ pub enum MacVlanMode {
     Passthru,
     /// Deserialize and serialize from/to `source`.
     Source,
+    #[default]
     Unknown,
 }
 
@@ -123,11 +125,5 @@ impl From<MacVlanMode> for u32 {
             MacVlanMode::Passthru => 4,
             MacVlanMode::Source => 5,
         }
-    }
-}
-
-impl Default for MacVlanMode {
-    fn default() -> Self {
-        Self::Unknown
     }
 }
