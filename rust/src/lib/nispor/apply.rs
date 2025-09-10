@@ -6,7 +6,7 @@ use crate::{
         hostname::set_running_hostname,
         ip::{nmstate_ipv4_to_np, nmstate_ipv6_to_np},
         route::gen_nispor_route_confs,
-        veth::nms_veth_conf_to_np,
+        veth::{nms_veth_conf_to_np, process_new_veth_peer},
         vlan::nms_vlan_conf_to_np,
     },
     ErrorKind, Interface, InterfaceType, MergedInterface, MergedInterfaces,
@@ -42,6 +42,11 @@ pub(crate) async fn nispor_apply(
             && i.for_apply.as_ref().is_some()
     }) {
         np_ifaces.push(nmstate_iface_to_np(merged_iface)?);
+        if let Some(np_iface) =
+            process_new_veth_peer(merged_iface, &merged_state.interfaces)
+        {
+            np_ifaces.push(np_iface);
+        }
     }
 
     let mut net_conf = nispor::NetConf::default();
