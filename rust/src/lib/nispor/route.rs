@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use log::warn;
 
 use crate::{
@@ -289,9 +291,56 @@ fn nmstate_to_nispor_route_conf(
 pub(crate) fn gen_nispor_route_confs(
     merged_routes: &MergedRoutes,
 ) -> Result<Vec<nispor::RouteConf>, NmstateError> {
+    validate_routes(merged_routes)?;
     let mut ret = Vec::new();
     for nmstate_rt in merged_routes.changed_routes.as_slice() {
         ret.push(nmstate_to_nispor_route_conf(nmstate_rt)?)
     }
     Ok(ret)
+}
+
+fn validate_routes(merged_routes: &MergedRoutes) -> Result<(), NmstateError> {
+    for iface in merged_routes.route_changed_ifaces.as_slice() {
+        let iface_routes = if let Some(r) = merged_routes.merged.get(iface) {
+            r
+        } else {
+            continue;
+        };
+        let mut hashed_rts: HashMap<(&str, Option<u32>), &RouteEntry> =
+            HashMap::new();
+        for rt in iface_routes {
+            if rt.weight.is_some() {
+                return Err(NmstateError::new(
+                    ErrorKind::NotSupportedError,
+                    "Kernel mode does not support ECMP routes".to_string(),
+                ));
+            }
+
+            // The `Routes::validate()` already confirmed non-absent routes
+            // always has destination.
+            // The `merged_routes.merged` does not have absent route.
+            let dst = if let Some(dst) = rt.destination.as_deref() {
+                dst
+            } else {
+                continue;
+            };
+
+            if hashed_rts
+                .insert(
+                    (dst, rt.metric.and_then(|m| u32::try_from(m).ok())),
+                    rt,
+                )
+                .is_some()
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Multiple routes to {dst} are sharing the same \
+                         metric, please use `state: absent` to remove others."
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
