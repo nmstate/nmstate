@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, EthernetInterface, VethConfig};
+use crate::{
+    BaseInterface, EthernetInterface, Interface, MergedInterface,
+    MergedInterfaces, VethConfig,
+};
 
 pub(crate) fn np_veth_to_nmstate(
     np_iface: &nispor::Iface,
@@ -34,4 +37,34 @@ pub(crate) fn nms_veth_conf_to_np(
         veth_conf.peer = nms_veth_conf.peer.to_string();
         veth_conf
     })
+}
+
+pub(crate) fn process_new_veth_peer(
+    merged_iface: &MergedInterface,
+    merged_ifaces: &MergedInterfaces,
+) -> Option<nispor::IfaceConf> {
+    if merged_iface.current.is_none() && merged_iface.merged.is_up() {
+        if let Some(Interface::Ethernet(apply_iface)) =
+            merged_iface.for_apply.as_ref()
+        {
+            if let Some(peer) =
+                apply_iface.veth.as_ref().map(|v| v.peer.as_str())
+            {
+                // Mark new veth peer as up if not mentioned in desired state.
+                if merged_ifaces
+                    .kernel_ifaces
+                    .get(peer)
+                    .map(|i| i.for_apply.is_some())
+                    != Some(true)
+                {
+                    let mut np_iface = nispor::IfaceConf::default();
+                    np_iface.name = peer.to_string();
+                    np_iface.iface_type = Some(nispor::IfaceType::Veth);
+                    np_iface.state = nispor::IfaceState::Up;
+                    return Some(np_iface);
+                }
+            }
+        }
+    }
+    None
 }
