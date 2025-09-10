@@ -2505,3 +2505,90 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
     assert IPV4_ADDRESS2 not in ipv4_routes_output
     ipv6_routes_output = _get_routes_from_iproute(6, 254)
     assert IPV6_ADDRESS2 not in ipv6_routes_output
+
+
+@pytest.mark.parametrize(
+    "routes",
+    [
+        (
+            """
+            - destination: 203.0.113.0/24
+              next-hop-address: 192.0.2.1
+              next-hop-interface: veth1
+            - destination: 203.0.113.0/24
+              next-hop-address: 192.0.2.2
+              next-hop-interface: veth1
+            """
+        ),
+        (
+            """
+            - destination: 203.0.113.0/24
+              next-hop-address: 192.0.2.1
+              next-hop-interface: veth1
+              metric: 109
+            - destination: 203.0.113.0/24
+              next-hop-address: 192.0.2.2
+              next-hop-interface: veth1
+              metric: 109
+            """
+        ),
+        (
+            """
+            - destination: 2001:db8:2::/64
+              next-hop-address: 2001:db8:1::2
+              next-hop-interface: veth1
+            - destination: 2001:db8:2::/64
+              next-hop-address: 2001:db8:1::3
+              next-hop-interface: veth1
+            """
+        ),
+        (
+            """
+            - destination: 2001:db8:2::/64
+              next-hop-address: 2001:db8:1::2
+              next-hop-interface: veth1
+              metric: 102
+            - destination: 2001:db8:2::/64
+              next-hop-address: 2001:db8:1::3
+              next-hop-interface: veth1
+              metric: 102
+            """
+        ),
+    ],
+    ids=[
+        "v4_without_metric",
+        "v4_with_metric",
+        "v6_without_metric",
+        "v6_with_metric",
+    ],
+)
+def test_kernel_mode_fail_on_same_dst_metric_routes(
+    routes,
+    cleanup_veth1_kernel_mode,
+):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        """
+    )
+    desired_state[Route.KEY] = {Route.CONFIG: load_yaml(routes)}
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(desired_state, kernel_only=True)
