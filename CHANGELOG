@@ -1,4 +1,21 @@
 # Changelog
+## [2.2.51] - 2025-09-12
+### Breaking changes
+ - N/A
+
+### New features
+ - Support configuring per-device IPv4 sysctl forwarding. (beae7972)
+ - Support interface alternative name. (9b8be19a)
+ - Introduce NetworkState and NetworkPoligy validation. (b07bd3df)
+
+### Bug fixes
+ - kernel mode: validate conflicting routes. (ad4647e0)
+ - hsr: copy mac address from port1 to port2 and hsr interfaces. (43d5ecac)
+ - nm dns: interpret global-dns correctly after changes in NM. (1754abd9)
+ - nm dns: differentiate empty global DNS from undefined one. (2176c951)
+ - docs: Fix typo in nmstatectl man page. (4672bba4)
+ - ethtool: Hide unsupported ethtool features during querying. (276cfd76)
+
 ## [2.2.50] - 2025-08-26
 ### Breaking changes
  - N/A
