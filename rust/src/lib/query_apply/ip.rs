@@ -82,6 +82,9 @@ impl InterfaceIpv4 {
             self.dhcp_custom_hostname
                 .clone_from(&other.dhcp_custom_hostname);
         }
+        if other.forwarding.is_some() {
+            self.forwarding = other.forwarding;
+        }
     }
 }
 

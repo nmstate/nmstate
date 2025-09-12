@@ -17,6 +17,7 @@ pub(crate) fn np_ipv4_to_nmstate(
             enabled_defined: true,
             ..Default::default()
         };
+        ip.forwarding = np_iface.ipv4.as_ref().and_then(|v| v.forwarding);
         if !ip.enabled {
             return Some(ip);
         }
@@ -64,6 +65,7 @@ pub(crate) fn np_ipv4_to_nmstate(
             }
         }
         ip.addresses = Some(addresses);
+
         Some(ip)
     } else {
         // IP might just disabled

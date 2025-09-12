@@ -16,6 +16,7 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.apply import apply_with_description
 from .testlib.dummy import nm_unmanaged_dummy
+from .testlib.env import nm_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.iproutelib import iproute_get_ip_addrs_with_order
@@ -764,25 +765,31 @@ def test_get_ip_address_from_unmanaged_dummy():
             )
         ]
 
-        assert iface_state[Interface.IPV4] == {
-            InterfaceIPv4.ENABLED: True,
-            InterfaceIPv4.ADDRESS: [
-                {
-                    InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
-                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
-                }
-            ],
-        }
+        assert statelib.state_match(
+            {
+                InterfaceIPv4.ENABLED: True,
+                InterfaceIPv4.ADDRESS: [
+                    {
+                        InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                        InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                    }
+                ],
+            },
+            iface_state[Interface.IPV4],
+        )
 
-        assert iface_state[Interface.IPV6] == {
-            InterfaceIPv6.ENABLED: True,
-            InterfaceIPv6.ADDRESS: [
-                {
-                    InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
-                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
-                }
-            ],
-        }
+        assert statelib.state_match(
+            {
+                InterfaceIPv6.ENABLED: True,
+                InterfaceIPv6.ADDRESS: [
+                    {
+                        InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+                        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                    }
+                ],
+            },
+            iface_state[Interface.IPV6],
+        )
 
 
 def test_ignore_invalid_ip_on_absent_interface(eth1_up):
@@ -915,6 +922,78 @@ def test_merge_ip_enabled_property_from_current(setup_eth1_static_ip):
         InterfaceIPv6.ENABLED
     ] = True
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 54,
+    reason="NetworkManager 1.54- does not support configuring per-device "
+    "IPv4 sysctl forwarding",
+)
+def test_ipv4_sysctl_forwarding(setup_eth1_static_ip):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                    InterfaceIPv4.FORWARDING: True,
+                },
+            }
+        ]
+    }
+    apply_with_description(
+        "Enable IPv4 forwarding on eth1",
+        desired_state,
+    )
+    assertlib.assert_state_match(desired_state)
+    desired_state[Interface.KEY][0][Interface.IPV4][
+        InterfaceIPv4.FORWARDING
+    ] = False
+    apply_with_description(
+        "Disable IPv4 forwarding on eth1",
+        desired_state,
+    )
+    assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() >= 53,
+    reason="On NM < 1.53, attempting to set per-interface IPv4 forwarding "
+    "should raise an error",
+)
+def test_ipv4_sysctl_forwarding_unsupported_error(setup_eth1_static_ip):
+    cmdlib.exec_cmd(
+        "sysctl -w net.ipv4.conf.eth1.forwarding=1".split(), check=True
+    )
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                    InterfaceIPv4.FORWARDING: False,
+                },
+            }
+        ]
+    }
+    with pytest.raises(libnmstate.error.NmstateVerificationError):
+        apply_with_description(
+            "Configure the ethernet device eth1 with IPv4 sysctl forwarding "
+            "disabled",
+            desired_state,
+        )
 
 
 def test_preserve_ipv4_addresses_order(eth1_up):

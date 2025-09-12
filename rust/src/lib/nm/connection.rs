@@ -25,6 +25,7 @@ pub(crate) fn prepare_nm_conns(
     nm_devs: &[NmDevice],
     gen_conf_mode: bool,
     is_retry: bool,
+    forwarding_supported: bool,
 ) -> Result<PreparedNmConnections, NmstateError> {
     let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
@@ -73,6 +74,32 @@ pub(crate) fn prepare_nm_conns(
             conn_matcher,
             gen_conf_mode,
         )? {
+            // Clear forwarding when not supported by NetworkManager to prevent
+            // failures. TODO: Remove this code once the minimum
+            // supported NetworkManager version is >= 1.54
+            if !forwarding_supported {
+                if let Some(ipv4) = nm_conn.ipv4.as_mut() {
+                    ipv4.forwarding = None;
+                }
+
+                if let Some(desired_iface) = merged_iface.desired.as_ref() {
+                    let forwarding_desired = desired_iface
+                        .base_iface()
+                        .ipv4
+                        .as_ref()
+                        .and_then(|ip4| ip4.forwarding)
+                        .is_some();
+
+                    if forwarding_desired {
+                        log::warn!(
+                            "Clearing unsupported ipv4.forwarding for \
+                             interface '{}'",
+                            desired_iface.name()
+                        );
+                    }
+                }
+            }
+
             if iface.is_up()
                 && (is_retry
                     || !can_skip_activation(

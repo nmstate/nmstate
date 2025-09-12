@@ -36,8 +36,14 @@ pub(crate) async fn nm_apply(
 ) -> Result<(), NmstateError> {
     let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
     let mut nm_route_remove_needs_deactivate = true;
+    let mut ipv4_forward_support = false;
 
-    check_nm_version(&nm_api, &mut nm_route_remove_needs_deactivate).await;
+    check_nm_version(
+        &nm_api,
+        &mut nm_route_remove_needs_deactivate,
+        &mut ipv4_forward_support,
+    )
+    .await;
 
     nm_api.set_checkpoint(checkpoint, timeout);
     nm_api.set_checkpoint_auto_refresh(true);
@@ -107,6 +113,7 @@ pub(crate) async fn nm_apply(
         &nm_devs,
         false,
         is_retry,
+        ipv4_forward_support,
     )?;
 
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
@@ -392,15 +399,19 @@ fn gen_nm_conn_need_to_deactivate_first(
 async fn check_nm_version(
     nm_api: &NmApi<'_>,
     route_remove_needs_deactivate: &mut bool,
+    ipv4_forward_support: &mut bool,
 ) {
     let version = if let Ok(ver_info) = nm_api.version_info().await {
         *route_remove_needs_deactivate = !ver_info
             .has_capability(NmVersionInfo::CAPABILITY_SYNC_ROUTE_WITH_TABLE);
+        *ipv4_forward_support =
+            ver_info.has_capability(NmVersionInfo::CAPABILITY_IP4_FORWARDING);
         Ok(ver_info.version())
     } else {
         // VersionInfo was added to NM 1.42. For older version we fallback to
         // parsing from Version string if VersionInfo is not available.
         *route_remove_needs_deactivate = true;
+        *ipv4_forward_support = false;
         nm_api.version().await
     };
 
