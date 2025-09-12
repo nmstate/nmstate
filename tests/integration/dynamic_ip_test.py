@@ -27,20 +27,23 @@ from libnmstate.error import NmstateValueError
 from libnmstate.iplib import is_ipv6_link_local_addr
 
 from .testlib import assertlib
-from .testlib import cmdlib
 from .testlib import bondlib
+from .testlib import cmdlib
 from .testlib import ifacelib
 from .testlib import statelib
-from .testlib.env import is_k8s
 from .testlib.apply import apply_with_description
-from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
-from .testlib.retry import retry_till_true_or_timeout
+from .testlib.dummy import dummy_interface
+from .testlib.env import is_k8s
+from .testlib.env import nm_minor_version
+from .testlib.ifacelib import get_mac_address
 from .testlib.retry import retry_till_false_or_timeout
+from .testlib.retry import retry_till_true_or_timeout
 from .testlib.veth import create_veth_pair
 from .testlib.veth import remove_veth_pair
+from .testlib.yaml import load_yaml
 
 ETH1 = "eth1"
 
@@ -2371,3 +2374,26 @@ def get_dhcp_addr(iface_state):
         and addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
     ]
     return (DHCPV4_ADDRS, DHCPV6_ADDRS)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 54,
+    reason="NetworkManager 1.54- does not support configuring per-device "
+    "IPv4 sysctl forwarding",
+)
+def test_enable_ipv4_forwarding_on_auto_iface_without_dhcp_srv():
+    with dummy_interface("dummy1"):
+        desired_state = load_yaml(
+            """---
+            interfaces:
+            - name: dummy1
+              type: dummy
+              state: up
+              ipv4:
+                enabled: true
+                dhcp: true
+                forwarding: true
+            """
+        )
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
