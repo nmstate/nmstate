@@ -175,7 +175,8 @@ srpm: dist
 .PHONY: rpm
 rpm: dist
 	$(eval TMPDIR := $(shell mktemp -d))
-	rpmbuild --define "_rpmdir $(TMPDIR)/" -tb $(TARBALL)
+	env RPM_BUILD_NCPUS=2 \
+		rpmbuild --define "_rpmdir $(TMPDIR)/" -tb $(TARBALL)
 	find $(TMPDIR) -type f -exec mv -v {} $(ROOT_DIR) \;
 	rm -rf $(TMPDIR)
 	rm -f $(TARBALL)
