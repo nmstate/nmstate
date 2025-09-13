@@ -3,7 +3,7 @@ Description=Apply nmstate on-disk state
 Documentation=man:nmstate.service(8) https://www.nmstate.io
 After=NetworkManager-wait-online.service
 Before=network-online.target
-Requires=NetworkManager-wait-online.service
+Wants=NetworkManager-wait-online.service
 Requires=NetworkManager.service
 
 [Service]
