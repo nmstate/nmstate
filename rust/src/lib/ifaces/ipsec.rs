@@ -153,6 +153,8 @@ pub struct LibreswanConfig {
         rename = "require-id-on-certificate"
     )]
     pub require_id_on_certificate: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leftsendcert: Option<String>,
 }
 
 impl LibreswanConfig {
@@ -193,6 +195,7 @@ impl std::fmt::Debug for LibreswanConfig {
             .field("hostaddrfamily", &self.hostaddrfamily)
             .field("clientaddrfamily", &self.clientaddrfamily)
             .field("require_id_on_certificate", &self.require_id_on_certificate)
+            .field("leftsendcert", &self.leftsendcert)
             .finish()
     }
 }
