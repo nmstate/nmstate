@@ -1011,3 +1011,44 @@ def _is_ipsec_nic_ipv6_no_auto(nic_name):
         iface_state[Interface.IPV6].get(InterfaceIPv6.DHCP)
         or iface_state[Interface.IPV6].get(InterfaceIPv6.AUTOCONF)
     )
+
+
+@pytest.mark.xfail(
+    nm_libreswan_version_int() < version_str_to_int("1.2.26"),
+    reason="Need NetworkManager-libreswan 1.2.26+ to support leftsendcert",
+)
+def test_ipsec_leftsendcert(ipsec_srv_cert_gw, load_both_keys):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: {IPSEC_CONN_NAME}
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            left: {IpsecTestEnv.CLI_ADDR_V4}
+            leftid: '%fromcert'
+            leftcert: {IpsecTestEnv.CLI_KEY_ID}
+            leftmodecfgclient: true
+            right: {IpsecTestEnv.SRV_ADDR_V4}
+            rightid: '%fromcert'
+            rightcert: {IpsecTestEnv.SRV_KEY_ID}
+            rightsubnet: 0.0.0.0/0
+            leftsendcert: always
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        IpsecTestEnv.CLI_ADDR_V4,
+        IpsecTestEnv.SRV_ADDR_V4,
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_ip,
+        IpsecTestEnv.SRV_POOL_PREFIX_V4,
+        IpsecTestEnv.CLI_NIC,
+    )
