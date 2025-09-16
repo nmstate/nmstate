@@ -93,9 +93,13 @@ cargo publish --allow-dirty
 cd $CODE_BASE_DIR
 RELEASE=1 make release
 
+echo "New release $CUR_VERSION
+
+${CHANGELOG_STR//=/#}" |
 hub release create \
-    -a nmstate-$CUR_VERSION.tar* nmstate-vendor-$CUR_VERSION.tar.xz \
-    -m "${CHANGELOG_STR//=/#}" "v$CUR_VERSION"
+    -a nmstate-$CUR_VERSION.tar.gz -a nmstate-$CUR_VERSION.tar.gz.asc \
+    -a nmstate-vendor-$CUR_VERSION.tar.xz \
+    -F - "v$CUR_VERSION"
 
 # Bump version
 git branch bump_version || true
