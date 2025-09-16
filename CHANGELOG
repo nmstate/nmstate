@@ -1,4 +1,14 @@
 # Changelog
+## [2.2.52] - 2025-09-16
+### Breaking changes
+ - N/A
+
+### New features
+ - ipsec: Support leftsendcert option. (e5f8a716)
+
+### Bug fixes
+ - service: Ignore NetworkManager-wait-online.service failure. (690adcb0)
+
 ## [2.2.51] - 2025-09-12
 ### Breaking changes
  - N/A
