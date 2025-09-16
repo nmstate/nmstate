@@ -56,28 +56,11 @@ sed -n '2,$p' CHANGELOG >> $TMP_CHANGELOG_FILE
 mv $TMP_CHANGELOG_FILE $CODE_BASE_DIR/CHANGELOG
 git commit --signoff $CODE_BASE_DIR/CHANGELOG -m "New release ${CUR_VERSION}" \
     -m "$CHANGELOG_STR"
-while true; do
-    echo "Press 'y' to creating pull request or 'n' to exit."
-    read -s -n 1 key
-    case $key in
-            y|Y)
-            echo "You pressed 'y'. Continuing..."
-            break
-            ;;
-        n|N)
-            echo "You pressed 'n'. Exiting..."
-            exit 1
-            ;;
-        *)
-            echo "Invalid input. Please press 'y' or 'n'."
-            ;;
-    esac
-done
 git push origin +new_release
 hub pull-request -b $MAIN_BRANCH_NAME --no-edit
 
 while true; do
-    echo "Press 'y' to do tagging on new release or 'n' to exit."
+    echo "Press 'y' after new release PR merged or 'n' to exit."
     read -s -n 1 key
 
     case $key in
@@ -109,35 +92,10 @@ cargo publish --allow-dirty
 
 cd $CODE_BASE_DIR
 RELEASE=1 make release
-mv -v nmstate-$CUR_VERSION.tar* nmstate-vendor-$CUR_VERSION.tar.xz /tmp/
-echo "Please upload these nmstate tarballs in /tmp folder"
 
-URL="${NEW_RELEASE_URL}?tag=v$CUR_VERSION"
-echo "${CHANGELOG_STR//=/#}"
-
-if [ -n $BROWSER ];then
-    $BROWSER $URL
-else
-    echo "Please visit $URL to create new release"
-fi
-
-while true; do
-    echo "Press 'y' to bump version or 'n' to exit."
-    read -s -n 1 key
-    case $key in
-            y|Y)
-            echo "You pressed 'y'. Continuing..."
-            break
-            ;;
-        n|N)
-            echo "You pressed 'n'. Exiting..."
-            exit 1
-            ;;
-        *)
-            echo "Invalid input. Please press 'y' or 'n'."
-            ;;
-    esac
-done
+hub release create \
+    -a nmstate-$CUR_VERSION.tar* nmstate-vendor-$CUR_VERSION.tar.xz \
+    -m "${CHANGELOG_STR//=/#}" "v$CUR_VERSION"
 
 # Bump version
 git branch bump_version || true
