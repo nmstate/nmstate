@@ -8,9 +8,13 @@ nmstate\&.service
 .PP
 nmstate\&.service invokes \fBnmstatectl service\fR command which
 apply all network state files ending with \fB.yml\fR in
-\fB/etc/nmstate\fR folder.
+\fB/etc/nmstate\fR folder and \fB/run/nmstate\fR folder.
 
 .PP
+
+For file in `/run/nmstate`, the service will take action to prevent second
+apply because OS reboot will purge that folder. For security reason, only file
+owned by root(0) in `/run/nmstate` folder will be used.
 
 By default, the service renames the network state file to a name with suffix
 \fB.applied\fR after processing the file. This prevents applying the same file

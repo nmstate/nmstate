@@ -76,6 +76,7 @@ desired:
 """
 
 CONFIG_DIR = "/etc/nmstate"
+RUN_CONFIG_DIR = "/run/nmstate"
 NMSTATE_CONF_PATH = f"{CONFIG_DIR}/nmstate.conf"
 TEST_CONFIG1_FILE_PATH = f"{CONFIG_DIR}/01-nmstate-test.yml"
 TEST_CONFIG1_APPLIED_FILE_PATH = f"{CONFIG_DIR}/01-nmstate-test.applied"
@@ -271,3 +272,33 @@ def test_nmstate_service_override(
     iface_state = show_only(("eth1",))[Interface.KEY][0]
     assert not iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
     assert not iface_state[Interface.IPV6][InterfaceIPv6.ENABLED]
+
+
+@pytest.fixture
+def dummy1_yaml_in_run_folder():
+    file_path = f"{RUN_CONFIG_DIR}/dummy1.yml"
+    with open(file_path, "w") as fd:
+        fd.write(
+            f"""---
+            interfaces:
+            - type: {DUMMY1}
+              name: dummy
+            """
+        )
+    yield
+    shutil.rmtree(RUN_CONFIG_DIR, ignore_errors=True)
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_nmstate_service_using_run_files(dummy1_yaml_in_run_folder):
+    exec_cmd("nmstatectl service".split(), check=True)
+    assert show_only(("dummy1",))[Interface.KEY][0][Interface.STATE] == "up"

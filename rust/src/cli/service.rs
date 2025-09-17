@@ -4,11 +4,16 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::{apply::apply_state, error::CliError, state::state_from_fd};
+use crate::{
+    apply::apply_state,
+    error::CliError,
+    state::{state_from_fd, state_from_file},
+};
 
 const CONFIG_FILE_EXTENSION: &str = "yml";
 const APPLIED_FILE_EXTENSION: &str = "applied";
@@ -43,6 +48,13 @@ impl FileContent {
 pub(crate) fn ncl_service(
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
+    // We ignore the error on loading
+    if let Err(e) = ncl_service_run_dir() {
+        log::error!(
+            "Failed to load desired state file from /run/nmstate folder: {e}"
+        );
+    }
+
     let folder = matches
         .value_of(crate::CONFIG_FOLDER_KEY)
         .unwrap_or(crate::DEFAULT_SERVICE_FOLDER);
@@ -138,6 +150,10 @@ fn get_unapplied_state_files(
     keep_state_file_after_apply: bool,
 ) -> Result<Vec<FileContent>, CliError> {
     let folder = Path::new(folder);
+    if !folder.exists() {
+        log::info!("Folder {} does not exists", folder.display());
+        return Ok(Vec::new());
+    }
     let mut yml_files = HashSet::<FileContent>::new();
     let mut applied_files = HashSet::<FileContent>::new();
     for entry in folder.read_dir()? {
@@ -216,5 +232,54 @@ fn relocate_file(file_path: &Path) -> Result<(), CliError> {
         file_path.display(),
         new_path.display()
     );
+    Ok(())
+}
+
+// Read state file from `/run/nmstate` folder, since this folder will
+// be purged by OS reboot, nmstate will use `.applied` file to prevent
+// second apply.
+// For security reason, only file own by root will be loaded.
+fn ncl_service_run_dir() -> Result<(), CliError> {
+    let folder = Path::new("/run/nmstate");
+    if !folder.exists() {
+        return Ok(());
+    }
+    let mut file_paths: Vec<String> = Vec::new();
+    for entry in folder.read_dir()? {
+        let file = entry?.path();
+        if file.extension() == Some(OsStr::new(CONFIG_FILE_EXTENSION)) {
+            if let Some(file_path) = folder.join(file).to_str() {
+                let meta = fs::metadata(file_path)?;
+                if meta.uid() == 0 {
+                    file_paths.push(file_path.to_string());
+                } else {
+                    log::warn!(
+                        "Ignoring file {} because it is not own by root",
+                        file_path
+                    );
+                }
+            }
+        }
+    }
+    file_paths.sort_unstable();
+    for file_path in file_paths {
+        let state = match state_from_file(&file_path) {
+            Ok(s) => s,
+            Err(e) => {
+                log::warn!("File {file_path} is not valid nmstate YAML: {e}");
+                continue;
+            }
+        };
+        log::info!("Applying desired state from {file_path}");
+        match apply_state(&state, false) {
+            Ok(_) => {
+                log::info!("File {file_path} applied",);
+            }
+
+            Err(e) => {
+                log::error!("Failed to apply state file {file_path}: {e}",);
+            }
+        }
+    }
     Ok(())
 }
