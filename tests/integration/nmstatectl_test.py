@@ -508,3 +508,70 @@ def test_cli_apply_with_override_iface(eth1_with_static_route_and_rule):
     iface_state = show_only(("eth1",))[Interface.KEY][0]
     assert not iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
     assert not iface_state[Interface.IPV6][InterfaceIPv6.ENABLED]
+
+
+@pytest.fixture
+def eth1_with_static_route(eth1_up):
+    desired_state = yaml.load(
+        """---
+        routes:
+          config:
+          - destination: 203.0.113.0/24
+            next-hop-address: 192.0.2.1
+            next-hop-interface: eth1
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: false
+              address:
+              - ip: 192.0.2.252
+                prefix-length: 24
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    yield
+
+
+def test_cli_apply_policy_change_routes(eth1_with_static_route, eth2_up):
+    with NamedTemporaryFile() as fd:
+        fd.write(
+            """---
+            capture:
+              nic: interfaces.name == "eth2"
+            desired:
+              routes:
+                config:
+                  - destination: 203.0.113.0/24
+                    state: absent
+                  - destination: 203.0.113.0/24
+                    next-hop-interface: "{{ capture.nic.interfaces.0.name }}"
+                    next-hop-address: 192.0.2.1
+              interfaces:
+                - name: "{{ capture.nic.interfaces.0.name }}"
+                  state: up
+                  type: ethernet
+                  ipv4:
+                    address:
+                    - ip: 192.0.2.253
+                      prefix-length: 24
+                    enabled: true
+            """.encode(
+                "utf-8"
+            )
+        )
+        fd.flush()
+        cmdlib.exec_cmd(f"nmstatectl apply {fd.name}".split(), check=True)
+
+    cur_state = libnmstate.show()
+
+    eth1_routes = [
+        route
+        for route in cur_state[Route.KEY][Route.CONFIG]
+        if route[Route.NEXT_HOP_INTERFACE] == "eth1"
+    ]
+
+    assert not eth1_routes

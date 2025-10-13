@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::{NetworkPolicy, NetworkState};
+use crate::{NetworkPolicy, NetworkState, RouteState};
 
 #[test]
 fn test_policy_move_dhcp_gw_eth_to_bridge() {
@@ -150,11 +150,17 @@ desiredState:
         std::net::IpAddr::from_str("192.0.2.251").unwrap()
     );
     let routes = state.routes.config.as_ref().unwrap();
-    assert_eq!(routes.len(), 2);
+    assert_eq!(routes.len(), 4);
     assert_eq!(routes[0].destination, Some("0.0.0.0/0".to_string()));
-    assert_eq!(routes[0].next_hop_iface, Some("br1".to_string()));
+    assert_eq!(routes[0].next_hop_iface, Some("eth1".to_string()));
+    assert_eq!(routes[0].state, Some(RouteState::Absent));
     assert_eq!(routes[1].destination, Some("192.51.100.0/24".to_string()));
-    assert_eq!(routes[1].next_hop_iface, Some("br1".to_string()));
+    assert_eq!(routes[1].next_hop_iface, Some("eth1".to_string()));
+    assert_eq!(routes[1].state, Some(RouteState::Absent));
+    assert_eq!(routes[2].destination, Some("0.0.0.0/0".to_string()));
+    assert_eq!(routes[2].next_hop_iface, Some("br1".to_string()));
+    assert_eq!(routes[3].destination, Some("192.51.100.0/24".to_string()));
+    assert_eq!(routes[3].next_hop_iface, Some("br1".to_string()));
 }
 
 #[test]

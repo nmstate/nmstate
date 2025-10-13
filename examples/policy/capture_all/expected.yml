@@ -2,6 +2,10 @@
 routes:
   config:
     - destination: 0.0.0.0/0
+      next-hop-interface: eth1
+      next-hop-address: 192.0.2.1
+      state: absent
+    - destination: 0.0.0.0/0
       next-hop-interface: br1
       next-hop-address: 192.0.2.1
 interfaces:
