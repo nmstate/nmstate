@@ -9,30 +9,18 @@ use crate::{
 
 impl MergedRoutes {
     pub(crate) fn gen_diff(&self) -> Routes {
-        let mut changed_routes: Vec<RouteEntry> = Vec::new();
-        let mut current_routes: HashSet<&RouteEntry> = HashSet::new();
-
-        if let Some(rts) = self.current.config.as_ref() {
-            for rt in rts {
-                current_routes.insert(rt);
+        if self.changed_routes.is_empty() {
+            Routes {
+                config: None,
+                ..Default::default()
             }
-        }
-
-        for rts in self.merged.values() {
-            for rt in rts {
-                if rt.is_absent() || !current_routes.contains(rt) {
-                    changed_routes.push(rt.clone());
-                }
+        } else {
+            let mut changed_routes = self.changed_routes.clone();
+            changed_routes.sort_unstable();
+            Routes {
+                config: Some(changed_routes),
+                ..Default::default()
             }
-        }
-
-        Routes {
-            config: if !changed_routes.is_empty() {
-                Some(changed_routes)
-            } else {
-                None
-            },
-            ..Default::default()
         }
     }
 

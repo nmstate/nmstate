@@ -789,6 +789,8 @@ impl MergedRoutes {
                 {
                     changed_routes.insert(rt.clone());
                 }
+            } else {
+                changed_routes.insert(rt.clone());
             }
             merged_routes.push(rt.clone());
         }
