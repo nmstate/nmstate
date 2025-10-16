@@ -10,7 +10,10 @@ use crate::{ErrorKind, NmstateError};
 // `lib/jsonrpc.c`. Changing it will impact `OvsDbJsonRpc::recv()`.
 // Do not change unless OpenvSwitch changed so.
 const BUFFER_SIZE: usize = 4096;
-const MAX_RECV_RETRY_COUNT: usize = 50;
+// The `lib/jsonrpc.c` is using infinite retry on OVS, we cannot do that
+// risking nmstate stuck for ever. We assume the OVSDB returns at most
+// 4 GiB data for a single JSON string.
+const MAX_RECV_RETRY_COUNT: usize = 4 * 1024 * 1024 * 1024 / BUFFER_SIZE;
 
 #[derive(Debug)]
 pub(crate) struct OvsDbJsonRpc {

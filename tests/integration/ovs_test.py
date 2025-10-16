@@ -33,13 +33,14 @@ from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
 from .testlib.genconf import gen_conf_apply
+from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.servicelib import disable_service
 from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
-from .testlib.iproutelib import ip_monitor_assert_stable_link_up
+from .testlib.yaml import load_yaml
 
 
 BOND1 = "bond1"
@@ -2326,3 +2327,48 @@ def test_ovn_map_to_absent_br(ovn_bridge_mapping_net1):
                 ],
             }
         )
+
+
+@pytest.fixture
+def cleanup_20480_test_bridge():
+    yield
+    desired_state = {Interface.KEY: []}
+    for i in range(0, 15):
+        iface_state = load_yaml(
+            f"""
+            name: br{i}
+            type: ovs-bridge
+            state: absent
+            """
+        )
+        desired_state[Interface.KEY].append(iface_state)
+    libnmstate.apply(desired_state)
+
+
+# OVS daemon will emit EGAIN on 20480 bytes of data transmission, this test
+# make sure nmstate can support so by create a OVSDB entry larger than 20480
+# bytes.
+# https://issues.redhat.com/browse/RHEL-121418
+@pytest.mark.tier1
+def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
+    desired_state = {Interface.KEY: []}
+    for i in range(0, 15):
+        iface_state = load_yaml(
+            f"""
+            name: br{i}
+            type: ovs-bridge
+            state: up
+            bridge:
+              port:
+              - name: ovs{i}
+            ovs-db:
+              external_ids:
+                key0: value0
+            """
+        )
+        for j in range(0, 255):
+            iface_state[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS][
+                f"key{j}"
+            ] = f"longlonglonglonglonglonglonglonglonglong{j}"
+        desired_state[Interface.KEY].append(iface_state)
+    libnmstate.apply(desired_state)
