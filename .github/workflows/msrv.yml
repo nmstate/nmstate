@@ -12,22 +12,16 @@ on:
 
 jobs:
   build_on_msrv:
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - msrv: "1.77"
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v5
 
-    - name: Install Rust ${{ matrix.msrv }}
-      run: rustup install ${{ matrix.msrv }}
+    - name: Install Rust 1.82
+      run: rustup install 1.82
 
     - name: Build test
-      run: cd rust && cargo +${{ matrix.msrv }} build --ignore-rust-version
+      run: cd rust && cargo +1.82 build --ignore-rust-version
 
     - name: Unit tests
-      run: cd rust && cargo +${{ matrix.msrv }} test --ignore-rust-version
+      run: cd rust && cargo +1.82 test --ignore-rust-version
