@@ -13,7 +13,7 @@ const BUFFER_SIZE: usize = 4096;
 // The `lib/jsonrpc.c` is using infinite retry on OVS, we cannot do that
 // risking nmstate stuck for ever. We assume the OVSDB returns at most
 // 4 GiB data for a single JSON string.
-const MAX_RECV_RETRY_COUNT: usize = 4 * 1024 * 1024 * 1024 / BUFFER_SIZE;
+const MAX_RECV_RETRY_COUNT: usize = 1048576;
 
 #[derive(Debug)]
 pub(crate) struct OvsDbJsonRpc {
