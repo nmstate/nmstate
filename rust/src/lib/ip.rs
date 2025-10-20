@@ -1385,7 +1385,7 @@ fn sanitize_ipv6_token_to_string(
 }
 
 fn is_ip_addrs_none_or_all_auto(addrs: Option<&[InterfaceIpAddr]>) -> bool {
-    addrs.map_or(true, |addrs| {
+    addrs.is_none_or(|addrs| {
         addrs.iter().all(|a| {
             if let IpAddr::V6(ip_addr) = a.ip {
                 is_ipv6_unicast_link_local(&ip_addr) || a.is_auto()
