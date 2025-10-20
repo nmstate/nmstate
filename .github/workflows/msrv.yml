@@ -17,11 +17,17 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
+    - name: Install Rust i686 target
+      run: rustup target add i686-unknown-linux-gnu
+
     - name: Install Rust 1.82
-      run: rustup install 1.82
+      run: rustup install 1.82 && rustup install 1.82 --target i686-unknown-linux-gnu
 
     - name: Build test
       run: cd rust && cargo +1.82 build --ignore-rust-version
+
+    - name: Build test (i686)
+      run: cd rust/src/lib && cargo +1.82 build --ignore-rust-version --target i686-unknown-linux-gnu
 
     - name: Unit tests
       run: cd rust && cargo +1.82 test --ignore-rust-version
