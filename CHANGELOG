@@ -1,4 +1,14 @@
 # Changelog
+## [2.2.54] - 2025-10-20
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - ovs: Fix build on i686. (9341c97b)
+
 ## [2.2.53] - 2025-10-20
 ### Breaking changes
  - Increase minimum supported rust version to 1.82. (ca3a55b6)
