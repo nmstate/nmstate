@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-rust-version = "1.77"
+rust-version = "1.82"
 
 [workspace.dependencies]
 log = "0.4.17"
