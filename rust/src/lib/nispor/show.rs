@@ -166,7 +166,8 @@ pub(crate) async fn nispor_retrieve(
         net_state.append_interface_data(iface);
     }
     set_controller_type(&mut net_state.interfaces);
-    net_state.routes = get_routes(running_config_only).await;
+    net_state.routes =
+        get_routes(running_config_only, &net_state.interfaces).await;
     net_state.rules = get_route_rules(&np_state.rules, running_config_only);
     if kernel_only {
         net_state.dns = get_dns();

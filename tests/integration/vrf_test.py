@@ -9,8 +9,9 @@ from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
-from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import Route
 from libnmstate.schema import VRF
 
 from .testlib import assertlib
@@ -491,3 +492,38 @@ class TestVrf:
         assertlib.assert_absent(TEST_VRF0)
         assertlib.assert_absent(TEST_BOND0)
         assertlib.assert_absent(TEST_BOND0_VLAN)
+
+    # https://issues.redhat.com/browse/RHEL-119046
+    @pytest.mark.tier1
+    def test_route_to_vrf_name(self, vrf0_with_port0):
+        desired = yaml.load(
+            f"""---
+            routes:
+              config:
+              - destination: 198.51.200.0/24
+                route-type: blackhole
+                vrf-name: {TEST_VRF0}
+            """,
+            Loader=yaml.SafeLoader,
+        )
+        libnmstate.apply(desired)
+
+        cur_routes = libnmstate.show()[Route.KEY]
+        for routes in (cur_routes[Route.RUNNING], cur_routes[Route.CONFIG]):
+            assert any(
+                route[Route.VRF_NAME] == TEST_VRF0
+                and route[Route.TABLE_ID] == TEST_ROUTE_TABLE_ID0
+                for route in routes
+            )
+        desired = yaml.load(
+            f"""---
+            routes:
+              config:
+              - destination: 198.51.200.0/24
+                state: absent
+                route-type: blackhole
+                vrf-name: {TEST_VRF0}
+            """,
+            Loader=yaml.SafeLoader,
+        )
+        libnmstate.apply(desired)

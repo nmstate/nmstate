@@ -56,6 +56,7 @@ class Route:
     MTU = "mtu"
     QUICKACK = "quickack"
     ADVMSS = "advmss"
+    VRF_NAME = "vrf-name"
 
 
 class RouteRule:
