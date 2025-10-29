@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceType, MergedInterface,
-    NmstateError,
+    MergedInterfaces, NmstateError, Routes,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -179,6 +182,104 @@ impl MergedInterface {
             if let Some(Interface::Vrf(verify_iface)) = self.for_verify.as_mut()
             {
                 verify_iface.merge_table_id(self.current.as_ref())?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Routes {
+    pub(crate) fn resolve_vrf_name(
+        &mut self,
+        merged_ifaces: &MergedInterfaces,
+    ) -> Result<(), NmstateError> {
+        let vrf_names_down: HashSet<&str> = merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|merged_iface| merged_iface.merged.is_down())
+            .filter_map(|merged_iface| {
+                if merged_iface.merged.iface_type() == InterfaceType::Vrf {
+                    Some(merged_iface.merged.name())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let vrf_names_absent: HashSet<&str> = merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|merged_iface| merged_iface.merged.is_absent())
+            .filter_map(|merged_iface| {
+                if merged_iface.merged.iface_type() == InterfaceType::Vrf {
+                    Some(merged_iface.merged.name())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let vrf_name_to_table_id: HashMap<&str, u32> = merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|merged_iface| merged_iface.merged.is_up())
+            .filter_map(|merged_iface| {
+                if let Interface::Vrf(vrf_iface) = &merged_iface.merged {
+                    vrf_iface.vrf.as_ref().and_then(|v| v.table_id).map(
+                        |table_id| (vrf_iface.base.name.as_str(), table_id),
+                    )
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if let Some(config_routes) = self.config.as_mut() {
+            for rt in config_routes.iter_mut() {
+                let vrf_name = if let Some(n) = rt.vrf_name.as_deref() {
+                    n
+                } else {
+                    continue;
+                };
+                if vrf_names_down.contains(vrf_name) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "VRF defined in Route '{rt}' is marked as 'state: \
+                             down'"
+                        ),
+                    ));
+                }
+                if vrf_names_absent.contains(vrf_name) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "VRF defined in Route '{rt}' is marked as 'state: \
+                             absent'"
+                        ),
+                    ));
+                }
+                let table_id = if let Some(t) =
+                    vrf_name_to_table_id.get(vrf_name)
+                {
+                    *t
+                } else {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!("VRF defined in Route '{rt}' does not exist"),
+                    ));
+                };
+                if let Some(des_table_id) = rt.table_id {
+                    if des_table_id != table_id {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Route '{rt}' has both table id and VRF name \
+                                 defined, but desired table ID is {} while \
+                                 table ID for VRF {} is {}",
+                                des_table_id, vrf_name, table_id
+                            ),
+                        ));
+                    }
+                }
+                rt.table_id = Some(table_id);
             }
         }
         Ok(())
