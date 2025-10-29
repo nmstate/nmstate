@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use log::warn;
 
 use crate::{
-    ErrorKind, MergedRoutes, NmstateError, RouteEntry, RouteType, Routes,
+    ErrorKind, Interface, Interfaces, MergedRoutes, NmstateError, RouteEntry,
+    RouteType, Routes,
 };
 
 const SUPPORTED_ROUTE_SCOPE: [nispor::RouteScope; 2] =
@@ -32,7 +33,10 @@ const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 // kernel values
 const RTAX_CWND: u32 = 7;
 
-pub(crate) async fn get_routes(running_config_only: bool) -> Routes {
+pub(crate) async fn get_routes(
+    running_config_only: bool,
+    ifaces: &Interfaces,
+) -> Routes {
     let mut ret = Routes::new();
     let mut np_routes: Vec<nispor::Route> = Vec::new();
     let route_type = [
@@ -65,6 +69,22 @@ pub(crate) async fn get_routes(running_config_only: bool) -> Routes {
         }
     }
 
+    let table_id_to_vrf_names: HashMap<u32, &str> =
+        ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|i| i.is_up())
+            .filter_map(|iface| {
+                if let Interface::Vrf(vrf_iface) = iface {
+                    vrf_iface.vrf.as_ref().and_then(|v| v.table_id).map(
+                        |table_id| (table_id, vrf_iface.base.name.as_str()),
+                    )
+                } else {
+                    None
+                }
+            })
+            .collect();
+
     if !running_config_only {
         let mut running_routes = Vec::new();
         for np_route in np_routes
@@ -72,13 +92,21 @@ pub(crate) async fn get_routes(running_config_only: bool) -> Routes {
             .filter(|np_route| SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope))
         {
             if is_multipath(np_route) {
-                for route in flat_multipath_route(np_route) {
+                for route in
+                    flat_multipath_route(np_route, &table_id_to_vrf_names)
+                {
                     running_routes.push(route);
                 }
             } else if route_type.contains(&np_route.route_type) {
-                running_routes.push(np_routetype_to_nmstate(np_route));
+                running_routes.push(np_routetype_to_nmstate(
+                    np_route,
+                    &table_id_to_vrf_names,
+                ));
             } else if np_route.oif.is_some() {
-                running_routes.push(np_route_to_nmstate(np_route));
+                running_routes.push(np_route_to_nmstate(
+                    np_route,
+                    &table_id_to_vrf_names,
+                ));
             }
         }
         ret.running = Some(running_routes);
@@ -90,20 +118,28 @@ pub(crate) async fn get_routes(running_config_only: bool) -> Routes {
             && SUPPORTED_STATIC_ROUTE_PROTOCOL.contains(&np_route.protocol)
     }) {
         if is_multipath(np_route) {
-            for route in flat_multipath_route(np_route) {
+            for route in flat_multipath_route(np_route, &table_id_to_vrf_names)
+            {
                 config_routes.push(route);
             }
         } else if route_type.contains(&np_route.route_type) {
-            config_routes.push(np_routetype_to_nmstate(np_route));
+            config_routes.push(np_routetype_to_nmstate(
+                np_route,
+                &table_id_to_vrf_names,
+            ));
         } else if np_route.oif.is_some() {
-            config_routes.push(np_route_to_nmstate(np_route));
+            config_routes
+                .push(np_route_to_nmstate(np_route, &table_id_to_vrf_names));
         }
     }
     ret.config = Some(config_routes);
     ret
 }
 
-fn np_routetype_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
+fn np_routetype_to_nmstate(
+    np_route: &nispor::Route,
+    table_id_to_vrf_names: &HashMap<u32, &str>,
+) -> RouteEntry {
     let destination = match &np_route.dst {
         Some(dst) => Some(dst.to_string()),
         None => match np_route.address_family {
@@ -130,6 +166,9 @@ fn np_routetype_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     }
     route_entry.metric = np_route.metric.map(i64::from);
     route_entry.table_id = Some(np_route.table);
+    route_entry.vrf_name = table_id_to_vrf_names
+        .get(&np_route.table)
+        .map(|n| n.to_string());
     match np_route.route_type {
         nispor::RouteType::BlackHole => {
             route_entry.route_type = Some(RouteType::Blackhole)
@@ -152,7 +191,10 @@ fn np_routetype_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     route_entry
 }
 
-fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
+fn np_route_to_nmstate(
+    np_route: &nispor::Route,
+    table_id_to_vrf_names: &HashMap<u32, &str>,
+) -> RouteEntry {
     let destination = match &np_route.dst {
         Some(dst) => Some(dst.to_string()),
         None => match np_route.address_family {
@@ -202,6 +244,9 @@ fn np_route_to_nmstate(np_route: &nispor::Route) -> RouteEntry {
     route_entry.source = source;
     route_entry.metric = np_route.metric.map(i64::from);
     route_entry.table_id = Some(np_route.table);
+    route_entry.vrf_name = table_id_to_vrf_names
+        .get(&np_route.table)
+        .map(|n| n.to_string());
     // according to `man ip-route`, cwnd is useless without the lock flag, so
     // we require both cwnd and its lock flag to consider cwnd as set.
     let cwnd_lock = np_route.lock.unwrap_or(0) & (1 << RTAX_CWND) != 0;
@@ -223,14 +268,18 @@ fn is_multipath(np_route: &nispor::Route) -> bool {
         .unwrap_or_default()
 }
 
-fn flat_multipath_route(np_route: &nispor::Route) -> Vec<RouteEntry> {
+fn flat_multipath_route(
+    np_route: &nispor::Route,
+    table_id_to_vrf_names: &HashMap<u32, &str>,
+) -> Vec<RouteEntry> {
     let mut ret: Vec<RouteEntry> = Vec::new();
     if let Some(mpath_routes) = np_route.multipath.as_ref() {
         for mp_route in mpath_routes {
             let mut new_np_route = np_route.clone();
             new_np_route.via = Some(mp_route.via.to_string());
             new_np_route.oif = Some(mp_route.iface.to_string());
-            let mut route = np_route_to_nmstate(&new_np_route);
+            let mut route =
+                np_route_to_nmstate(&new_np_route, table_id_to_vrf_names);
             if np_route.address_family == nispor::AddressFamily::IPv4 {
                 route.weight = Some(mp_route.weight);
             }

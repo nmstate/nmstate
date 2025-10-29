@@ -302,6 +302,9 @@ pub struct RouteEntry {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub advmss: Option<u32>,
+    /// Store the routes to the route table specified VRF bind to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vrf_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -412,6 +415,9 @@ impl RouteEntry {
         if self.advmss.is_some() && self.advmss != other.advmss {
             return false;
         }
+        if self.vrf_name.is_some() && self.vrf_name != other.vrf_name {
+            return false;
+        }
         true
     }
 
@@ -437,6 +443,7 @@ impl RouteEntry {
                 self.destination.as_deref().unwrap_or(""),
                 self.next_hop_addr.as_deref().unwrap_or(""),
                 self.source.as_deref().unwrap_or(""),
+                self.vrf_name.as_deref().unwrap_or(""),
             ],
             vec![
                 self.table_id.unwrap_or(DEFAULT_TABLE_ID),
@@ -622,6 +629,9 @@ impl std::fmt::Display for RouteEntry {
         if let Some(v) = self.advmss {
             props.push(format!("advmss: {v}"));
         }
+        if let Some(v) = self.vrf_name.as_ref() {
+            props.push(format!("vrf-name: {v}"));
+        }
 
         write!(f, "{}", props.join(" "))
     }
@@ -652,6 +662,7 @@ impl MergedRoutes {
         desired.remove_ignored_routes();
         desired.validate()?;
         desired.resolve_next_hop_iface_ref(merged_ifaces)?;
+        desired.resolve_vrf_name(merged_ifaces)?;
 
         let mut desired_routes = Vec::new();
         if let Some(rts) = desired.config.as_ref() {
