@@ -537,6 +537,7 @@ def test_gc_on_ovs_dpdk():
             n_rxq: 100
             n_rxq_desc: 1024
             n_txq_desc: 2048
+            lsc-interrupt: true
         - name: br0
           type: ovs-bridge
           state: up
@@ -556,6 +557,7 @@ def test_gc_on_ovs_dpdk():
     assert "n-rxq-desc=1024" in ovs_iface_conf
     assert "n-txq-desc=2048" in ovs_iface_conf
     assert "n-rxq=100" in ovs_iface_conf
+    assert "lsc-interrupt=1" in ovs_iface_conf
     assert "devargs=0000:af:00.1" in ovs_iface_conf
 
 

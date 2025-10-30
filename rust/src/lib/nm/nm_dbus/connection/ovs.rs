@@ -289,6 +289,7 @@ pub struct NmSettingOvsDpdk {
     pub n_rxq: Option<u32>,
     pub n_rxq_desc: Option<u32>,
     pub n_txq_desc: Option<u32>,
+    pub lsc_interrupt: Option<bool>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -300,6 +301,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsDpdk {
             n_rxq: _from_map!(v, "n-rxq", u32::try_from)?,
             n_rxq_desc: _from_map!(v, "n-rxq-desc", u32::try_from)?,
             n_txq_desc: _from_map!(v, "n-txq-desc", u32::try_from)?,
+            lsc_interrupt: _from_map!(v, "lsc-interrupt", i32::try_from)?
+                .map(|i| i != 0),
             _other: v,
         })
     }
@@ -319,6 +322,9 @@ impl ToDbusValue for NmSettingOvsDpdk {
         }
         if let Some(v) = &self.n_txq_desc {
             ret.insert("n-txq-desc", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.lsc_interrupt {
+            ret.insert("lsc-interrupt", zvariant::Value::new(*v as i32));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
