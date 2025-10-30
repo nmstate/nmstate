@@ -1431,6 +1431,7 @@ class TestOvsDpdk:
             OVSInterface.Dpdk.DEVARGS: _test_pci_path(),
             OVSInterface.Dpdk.N_RXQ_DESC: 1024,
             OVSInterface.Dpdk.N_TXQ_DESC: 2048,
+            OVSInterface.Dpdk.LSC_INTERRUPT: True,
         }
         bridge = Bridge(BRIDGE0)
         bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)

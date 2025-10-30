@@ -336,6 +336,13 @@ fn parse_ovs_iface_dpdk_conf(
                     conf.n_txq_desc = Some(i)
                 }
             }
+            if let Some(lsc_interrupt) = options.get("dpdk-lsc-interrupt") {
+                conf.lsc_interrupt = match lsc_interrupt.as_str() {
+                    "true" => Some(true),
+                    "false" => Some(false),
+                    _ => None,
+                }
+            }
             return Some(conf);
         }
     }

@@ -391,6 +391,7 @@ class OVSInterface(OvsDB):
         RX_QUEUE = "rx-queue"
         N_RXQ_DESC = "n_rxq_desc"
         N_TXQ_DESC = "n_txq_desc"
+        LSC_INTERRUPT = "lsc-interrupt"
 
 
 class OVSBridge(Bridge, OvsDB):

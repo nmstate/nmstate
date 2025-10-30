@@ -166,6 +166,7 @@ pub(crate) fn gen_nm_ovs_iface_setting(
             nm_ovs_dpdk.n_rxq = dpdk_iface.rx_queue;
             nm_ovs_dpdk.n_rxq_desc = dpdk_iface.n_rxq_desc;
             nm_ovs_dpdk.n_txq_desc = dpdk_iface.n_txq_desc;
+            nm_ovs_dpdk.lsc_interrupt = dpdk_iface.lsc_interrupt;
             nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
             nm_conn.ovs_iface = Some(nm_ovs_iface_set);
         }

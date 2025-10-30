@@ -659,6 +659,16 @@ pub struct OvsDpdkConfig {
     /// Must be power of 2 in the range of 1 to 4096.
     /// Setting to 0 means remove this setting from OVS database.
     pub n_txq_desc: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "lsc-interrupt",
+        alias = "dpdk-lsc-interrupt"
+    )]
+    /// Configures the Link State Change (LSC) detection mode for dpdk ports.
+    /// Setting to true enables interrupt mode; false disables interrupt mode
+    /// and configures the interface in poll mode. You may also use the OVS
+    /// terminology `dpdk-lsc-interrupt` for this property.
+    pub lsc_interrupt: Option<bool>,
 }
 
 const POWER_2_BETWEEN_1_4096: [u32; 13] =
