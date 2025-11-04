@@ -361,3 +361,60 @@ def test_set_dns_search_only_in_down_iface(auto_eth1, eth2_up):
     # It is not possible to assert that the new configuration has been put into
     # eth1 because, if there are more interfaces in the host, it might be in
     # any of them
+
+
+@pytest.fixture
+def eth1_static_iface_dns(eth1_up):
+    cmdlib.exec_cmd("nmcli c del eth1".split(), check=False)
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet ifname eth1 "
+        "connection.id eth1 ipv4.method manual "
+        "ipv4.address 192.0.2.251/24 ipv4.gateway 192.0.2.1 "
+        "ipv4.dns 192.0.2.1,192.0.2.2 "
+        "ipv6.method disabled".split(),
+        check=False,
+    )
+    yield
+    cmdlib.exec_cmd("nmcli c del eth1".split())
+
+
+# https://issues.redhat.com/browse/RHEL-125548
+@pytest.mark.tier1
+def test_use_global_dns_even_for_with_static_ip(
+    eth1_static_iface_dns, eth2_up
+):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: eth2
+          type: ethernet
+          state: up
+          ipv4:
+            dhcp: false
+            enabled: true
+            address:
+            - ip: 192.0.2.253
+              prefix-length: 24
+        routes:
+          config:
+          - destination: 0.0.0.0/0
+            next-hop-address: 192.0.2.1
+            next-hop-interface: eth2
+            metric: 100
+        dns-resolver:
+          config:
+            search:
+            - example.net
+            - example.org
+            server:
+            - 192.0.2.3
+            - 192.0.2.4
+        """
+    )
+    libnmstate.apply(desired_state)
+    assert_global_dns(["192.0.2.3", "192.0.2.4"])
+    # Make sure eth1 connection is untouched and still holding old DNS config
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv4.dns c show eth1".split())[1].strip()
+        == "192.0.2.1,192.0.2.2"
+    )
