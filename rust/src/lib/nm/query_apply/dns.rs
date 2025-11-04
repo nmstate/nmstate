@@ -330,9 +330,6 @@ async fn purge_global_dns_config(
 //  1. Has IPv6 link-local address as name server: e.g. `fe80::deef:1%eth1`
 //  2. User want static DNS server appended before dynamic one. In this case,
 //     user should define `auto-dns: true` explicitly along with static DNS.
-//  3. User want to force DNS server stored in interface for static IP
-//     interface. This case, user need to state static DNS config along with
-//     static IP config.
 fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
     if extract_ipv6_link_local_iface_from_dns_srv(
         merged_state.dns.servers.as_slice(),
@@ -368,17 +365,6 @@ fn is_iface_dns_desired(merged_state: &MergedNetworkState) -> bool {
             log::info!(
                 "Using interface level DNS for special use case: appending \
                  static DNS nameserver before dynamic ones."
-            );
-            return true;
-        }
-        if iface.base_iface().ipv4.as_ref().map(|i| i.is_static()) == Some(true)
-            || iface.base_iface().ipv6.as_ref().map(|i| i.is_static())
-                == Some(true)
-        {
-            log::info!(
-                "Using interface level DNS for special use case: explicitly \
-                 requested interface level DNS via defining static IP and \
-                 static DNS nameserver."
             );
             return true;
         }
