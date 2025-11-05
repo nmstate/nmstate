@@ -511,7 +511,7 @@ class TestVrf:
         cur_routes = libnmstate.show()[Route.KEY]
         for routes in (cur_routes[Route.RUNNING], cur_routes[Route.CONFIG]):
             assert any(
-                route[Route.VRF_NAME] == TEST_VRF0
+                route.get(Route.VRF_NAME) == TEST_VRF0
                 and route[Route.TABLE_ID] == TEST_ROUTE_TABLE_ID0
                 for route in routes
             )
