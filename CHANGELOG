@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.55] - 2025-11-07
+### Breaking changes
+ - N/A
+
+### New features
+ - Support the lsc-interrupt option for OVS DPDK interfaces. (045ed3c4)
+ - Support referring route table ID by VRF interface name. (40369dcb)
+
+### Bug fixes
+ - nm dns: Do not use interface DNS for static ip + static DNS. (f815c226)
+ - python: Fix the license disclaimer. (4b9a28c3)
+
 ## [2.2.54] - 2025-10-20
 ### Breaking changes
  - N/A
