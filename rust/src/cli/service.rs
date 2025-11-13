@@ -11,6 +11,7 @@ use serde::Deserialize;
 use crate::{apply::apply_state, error::CliError, state::state_from_fd};
 
 const CONFIG_FILE_EXTENSION: &str = "yml";
+const CONFIG_FILE_EXTENSION2: &str = "yaml";
 const APPLIED_FILE_EXTENSION: &str = "applied";
 const CONFIG_FILE_NAME: &str = "nmstate.conf";
 
@@ -49,23 +50,19 @@ pub(crate) fn ncl_service(
 
     let config = load_config(folder)?;
 
-    let state_files = match get_unapplied_state_files(
+    if !Path::new(&folder).exists() {
+        log::info!("{folder} does not exist, skipping");
+        return Ok(String::new());
+    }
+
+    let state_files = get_unapplied_state_files(
         folder,
         config.service.keep_state_file_after_apply,
-    ) {
-        Ok(f) => f,
-        Err(e) => {
-            log::info!(
-                "Failed to read config folder {folder} due to error {e}, \
-                 ignoring"
-            );
-            return Ok(String::new());
-        }
-    };
+    )?;
     if state_files.is_empty() {
         log::info!(
-            "No new nmstate config(end with .{CONFIG_FILE_EXTENSION}) found \
-             in config folder {folder}"
+            "No new nmstate config(end with .{CONFIG_FILE_EXTENSION} or \
+             .{CONFIG_FILE_EXTENSION2}) found in config folder {folder}"
         );
         return Ok(String::new());
     }
@@ -142,12 +139,21 @@ fn get_unapplied_state_files(
     let mut applied_files = HashSet::<FileContent>::new();
     for entry in folder.read_dir()? {
         let file = entry?.path();
-        if file.extension() == Some(OsStr::new(CONFIG_FILE_EXTENSION)) {
+        if file.extension() == Some(OsStr::new(CONFIG_FILE_EXTENSION))
+            || file.extension() == Some(OsStr::new(CONFIG_FILE_EXTENSION2))
+        {
             let content = fs::read_to_string(&file)?;
-            yml_files.insert(FileContent::new(
-                folder.join(file).with_extension(""),
+            let file_name_no_extention = folder.join(&file).with_extension("");
+            if !yml_files.insert(FileContent::new(
+                file_name_no_extention.clone(),
                 content,
-            ));
+            )) {
+                return Err(CliError::from(format!(
+                    "Conflict YAML file {}.yml and {}.yaml",
+                    file_name_no_extention.display(),
+                    file_name_no_extention.display(),
+                )));
+            }
         } else if keep_state_file_after_apply
             && file.extension() == Some(OsStr::new(APPLIED_FILE_EXTENSION))
         {
@@ -158,16 +164,26 @@ fn get_unapplied_state_files(
             ));
         }
     }
-    let mut ret: Vec<_> = yml_files
-        .difference(&applied_files)
-        .cloned()
-        .map(|f| {
-            FileContent::new(
-                f.path.with_extension(CONFIG_FILE_EXTENSION),
-                f.content,
-            )
-        })
-        .collect();
+
+    let mut ret: Vec<FileContent> = Vec::new();
+    for fc in yml_files.difference(&applied_files) {
+        let file_path =
+            if fc.path.with_extension(CONFIG_FILE_EXTENSION).exists() {
+                fc.path.with_extension(CONFIG_FILE_EXTENSION)
+            } else if fc.path.with_extension(CONFIG_FILE_EXTENSION2).exists() {
+                fc.path.with_extension(CONFIG_FILE_EXTENSION2)
+            } else {
+                log::error!(
+                    "Bug: {}.yml or {}.yaml not exists",
+                    fc.path.display(),
+                    fc.path.display()
+                );
+                continue;
+            };
+
+        ret.push(FileContent::new(file_path, fc.content.clone()));
+    }
+
     ret.sort_by_key(|f| f.path.clone());
     Ok(ret)
 }

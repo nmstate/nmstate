@@ -7,8 +7,10 @@ nmstate\&.service
 .SH "DESCRIPTION"
 .PP
 nmstate\&.service invokes \fBnmstatectl service\fR command which
-apply all network state files ending with \fB.yml\fR in
-\fB/etc/nmstate\fR folder.
+apply all network state files ending with \fB.yml\fR or \fB.yaml\fR in
+\fB/etc/nmstate\fR folder. When two files holding the same name but one with
+`.yml` and another with `.yaml`, nmstate will not apply any but fail the
+service.
 
 .PP
 

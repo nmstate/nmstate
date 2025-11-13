@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+from pathlib import Path
+from subprocess import SubprocessError
 import os
 import shutil
-from pathlib import Path
 
 import yaml
 import pytest
@@ -271,3 +272,45 @@ def test_nmstate_service_override(
     iface_state = show_only(("eth1",))[Interface.KEY][0]
     assert not iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
     assert not iface_state[Interface.IPV6][InterfaceIPv6.ENABLED]
+
+
+@pytest.fixture
+def dummy0_conf_with_yaml_extention():
+    if not os.path.isdir(CONFIG_DIR):
+        os.mkdir(CONFIG_DIR)
+    with open(f"{CONFIG_DIR}/01-nmstate-test.yaml", "w") as fd:
+        fd.write(TEST_YAML1_CONTENT)
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "dummy0",
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_nmstate_serice_with_yaml_extention(dummy0_conf_with_yaml_extention):
+    exec_cmd("nmstatectl service".split(), check=True)
+    current_state = show_only(("dummy0",))
+    assert current_state[Interface.KEY][0][Interface.NAME] == "dummy0"
+
+
+@pytest.fixture
+def conflict_yamls():
+    if not os.path.isdir(CONFIG_DIR):
+        os.mkdir(CONFIG_DIR)
+    with open(f"{CONFIG_DIR}/01-nmstate-test.yaml", "w") as fd:
+        fd.write(TEST_YAML1_CONTENT)
+    with open(f"{CONFIG_DIR}/01-nmstate-test.yml", "w") as fd:
+        fd.write(TEST_YAML1_CONTENT)
+    yield
+
+
+def test_nmstate_service_with_conflict_yamls(conflict_yamls):
+    with pytest.raises(SubprocessError):
+        exec_cmd("nmstatectl service".split(), check=True)
+    assert_absent("dummy0")
