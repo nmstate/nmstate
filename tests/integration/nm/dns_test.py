@@ -380,6 +380,7 @@ def eth1_static_iface_dns(eth1_up):
 
 # https://issues.redhat.com/browse/RHEL-125548
 @pytest.mark.tier1
+@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_use_global_dns_even_for_with_static_ip(
     eth1_static_iface_dns, eth2_up
 ):
