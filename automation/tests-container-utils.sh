@@ -104,6 +104,7 @@ function create_container {
   CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d \
       -e CI \
       -e SHIPPABLE \
+      -v /var/lib/containers:/var/lib/containers \
       -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
       -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
   [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
