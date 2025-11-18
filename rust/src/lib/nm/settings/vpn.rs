@@ -11,6 +11,10 @@ pub(crate) fn gen_nm_ipsec_vpn_setting(
 ) {
     if let Some(conf) = iface.libreswan.as_ref() {
         let mut vpn_data: HashMap<String, String> = HashMap::new();
+        if !conf.nm_auto_defaults {
+            vpn_data.insert("nm-auto-defaults".into(), "no".into());
+        }
+
         vpn_data.insert("right".into(), conf.right.to_string());
         if let Some(v) = conf.rightid.as_deref() {
             vpn_data.insert("rightid".into(), v.to_string());

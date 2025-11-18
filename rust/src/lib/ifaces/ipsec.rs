@@ -85,6 +85,11 @@ impl IpsecInterface {
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LibreswanConfig {
+    /// Whether use NetworkManager default value. Default is true.
+    /// Setting false will instruct nmstate to follow libreswan default value
+    /// sets.
+    #[serde(rename = "nm-auto-defaults", default = "default_true")]
+    pub nm_auto_defaults: bool,
     pub right: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rightid: Option<String>,
@@ -159,6 +164,10 @@ pub struct LibreswanConfig {
     pub rightca: Option<String>,
 }
 
+fn default_true() -> bool {
+    true
+}
+
 impl LibreswanConfig {
     pub fn new() -> Self {
         Self::default()
@@ -168,6 +177,7 @@ impl LibreswanConfig {
 impl std::fmt::Debug for LibreswanConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LibreswanConfig")
+            .field("nm-auto-defaults", &self.nm_auto_defaults)
             .field("right", &self.right)
             .field("rightid", &self.rightid)
             .field("rightrsasigkey", &self.rightrsasigkey)
