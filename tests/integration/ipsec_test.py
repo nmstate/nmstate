@@ -1096,3 +1096,34 @@ def test_ipsec_rightca(ipsec_srv_cert_gw):
         IpsecTestEnv.SRV_POOL_PREFIX_V4,
         IpsecTestEnv.CLI_NIC,
     )
+
+
+def test_ipsec_ipv4_libreswan_p2p_no_nm_auto_defaults(ipsec_srv_p2p):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: {IPSEC_CONN_NAME}
+          type: ipsec
+          libreswan:
+            nm-auto-defaults: false
+            left: {IpsecTestEnv.CLI_ADDR_V4}
+            leftid: '@{IpsecTestEnv.CLI_KEY_ID}'
+            leftcert: {IpsecTestEnv.CLI_KEY_ID}
+            right: {IpsecTestEnv.SRV_ADDR_V4}
+            rightid: '@{IpsecTestEnv.SRV_KEY_ID}'
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        IpsecTestEnv.CLI_ADDR_V4,
+        IpsecTestEnv.SRV_ADDR_V4,
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_policy,
+        f"{IpsecTestEnv.CLI_ADDR_V4}/32",
+        f"{IpsecTestEnv.SRV_ADDR_V4}/32",
+    )
