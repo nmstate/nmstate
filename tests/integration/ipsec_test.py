@@ -10,11 +10,12 @@ from libnmstate.schema import InterfaceIPv6
 
 
 from .testlib import cmdlib
+from .testlib.env import is_k8s
 from .testlib.env import nm_libreswan_version_int
 from .testlib.env import version_str_to_int
+from .testlib.ipsec import IpsecTestEnv
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import show_only
-from .testlib.ipsec import IpsecTestEnv
 
 
 RETRY_COUNT = 10
@@ -1036,6 +1037,49 @@ def test_ipsec_leftsendcert(ipsec_srv_cert_gw, load_both_keys):
             rightcert: {IpsecTestEnv.SRV_KEY_ID}
             rightsubnet: 0.0.0.0/0
             leftsendcert: always
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        IpsecTestEnv.CLI_ADDR_V4,
+        IpsecTestEnv.SRV_ADDR_V4,
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_ip,
+        IpsecTestEnv.SRV_POOL_PREFIX_V4,
+        IpsecTestEnv.CLI_NIC,
+    )
+
+
+# https://issues.redhat.com/browse/RHEL-114237
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_libreswan_version_int() < version_str_to_int("1.2.27"),
+    reason="Need NetworkManager-libreswan 1.2.27+ to support rightca",
+)
+@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
+def test_ipsec_rightca(ipsec_srv_cert_gw):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: {IPSEC_CONN_NAME}
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            left: {IpsecTestEnv.CLI_ADDR_V4}
+            leftid: '%fromcert'
+            leftcert: {IpsecTestEnv.CLI_KEY_ID}
+            leftmodecfgclient: true
+            right: {IpsecTestEnv.SRV_ADDR_V4}
+            rightid: '%fromcert'
+            rightsubnet: 0.0.0.0/0
+            rightca: '%same'
             ikev2: insist""",
         Loader=yaml.SafeLoader,
     )
