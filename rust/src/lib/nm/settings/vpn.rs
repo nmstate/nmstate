@@ -95,6 +95,9 @@ pub(crate) fn gen_nm_ipsec_vpn_setting(
         if let Some(v) = conf.leftsendcert.as_ref() {
             vpn_data.insert("leftsendcert".into(), v.to_string());
         }
+        if let Some(v) = conf.rightca.as_ref() {
+            vpn_data.insert("rightca".into(), v.to_string());
+        }
 
         let mut nm_vpn_set = NmSettingVpn::default();
         nm_vpn_set.data = Some(vpn_data);
