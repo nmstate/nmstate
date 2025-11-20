@@ -64,3 +64,17 @@ def test_hsr_mac_address_sync(hsr0_with_eths):
     assert hsr_mac is not None
     assert hsr_mac == eth1_mac
     assert hsr_mac == eth2_mac
+
+
+# https://issues.redhat.com/browse/RHEL-100773
+@pytest.mark.tier1
+def test_hsr_update_protocol(hsr0_with_eths):
+    # Break if the default protocol in fixture is changed,
+    # since it may render this test otherwise useless.
+    assert (
+        "prp"
+        == hsr0_with_eths[Interface.KEY][0][Hsr.CONFIG_SUBTREE][Hsr.PROTOCOL]
+    )
+    hsr0_with_eths[Interface.KEY][0][Hsr.CONFIG_SUBTREE][Hsr.PROTOCOL] = "hsr"
+    libnmstate.apply(hsr0_with_eths)
+    assertlib.assert_state_match(hsr0_with_eths)

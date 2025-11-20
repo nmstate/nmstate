@@ -5,6 +5,7 @@ mod connection;
 pub(crate) mod device;
 pub(crate) mod dispatch;
 pub(crate) mod dns;
+mod hsr;
 mod ieee8021x;
 mod ip;
 mod ipvlan;
@@ -26,6 +27,7 @@ pub(crate) use self::connection::{
 };
 pub(crate) use self::device::deactivate_nm_devices;
 pub(crate) use self::dns::retrieve_dns_state;
+pub(crate) use self::hsr::is_hsr_changed;
 pub(crate) use self::ieee8021x::nm_802_1x_to_nmstate;
 pub(crate) use self::ip::{
     nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6, query_nmstate_wait_ip,
