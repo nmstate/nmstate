@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install Rust ${{ matrix.rust_version }}
       run: |
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install Rust ${{ matrix.rust_version }}
       run: |
@@ -104,7 +104,7 @@ jobs:
         include:
           - os_type: "el9"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: build nmstate rpm
         run: .github/workflows/build_rpm.sh ${{ matrix.os_type }}
       - uses: actions/upload-artifact@v5
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     container: quay.io/nmstate/test-env:nmstate-lint
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Run tests
         shell: bash
         run: ./automation/run-lint-tests.sh
@@ -144,7 +144,7 @@ jobs:
           - job_type: "fed-nm_main-integ_tier1"
           - job_type: "c10s-nm_stable-integ_tier1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Enable openvswitch kernel module
         run: sudo modprobe openvswitch
@@ -210,7 +210,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install Rust ${{ matrix.rust_version }}
       run: |
