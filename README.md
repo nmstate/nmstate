@@ -11,7 +11,6 @@ A declarative network management API for hosts.
 
 Copr build status, all repos are built for Fedora Linux and RHEL/CentOS Stream/EPEL 8+:
 
-* Latest release: [![Latest release Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate/package/nmstate/)
 * Git base: [![Git base Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git/package/nmstate/)
 
 Nmstate is a library with an accompanying command line tool that manages
