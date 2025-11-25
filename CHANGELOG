@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.56] - 2025-11-25
+### Breaking changes
+ - N/A
+
+### New features
+ - ipsec: New option `nm-auto-defaults: false`. (b105a178)
+ - ipsec: Support `rightca` option. (891e18f4)
+ - service: Support `.yaml` extension. (993a01b3)
+
+### Bug fixes
+ - nm: deactivate hsr interface before reactivating when changed. (9787cfc9)
+
 ## [2.2.55] - 2025-11-07
 ### Breaking changes
  - N/A
