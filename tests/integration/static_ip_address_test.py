@@ -1219,6 +1219,8 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
             address:
             - ip: 192.0.2.251
               prefix-length: 24
+            - ip: 192.0.3.251
+              prefix-length: 24
             dhcp: false
             enabled: true
           ipv6:
@@ -1228,11 +1230,14 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
             address:
               - ip: 2001:db8:1::1
                 prefix-length: 64
+              - ip: 2001:db7:1::1
+                prefix-length: 64
         """
     )
     apply_with_description(
-        "Configure the veth device veth1 with the peer veth1_peer and "
-        "address 192.0.2.251/24 and 2001:db8:1::1/64",
+        "Configure the veth device veth1 with the peer veth1_peer and"
+        "address 192.0.2.251/24, 192.0.3.251/24, 2001:db8:1::1/64, and"
+        "2001:db7:1::1/64",
         desired_state,
         kernel_only=True,
     )
@@ -1250,6 +1255,8 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
             address:
             - ip: 192.0.2.252
               prefix-length: 24
+            - ip: 192.0.3.252
+              prefix-length: 24
             dhcp: false
             enabled: true
           ipv6:
@@ -1259,11 +1266,14 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
             address:
               - ip: 2001:db8:1::2
                 prefix-length: 64
+              - ip: 2001:db7:1::2
+                prefix-length: 64
         """
     )
     apply_with_description(
-        "Configure the veth device veth1 with the peer veth1_peer and "
-        "address 192.0.2.252/24 and 2001:db8:1::2/64",
+        "Configure the veth device veth1 with the peer veth1_peer and"
+        "address 192.0.2.252/24, 192.0.3.252/24, 2001:db8:1::2/64, and"
+        "2001:db7:1::2/64",
         new_desired_state,
         kernel_only=True,
     )
@@ -1281,6 +1291,8 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
             address:
             - ip: 192.0.2.252
               prefix-length: 12
+            - ip: 192.0.3.252
+              prefix-length: 24
             dhcp: false
             enabled: true
           ipv6:
@@ -1290,11 +1302,50 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
             address:
               - ip: 2001:db8:1::2
                 prefix-length: 32
+              - ip: 2001:db7:1::2
+                prefix-length: 64
         """
     )
     apply_with_description(
-        "Configure the veth device veth1 with the peer veth1_peer and "
-        "address 192.0.2.252/12 and 2001:db8:1::2/32",
+        "Configure the veth device veth1 with the peer veth1_peer and"
+        "address 192.0.2.252/12, 192.0.3.252/24, 2001:db8:1::2/32, and"
+        "2001:db7:1::2/64",
+        new_desired_state,
+        kernel_only=True,
+    )
+    assertlib.assert_state_match(new_desired_state, kernel_only=True)
+
+    new_desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.3.252
+              prefix-length: 24
+            - ip: 192.0.2.252
+              prefix-length: 12
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+              - ip: 2001:db7:1::2
+                prefix-length: 64
+              - ip: 2001:db8:1::2
+                prefix-length: 32
+        """
+    )
+    apply_with_description(
+        "Configure the veth device veth1 with the peer veth1_peer and"
+        "address 192.0.3.252/24, 192.0.2.252/12, 2001:db7:1::2/64, and"
+        "2001:db8:1::2/32",
         new_desired_state,
         kernel_only=True,
     )
