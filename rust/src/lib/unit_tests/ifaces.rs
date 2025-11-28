@@ -911,3 +911,36 @@ fn test_hsr_v1_protocol() {
         panic!("Should be resolved to hsr interface, but got {merged_if:?}");
     }
 }
+
+#[test]
+fn test_sort_ovs_bridge_with_same_name() {
+    let ifaces_1 = serde_yaml::from_str::<Interfaces>(
+        r"---
+          - name: br-ex
+            type: ovs-bridge
+            state: up
+          - name: br-ex
+            type: ovs-interface
+            state: up",
+    )
+    .unwrap();
+    let ifaces_2 = serde_yaml::from_str::<Interfaces>(
+        r"---
+          - name: br-ex
+            type: ovs-interface
+            state: up
+          - name: br-ex
+            type: ovs-bridge
+            state: up",
+    )
+    .unwrap();
+
+    let sorted_ifaces_1 = ifaces_1.to_vec();
+    let sorted_ifaces_2 = ifaces_2.to_vec();
+    assert_eq!(sorted_ifaces_1, sorted_ifaces_2);
+
+    assert_eq!(sorted_ifaces_1[0].name(), "br-ex");
+    assert_eq!(sorted_ifaces_1[0].iface_type(), InterfaceType::OvsBridge);
+    assert_eq!(sorted_ifaces_1[1].name(), "br-ex");
+    assert_eq!(sorted_ifaces_1[1].iface_type(), InterfaceType::OvsInterface);
+}
