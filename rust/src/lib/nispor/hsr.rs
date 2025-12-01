@@ -2,15 +2,19 @@
 
 use crate::{BaseInterface, HsrConfig, HsrInterface, HsrProtocol};
 
-impl From<nispor::HsrProtocol> for HsrProtocol {
-    fn from(v: nispor::HsrProtocol) -> Self {
-        match v {
-            nispor::HsrProtocol::Hsr => Self::Hsr,
-            nispor::HsrProtocol::Prp => Self::Prp,
-            _ => {
-                log::warn!("Unknown HSR protocol {v:?}");
-                Self::default()
-            }
+fn protocol_from_np(
+    np_protocol: nispor::HsrProtocol,
+    version: u8,
+) -> HsrProtocol {
+    match (np_protocol, version) {
+        (nispor::HsrProtocol::Hsr, 0) => HsrProtocol::Hsr,
+        (nispor::HsrProtocol::Hsr, 1) => HsrProtocol::Hsr2012,
+        (nispor::HsrProtocol::Prp, _) => HsrProtocol::Prp,
+        _ => {
+            log::warn!(
+                "Unknown HSR protocol {np_protocol:?} with version {version}"
+            );
+            HsrProtocol::default()
         }
     }
 }
@@ -42,7 +46,7 @@ pub(crate) fn np_hsr_to_nmstate(
         // Due to a kernel bug multicast_spec is always zero. Until it is fixed,
         // use the last byte of supervision_address instead.
         multicast_spec: mutlicast_value,
-        protocol: np_hsr_info.protocol.into(),
+        protocol: protocol_from_np(np_hsr_info.protocol, np_hsr_info.version),
     });
 
     HsrInterface {

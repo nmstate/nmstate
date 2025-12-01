@@ -13,6 +13,7 @@ pub(crate) fn is_hsr_changed(
             || new_hsr_conf.port2 != cur_hsr_conf.port2
             || new_hsr_conf.multicast_spec != cur_hsr_conf.multicast_spec
             || new_hsr_conf.prp != cur_hsr_conf.prp
+            || new_hsr_conf.protocol_version != cur_hsr_conf.protocol_version
     } else {
         false
     }

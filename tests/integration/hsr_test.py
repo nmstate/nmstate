@@ -9,6 +9,8 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Hsr
 
 from .testlib import assertlib
+from .testlib.env import kernel_newer_than
+from .testlib.env import nm_minor_version
 from .testlib.hsrlib import hsr_interface
 from .testlib.ifacelib import get_mac_address
 
@@ -78,3 +80,24 @@ def test_hsr_update_protocol(hsr0_with_eths):
     hsr0_with_eths[Interface.KEY][0][Hsr.CONFIG_SUBTREE][Hsr.PROTOCOL] = "hsr"
     libnmstate.apply(hsr0_with_eths)
     assertlib.assert_state_match(hsr0_with_eths)
+
+
+# https://issues.redhat.com/browse/RHEL-100763
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    not kernel_newer_than(6, 18) or nm_minor_version() < 56,
+    reason=(
+        "HSR protocol version is only supported by NetworkManager 1.56+, "
+        "and kernel exposes this attribute only since 6.19+"
+    ),
+)
+@pytest.mark.parametrize("protocol", ("hsr", "hsr-2010", "hsr-2012"))
+def test_add_hsr_with_protocol_version(eth1_up, eth2_up, protocol):
+    with hsr_interface(HSR0, ETH1, ETH2, protocol=protocol) as state:
+        # hsr-2010 maps to hsr for backwards compatibility, so we expect to see
+        # only `hsr` protocol in the state.
+        state[Interface.KEY][0][Hsr.CONFIG_SUBTREE][Hsr.PROTOCOL] = (
+            "hsr" if "hsr-2010" == protocol else protocol
+        )
+        assertlib.assert_state(state)
+    assertlib.assert_absent(HSR0)
