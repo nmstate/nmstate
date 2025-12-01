@@ -5,8 +5,8 @@ use crate::{
         get_mac, new_eth_iface, new_ovs_br_iface, new_ovs_iface,
         new_unknown_iface, new_vlan_iface,
     },
-    BondMode, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
-    MergedInterfaces,
+    BondMode, ErrorKind, HsrProtocol, Interface, InterfaceState, InterfaceType,
+    Interfaces, MergedInterfaces,
 };
 
 #[test]
@@ -844,4 +844,70 @@ fn test_hsr_all_ifaces_only_permanent_mac() {
         get_mac(&hsr_iface.for_apply),
         Some("AA:BB:CC:DD:EE:FF".to_string())
     );
+}
+
+#[test]
+fn test_hsr_v1_protocol() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: eth1
+    type: ethernet
+    permanent-mac-address: aa:bb:cc:dd:ee:ff
+    state: up
+  - name: eth2
+    type: ethernet
+    permanent-mac-address: 11:22:33:44:55:66
+    state: up
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: hsr
+    ",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+  - name: hsr0
+    type: hsr
+    state: up
+    hsr:
+      port1: eth1
+      port2: eth2
+      multicast-spec: 40
+      protocol: hsr-2012
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let current_if = merged
+        .get_iface("hsr0", InterfaceType::Hsr)
+        .unwrap()
+        .current
+        .as_ref()
+        .unwrap();
+    if let Interface::Hsr(iface) = current_if {
+        assert_eq!(iface.hsr.as_ref().unwrap().protocol, HsrProtocol::Hsr);
+    } else {
+        panic!("Should be resolved to hsr interface, but got {current_if:?}");
+    }
+
+    let merged_if = merged
+        .get_iface("hsr0", InterfaceType::Hsr)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    if let Interface::Hsr(iface) = merged_if {
+        assert_eq!(iface.hsr.as_ref().unwrap().protocol, HsrProtocol::Hsr2012);
+    } else {
+        panic!("Should be resolved to hsr interface, but got {merged_if:?}");
+    }
 }

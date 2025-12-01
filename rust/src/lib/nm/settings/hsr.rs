@@ -15,7 +15,15 @@ pub(crate) fn gen_nm_hsr_setting(
         nm_hsr_set.multicast_spec = Some(hsr_conf.multicast_spec as u32);
         nm_hsr_set.prp = match hsr_conf.protocol {
             HsrProtocol::Prp => Some(true),
-            HsrProtocol::Hsr => Some(false),
+            HsrProtocol::Hsr | HsrProtocol::Hsr2012 => Some(false),
+        };
+        nm_hsr_set.protocol_version = match hsr_conf.protocol {
+            // TODO: If protocol is hsr-2010, don't set protocol version
+            // for backwards compatibility. This can be updated when the
+            // minimum required version of NetworkManager is 1.56.
+            HsrProtocol::Hsr => None,
+            HsrProtocol::Hsr2012 => Some(1),
+            HsrProtocol::Prp => None,
         };
     }
     nm_conn.hsr = Some(nm_hsr_set);

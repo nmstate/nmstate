@@ -256,6 +256,9 @@ impl HsrConfig {
 #[derive(Default)]
 pub enum HsrProtocol {
     #[default]
+    #[serde(alias = "hsr-2010")]
     Hsr,
+    #[serde(rename = "hsr-2012")]
+    Hsr2012,
     Prp,
 }
