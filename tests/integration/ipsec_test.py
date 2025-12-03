@@ -71,6 +71,11 @@ def ipsec_srv_4in6_6in4(ipsec_env):
 
 
 @pytest.fixture
+def ipsec_srv_cert_gw_icmp(ipsec_env):
+    IpsecTestEnv.start_ipsec_srv_cert_gw_icmp()
+
+
+@pytest.fixture
 def load_both_keys():
     IpsecTestEnv.load_both_srv_cli_keys()
     yield
@@ -1126,4 +1131,49 @@ def test_ipsec_ipv4_libreswan_p2p_no_nm_auto_defaults(ipsec_srv_p2p):
         _check_ipsec_policy,
         f"{IpsecTestEnv.CLI_ADDR_V4}/32",
         f"{IpsecTestEnv.SRV_ADDR_V4}/32",
+    )
+
+
+# https://issues.redhat.com/browse/RHEL-107158
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_libreswan_version_int() < version_str_to_int("1.2.28"),
+    reason="Need NetworkManager-libreswan 1.2.29+ to support leftprotoport",
+)
+@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
+def test_ipsec_leftprotoport_rightprotoport(ipsec_srv_cert_gw_icmp):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: {IPSEC_CONN_NAME}
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            nm-auto-defaults: false
+            left: {IpsecTestEnv.CLI_ADDR_V4}
+            leftid: '%fromcert'
+            leftcert: {IpsecTestEnv.CLI_KEY_ID}
+            leftmodecfgclient: true
+            right: {IpsecTestEnv.SRV_ADDR_V4}
+            rightid: '%fromcert'
+            rightsubnet: 0.0.0.0/0
+            leftprotoport: icmp
+            rightprotoport: icmp
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_ip,
+        IpsecTestEnv.SRV_POOL_PREFIX_V4,
+        IpsecTestEnv.CLI_NIC,
+    )
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec_ip,
+        IpsecTestEnv.SRV_POOL_PREFIX_V4,
+        IpsecTestEnv.CLI_NIC,
     )

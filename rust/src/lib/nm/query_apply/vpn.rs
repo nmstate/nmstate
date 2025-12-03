@@ -118,6 +118,8 @@ fn get_libreswan_conf(nm_set_vpn: &NmSettingVpn) -> LibreswanConfig {
             data.get("require-id-on-certificate").map(|s| s == "yes");
         ret.leftsendcert = data.get("leftsendcert").cloned();
         ret.rightca = data.get("rightca").cloned();
+        ret.leftprotoport = data.get("leftprotoport").cloned();
+        ret.rightprotoport = data.get("rightprotoport").cloned();
     }
     if let Some(secrets) = nm_set_vpn.secrets.as_ref() {
         ret.psk = secrets.get("pskvalue").cloned();
