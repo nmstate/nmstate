@@ -162,6 +162,10 @@ pub struct LibreswanConfig {
     pub leftsendcert: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rightca: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leftprotoport: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rightprotoport: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -208,6 +212,9 @@ impl std::fmt::Debug for LibreswanConfig {
             .field("clientaddrfamily", &self.clientaddrfamily)
             .field("require_id_on_certificate", &self.require_id_on_certificate)
             .field("leftsendcert", &self.leftsendcert)
+            .field("rightca", &self.rightca)
+            .field("leftprotoport", &self.leftprotoport)
+            .field("rightprotoport", &self.rightprotoport)
             .finish()
     }
 }

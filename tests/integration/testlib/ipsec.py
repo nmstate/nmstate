@@ -37,6 +37,7 @@ SRV_SITE_TO_SITE_CONF = f"{TEST_FILES_DIR}/site_to_site.conf"
 SRV_TRANSPORT_CONF = f"{TEST_FILES_DIR}/transport.conf"
 SRV_HOST_TO_SITE_CONF = f"{TEST_FILES_DIR}/host_to_site.conf"
 SRV_4IN6_6IN4_CONF = f"{TEST_FILES_DIR}/4in6_6in4.conf"
+SRV_CERT_GW_ICMP_CONF = f"{TEST_FILES_DIR}/cert_gw_icmp.conf"
 
 
 class IpsecTestEnv:
@@ -128,6 +129,9 @@ class IpsecTestEnv:
 
     def start_ipsec_srv_cert_gw():
         _start_ipsec_connection(SRV_CERT_GW_CONF)
+
+    def start_ipsec_srv_cert_gw_icmp():
+        _start_ipsec_connection(SRV_CERT_GW_ICMP_CONF)
 
     def start_ipsec_srv_p2p():
         _start_ipsec_connection(SRV_P2P_CONF)
