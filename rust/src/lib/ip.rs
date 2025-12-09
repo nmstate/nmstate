@@ -344,7 +344,8 @@ impl InterfaceIpv4 {
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
                 a.valid_life_time = None;
-                a.preferred_life_time = None
+                a.preferred_life_time = None;
+                a.dynamic = None;
             });
         }
 
@@ -390,6 +391,15 @@ impl InterfaceIpv4 {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn purge_timer(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs.iter_mut() {
+                addr.preferred_life_time = None;
+                addr.valid_life_time = None;
+            }
+        }
     }
 }
 
@@ -782,6 +792,15 @@ impl InterfaceIpv6 {
             }
         }
     }
+
+    pub(crate) fn purge_timer(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs.iter_mut() {
+                addr.preferred_life_time = None;
+                addr.valid_life_time = None;
+            }
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for InterfaceIpv6 {
@@ -908,6 +927,14 @@ pub struct InterfaceIpAddr {
         alias = "preferred-lft"
     )]
     pub preferred_life_time: Option<String>,
+    /// Whether IP address is dynamic allocated by DHCP or IPv6-RA.
+    /// This property is query only, it will be ignored when applying.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub dynamic: Option<bool>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -918,31 +945,32 @@ impl Default for InterfaceIpAddr {
             mptcp_flags: None,
             valid_life_time: None,
             preferred_life_time: None,
+            dynamic: None,
         }
     }
 }
 
 impl std::fmt::Display for InterfaceIpAddr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.is_auto() {
-            write!(
-                f,
-                "{}/{} valid_life_time {} preferred_lft {}",
-                self.ip,
-                self.prefix_length,
-                self.valid_life_time.as_deref().unwrap_or(FOREVER),
-                self.preferred_life_time.as_deref().unwrap_or(FOREVER)
-            )
-        } else {
-            write!(f, "{}/{}", self.ip, self.prefix_length)
+        write!(f, "{}/{}", self.ip, self.prefix_length,)?;
+        if let Some(life_time) = self.valid_life_time.as_ref() {
+            write!(f, " valid_life_time {life_time}")?;
         }
+        if let Some(life_time) = self.preferred_life_time.as_ref() {
+            write!(f, " preferred_lft {life_time}")?;
+        }
+        if self.dynamic == Some(true) {
+            write!(f, " dynamic")?;
+        }
+        Ok(())
     }
 }
 
 impl InterfaceIpAddr {
     pub(crate) fn is_auto(&self) -> bool {
-        self.valid_life_time.is_some()
-            && self.valid_life_time.as_deref() != Some(FOREVER)
+        self.dynamic == Some(true)
+            || (self.valid_life_time.is_some()
+                && self.valid_life_time.as_deref() != Some(FOREVER))
     }
 }
 
@@ -992,6 +1020,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             mptcp_flags: None,
             valid_life_time: None,
             preferred_life_time: None,
+            dynamic: None,
         })
     }
 }

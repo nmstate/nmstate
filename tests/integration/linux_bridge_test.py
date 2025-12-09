@@ -1382,3 +1382,19 @@ def test_change_mtu_with_stable_link_up(bridge0_with_port0):
     )
 
     assertlib.assert_state(desired_state)
+
+
+def test_nmstatectl_purge_linux_bridge_timer(bridge0_with_port0):
+    output = exec_cmd(
+        f"nmstatectl show {TEST_BRIDGE0}".split(),
+        check=True,
+    )[1]
+    assert "gc-timer" in output
+    assert "hello-timer" in output
+
+    output = exec_cmd(
+        f"nmstatectl show --purge-timer {TEST_BRIDGE0}".split(),
+        check=True,
+    )[1]
+    assert "gc-timer" not in output
+    assert "hello-timer" not in output

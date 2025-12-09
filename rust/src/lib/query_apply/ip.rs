@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Interface, InterfaceIpv4, InterfaceIpv6};
+use crate::{Interface, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 
 impl InterfaceIpv4 {
     // Sort addresses and dedup
@@ -8,6 +8,9 @@ impl InterfaceIpv4 {
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.sort_unstable();
             addrs.dedup();
+            for addr in addrs.iter_mut() {
+                addr.sanitize_current_for_verify();
+            }
         }
         if self.dhcp_custom_hostname.is_none() {
             self.dhcp_custom_hostname = Some(String::new());
@@ -32,6 +35,9 @@ impl InterfaceIpv4 {
                 // false as it might varied depend on whether have route on it
                 self.enabled_defined = false;
             } else {
+                for addr in addrs.iter_mut() {
+                    addr.sanitize_desired_for_verify();
+                }
                 addrs.sort_unstable();
                 addrs.dedup();
             }
@@ -92,6 +98,9 @@ impl InterfaceIpv6 {
     // Sort addresses and dedup
     pub(crate) fn sanitize_current_for_verify(&mut self) {
         if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs.iter_mut() {
+                addr.sanitize_current_for_verify();
+            }
             addrs.sort_unstable();
             addrs.dedup();
         }
@@ -123,6 +132,9 @@ impl InterfaceIpv6 {
     // Sort addresses and dedup
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
         if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs.iter_mut() {
+                addr.sanitize_desired_for_verify();
+            }
             addrs.sort_unstable();
             addrs.dedup();
         }
@@ -195,7 +207,11 @@ impl Interface {
                 (des_ip.addresses.as_ref(), cur_ip.addresses.as_mut())
             {
                 if des_ip.allow_extra_address != Some(false) {
-                    cur_ip_addrs.retain(|i| des_ip_addrs.contains(i))
+                    cur_ip_addrs.retain(|c| {
+                        des_ip_addrs.iter().any(|d| {
+                            d.ip == c.ip && d.prefix_length == c.prefix_length
+                        })
+                    })
                 }
                 // Remove allow_extra_address as current does not have it
                 des_ip.allow_extra_address = None
@@ -209,11 +225,29 @@ impl Interface {
                 (des_ip.addresses.as_ref(), cur_ip.addresses.as_mut())
             {
                 if des_ip.allow_extra_address != Some(false) {
-                    cur_ip_addrs.retain(|i| des_ip_addrs.contains(i))
+                    cur_ip_addrs.retain(|c| {
+                        des_ip_addrs.iter().any(|d| {
+                            d.ip == c.ip && d.prefix_length == c.prefix_length
+                        })
+                    })
                 }
                 // Remove allow_extra_address as current does not have it
                 des_ip.allow_extra_address = None
             }
+        }
+    }
+}
+
+impl InterfaceIpAddr {
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        if self.dynamic != Some(true) {
+            self.dynamic = None;
+        }
+    }
+
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        if self.dynamic != Some(true) {
+            self.dynamic = None;
         }
     }
 }

@@ -40,6 +40,9 @@ pub(crate) fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
     }
     net_state.set_include_secrets(matches.is_present("SHOW_SECRETS"));
     net_state.retrieve()?;
+    if matches.is_present("PURGE_TIMER") {
+        net_state.purge_timer();
+    }
     Ok(if let Some(ifname) = matches.value_of("IFNAME") {
         let mut new_net_state = filter_net_state_with_iface(&net_state, ifname);
         new_net_state.set_kernel_only(matches.is_present("KERNEL"));

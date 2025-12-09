@@ -721,6 +721,12 @@ impl Interfaces {
             }
         }
     }
+
+    pub(crate) fn purge_timer(&mut self) {
+        for iface in self.kernel_ifaces.values_mut().filter(|i| i.is_up()) {
+            iface.purge_timer()
+        }
+    }
 }
 
 fn is_opt_str_empty(opt_string: &Option<String>) -> bool {

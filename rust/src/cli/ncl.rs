@@ -138,6 +138,12 @@ fn main() {
                         .long("show-secrets")
                         .takes_value(false)
                         .help("Show secrets(hide by default)"),
+                )
+                .arg(
+                    clap::Arg::new("PURGE_TIMER")
+                        .long("purge-timer")
+                        .takes_value(false)
+                        .help("Purge count down timer properties"),
                 ),
         )
         .subcommand(

@@ -773,6 +773,18 @@ impl Interface {
             iface.change_port_name(org_port_name, new_port_name);
         }
     }
+
+    pub(crate) fn purge_timer(&mut self) {
+        if let Some(ip) = self.base_iface_mut().ipv4.as_mut() {
+            ip.purge_timer()
+        }
+        if let Some(ip) = self.base_iface_mut().ipv6.as_mut() {
+            ip.purge_timer()
+        }
+        if let Interface::LinuxBridge(iface) = self {
+            iface.purge_timer()
+        }
+    }
 }
 
 // The default on enum is experimental, but clippy is suggestion we use

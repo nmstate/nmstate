@@ -259,6 +259,17 @@ impl NetworkState {
         }
     }
 
+    /// Purge lifetime properties like:
+    /// * `ipv4.valid-life-time`
+    /// * `ipv4.preferred-life-time`
+    /// * `ipv6.valid-life-time`
+    /// * `ipv6.preferred-life-time`
+    /// * `bridge.gc-timer`
+    /// * `bridge.hello-timer`
+    pub fn purge_timer(&mut self) {
+        self.interfaces.purge_timer();
+    }
+
     /// Append [Interface] into [NetworkState]
     pub fn append_interface_data(&mut self, iface: Interface) {
         self.interfaces.push(iface);

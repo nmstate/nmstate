@@ -53,6 +53,11 @@ pub(crate) fn np_ipv4_to_nmstate(
                     } else {
                         None
                     },
+                    dynamic: if np_addr.valid_lft != "forever" {
+                        Some(true)
+                    } else {
+                        None
+                    },
                     ..Default::default()
                 }),
                 Err(e) => {
@@ -124,6 +129,14 @@ pub(crate) fn np_ipv6_to_nmstate(
                     },
                     preferred_life_time: if np_addr.preferred_lft != "forever" {
                         Some(np_addr.preferred_lft.clone())
+                    } else {
+                        None
+                    },
+                    dynamic: if !np_addr
+                        .flags
+                        .contains(&nispor::Ipv6AddrFlag::Permanent)
+                    {
+                        Some(true)
                     } else {
                         None
                     },

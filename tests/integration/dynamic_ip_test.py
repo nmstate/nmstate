@@ -24,6 +24,7 @@ from libnmstate.schema import Route
 
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
+from libnmstate.iplib import is_ipv6_address
 from libnmstate.iplib import is_ipv6_link_local_addr
 
 from .testlib import assertlib
@@ -626,6 +627,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
     dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state.pop(Interface.MPTCP, None)
     dhcp_cli_desired_state[Interface.IPV4] = _create_ipv4_state(
         enabled=True, dhcp=False
     )
@@ -1059,23 +1061,29 @@ def _create_ipv6_state(
 def create_ipv4_address_state(
     address, prefix_length, valid_lft=None, prefferred_lft=None
 ):
-    return {
+    ret = {
         InterfaceIPv4.ADDRESS_IP: address,
         InterfaceIPv4.ADDRESS_PREFIX_LENGTH: prefix_length,
         InterfaceIPv4.ADDRESS_VALID_LIFE_TIME: valid_lft,
         InterfaceIPv4.ADDRESS_PREFERRED_LIFE_TIME: prefferred_lft,
     }
+    if valid_lft is not None and valid_lft != "forever":
+        ret[InterfaceIPv4.DYNAMIC] = True
+    return ret
 
 
 def create_ipv6_address_state(
     address, prefix_length, valid_lft=None, prefferred_lft=None
 ):
-    return {
+    ret = {
         InterfaceIPv6.ADDRESS_IP: address,
         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: prefix_length,
         InterfaceIPv6.ADDRESS_VALID_LIFE_TIME: valid_lft,
         InterfaceIPv6.ADDRESS_PREFERRED_LIFE_TIME: prefferred_lft,
     }
+    if valid_lft is not None and valid_lft != "forever":
+        ret[InterfaceIPv6.DYNAMIC] = True
+    return ret
 
 
 @pytest.fixture(scope="function")
@@ -1542,6 +1550,7 @@ def _remove_ip_lifetime(addresses):
     for addr in addresses:
         addr.pop(InterfaceIP.ADDRESS_VALID_LIFE_TIME, None)
         addr.pop(InterfaceIP.ADDRESS_PREFERRED_LIFE_TIME, None)
+        addr.pop(InterfaceIP.DYNAMIC, None)
 
 
 def _remove_ip_mptcp_flags(addresses):
@@ -2403,3 +2412,39 @@ def test_enable_ipv4_forwarding_on_auto_iface_without_dhcp_srv():
         )
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
+
+
+def test_show_auto_ip_with_dynamic_property(dhcpcli_up_with_dynamic_ip):
+    iface_state = statelib.show_only((DHCP_CLI_NIC,))[Interface.KEY][0]
+
+    for addrs in (
+        iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS],
+        iface_state[Interface.IPV6][InterfaceIPv6.ADDRESS],
+    ):
+        for addr in addrs:
+            if is_ipv6_address(
+                addr[InterfaceIP.ADDRESS_IP]
+            ) and is_ipv6_link_local_addr(
+                addr[InterfaceIPv6.ADDRESS_IP],
+                addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
+            ):
+                continue
+            assert addr[InterfaceIP.DYNAMIC]
+
+
+def test_nmstatectl_purge_ip_timer(dhcpcli_up_with_dynamic_ip):
+    output = cmdlib.exec_cmd(
+        f"nmstatectl show {DHCP_CLI_NIC}".split(),
+        check=True,
+    )[1]
+    assert "valid-life-time" in output
+    assert "preferred-life-time" in output
+    assert "dynamic: true" in output
+
+    output = cmdlib.exec_cmd(
+        f"nmstatectl show --purge-timer {DHCP_CLI_NIC}".split(),
+        check=True,
+    )[1]
+    assert "valid-life-time" not in output
+    assert "preferred-life-time" not in output
+    assert "dynamic: true" in output

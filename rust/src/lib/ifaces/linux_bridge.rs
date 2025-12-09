@@ -124,7 +124,7 @@ impl LinuxBridgeInterface {
         self.use_upper_case_of_mac_address();
         self.flatten_port_vlan_ranges();
         self.sort_port_vlans();
-        self.remove_runtime_only_timers();
+        self.purge_timer();
         if let Some(port_confs) = self
             .bridge
             .as_ref()
@@ -188,7 +188,7 @@ impl LinuxBridgeInterface {
         }
     }
 
-    fn remove_runtime_only_timers(&mut self) {
+    pub(crate) fn purge_timer(&mut self) {
         if let Some(ref mut br_conf) = self.bridge {
             if let Some(ref mut opts) = &mut br_conf.options {
                 opts.gc_timer = None;
