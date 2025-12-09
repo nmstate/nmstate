@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.57] - 2025-12-09
+### Breaking changes
+ - N/A
+
+### New features
+ - ipsec: Add options: leftprotoport, rightprotoport. (c8c94b75)
+ - hsr: Add support for HSRv1/2012 protocol. (ea255551)
+
+### Bug fixes
+ - iface: Consistent order on serialization. (6caa2654)
+ - deps: use time instead of chrono. (742c6911)
+
 ## [2.2.56] - 2025-11-25
 ### Breaking changes
  - N/A
