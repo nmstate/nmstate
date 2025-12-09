@@ -629,6 +629,12 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
     dhcp_cli_desired_state[Interface.IPV4] = _create_ipv4_state(
         enabled=True, dhcp=False
     )
+    dhcp_cli_desired_state[Interface.IPV4][InterfaceIPv4.ADDRESS] = [
+        {
+            InterfaceIPv4.ADDRESS_IP: "192.0.2.249",
+            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+        }
+    ]
 
     apply_with_description(
         "Configure the ethernet device dhcpcli with the address "
