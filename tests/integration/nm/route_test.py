@@ -282,7 +282,6 @@ def test_reapply_with_ip_setting_table_and_metric_defaults(dummy0_up):
     assert_routes(desired_state[Route.KEY][Route.CONFIG], cur_state)
 
 
-@pytest.mark.tier1
 @pytest.fixture
 def vlan_with_empty_connection_iface_name(eth1_up):
     exec_cmd(
@@ -296,6 +295,7 @@ def vlan_with_empty_connection_iface_name(eth1_up):
     exec_cmd("nmcli c delete eth1.100".split(), check=True)
 
 
+@pytest.mark.tier1
 def test_add_route_to_vlan_with_empty_connection_iface_name(
     vlan_with_empty_connection_iface_name,
 ):
