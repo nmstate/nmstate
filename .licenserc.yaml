@@ -6,6 +6,9 @@ header:
   paths:
     - 'rust/src/python/*'
     - 'rust/src/*'
+    - 'tests/integration/*.py'
+    - 'tests/integration/testlib/*.py'
+    - 'tests/integration/nm/*.py'
 
   paths-ignore:
     - 'target'
