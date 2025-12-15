@@ -185,7 +185,7 @@ displays nmstate version.
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
 .SH COPYRIGHT
-License LGPL-2.1 or any later version
-<https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt>.
+License Apache-2.0
+<https://www.apache.org/licenses/LICENSE-2.0>
 .SH SEE ALSO
 .B NetworkManager\fP(8)

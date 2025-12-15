@@ -1,5 +1,5 @@
 [project]
-license = "LGPL-2.1-or-later"
+license = "Apache-2.0"
 
 [build-system]
 requires = ["setuptools"]
