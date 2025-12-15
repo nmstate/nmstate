@@ -42,6 +42,7 @@ pub(crate) fn np_hsr_to_nmstate(
     let hsr_conf = np_iface.hsr.as_ref().map(|np_hsr_info| HsrConfig {
         port1: np_hsr_info.port1.clone().unwrap_or_default(),
         port2: np_hsr_info.port2.clone().unwrap_or_default(),
+        interlink: np_hsr_info.interlink.clone(),
         supervision_address: Some(np_hsr_info.supervision_addr.clone()),
         // Due to a kernel bug multicast_spec is always zero. Until it is fixed,
         // use the last byte of supervision_address instead.

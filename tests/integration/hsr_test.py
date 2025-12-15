@@ -17,6 +17,7 @@ from .testlib.ifacelib import get_mac_address
 
 ETH1 = "eth1"
 ETH2 = "eth2"
+ETH3 = "eth3"
 HSR0 = "hsr0"
 
 
@@ -85,7 +86,7 @@ def test_hsr_update_protocol(hsr0_with_eths):
 # https://issues.redhat.com/browse/RHEL-100763
 @pytest.mark.tier1
 @pytest.mark.skipif(
-    not kernel_newer_than(6, 18) or nm_minor_version() < 56,
+    not kernel_newer_than(6, 19) or nm_minor_version() < 56,
     reason=(
         "HSR protocol version is only supported by NetworkManager 1.56+, "
         "and kernel exposes this attribute only since 6.19+"
@@ -99,5 +100,22 @@ def test_add_hsr_with_protocol_version(eth1_up, eth2_up, protocol):
         state[Interface.KEY][0][Hsr.CONFIG_SUBTREE][Hsr.PROTOCOL] = (
             "hsr" if "hsr-2010" == protocol else protocol
         )
+        assertlib.assert_state(state)
+    assertlib.assert_absent(HSR0)
+
+
+# https://issues.redhat.com/browse/RHEL-100766
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    not kernel_newer_than(6, 19) or nm_minor_version() < 55,
+    reason=(
+        "HSR interlink is only supported by NetworkManager 1.55+, "
+        "and kernel exposes this attribute only since 6.19+"
+    ),
+)
+def test_add_hsr_with_interlink(eth1_up, eth2_up, eth3_up):
+    with hsr_interface(
+        HSR0, ETH1, ETH2, protocol="hsr", interlink=ETH3
+    ) as state:
         assertlib.assert_state(state)
     assertlib.assert_absent(HSR0)
