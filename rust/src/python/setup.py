@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: Apache-2.0
 
 import setuptools
 
@@ -23,7 +23,7 @@ setuptools.setup(
     url="https://github.com/nmstate/nmstate/",
     packages=setuptools.find_packages(),
     install_requires=requirements(),
-    license="ASL2.0+",
+    license="Apache-2.0",
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",

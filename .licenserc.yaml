@@ -4,16 +4,16 @@ header:
       SPDX-License-Identifier: Apache-2.0
 
   paths:
+    - 'rust/src/python/*'
     - 'rust/src/*'
 
   paths-ignore:
     - 'target'
-    - '**/*.py'
+    - '**/*.toml'
+    - '**/*.lock'
     - '**/*.mod'
     - '**/*.sum'
     - '**/*.in'
-    - '**/*.toml'
-    - '**/*.lock'
     - '**/*.yml'
     - '**/*.md'
     - 'CHANGELOG'

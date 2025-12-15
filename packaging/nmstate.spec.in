@@ -12,7 +12,7 @@ Name:           nmstate
 Version:        @VERSION@
 Release:        @RELEASE@%{?dist}
 Summary:        Declarative network manager API
-License:        Apache-2.0 AND LGPL-2.1-or-later
+License:        Apache-2.0
 URL:            https://github.com/%{srcname}/%{srcname}
 %if ! %{is_snapshot}
 Source0:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
