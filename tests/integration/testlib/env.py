@@ -41,4 +41,4 @@ def version_str_to_int(version_str):
 
 def kernel_newer_than(major, minor):
     version_str = exec_cmd("uname -r".split(), check=True)[1].split("-")[0]
-    return version_str_to_int(version_str) > version_int(major, minor)
+    return version_str_to_int(version_str) >= version_int(major, minor)

@@ -124,3 +124,42 @@ fn test_auto_include_hsr_port_as_changed() {
         Some(false)
     );
 }
+
+#[test]
+fn test_prp_interlink_is_forbidden() {
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+      - name: eth1
+        type: ethernet
+      - name: eth2
+        type: ethernet
+      - name: eth3
+        type: ethernet
+      ",
+    )
+    .unwrap();
+    let des_ifaces = serde_yaml::from_str(
+        r"---
+        - name: hsr0
+          type: hsr
+          state: up
+          hsr:
+            port1: eth1
+            port2: eth2
+            interlink: eth3
+            protocol: prp
+            multicast-spec: 40",
+    )
+    .unwrap();
+
+    let err = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap_err();
+
+    assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    assert!(err.msg().contains("interlink property is not supported"));
+}

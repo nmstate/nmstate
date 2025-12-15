@@ -500,6 +500,7 @@ class Hsr:
     CONFIG_SUBTREE = "hsr"
     PORT1 = "port1"
     PORT2 = "port2"
+    INTERLINK = "interlink"
     SUPERVISION_ADDRESS = "supervision-address"
     MULTICAST_SPEC = "multicast-spec"
     PROTOCOL = "protocol"

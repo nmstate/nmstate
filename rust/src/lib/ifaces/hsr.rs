@@ -76,6 +76,22 @@ impl HsrInterface {
                  state."
             );
         }
+
+        if is_desired
+            && let Some(conf) = &mut self.hsr
+            && conf.interlink.is_some()
+            && conf.protocol == HsrProtocol::Prp
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "The interlink property is not supported on PRP interface \
+                     {}",
+                    self.base.name
+                ),
+            ));
+        }
+
         Ok(())
     }
 }
@@ -259,6 +275,9 @@ pub struct HsrConfig {
     pub port1: String,
     /// The port2 interface name.
     pub port2: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// The interlink interface name.
+    pub interlink: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// The MAC address used for the supervision frames. This property is
     /// read-only.

@@ -27,6 +27,7 @@ nmstate: {nmstate_version}
 """
 
 ISOLATE_NAMESPACE = "nmstate_test_ep"
+ISOLATE_NAMESPACE_ETH3 = "nmstate_test_ep3"
 LIBNMSTATE_APPLY = libnmstate.apply
 LIBNMSTATE_SHOW = libnmstate.show
 DUMP_STATES_DIR = os.path.join(
@@ -110,6 +111,17 @@ def test_env_setup():
     restore_old_state(old_state)
 
 
+# eth3 is only needed for some specific tests (HSR).
+# If it's not necessary, do not set it up to save time.
+@pytest.fixture(scope="session")
+def test_env_setup_eth3(test_env_setup):
+    remove_veth_pair("eth3", ISOLATE_NAMESPACE_ETH3)
+    create_veth_pair("eth3", "eth3.ep", ISOLATE_NAMESPACE_ETH3)
+    ifacelib.ifaces_init("eth3")
+    yield
+    remove_veth_pair("eth3", ISOLATE_NAMESPACE_ETH3)
+
+
 def _remove_dns_route_route_rule():
     """
     Remove existing DNS, routes, route rules in case it interference tests.
@@ -167,6 +179,12 @@ def eth1_up(test_env_setup):
 @pytest.fixture(scope="function")
 def eth2_up(test_env_setup):
     with ifacelib.iface_up("eth2") as ifstate:
+        yield ifstate
+
+
+@pytest.fixture(scope="function")
+def eth3_up(test_env_setup_eth3):
+    with ifacelib.iface_up("eth3") as ifstate:
         yield ifstate
 
 

@@ -11,7 +11,13 @@ from libnmstate.schema import InterfaceType
 
 @contextmanager
 def hsr_interface(
-    name, port1, port2, mcast_spec=40, protocol="prp", create=True
+    name,
+    port1,
+    port2,
+    interlink=None,
+    mcast_spec=40,
+    protocol="prp",
+    create=True,
 ):
     desired_state = {
         Interface.KEY: [
@@ -28,6 +34,11 @@ def hsr_interface(
             }
         ]
     }
+
+    if interlink is not None:
+        desired_state[Interface.KEY][0][Hsr.CONFIG_SUBTREE][
+            Hsr.INTERLINK
+        ] = interlink
 
     if create:
         libnmstate.apply(desired_state)

@@ -12,6 +12,7 @@ use super::super::{NmError, ToDbusValue, connection::DbusDictionary};
 pub struct NmSettingHsr {
     pub port1: Option<String>,
     pub port2: Option<String>,
+    pub interlink: Option<String>,
     pub multicast_spec: Option<u32>,
     pub protocol_version: Option<i32>,
     pub prp: Option<bool>,
@@ -24,6 +25,7 @@ impl TryFrom<DbusDictionary> for NmSettingHsr {
         Ok(Self {
             port1: _from_map!(v, "port1", String::try_from)?,
             port2: _from_map!(v, "port2", String::try_from)?,
+            interlink: _from_map!(v, "interlink", String::try_from)?,
             multicast_spec: _from_map!(v, "multicast-spec", u32::try_from)?,
             protocol_version: _from_map!(v, "protocol-version", i32::try_from)?,
             prp: _from_map!(v, "prp", bool::try_from)?,
@@ -36,10 +38,13 @@ impl ToDbusValue for NmSettingHsr {
     fn to_value(&self) -> Result<HashMap<&str, zvariant::Value<'_>>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.port1 {
-            ret.insert("port1", zvariant::Value::new(v.clone()));
+            ret.insert("port1", zvariant::Value::new(v));
         }
         if let Some(v) = &self.port2 {
-            ret.insert("port2", zvariant::Value::new(v.clone()));
+            ret.insert("port2", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.interlink {
+            ret.insert("interlink", zvariant::Value::new(v));
         }
         if let Some(v) = &self.multicast_spec
             && *v > 0
