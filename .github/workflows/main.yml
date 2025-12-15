@@ -107,7 +107,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: build nmstate rpm
         run: .github/workflows/build_rpm.sh ${{ matrix.os_type }}
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: rpms_${{ matrix.os_type }}
           path: rpms/${{ matrix.os_type }}
@@ -167,7 +167,7 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: nmstate-test-junit-artifact-${{ matrix.job_type }}
           path: junit.*xml
@@ -181,7 +181,7 @@ jobs:
             fdupes -d -N tests/integration/.states/
           fi
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: nmstate-test-apply-show-dump-artifact-${{ matrix.job_type }}
           path: tests/integration/.states/*
@@ -192,7 +192,7 @@ jobs:
         if: ${{ failure() }}
         run: sudo chmod 777 test_artifacts/*
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: ${{ failure() }}
         with:
           name: nmstate-test-artifact-${{ matrix.job_type }}
