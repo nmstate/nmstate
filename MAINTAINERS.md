@@ -3,6 +3,7 @@ The current Maintainers Group for the nmstate Project consists of:
 | Name | Employer |
 | ---- | -------- |
 | [Gris Ge](https://github.com/cathay4t) | Red Hat |
+| [Fernando Fernandez Mancera](https://github.com/ffmancera) | SUSE |
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for general contribution guidelines.
 
