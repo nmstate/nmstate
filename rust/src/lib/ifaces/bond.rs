@@ -4,13 +4,11 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::Ipv6Addr;
 
-use serde::{
-    de::IntoDeserializer, Deserialize, Deserializer, Serialize, Serializer,
-};
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    deserializer::NumberAsString, BaseInterface, ErrorKind, Interface,
-    InterfaceState, InterfaceType, MergedInterface, NmstateError,
+    BaseInterface, ErrorKind, Interface, InterfaceState, InterfaceType,
+    MergedInterface, NmstateError,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -444,7 +442,6 @@ impl BondInterface {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
-#[serde(remote = "BondMode")]
 /// Bond mode
 #[derive(Default)]
 pub enum BondMode {
@@ -482,28 +479,6 @@ pub enum BondMode {
     Unknown,
 }
 
-impl<'de> Deserialize<'de> for BondMode {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondMode::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondMode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondMode::serialize(self, serializer)
-    }
-}
-
 impl std::fmt::Display for BondMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -527,7 +502,11 @@ impl std::fmt::Display for BondMode {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct BondConfig {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
+    )]
     /// Mode is mandatory when create new bond interface.
     pub mode: Option<BondMode>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -559,7 +538,7 @@ impl BondConfig {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
-#[serde(remote = "BondAdSelect", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 /// Specifies the 802.3ad aggregation selection logic to use.
 pub enum BondAdSelect {
     /// Deserialize and serialize from/to `stable`.
@@ -571,28 +550,6 @@ pub enum BondAdSelect {
     /// Deserialize and serialize from/to `count`.
     #[serde(alias = "2")]
     Count,
-}
-
-impl<'de> Deserialize<'de> for BondAdSelect {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondAdSelect::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondAdSelect {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondAdSelect::serialize(self, serializer)
-    }
 }
 
 impl std::fmt::Display for BondAdSelect {
@@ -610,7 +567,7 @@ impl std::fmt::Display for BondAdSelect {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case", remote = "BondLacpRate")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// Option specifying the rate in which we'll ask our link partner to transmit
 /// LACPDU packets in 802.3ad mode
@@ -627,28 +584,6 @@ pub enum BondLacpRate {
     Fast,
 }
 
-impl<'de> Deserialize<'de> for BondLacpRate {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondLacpRate::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondLacpRate {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondLacpRate::serialize(self, serializer)
-    }
-}
-
 impl std::fmt::Display for BondLacpRate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -663,7 +598,7 @@ impl std::fmt::Display for BondLacpRate {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "kebab-case", remote = "BondAllPortsActive")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// Equal to kernel `all_slaves_active` option.
 /// Specifies that duplicate frames (received on inactive ports) should be
@@ -679,28 +614,6 @@ pub enum BondAllPortsActive {
     /// Deserialize from 1 or `delivered`.
     #[serde(alias = "1")]
     Delivered,
-}
-
-impl<'de> Deserialize<'de> for BondAllPortsActive {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondAllPortsActive::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondAllPortsActive {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondAllPortsActive::serialize(self, serializer)
-    }
 }
 
 impl std::fmt::Display for BondAllPortsActive {
@@ -731,7 +644,7 @@ impl From<BondAllPortsActive> for u8 {
 /// the ARP monitor to consider a port as being up. This option affects only
 /// active-backup mode for ports with arp_validation enabled.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case", remote = "BondArpAllTargets")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondArpAllTargets {
     /// consider the port up only when any of the `arp_ip_target` is reachable
@@ -741,28 +654,6 @@ pub enum BondArpAllTargets {
     /// reachable
     #[serde(alias = "1")]
     All,
-}
-
-impl<'de> Deserialize<'de> for BondArpAllTargets {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondArpAllTargets::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondArpAllTargets {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondArpAllTargets::serialize(self, serializer)
-    }
 }
 
 impl std::fmt::Display for BondArpAllTargets {
@@ -784,7 +675,7 @@ impl std::fmt::Display for BondArpAllTargets {
 /// mode that supports arp monitoring, or whether non-ARP traffic should be
 /// filtered (disregarded) for link monitoring purposes.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "snake_case", remote = "BondArpValidate")]
+#[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum BondArpValidate {
     /// No validation or filtering is performed.
@@ -826,28 +717,6 @@ pub enum BondArpValidate {
     FilterBackup,
 }
 
-impl<'de> Deserialize<'de> for BondArpValidate {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondArpValidate::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondArpValidate {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondArpValidate::serialize(self, serializer)
-    }
-}
-
 impl std::fmt::Display for BondArpValidate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -873,7 +742,7 @@ impl std::fmt::Display for BondArpValidate {
 /// perform special handling of the bond's MAC address in accordance with the
 /// selected policy.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "kebab-case", remote = "BondFailOverMac")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondFailOverMac {
     /// This setting disables fail_over_mac, and causes bonding to set all
@@ -903,28 +772,6 @@ pub enum BondFailOverMac {
     Follow,
 }
 
-impl<'de> Deserialize<'de> for BondFailOverMac {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondFailOverMac::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondFailOverMac {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondFailOverMac::serialize(self, serializer)
-    }
-}
-
 impl std::fmt::Display for BondFailOverMac {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -946,7 +793,7 @@ impl std::fmt::Display for BondFailOverMac {
 /// port or recovery of the primary port occurs. This option is designed to
 /// prevent flip-flopping between the primary port and other ports.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case", remote = "BondPrimaryReselect")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondPrimaryReselect {
     ///The primary port becomes the active port whenever it comes back up.
@@ -969,27 +816,6 @@ pub enum BondPrimaryReselect {
     Failure,
 }
 
-impl<'de> Deserialize<'de> for BondPrimaryReselect {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondPrimaryReselect::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondPrimaryReselect {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondPrimaryReselect::serialize(self, serializer)
-    }
-}
 impl std::fmt::Display for BondPrimaryReselect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -1010,7 +836,6 @@ impl std::fmt::Display for BondPrimaryReselect {
 /// 802.3ad, and tlb modes.
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
-#[serde(remote = "BondXmitHashPolicy")]
 pub enum BondXmitHashPolicy {
     #[serde(rename = "layer2", alias = "0")]
     /// Serialize to `layer2`.
@@ -1038,28 +863,6 @@ pub enum BondXmitHashPolicy {
     VlanSrcMac,
 }
 
-impl<'de> Deserialize<'de> for BondXmitHashPolicy {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        BondXmitHashPolicy::deserialize(
-            NumberAsString::deserialize(deserializer)?
-                .as_str()
-                .into_deserializer(),
-        )
-    }
-}
-
-impl Serialize for BondXmitHashPolicy {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        BondXmitHashPolicy::serialize(self, serializer)
-    }
-}
-
 impl std::fmt::Display for BondXmitHashPolicy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -1081,31 +884,30 @@ impl std::fmt::Display for BondXmitHashPolicy {
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct BondOptions {
+    /// In an AD system, this specifies the system priority. The allowed range
+    /// is 1 - 65535.
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
-    /// In an AD system, this specifies the system priority. The allowed range
-    /// is 1 - 65535.
     pub ad_actor_sys_prio: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// In an AD system, this specifies the mac-address for the actor in
     /// protocol packet exchanges (LACPDUs). The value cannot be NULL or
     /// multicast. It is preferred to have the local-admin bit set for this mac
     /// but driver does not enforce it. If the value is not given then system
     /// defaults to using the controller's mac address as actors' system
     /// address.
-    pub ad_actor_system: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub ad_actor_system: Option<String>,
     /// Specifies the 802.3ad aggregation selection logic to use. The
     /// possible values and their effects are:
-    pub ad_select: Option<BondAdSelect>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u16_or_string"
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
     )]
+    pub ad_select: Option<BondAdSelect>,
     /// In an AD system, the port-key has three parts as shown below -
     ///
     /// ```text
@@ -1120,26 +922,34 @@ pub struct BondOptions {
     /// - 1023. If not given, the system defaults to 0.
     ///
     /// This parameter has effect only in 802.3ad mode.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub ad_user_port_key: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// Specifies that duplicate frames (received on inactive ports) should be
     /// dropped (0) or delivered (1).
     ///
     /// Normally, bonding will drop duplicate frames (received on inactive
     /// ports), which is desirable for most users. But there are some times it
     /// is nice to allow duplicate frames to be delivered.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
+    )]
     pub all_slaves_active: Option<BondAllPortsActive>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// Specifies the quantity of arp_ip_target that must be reachable in
     /// order for the ARP monitor to consider a port as being up. This
     /// option affects only active-backup mode for ports with
     /// arp_validation enabled.
-    pub arp_all_targets: Option<BondArpAllTargets>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
     )]
+    pub arp_all_targets: Option<BondArpAllTargets>,
     /// Specifies the ARP link monitoring frequency in milliseconds.
     ///
     /// The ARP monitor works by periodically checking the port devices to
@@ -1163,8 +973,12 @@ pub struct BondOptions {
     ///  * `802.3ad`
     ///  * `balance-tlb`
     ///  * `balance-alb`
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub arp_interval: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// Specifies the IP addresses to use as ARP monitoring peers when
     /// arp_interval is > 0. These are the targets of the ARP request sent to
     /// determine the health of the link to the targets. Specify these values
@@ -1172,49 +986,57 @@ pub struct BondOptions {
     /// comma. At least one IP address must be given for ARP monitoring to
     /// function. The maximum number of targets that can be specified is 16.
     /// The default value is no IP addresses.
-    pub arp_ip_target: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub arp_ip_target: Option<String>,
     /// Specifies whether or not ARP probes and replies should be validated in
     /// any mode that supports arp monitoring, or whether non-ARP traffic
     /// should be filtered (disregarded) for link monitoring purposes.
-    pub arp_validate: Option<BondArpValidate>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
     )]
+    pub arp_validate: Option<BondArpValidate>,
     /// Specifies the time, in milliseconds, to wait before disabling a port
     /// after a link failure has been detected. This option is only valid for
     /// the miimon link monitor. The downdelay value should be a multiple of
     /// the miimon value; if not, it will be rounded down to the nearest
     /// multiple. The default value is 0.
-    pub downdelay: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Specifies whether active-backup mode should set all ports to the same
-    /// MAC address at enportment (the traditional behavior), or, when enabled,
-    /// perform special handling of the bond's MAC address in accordance with
-    /// the selected policy.
-    pub fail_over_mac: Option<BondFailOverMac>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Option specifying the rate in which we'll ask our link partner to
-    /// transmit LACPDU packets in 802.3ad mode.
-    pub lacp_rate: Option<BondLacpRate>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    pub downdelay: Option<u32>,
+    /// Specifies whether active-backup mode should set all ports to the same
+    /// MAC address at enportment (the traditional behavior), or, when enabled,
+    /// perform special handling of the bond's MAC address in accordance with
+    /// the selected policy.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
+    )]
+    pub fail_over_mac: Option<BondFailOverMac>,
+    /// Option specifying the rate in which we'll ask our link partner to
+    /// transmit LACPDU packets in 802.3ad mode.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
+    )]
+    pub lacp_rate: Option<BondLacpRate>,
     /// Specifies the number of seconds between instances where the bonding
     /// driver sends learning packets to each slaves peer switch.
     ///
     /// The valid range is 1 - 0x7fffffff; the default value is 1. This Option
     /// has effect only in balance-tlb and balance-alb modes.
-    pub lp_interval: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    pub lp_interval: Option<u32>,
     /// Specifies the MII link monitoring frequency in milliseconds.
     /// This determines how often the link state of each port is
     /// inspected for link failures. A value of zero disables MII
@@ -1222,12 +1044,12 @@ pub struct BondOptions {
     /// The use_carrier option, below, affects how the link state is
     /// determined. See the High Availability section for additional
     /// information. The default value is 0.
-    pub miimon: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    pub miimon: Option<u32>,
     /// Specifies the minimum number of links that must be active before
     /// asserting carrier. It is similar to the Cisco EtherChannel min-links
     /// feature. This allows setting the minimum number of member ports that
@@ -1242,12 +1064,12 @@ pub struct BondOptions {
     /// number of available links in that aggregator. Note that, because an
     /// aggregator cannot be active without at least one available link,
     /// setting this option to 0 or to 1 has the exact same effect.
-    pub min_links: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u8_or_string"
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    pub min_links: Option<u32>,
     /// Specify the number of peer notifications (gratuitous ARPs and
     /// unsolicited IPv6 Neighbor Advertisements) to be issued after a
     /// failover event. As soon as the link is up on the new port
@@ -1263,26 +1085,30 @@ pub struct BondOptions {
     /// From Linux 3.0 and bonding version 3.7.1, these notifications are
     /// generated by the ipv4 and ipv6 code and the numbers of repetitions
     /// cannot be set independently.
-    pub num_grat_arp: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
+    pub num_grat_arp: Option<u8>,
     /// Identical to [BondOptions.num_grat_arp]
-    pub num_unsol_na: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
+        deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
+    pub num_unsol_na: Option<u8>,
     /// Specify the number of packets to transmit through a port before moving
     /// to the next one. When set to 0 then a port is chosen at random.
     ///
     /// The valid range is 0 - 65535; the default value is 1. This option has
     /// effect only in balance-rr mode.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub packets_per_slave: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// A string (eth0, eth2, etc) specifying which slave is the primary
     /// device. The specified device will always be the active slave while
     /// it is available. Only when the primary is off-line will alternate
@@ -1291,19 +1117,19 @@ pub struct BondOptions {
     ///
     /// The primary option is only valid for active-backup(1), balance-tlb (5)
     /// and balance-alb (6) mode.
-    pub primary: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary: Option<String>,
     /// Specifies the reselection policy for the primary port. This affects
     /// how the primary port is chosen to become the active port when failure
     /// of the active port or recovery of the primary port occurs. This
     /// option is designed to prevent flip-flopping between the primary port
     /// and other ports.
-    pub primary_reselect: Option<BondPrimaryReselect>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
     )]
+    pub primary_reselect: Option<BondPrimaryReselect>,
     /// Specifies the number of IGMP membership reports to be issued after
     /// a failover event. One membership report is issued immediately after
     /// the failover, subsequent packets are sent in each 200ms interval.
@@ -1317,12 +1143,12 @@ pub struct BondOptions {
     /// switch the IGMP traffic from one port to another. Therefore a
     /// fresh IGMP report must be issued to cause the switch to forward the
     /// incoming IGMP traffic over the newly selected port.
-    pub resend_igmp: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    pub resend_igmp: Option<u32>,
     /// Specifies if dynamic shuffling of flows is enabled in tlb mode. The
     /// value has no effect on any other modes.
     ///
@@ -1339,23 +1165,23 @@ pub struct BondOptions {
     ///
     /// The default value is "1" that enables flow shuffling while value "0"
     /// disables it. This option was added in bonding driver 3.7.1
-    pub tlb_dynamic_lb: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
-    )]
-    /// Specifies the time, in milliseconds, to wait before enabling a port
-    /// after a link recovery has been detected. This option is only valid for
-    /// the miimon link monitor. The updelay value should be a multiple of the
-    /// miimon value; if not, it will be rounded down to the nearest multiple.
-    /// The default value is 0.
-    pub updelay: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    pub tlb_dynamic_lb: Option<bool>,
+    /// Specifies the time, in milliseconds, to wait before enabling a port
+    /// after a link recovery has been detected. This option is only valid for
+    /// the miimon link monitor. The updelay value should be a multiple of the
+    /// miimon value; if not, it will be rounded down to the nearest multiple.
+    /// The default value is 0.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    pub updelay: Option<u32>,
     /// Specifies whether or not miimon should use MII or ETHTOOL
     /// ioctls vs. netif_carrier_ok() to determine the link
     /// status. The MII or ETHTOOL ioctls are less efficient and
@@ -1375,10 +1201,19 @@ pub struct BondOptions {
     /// A value of 1 enables the use of netif_carrier_ok(), a value of
     /// 0 will use the deprecated MII / ETHTOOL ioctls.  The default
     /// value is 1.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub use_carrier: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// Selects the transmit hash policy to use for slave selection in
     /// balance-xor, 802.3ad, and tlb modes.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
+    )]
     pub xmit_hash_policy: Option<BondXmitHashPolicy>,
     #[serde(
         skip_serializing_if = "Option::is_none",
