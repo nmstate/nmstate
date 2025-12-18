@@ -3,9 +3,7 @@
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use serde::{de, de::Visitor, Deserialize, Deserializer};
-
-use crate::{ErrorKind, NmstateError};
+use serde::{de, de::IntoDeserializer, de::Visitor, Deserialize, Deserializer};
 
 pub(crate) fn u8_or_string<'de, D>(deserializer: D) -> Result<u8, D::Error>
 where
@@ -278,31 +276,44 @@ where
     deserializer.deserialize_any(IntegerOrString(PhantomData))
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
-#[non_exhaustive]
-#[serde(try_from = "serde_json::Value")]
-pub(crate) struct NumberAsString {
-    value: String,
-}
+pub(crate) fn option_enum_string_or_integer<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    struct IntegerOrString<T>(PhantomData<fn() -> Option<T>>);
 
-impl NumberAsString {
-    pub(crate) fn as_str(&self) -> &str {
-        self.value.as_str()
-    }
-}
+    impl<'de, T> Visitor<'de> for IntegerOrString<T>
+    where
+        T: Deserialize<'de>,
+    {
+        type Value = Option<T>;
 
-impl std::convert::TryFrom<serde_json::Value> for NumberAsString {
-    type Error = NmstateError;
-    fn try_from(s: serde_json::Value) -> Result<Self, NmstateError> {
-        match s {
-            serde_json::Value::Number(d) => Ok(Self {
-                value: format!("{d}"),
-            }),
-            serde_json::Value::String(s) => Ok(Self { value: s }),
-            _ => Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!("Invalid data type: {s}, should be integer or string"),
-            )),
+        fn expecting(
+            &self,
+            formatter: &mut std::fmt::Formatter,
+        ) -> std::fmt::Result {
+            formatter.write_str("unsigned integer or string")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Option<T>, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(T::deserialize(value.into_deserializer())?))
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Option<T>, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(T::deserialize(
+                format!("{}", value).into_deserializer(),
+            )?))
         }
     }
+
+    deserializer.deserialize_any(IntegerOrString(PhantomData))
 }
