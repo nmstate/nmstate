@@ -1,0 +1,2193 @@
+.nh
+.TH Nmstate(3)
+Nmstate provides a set of bindings for querying and applying the network state
+in the format of YAML.
+For properties not mentioned desired state, nmstate will try to preserve
+current configuration unless changes required by other desired property.
+
+.PP
+For example, to create an OpenvSwitch bridge:
+
+.EX
+#!/usr/bin/python3
+
+import yaml
+import libnmstate
+
+desire_state = """
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+"""
+
+libnmstate.apply(yaml.load(desire_state, Loader=yaml.SafeLoader))
+.EE
+
+.EX
+// SPDX-License-Identifier: Apache-2.0
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let desire_state: nmstate::NetworkState = serde_yaml::from_str(
+        r#"---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+"#,
+    )?;
+    desire_state.apply()?;
+    Ok(())
+}
+
+.EE
+
+.PP
+TODO: provide example code for using C binding.
+
+.SH Interfaces
+The \fBinterfaces\fR section is a list, for those interface not mentioned in desire
+state, nmstate will not modify it unless required(for example, bridge port list
+changed).
+
+.SS Base Interface
+There are many properties that are available for all kind of network
+interfaces. The example this is a desire state of base interface properties
+only:
+
+.EX
+interfaces:
+- name: eth1
+  profile-name: wan0
+  type: ethernet
+  state: up
+  mac-address: 1C:FF:EE:DD:3B:D3
+  permanent-mac-address: 1C:FF:EE:DD:BB:D3
+  pci-address: 0000:07:00.0
+  mtu: 1500
+  min-mtu: 256
+  max-mtu: 2304
+  wait-ip: any
+  accept-all-mac-addresses: false
+.EE
+
+.PP
+Besides above example, we also have these properties:
+ * \fBcontroller\fR
+ * \fBcopy-mac-from\fR
+
+.SS Name
+The \fBname\fR property is the name string used in kernel or user space tool(for
+example OpenvSwitch bridge interface name only exist in its user space
+database).
+
+.PP
+You may also use this format to refer a SR-IOV VF interface:
+
+.EX
+sriov:<pf_name>:<vf_id>
+.EE
+
+.PP
+Please check this document
+\[la]../features/iface_vf_id.md\[ra] for detail.
+
+.SS Type
+The \fBtype\fR property is the type name of interface. Please read on to get all
+supported interface types.
+
+.SS State
+All possible states of interface are:
+.IP \(bu 2
+\fBup\fR: Indicate network backend is managing this interface and activated
+configuration of specified interface.
+.IP \(bu 2
+\fBdown\fR: Indicate network backend deactivate configuration of specified
+interface.
+.IP \(bu 2
+\fBignore\fR: Indicate network backend is ignoring this interface. When
+applying state with interface marked as \fBignore\fR, the verification will
+ignore this interface also.
+.IP \(bu 2
+\fBabsent\fR: Only used when applying to instruct network backend to delete
+configuration of specified interface, this might or might not lead to
+the deletion in kernel.
+
+.SS Description
+The \fBdescription\fR of the interface. This value can be configured to any string. For example:
+
+.EX
+---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  description: "Main interface connected to switch S1"
+.EE
+
+.SS Profile Name
+The profile name used by network backend. For example:
+
+.EX
+---
+interfaces:
+- name: eth1
+  profile-name: wan0
+  type: veth
+  state: up
+  identifier: mac-address
+  mac-address: 8A:8C:92:1A:F6:98
+.EE
+
+.SS Interface Identifier
+The \fBidentifier\fR property is only valid for applying or generating
+configurations. The valid values are:
+ * \fBname\fR: Default value. Specified configuration is applied to interface
+   holding the specified interface name.
+ * \fBmac-address\fR: Specified configuration is applied to interface holding
+   the specified MAC address.
+ * \fBpci-address\fR: Specified configuration is applied to interface holding
+   the specified PCI address.
+
+.SS MAC Address
+The \fBmac-address\fR property holds the MAC address of this interface. Please be
+aware the IP over InfiniBand interface have 20 bytes which result in a string
+like:
+
+.EX
+20:00:55:04:01:FE:80:00:00:00:00:00:00:00:02:C9:02:00:23:13:92
+.EE
+
+.PP
+The loopback interface will hold MAC address as \fB00:00:00:00:00:00\fR\&.
+
+.PP
+When showing, nmstate use upper case string. When applying, it is
+case-insensitive.
+
+.PP
+For applying or generating configurations:
+ * \fBidentifier\fR is undefined or \fBidentifier: name\fR, interface will be changed
+   to hold the specified MAC address
+ * \fBidentifier: mac-address\fR, interface holding the specified MAC address
+   will be used instead of interface name.
+
+.PP
+Example on matching interface by MAC address:
+
+.EX
+---
+interfaces:
+  - name: wan0
+    type: ethernet
+    state: up
+    identifier: mac-address
+    mac-address: 00:23:45:67:89:1a
+    ipv4:
+      enabled: true
+      dhcp: true
+    ipv6:
+      enabled: true
+      dhcp: true
+      autoconf: true
+.EE
+
+.SS PCI Address
+New since 2.2.47.
+
+.PP
+The \fBpci-address\fR property holds the PCI address of this interface.
+
+.PP
+When showing, nmstate will use format like \fB0000:07:00.0\fR\&.
+When applying, nmstate accept format like \fB07:00.0\fR with domain set to 0.
+
+.PP
+When using with \fBidentifier: pci-address\fR, desired state will be applied to
+interface holding specified PCI address instead of desired interface name.
+
+.PP
+Example on matching interface by PCI address:
+
+.EX
+---
+interfaces:
+  - name: wan0
+    type: ethernet
+    state: up
+    identifier: pci-address
+    pci-address: 0000:07:00.0
+    ipv4:
+      enabled: true
+      dhcp: true
+    ipv6:
+      enabled: true
+      dhcp: true
+      autoconf: true
+.EE
+
+.SS Permanent MAC Address
+The \fBpermanent-mac-address\fR property holds the MAC addresses stored in
+firmware of network card which will be persistent after system rebooted.
+
+.PP
+This is query only property and will be ignored when applying.
+
+.SS MTU
+The \fBmtu\fR value is the Maximum Transmission Unit of specified interface.
+
+.PP
+It should be in the range between \fBmin_mtu\fR and \fBmax_mtu\fR\&.
+
+.SS Minimum MTU
+Available since 2.2.0.
+
+.PP
+The minimum MTU supported by specified interface.
+
+.PP
+This is query only property and will be ignored when applying.
+
+.SS Maximum MTU
+Available since 2.2.0.
+
+.PP
+The maximum MTU supported by specified interface.
+
+.PP
+This is query only property and will be ignored when applying.
+
+.SS Wait IP
+Available since 2.1.3.
+
+.PP
+The \fBwait-ip\fR property defines which IP stack should network backend wait
+before considering the interface activation finished.
+
+.PP
+It supports these values:
+.IP \(bu 2
+\fBany\fR -- (Default value) The activation is considered done once IPv4 stack
+or IPv6 stack is configure.
+.IP \(bu 2
+\fBipv4\fR -- The activation is considered done once IPv4 stack is configured.
+.IP \(bu 2
+\fBipv6\fR -- The activation is considered done once IPv6 stack is configured.
+.IP \(bu 2
+\fBipv4+ipv6\fR -- The activation is considered done once both IPv4 and IPv6
+stack are configured.
+
+.SS Interface Controller
+Available since 2.2.2.
+
+.PP
+The \fBcontroller\fR property defines the controller of the specified interface.
+This property is hidden when querying and only used for controller attaching
+and detaching. Setting as \fBcontroller: ''\fR means detaching from current
+controller.
+
+.PP
+This property might conflict with port list of controller, an error will be
+trigger when it happens.
+
+.PP
+Example yaml for attaching \fBeth1\fR to \fBbr0\fR interface:
+
+.EX
+---
+interfaces:
+- name: eth1
+  state: up
+  controller: br0
+.EE
+
+.SS Accept All MAC addresses
+The \fBaccept-all-mac-addresses\fR properties is the boolean switch for enabling
+the \fBpromiscuous\fR mode of specified interface which causing the kernel
+to accept ethernet packages even its destination MAC address is not for
+current interface.
+
+.SS Copy MAC From
+The apply only property \fBcopy-mac-from\fR is for clone MAC address of other
+interface.
+
+.PP
+For example, to create bridge using the MAC address of eth1:
+
+.EX
+---
+interfaces:
+  - name: br0
+    type: linux-bridge
+    state: up
+    copy-mac-from: eth2
+    bridge:
+      port:
+      - name: eth2
+      - name: eth1
+.EE
+
+.SS Dispatch script
+Since 2.2.17, nmstate has introduced support of invoking dispatch script upon
+the activation and deactivation of interface.
+
+.PP
+For example, this desire state will instruct network backend to invoke
+\fBecho post-up-eth1 | systemd-cat\fR after the interface is activated, and
+\fBecho post-down-eth1 | systemd-cat\fR after the interface been deactivated.
+
+.EX
+---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  dispatch:
+    post-activation: |
+      echo post-up-eth1 | systemd-cat
+    post-deactivation: |
+      echo post-down-eth1 | systemd-cat
+.EE
+
+.PP
+Setting the \fBpost-activation\fR or \fBpost-deactivation\fR to empty string will
+remove the dispatch scripts. Removing the interface using
+\fBstate: absent\fR also remove the dispatch scripts.
+
+.SS Interface Alternative Name
+Since 2.2.51, nmstate support configuration interface alternative names.
+
+.PP
+Example YAML for adding alternative names:
+
+.EX
+---
+interfaces:
+  - name: enp7s0
+    alt-names:
+      - name: port1
+      - name: veryveryveryverylonglonglongname
+.EE
+
+.PP
+Example YAML for removing alternative names:
+
+.EX
+---
+interfaces:
+  - name: enp7s0
+    alt-names:
+      - name: port1
+        state: absent
+      - name: veryveryveryverylonglonglongname
+        state: absent
+.EE
+
+.PP
+Considering the alternative name might also added by external tools(e.g.
+systemd-udev), nmstate is doing incremental changes to interface alternative
+names, meaning:
+ * Applying YAML only append alt-names to existing.
+ * Only remove names marked with \fBstate: absent\fR\&.
+
+.SS IP
+This is the example of interface with static IP addresses:
+
+.EX
+---
+interfaces:
+- name: eth1
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+      mptcp-flags:
+      - signal
+      - subflow
+    - ip: 192.0.2.251
+      prefix-length: 24
+      mptcp-flags:
+      - signal
+      - subflow
+  ipv6:
+    enabled: true
+    autoconf: false
+    dhcp: false
+    address:
+    - ip: 2001:db8:2::1
+      prefix-length: 64
+      mptcp-flags:
+      - signal
+      - subflow
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+      mptcp-flags:
+      - signal
+      - subflow
+.EE
+
+.PP
+This is the example of interface with dynamic IP addresses:
+
+.EX
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: true
+      auto-dns: true
+      auto-gateway: true
+      auto-routes: true
+      auto-route-table-id: 0
+      auto-route-metric: 101
+      dhcp-client-id: ll
+    ipv6:
+      enabled: true
+      dhcp: true
+      autoconf: true
+      auto-dns: true
+      auto-gateway: true
+      auto-routes: true
+      auto-route-table-id: 0
+      auto-route-metric: 102
+      dhcp-duid: ll
+.EE
+
+.SS IP Enable
+The \fBenabled\fR property is the boolean switch to enable and disable the whole IP
+stack.
+
+.PP
+For IPv6 with \fBenabled: false\fR, the link local address will also be removed
+from this interface.
+
+.PP
+If explicitly set to \fBenabled: false\fR, all other IP parameters will be ignored
+and will not fail the verification.
+
+.SS DHCP
+The \fBdhcp\fR property is the boolean switch for DHCP on specified interface.
+
+.PP
+When set to \fBdhcp: false\fR for IPv4, these properties will be ignored and will
+not fail the verification:
+ * \fBauto-dns\fR
+ * \fBauto-gateway\fR
+ * \fBauto-routes\fR
+ * \fBauto-route-table-id\fR
+ * \fBauto-route-metric\fR
+ * \fBdhcp-client-id\fR
+
+.PP
+When dynamic configuration disabled(IPv4 dhcp off, IPv6 dhcp off and autoconf
+off),  these properties will be ignored and will not fail the verification:
+.IP \(bu 2
+\fBauto-dns\fR
+.IP \(bu 2
+\fBauto-gateway\fR
+.IP \(bu 2
+\fBauto-routes\fR
+.IP \(bu 2
+\fBauto-route-table-id\fR
+.IP \(bu 2
+\fBauto-route-metric\fR
+
+.SS IPv6 Autoconf
+The \fBautoconf\fR property is the boolean switch for IPv6 autoconf via Router
+Advertisement (RA).
+
+.PP
+Limitation:
+.IP \(bu 2
+Currently nmstate does not allows \fBautoconf: true\fR and \fBdhcp: false\fR\&.
+
+.SS IP Address
+The \fBaddress\fR property holds a list of object for IP address which contains
+these parameters:
+ * \fBip\fR
+ * \fBprefix-length\fR
+ * \fBmptcp-flags\fR -- Query only, list of MPTCP flag string.
+
+.PP
+The order of IP address will be preserved when applying to kernel.
+
+.SS Auto DNS
+The \fBauto-dns\fR property is the boolean switch for whether apply DNS
+configurations retried from dynamic configuration method.
+
+.PP
+Set to true by default unless current state set to false explicitly.
+
+.SS Auto Routes
+The \fBauto-routes\fR property is the boolean switch for whether apply routes
+entries(including default gateway) retried from dynamic configuration method.
+
+.PP
+Set to true by default unless current state set to false explicitly.
+
+.SS Auto Gateway
+The \fBauto-routes\fR property is the boolean switch for whether apply default
+gateway retried from dynamic configuration method.
+
+.PP
+Set to true by default unless current state set to false explicitly.
+
+.SS Auto Route Table ID
+The \fBauto-route-table-id\fR property is the integer for route table ID of
+the routes retried from dynamic configuration method.
+
+.PP
+If not mentioned in desire state or set to 0, nmstate will use the main table
+ID 254.
+
+.SS Auto Route Metric
+Available since nmstate 2.2.1.
+
+.PP
+The \fBauto-route-metric\fR property is the integer for route metric of
+the routes retried from dynamic configuration method.
+
+.PP
+If not mentioned in desire state or set to -1, nmstate will let network backend
+to determine the metric.
+
+.SS DHCPv4 Client ID
+Available since nmstate 2.1.1.
+
+.PP
+The \fBdhcp-client-id\fR property accepts string as arbitrary value, these special
+value are treat specially:
+ * \fBll\fR or \fBLL\fR: Use link layer address as DHCPv4 client ID.
+ * \fBiaid+duid\fR or \fBIAID+DUID\fR: RFC 4361 type 255, 32 bits IAID followed by
+   DUID.
+
+.SS DHCPv6 Unique Identifier
+Available since nmstate 2.1.1.
+
+.PP
+The \fBdhcp-duid\fR property accepts string as arbitrary value, these special
+value are treat specially:
+ * \fBll\fR or \fBLL\fR: Use link layer address
+ * \fBllt\fR or \fBLLT\fR: DUID Based on Link-Layer Address Plus Time
+ * \fBen\fR or \fBEN\fR: DUID Assigned by Vendor Based on Enterprise Number
+ * \fBuuid\fR or \fBUUID\fR: DUID Based on Universally Unique Identifier
+
+.SS Multipath TCP
+Available since nmstate 2.2.0.
+
+.PP
+The \fBmptcp\fR section of interface holds the Multipath TCP interface level
+flags, it will apply flags to all valid IP addresses(both static and dynamic).
+Network backend might has its own rule on excusing special scope of IP
+address, e.g. IPv6 multicast address.
+
+.PP
+For example:
+
+.EX
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    mptcp:
+      address-flags:
+      - backup
+      - signal
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: 192.0.2.2
+          prefix-length: 24
+.EE
+
+.PP
+The only supported property of \fBmptcp\fR section is \fBaddress-flags\fR for now.
+The \fBaddress-flags\fR property holds the list of MPTCP flags which could be:
+ * \fBsignal\fR
+ * \fBsubflow\fR
+ * \fBbackup\fR
+ * \fBfullmess\fR
+
+.PP
+Limitations:
+ * Per IP address MPTCP flags is ignored with an warning message when
+   different from interface level MPTCP flags.
+ * Cannot set \fBsignal\fR along with \fBfullmesh\fR due to kernel restriction.
+ * If sysctl has \fBnet.mptcp.enabled\fR set to 0, NetworkManager cannot
+   apply MPTCP flags. User will get an failure suggest them to use
+   third-party tools.
+ * Cannot reapply on MPTCP changes, full activation will invoked when
+   MPTCP flags changed.
+ * When MPTCP not supported by NetworkManager, the query will hide
+   interface level MPTCP flags even it been enabled by third party
+   tool.
+
+.SS Ethtool
+Available since 1.1.0
+
+.PP
+The \fBethtool\fR section of interface holds the ethtool settings of network cards,
+including these subsections.
+.IP \(bu 2
+\fBfeature\fR -- configurable offload protocol and other features
+.IP \(bu 2
+\fBring\fR -- RX/TX ring parameters
+.IP \(bu 2
+\fBcoalesce\fR -- Coalescing parameters
+
+.PP
+This is the example query output of \fBnetdevsim\fR interface:
+
+.EX
+interfaces:
+- name: sim0
+  type: ethernet
+  state: up
+  ethtool:
+    pause:
+      rx: true
+      tx: true
+      autoneg: false
+    feature:
+      rx-gro: true
+      tx-nocache-copy: false
+      hw-tc-offload: false
+      rx-udp_tunnel-port-offload: true
+      tx-generic-segmentation: true
+      rx-udp-gro-forwarding: false
+      rx-gro-list: false
+    coalesce:
+      adaptive-rx: false
+      adaptive-tx: false
+      pkt-rate-high: 0
+      pkt-rate-low: 0
+      rx-frames: 0
+      rx-frames-high: 0
+      rx-frames-low: 0
+      rx-usecs: 0
+      rx-usecs-high: 0
+      rx-usecs-irq: 0
+      rx-usecs-low: 0
+      sample-interval: 0
+      stats-block-usecs: 0
+      tx-frames: 0
+      tx-frames-high: 0
+      tx-frames-irq: 0
+      tx-frames-low: 0
+      tx-usecs: 0
+      tx-usecs-high: 0
+      tx-usecs-irq: 0
+      tx-usecs-low: 0
+    ring:
+      rx: 0
+      rx-max: 4096
+      rx-jumbo: 0
+      rx-jumbo-max: 4096
+      rx-mini: 0
+      rx-mini-max: 4096
+      tx: 0
+      tx-max: 4096
+.EE
+
+.SS Ethtool feature
+The \fBfeature\fR subsection of \fBethtool\fR holds the \fBchangeable\fP features of
+specified interface using feature name as key string and boolean as value.
+
+.PP
+Currently, nmstate support enable/disable features(if NIC support so):
+.IP \(bu 2
+\fBesp-hw-offload\fR
+.IP \(bu 2
+\fBesp-tx-csum-hw-offload\fR
+.IP \(bu 2
+\fBtx-checksum-fcoe-crc\fR
+.IP \(bu 2
+\fBfcoe-mtu\fR
+.IP \(bu 2
+\fBtx-checksum-ip-generic\fR
+.IP \(bu 2
+\fBrx-gro\fR
+.IP \(bu 2
+\fBtx-checksum-ipv4\fR
+.IP \(bu 2
+\fBtx-generic-segmentation\fR
+.IP \(bu 2
+\fBtx-checksum-ipv6\fR
+.IP \(bu 2
+\fBhighdma\fR
+.IP \(bu 2
+\fBtx-checksum-sctp\fR
+.IP \(bu 2
+\fBhw-tc-offload\fR
+.IP \(bu 2
+\fBtx-esp-segmentation\fR
+.IP \(bu 2
+\fBl2-fwd-offload\fR
+.IP \(bu 2
+\fBtx-fcoe-segmentation\fR
+.IP \(bu 2
+\fBloopback\fR
+.IP \(bu 2
+\fBtx-gre-csum-segmentation\fR
+.IP \(bu 2
+\fBrx-lro\fR
+.IP \(bu 2
+\fBtx-gre-segmentation\fR
+.IP \(bu 2
+\fBmacsec-hw-offload\fR
+.IP \(bu 2
+\fBtx-gso-list\fR
+.IP \(bu 2
+\fBrx-ntuple-filter\fR
+.IP \(bu 2
+\fBtx-gso-partial\fR
+.IP \(bu 2
+\fBrx-checksum\fR
+.IP \(bu 2
+\fBtx-gso-robust\fR
+.IP \(bu 2
+\fBrx-all\fR
+.IP \(bu 2
+\fBtx-ipxip4-segmentation\fR
+.IP \(bu 2
+\fBrx-fcs\fR
+.IP \(bu 2
+\fBtx-ipxip6-segmentation\fR
+.IP \(bu 2
+\fBrx-gro-hw\fR
+.IP \(bu 2
+\fBtx-nocache-copy\fR
+.IP \(bu 2
+\fBrx-gro-list\fR
+.IP \(bu 2
+\fBtx-scatter-gather\fR
+.IP \(bu 2
+\fBrx-hashing\fR
+.IP \(bu 2
+\fBtx-scatter-gather-fraglist\fR
+.IP \(bu 2
+\fBrx-udp-gro-forwarding\fR
+.IP \(bu 2
+\fBtx-sctp-segmentation\fR
+.IP \(bu 2
+\fBrx-udp_tunnel-port-offload\fR
+.IP \(bu 2
+\fBtx-tcp6-segmentation\fR
+.IP \(bu 2
+\fBrx-vlan-hw-parse\fR
+.IP \(bu 2
+\fBtx-tcp-ecn-segmentation\fR
+.IP \(bu 2
+\fBrx-vlan-filter\fR
+.IP \(bu 2
+\fBtx-tcp-mangleid-segmentation\fR
+.IP \(bu 2
+\fBrx-vlan-stag-filter\fR
+.IP \(bu 2
+\fBtx-tcp-segmentation\fR
+.IP \(bu 2
+\fBrx-vlan-stag-hw-parse\fR
+.IP \(bu 2
+\fBtx-tunnel-remcsum-segmentation\fR
+.IP \(bu 2
+\fBtx-scatter-gather\fR
+.IP \(bu 2
+\fBtx-udp-segmentation\fR
+.IP \(bu 2
+\fBtls-hw-record\fR
+.IP \(bu 2
+\fBtx-udp_tnl-csum-segmentation\fR
+.IP \(bu 2
+\fBtls-hw-rx-offload\fR
+.IP \(bu 2
+\fBtx-udp_tnl-segmentation\fR
+.IP \(bu 2
+\fBtls-hw-tx-offload\fR
+.IP \(bu 2
+\fBtx-vlan-hw-insert\fR
+.IP \(bu 2
+\fBtso\fR
+.IP \(bu 2
+\fBtx-vlan-stag-hw-insert\fR
+
+.PP
+Nmstate also support these aliases used by \fBethtool\fR CLI tool:
+.IP \(bu 2
+\fBrx\fR -- \fBrx-checksum\fR
+.IP \(bu 2
+\fBrx-checksumming\fR -- \fBrx-checksum\fR
+.IP \(bu 2
+\fBufo\fR -- \fBtx-udp-fragmentation\fR
+.IP \(bu 2
+\fBgso\fR -- \fBtx-generic-segmentation\fR
+.IP \(bu 2
+\fBgeneric-segmentation-offload\fR -- \fBtx-generic-segmentation\fR
+.IP \(bu 2
+\fBgro\fR -- \fBrx-gro\fR
+.IP \(bu 2
+\fBgeneric-receive-offload\fR -- \fBrx-gro\fR
+.IP \(bu 2
+\fBlro\fR -- \fBrx-lro\fR
+.IP \(bu 2
+\fBlarge-receive-offload\fR -- \fBrx-lro\fR
+.IP \(bu 2
+\fBrxvlan\fR -- \fBrx-vlan-hw-parse\fR
+.IP \(bu 2
+\fBrx-vlan-offload\fR -- \fBrx-vlan-hw-parse\fR
+.IP \(bu 2
+\fBtxvlan\fR -- \fBtx-vlan-hw-insert\fR
+.IP \(bu 2
+\fBtx-vlan-offload\fR -- \fBtx-vlan-hw-insert\fR
+.IP \(bu 2
+\fBntuple\fR -- \fBrx-ntuple-filter\fR
+.IP \(bu 2
+\fBntuple-filters\fR -- \fBrx-ntuple-filter\fR
+.IP \(bu 2
+\fBrxhash\fR -- \fBrx-hashing\fR
+.IP \(bu 2
+\fBreceive-hashing\fR -- \fBrx-hashing\fR
+
+.SS Ethtool coalesce
+The \fBcoalesce\fR subsection supports these parameters:
+.IP \(bu 2
+\fBadaptive-rx\fR: boolean
+.IP \(bu 2
+\fBadaptive-tx\fR: boolean
+.IP \(bu 2
+\fBpkt-rate-high\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBpkt-rate-low\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBrx-frames\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBrx-frames-high\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBrx-frames-low\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBrx-usecs\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBrx-usecs-high\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBrx-usecs-irq\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBrx-usecs-low\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBsample-interval\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBstats-block-usecs\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-frames\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-frames-high\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-frames-irq\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-frames-low\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-usecs\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-usecs-high\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-usecs-irq\fR: 32 bits unsigned integer
+.IP \(bu 2
+\fBtx-usecs-low\fR: 32 bits unsigned integer
+
+.SS Ethtool ring
+The \fBring\fR subsection supports these parameters:
+ * \fBrx\fR
+ * \fBrx-max\fR
+ * \fBrx-jumbo\fR
+ * \fBrx-jumbo-max\fR
+ * \fBrx-mini\fR
+ * \fBrx-mini-max\fR
+ * \fBtx\fR
+ * \fBtx-max\fR
+
+.PP
+All of them are 32 bits unsigned integer.
+
+.PP
+Example YAML:
+
+.EX
+---
+interfaces:
+  - name: enp1s0
+    state: up
+    ethtool:
+      ring:
+        rx: 256
+        rx-jumbo: 0
+        rx-mini: 0
+        tx: 256
+.EE
+
+.SS Ethtool FEC(Forward Error Correction)
+New in version 2.2.43.
+
+.PP
+Example YAML to disable automatic FEC and enforce llrs mode:
+
+.EX
+---
+interfaces:
+  - name: sim0
+    type: ethernet
+    ethtool:
+      fec:
+        auto: false
+        mode: llrs
+.EE
+
+.IP \(bu 2
+\fBauto\fR: true or false. Once enabled, the \fBmode\fR setting will be ignored.
+.IP \(bu 2
+\fBmode\fR: valid values are: \fBoff\fR, \fBrs\fR, \fBbaser\fR, \fBllrs\fR\&.
+
+.PP
+Please set FEC mode on the switch first, otherwise nmstate verification stage
+will complain about desired FEC mode cannot be activated.
+
+.SS LLDP
+.SS LLDP Enabled
+Indicate whether LLDP listener is enabled for the interface or not. The
+property type is \fBboolean\fR\&.
+
+.SS Neighbors
+The \fBneighbors\fR section of LLDP holds the parameter of each neighbor reported
+by the LLDP listener. This parameters are read-only.
+
+.SS TLV Type
+This is the TLV type reported as described in IEEE 802.1AB. The property type
+is \fBinteger\fR\&.
+
+.SS TLV Subtype
+This is the TLV subtype reported as described in IEEE 802.1AB. The property
+type is \fBinteger\fR\&.
+
+.SS Organization code
+This is the organization code or \fBoui\fR as described in IEEE 802.1AB. The property
+type is \fBinteger\fR\&.
+
+.SS Ethernet Interface
+The \fBethernet\fR section of interface holds the parameters of ethernet specific
+configurations. For example:
+
+.EX
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ethernet:
+      speed: 10000
+      duplex: full
+      auto-negotiation: false
+.EE
+
+.SS Ethernet speed
+The \fBspeed\fR property is the integer speed in Mbps.
+
+.PP
+This property is ignored when applying if \fBauto-negotiation: true\fR\&.
+
+.SS Ethernet duplex
+The \fBduplex\fR property supports:
+.IP \(bu 2
+\fBfull\fR
+.IP \(bu 2
+\fBhalf\fR
+
+.PP
+This property is ignored when applying if \fBauto-negotiation: true\fR\&.
+
+.SS Ethernet Auto Negotiation
+The \fBauto-negotiation\fR property is the boolean switch for enabling
+auto negotiation on speed and duplex.
+
+.PP
+Undefined means preserving current setting.
+
+.SS SR-IOV
+The \fBsr-iov\fR is subsection of \fBethernet\fR interface. For example:
+
+.EX
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ethernet:
+      sr-iov:
+        total-vfs: 2
+        vfs:
+        - id: 0
+          mac-address: 00:11:22:33:00:FF
+          spoof-check: true
+          trust: false
+          min-tx-rate: 0
+          max-tx-rate: 0
+          vlan-id: 0
+          qos: 0
+        - id: 1
+          mac-address: 00:11:22:33:00:EF
+          spoof-check: true
+          trust: false
+          min-tx-rate: 0
+          max-tx-rate: 0
+          vlan-id: 0
+          qos: 0
+.EE
+
+.SS SR-IOV Total VFS Count
+The \fBtotal-vfs\fR property defines the SRIOV VF count of PF interface.
+
+.SS SR-IOV VF Specific Settings
+The \fBvfs\fR section holds VF specific settings:
+.IP \(bu 2
+\fBid\fR -- VF ID
+.IP \(bu 2
+\fBmac-address\fR -- VF MAC address
+.IP \(bu 2
+\fBspoof-check\fR -- Whether spoof check is enabled
+.IP \(bu 2
+\fBtrust\fR -- Is Privileged (trusted) VF or not
+.IP \(bu 2
+\fBmin-tx-rate\fR
+.IP \(bu 2
+\fBmax-tx-rate\fR
+.IP \(bu 2
+\fBvlan-id\fR
+.IP \(bu 2
+\fBqos\fR
+.IP \(bu 2
+\fBvlan-proto\fR -- choice of \fB802.1q\fR(default) or \fB802.1ad\fR
+
+.PP
+Once the \fBvfs\fR section is defined in desire state, user is required to provide
+\fBall\fP VFS configuration, nmstate will not merge it with current status.
+
+.SS Bond Interface
+The \fBlink-aggregation\fR section of interface holds the parameters of bond
+specific configurations. For example:
+
+.EX
+---
+interfaces:
+- name: bond99
+  type: bond
+  state: up
+  link-aggregation:
+    mode: balance-rr
+    options:
+      all_slaves_active: dropped
+      arp_all_targets: any
+      arp_interval: 0
+      arp_validate: none
+      downdelay: 0
+      lp_interval: 1
+      miimon: 100
+      min_links: 0
+      packets_per_slave: 1
+      primary_reselect: always
+      resend_igmp: 1
+      updelay: 0
+      use_carrier: true
+    port:
+    - eth1
+    - eth2
+.EE
+
+.SS Bond Mode
+The \fBmode\fR property defines the bond mode:
+.IP \(bu 2
+\fBbalance-rr\fR or 0
+.IP \(bu 2
+\fBactive-backup\fR or 1
+.IP \(bu 2
+\fBbalance-xor\fR or 2
+.IP \(bu 2
+\fBbroadcast\fR or 3
+.IP \(bu 2
+\fB802.3ad\fR or 4
+.IP \(bu 2
+\fBbalance-tlb\fR or 5
+.IP \(bu 2
+\fBbalance-alb\fR or 6
+
+.PP
+Please check kernel document for detail meaning of each mode.
+
+.SS Bond Options
+The \fBoptions\fR property of bond supports:
+.IP \(bu 2
+\fBad_actor_sys_prio\fR
+.IP \(bu 2
+\fBad_actor_system\fR
+.IP \(bu 2
+\fBad_select\fR
+.IP \(bu 2
+\fBad_user_port_key\fR
+.IP \(bu 2
+\fBall_slaves_active\fR
+.IP \(bu 2
+\fBarp_all_targets\fR
+.IP \(bu 2
+\fBarp_interval\fR
+.IP \(bu 2
+\fBarp_ip_target\fR
+.IP \(bu 2
+\fBarp_validate\fR
+.IP \(bu 2
+\fBdowndelay\fR
+.IP \(bu 2
+\fBfail_over_mac\fR
+.IP \(bu 2
+\fBlacp_rate\fR
+.IP \(bu 2
+\fBlp_interval\fR
+.IP \(bu 2
+\fBmiimon\fR
+.IP \(bu 2
+\fBmin_links\fR
+.IP \(bu 2
+\fBnum_grat_arp\fR
+.IP \(bu 2
+\fBnum_unsol_na\fR
+.IP \(bu 2
+\fBpackets_per_slave\fR
+.IP \(bu 2
+\fBprimary\fR
+.IP \(bu 2
+\fBprimary_reselect\fR
+.IP \(bu 2
+\fBresend_igmp\fR
+.IP \(bu 2
+\fBtlb_dynamic_lb\fR
+.IP \(bu 2
+\fBupdelay\fR
+.IP \(bu 2
+\fBuse_carrier\fR
+.IP \(bu 2
+\fBxmit_hash_policy\fR
+.IP \(bu 2
+\fBbalance_slb\fR
+.IP \(bu 2
+\fBlacp_active\fR (new in 2.2.47)
+.IP \(bu 2
+\fBns_ip6_target\fR (new in 2.2.47)
+
+.PP
+Please check kernel document for their allowed value and combinations.
+
+.PP
+The \fBbalance_slb\fR is not kernel option of bond, but user space configuration,
+only supported by nmstate 2.2.1+, NetworkManager 1.41+ on patched linux kernel.
+
+.SS Bond Ports
+The \fBport\fR property of bond defines a list of bond ports.
+
+.PP
+When defined in desire state, user is required to provide \fBall\fP bond ports.
+
+.PP
+You may use \fBports\fR also for applying since 2.1.4.
+
+.SS VLAN Interface
+The \fBvlan\fR section of interface holds the parameters of VLAN specific
+configurations. For example:
+
+.EX
+---
+interfaces:
+  - name: eth1.101
+    type: vlan
+    state: up
+    vlan:
+      base-iface: eth1
+      id: 101
+      protocol: 802.1q
+.EE
+
+.PP
+The \fBvlan\fR sections contains two parameters:
+ * \fBbase-iface\fR: The parent interface name.
+ * \fBid\fR: VLAN ID integer.
+ * \fBprotocol\fR: \fB802.1q\fR (default) or \fB802.1ad\fR
+
+.PP
+With nmstate 2.2.1+, when using Nmstate with NetworkManager backend, nmstate
+can creating VLAN over unmanaged interface, hence if you never mention VLAN
+parent in \fBinterfaces\fR section of desired state, nmstate will not convert
+VxLAN parent interface from unmanaged to managed.
+
+.PP
+For \fBgenerate configuration(gc)\fR mode, unmentioned VLAN parent will not
+get automatically created interface profile.
+
+.SS VxLAN Interface
+The \fBvxlan\fR section of interface holds the parameters of VxLAN specific
+configurations. For example:
+
+.EX
+interfaces:
+- name: eth1.102
+  type: vxlan
+  state: up
+  ipv6:
+    enabled: true
+  vxlan:
+    base-iface: eth1
+    id: 102
+    remote: 192.0.2.251
+    local: 192.0.2.252
+    learning: false
+    destination-port: 1235
+.EE
+
+.PP
+The \fBvxlan\fR sections contains two parameters:
+ * \fBbase-iface\fR: The parent interface name.
+ * \fBid\fR: VLAN ID integer.
+ * \fBremote\fR: The destination IP address to use in outgoing packages when the
+   destination link layer address is not known in the VxLAN device forwarding
+   database. Could be unicast IP or multicast IP.
+ * \fBdestination-port\fR: The UDP destination port.
+ * \fBlocal\fR: The source IP address for outgoing packages.
+ * \fBlearning\fR: Whether store unknown link-layer address to forward database.
+
+.PP
+Currently, we only support VxLAN based on IEEE 802.1Q protocol.
+
+.PP
+With nmstate 2.2.1+, when using Nmstate with NetworkManager backend, nmstate
+can creating VxLAN over unmanaged interface, if you never mention VxLAN parent
+in \fBinterfaces\fR section of desired state, nmstate will not convert VxLAN
+parent interface from unmanaged to managed.
+
+.PP
+For \fBgenerate configuration(gc)\fR mode, unmentioned VxLAN parent will not
+get automatically created interface profile.
+
+.SS Linux Bridge Interface
+The \fBbridge\fR section of interface could hold parameters of Linux Bridge
+specific configurations. For example:
+
+.EX
+interfaces:
+- name: br0
+  type: linux-bridge
+  state: up
+  bridge:
+    options:
+      gc-timer: 29657
+      group-addr: 01:80:C2:00:00:00
+      group-forward-mask: 0
+      group-fwd-mask: 0
+      hash-max: 4096
+      hello-timer: 0
+      mac-ageing-time: 300
+      multicast-last-member-count: 2
+      multicast-last-member-interval: 100
+      multicast-membership-interval: 26000
+      multicast-querier: false
+      multicast-querier-interval: 25500
+      multicast-query-interval: 12500
+      multicast-query-response-interval: 1000
+      multicast-query-use-ifaddr: false
+      multicast-router: auto
+      multicast-snooping: true
+      multicast-startup-query-count: 2
+      multicast-startup-query-interval: 3125
+      stp:
+        enabled: false
+        forward-delay: 15
+        hello-time: 2
+        max-age: 20
+        priority: 32768
+      vlan-protocol: 802.1q
+    port:
+    - name: eth1
+      stp-hairpin-mode: false
+      stp-path-cost: 100
+      stp-priority: 32
+.EE
+
+.SS Linux Bridge Options
+The \fBoptions\fR subsection of Linux bridge interface \fBbridge\fR section holds these
+options:
+.IP \(bu 2
+\fBgc_timer\fR: Integer. Ignored when applying.
+.IP \(bu 2
+\fBgroup-addr\fR: String.
+.IP \(bu 2
+\fBgroup-forward-mask\fR: Integer.
+.IP \(bu 2
+\fBgroup-fwd-mask\fR: alias of \fBgroup-forward-mask\fR\&.
+.IP \(bu 2
+\fBhash-max\fR: Integer.
+.IP \(bu 2
+\fBhello-timer\fR: Integer. Ignored when applying.
+.IP \(bu 2
+\fBmac-ageing-time\fR: Integer.
+.IP \(bu 2
+\fBmulticast-last-member-count\fR: Integer.
+.IP \(bu 2
+\fBmulticast-last-member-interval\fR: Integer.
+.IP \(bu 2
+\fBmulticast-membership-interval\fR: Integer.
+.IP \(bu 2
+\fBmulticast-querier\fR: Boolean.
+.IP \(bu 2
+\fBmulticast-querier-interval\fR: Integer.
+.IP \(bu 2
+\fBmulticast-query-interval\fR: Integer.
+.IP \(bu 2
+\fBmulticast-query-response-interval\fR: Integer.
+.IP \(bu 2
+\fBmulticast-query-use-ifaddr\fR: Boolean.
+.IP \(bu 2
+\fBmulticast-router\fR: \fBauto\fR, \fBdisabled\fR or \fBenabled\fR\&.
+.IP \(bu 2
+\fBmulticast-snooping\fR: Boolean.
+.IP \(bu 2
+\fBmulticast-startup-query-count\fR: Integer.
+.IP \(bu 2
+\fBmulticast-startup-query-interval\fR: Integer.
+.IP \(bu 2
+\fBvlan-default-pvid\fR: Integer.
+.IP \(bu 2
+\fBstp\fR:
+.RS
+.IP \(bu 2
+\fBenabled\fR: Boolean. Other STP options will be ignored if set \fBfalse\fR\&.
+.IP \(bu 2
+\fBforward-delay\fR: Integer
+.IP \(bu 2
+\fBhello-time\fR: Integer
+.IP \(bu 2
+\fBmax-age\fR: Integer
+.IP \(bu 2
+\fBpriority\fR: Integer
+.RE
+.IP \(bu 2
+\fBvlan-protocol\fR: \fB802.1q\fR (default) or \fB802.1ad\fR
+
+.SS Linux Bridge Ports
+The \fBport\fR subsection of \fBbridge\fR section defines a list of linux bridge ports.
+
+.PP
+Each linux bridge port contains these properties:
+ * \fBname\fR: Interface name.
+ * \fBstp-hairpin-mode\fR: Boolean.
+ * \fBstp-path-cost\fR: Integer.
+ * \fBstp-priority\fR: Integer.
+ * \fBvlan\fR: Please check \fBLinux Bridge Port VLAN\fR section.
+
+.SS Linux Bridge Port VLAN
+The \fBvlan\fR subsection of \fBport\fR section of linux bridge holds the VLAN
+filtering of linux bridge. For example:
+
+.EX
+---
+interfaces:
+  - name: br0
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: eth1
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id: 101
+            - id-range:
+                min: 500
+                max: 599
+            tag: 100
+            enable-native: true
+        - name: eth2
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id: 500
+.EE
+
+.PP
+The \fBvlan\fR subsection holds these parameters:
+.IP \(bu 2
+\fBmode\fR: \fBaccess\fR or \fBtrunk\fR
+.IP \(bu 2
+\fBtag\fR: Integer. VLAN Tag for native VLAN.
+.IP \(bu 2
+\fBenable-native\fR: Boolean. Enable native VLAN or not.
+.IP \(bu 2
+\fBtrunk-tags\fR: List of VLAN IDs or ID ranges:
+.RS
+.IP \(bu 2
+\fBid\fR: Integer.
+.IP \(bu 2
+\fBid-range\fR:
+.RS
+.IP \(bu 2
+\fBmin\fR: Minimum VLAN ID(inclusive).
+.IP \(bu 2
+\fBmax\fR: Maximum VLAN ID(inclusive).
+.RE
+.RE
+
+.PP
+When \fBvlan\fR section not defined in desire state when applying, current VLAN
+filtering settings will be preserved for specified interface, once defined,
+nmstate will override all VLAN filter settings of specified interface with
+desired without merging from current.
+
+.SS OpenvSwitch Bridge Interface
+The \fBbridge\fR section of could hold parameters of
+OpenvSwitch(Short to OVS below) Bridge specific configurations. For example:
+
+.EX
+interfaces:
+- name: br0
+  type: ovs-bridge
+  state: up
+  wait-ip: any
+  bridge:
+    options:
+      stp: false
+      rstp: false
+      mcast-snooping-enable: false
+    port:
+    - name: ovs0
+    - name: eth1
+.EE
+
+.SS OpenvSwitch Bridge Options
+The \fBoptions\fR subsection of OVS bridge interface \fBbridge\fR section holds these
+options:
+.IP \(bu 2
+\fBstp\fR: Boolean.
+.IP \(bu 2
+\fBrstp\fR: Boolean.
+.IP \(bu 2
+\fBmcast-snooping-enable\fR: String.
+.IP \(bu 2
+\fBfail-mode\fR: String.
+.IP \(bu 2
+\fBdatapath\fR: String. Only for DPDK.
+.IP \(bu 2
+\fBallow-extra-patch-ports\fR: Boolean. When set to true, the verification
+stage of nmstate will ignore extra OVS patch port not mentioned in \fBport\fR
+section. This allows external tool to attach OVS patch port upon nmstate
+creating the OVS bridge. This option is not persisted because it only
+control nmstate verification stage during apply action. The default value
+is false means the verification stage will make sure OVS bridge port list
+match with desired state.
+
+.SS OpenvSwitch Bridge Ports
+The \fBport\fR subsection of \fBbridge\fR section defines a list of OVS bridge
+interfaces.
+
+.PP
+There are three type of OVS interfaces:
+ * \fBinternal\fR: Represent the bridge itself in kernel.
+ * \fBsystem\fR: Interface exists in kernel and attached to this bridge.
+ * \fBbond\fR: OVS bond interface.
+
+.PP
+This is the example YAML contains these three OVS interface types.
+
+.EX
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: veth1
+    - name: ovs0
+    - name: bond1
+      link-aggregation:
+        mode: balance-slb
+        port:
+          - name: eth2
+          - name: eth1
+      vlan:
+        mode: access
+        tag: 100
+.EE
+
+.PP
+Each OVS interface config could have:
+ * \fBname\fR: String
+ * \fBlink-aggregation\fR: Bond config.
+ * \fBvlan\fR: Vlan config. Please check \fBLinux Bridge Port VLAN\fR section.
+
+.SS OpenvSwitch DPDK
+Below yaml could be used to enable DPDK using PCI device \fB0000:af:00.1\fR:
+
+.EX
+---
+interfaces:
+- name: ovs0
+  type: ovs-interface
+  state: up
+  dpdk:
+    devargs: "0000:af:00.1"
+    rx-queue: 100
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    options:
+      datapath: "netdev"
+    port:
+    - name: ovs0
+ovs-db:
+  other_config:
+    dpdk-init: "true"
+.EE
+
+.PP
+Please refer to OpenvSwitch document for technical details.
+
+.SS OpenvSwitch Internal Interface
+The OVS internal interface is the virtual interface representing the OVS bridge
+in kernel. For example:
+
+.EX
+- name: ovs0
+  type: ovs-interface
+  state: up
+  mac-address: 92:7C:8B:BF:AA:D8
+  mtu: 1500
+  min-mtu: 68
+  max-mtu: 65535
+  wait-ip: any
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+.EE
+
+.PP
+There is no special config for OVS internal interface.
+
+.SS OpenvSwitch Bridge Patch Interface
+The \fBpatch\fR section of \fBovs-interface\fR could be used for OVS bridge patching.
+
+.PP
+This is the example on using OVS patch interface to connect two OVS bridges:
+
+.EX
+---
+interfaces:
+- name: patch0
+  type: ovs-interface
+  state: up
+  patch:
+    peer: patch1
+- name: ovs-br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: patch0
+- name: patch1
+  type: ovs-interface
+  state: up
+  patch:
+    peer: patch0
+- name: ovs-br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: patch1
+.EE
+
+.SS Mac VTAP Interface
+The \fBmac-vtap\fR section of \fBmac-vtap\fR interface defines configurations of
+MAC VTAP interface.
+
+.PP
+For example:
+
+.EX
+interfaces:
+- name: mac0
+  type: mac-vtap
+  state: up
+  mac-vtap:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+.EE
+
+.PP
+The \fBmac-vtap\fR section contains these parameters:
+ * \fBbase-iface\fR: String. Parent interface name.
+ * \fBmode\fR: String. Should be \fBvepa\fR, \fBbridge\fR, \fBprivate\fR, \fBpassthru\fR or
+   \fBsource\fR\&.
+ * \fBpromiscuous\fR: Boolean.
+
+.SS Mac VLAN Interface
+The \fBmac-vlan\fR section of \fBmac-vlan\fR interface defines configurations of
+MAC VLAN interface.
+
+.PP
+For example:
+
+.EX
+interfaces:
+- name: mac0
+  type: mac-vlan
+  state: up
+  mac-vlan:
+    base-iface: eth1
+    mode: passthru
+    promiscuous: true
+.EE
+
+.PP
+The \fBmac-vlan\fR section contains these parameters:
+ * \fBbase-iface\fR: String. Parent interface name.
+ * \fBmode\fR: String. Should be \fBvepa\fR, \fBbridge\fR, \fBprivate\fR, \fBpassthru\fR or
+   \fBsource\fR\&.
+ * \fBpromiscuous\fR: Boolean.
+
+.SS IP over InfiniBand Interface
+The \fBinfiniband\fR section of \fBinfiniband\fR interface defines configurations of
+IP over InfiniBand Interface.
+
+.PP
+For example:
+
+.EX
+---
+interfaces:
+  - name: ib2.8001
+    type: infiniband
+    state: up
+    mtu: 1280
+    infiniband:
+      pkey: "0x8001"
+      mode: "connected"
+      base-iface: "ib2"
+.EE
+
+.PP
+The \fBinfiniband\fR sections contains these parameters:
+ * \fBpkey\fR: String or integer. P-key of sub-interface. None and \fB0xffff\fR both
+   indicate the base interface.
+ * \fBbase-iface\fR: Base interface name. Empty for base interface itself.
+ * \fBmode\fR: \fBconnected\fR or \fBdatagram\fR\&.
+
+.SS Virtual Routing and Forwarding (VRF) Interface
+The \fBvrf\fR section of \fBvrf\fR interface contains configurations of Linux kernel
+Virtual Routing and Forwarding(VRF) interface. For example:
+
+.EX
+- name: vrf0
+  type: vrf
+  state: up
+  vrf:
+    port:
+    - eth1
+    - eth2
+    route-table-id: 100
+.EE
+
+.PP
+The \fBvrf\fR section contains:
+ * \fBport\fR: List of String. VRF Ports.
+ * \fBroute-table-id\fR: Which route table ID should this VRF attach to.
+
+.SS Linux Virtual Ethernet(veth) Interface
+Besides holding configurations of Ethernet interface, the \fBveth\fR interface
+could also hold \fBveth\fR section. For example:
+
+.EX
+---
+interfaces:
+- name: veth1
+  type: veth
+  state: up
+  veth:
+    peer: veth1peer
+.EE
+
+.SS IPsec Encryption
+New feature in 2.2.21
+
+.PP
+Nmstate is using Libreswan
+\[la]https://libreswan.org/\[ra] daemon and
+\fBNetworkManager-libreswan\fR for IPsec encryption communication.
+
+.PP
+This is an example of X509 based authentication IPsec connection:
+
+.EX
+---
+interfaces:
+- name: hosta_conn
+  type: ipsec
+  ipv4:
+    enabled: true
+    dhcp: true
+  libreswan:
+    right: 192.0.2.252
+    rightid: '@hostb.example.org'
+    left: 192.0.2.251
+    leftid: '%fromcert'
+    leftcert: hosta.example.org
+    ikev2: insist
+.EE
+
+.PP
+The \fBlibreswan\fR section, nmstate provides these properties:
+ * \fBnm-auto-defaults\fR: Boolean. New in 2.2.56. Please always explicitly set it
+   to \fBfalse\fR for aligning libreswan default values instead of NetworkManager
+   default values. Default is true for backwards compatibility.
+ * \fBipsec-interface\fR: String 'yes' or 'no' or unsigned integer.
+ * \fBauthby\fR: Authentication method. Normally you don't need to set it.
+ * \fBdpddelay\fR: Integer.
+ * \fBdpdtimeout\fR: Integer.
+ * \fBdpdaction\fR: String.
+ * \fBikelifetime\fR: String.
+ * \fBsalifetime\fR: String.
+ * \fBikev2\fR: String.
+ * \fBike\fR: String.
+ * \fBesp\fR: String.
+ * \fBright\fR: String.
+ * \fBrightid\fR: String.
+ * \fBrightrsasigkey\fR: String.
+ * \fBleft\fR: String.
+ * \fBleftid\fR: String.
+ * \fBleftrsasigkey\fR: String.
+ * \fBleftcert\fR: String.
+ * \fBikev2\fR: String.
+ * \fBpsk\fR: String. The Pre-Shared-Key. Please consider to use x509/PKI
+   authentication in production system. In query, this property will be
+   shown as \fB<_password_hid_by_nmstate>\fR for security concern.
+ * \fBrightsubnet\fR: String. Please explicitly set it to /32 or /128 IP when using
+   in host-to-host mode.
+ * \fBleftmodecfgclient\fR: true|false. Please explicitly set it to \fBfalse\fR when
+   using in host-to-host mode.
+ * \fBtype\fR: \fBtransport\fR or \fBtunnel\fR\&. The \fBtunnel\fR is the default value if not
+   defined.
+ * \fBrightca\fR: String. New in 2.2.56. Certificate Authority (CA) of remote peer.
+ * \fBleftprotoport\fR: String. New in 2.2.57. Allowed protocols and ports over
+   connection.
+ * \fBrightprotoport\fR: String. New in 2.2.57. Allowed protocols and ports over
+   connection.
+
+.PP
+Except the \fBpsk\fR and \fBnm-auto-defaults\fR properties, all other properties are
+libreswan specific options, please refer to the manpage of \fBipsec.conf\fR for
+detail meaning of them.
+
+.PP
+By default, nmstate will not create any virtual NIC representing the encrypted
+communication, they can be check via \fBip xfrm policy\fR command. The IP provided
+by IPsec remote will be assigned the interface hosting the underneath network
+flow.
+
+.PP
+If you prefer a logical interface holding encrypted communication, please set
+\fBipsec-interface\fR to \fB\&'yes'\fR or a unsigned integer number, then a xfrm logical
+interface named \fBipsec<number>\fR will be created holding the IP retrieved from
+IPsec remote.
+
+.PP
+You may also check IPsec example page
+\[la]../features/ipsec.md\[ra] for use cases.
+
+.SS Loopback Interface
+New feature in 2.2.2
+
+.PP
+Example loopback interface YAML:
+
+.EX
+interfaces:
+- name: lo
+  type: loopback
+  state: up
+  mac-address: 00:00:00:00:00:00
+  mtu: 65536
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 127.0.0.1
+      prefix-length: 8
+  ipv6:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: ::1
+      prefix-length: 128
+.EE
+
+.PP
+Use \fBstate: absent\fR will revert loopback interface back to kernel defaults.
+
+.PP
+Even desired state does not have \fB127.0.0.1/8\fR or \fB::1/128\fR, nmstate will
+still include those two IPs to loopback interface.
+
+.SS IPVLAN Interface
+New feature in 2.2.38
+
+.PP
+Example YAML:
+
+.EX
+interfaces:
+- name: ipvlan0
+  type: ipvlan
+  state: up
+  ipvlan:
+    mode: l3
+    base-iface: eth1
+    private: false
+    vepa: false
+.EE
+
+.PP
+The \fBipvlan\fR section contains these options:
+* \fBmode\fR: String. Should be \fBl2\fR, \fBl3\fR or \fBl3s\fR\&.
+    * \fBl2\fR: ipvlan receive and respond to ARP requests, it provides good
+      performance, but less control on the network traffic.
+    * \fBl3\fR: ipvlan process only L3 traffic and above, does not respond to ARP
+      request and users must configure the neighbour entries for the IPVLAN IP
+      addresses on the relevant peers manually.
+    * \fBl3s\fR: ipvlan process the same way as in L3 mode, except that both egress
+      and ingress traffics of a relevant container are landed on netfilter chain
+      in the default namespace.
+* \fBbase-iface\fR: String. Parent interface name.
+* \fBprivate\fR: Boolean. It controls the isolation between the ipvlan interface and
+  other devices on the network.
+* \fBvepa\fR: Boolean. When enabled, traffic will be forwarded through a central
+  switch, helping improve network management and reduce broadcast traffic.
+
+.SS HSR/PRP Interface
+New feature since 2.2.22
+
+.PP
+HSR (High Availability Seamless Redundancy) and PRP (Parallel Redundancy
+Protocol) interface are treat as \fBtype: hsr\fR\&.
+
+.PP
+Example YAML for you to create a HSR interface:
+
+.EX
+.EE
+
+.SH Routes
+The \fBroutes\fR top section of network state contains two type routes:
+ * \fBrunning\fR: Running effected routes containing route from universe or link scope,
+    and only from these protocols:
+    * boot (often used by \fBiproute\fR command)
+    * static
+    * ra
+    * dhcp
+    * mrouted
+    * keepalived
+    * babel
+.IP \(bu 2
+\fBconfig\fR: Static routes containing route from universe or link scope,
+and only from these protocols:
+.RS
+.IP \(bu 2
+boot (often used by \fBiproute\fR command)
+.IP \(bu 2
+static
+.RE
+
+.PP
+For example:
+
+.EX
+routes:
+  running:
+  - destination: 0.0.0.0/0
+    next-hop-interface: eth1
+    next-hop-address: 192.0.2.1
+    table-id: 254
+  config:
+  - destination: 0.0.0.0/0
+    next-hop-interface: eth1
+    next-hop-address: 192.0.2.1
+    table-id: 254
+.EE
+
+.PP
+When applying, the \fBrunning\fR routes are ignored, the \fBconfig\fR routes in desire
+state is \fBappended\fP to existing routes. To change or override existing
+routes, you need to delete old route entry and add new one(could in single
+desire state). For example, to change default gateway of \fBeth1\fR:
+
+.EX
+routes:
+  config:
+  - destination: 0.0.0.0/0
+    next-hop-interface: eth1
+    state: absent
+  - destination: 0.0.0.0/0
+    next-hop-address: 192.0.2.1
+    next-hop-interface: eth1
+.EE
+
+.PP
+The \fBstate: absent\fR is used to delete all matching route entry. Below route
+will delete all routes with \fBnext-hop-interface: eth1\fR:
+
+.EX
+routes:
+  config:
+  - destination: 0.0.0.0/0
+    next-hop-interface: eth1
+    state: absent
+.EE
+
+.PP
+Each route entry could have these parameters:
+.IP \(bu 2
+\fBstate\fR: Only set to \fBabsent\fR for deleting matching routes when applying.
+During querying, nmstate will set routes next hop to ignored interface as
+\fBstate: ignore\fR\&. Applying routes with \fBstate: ignore\fR will be ignored.
+.IP \(bu 2
+\fBdestination\fR: String. Mandatory for every non-absent routes.
+.IP \(bu 2
+\fBnext-hop-interface\fR: String. Mandatory for every non-absent routes
+.IP \(bu 2
+\fBnext-hop-address\fR: String. When setting this as empty string for absent
+route, it will only delete routes \fBwithout\fP \fBnext-hop-address\fR\&.
+.IP \(bu 2
+\fBmetric\fR: Integer. Set to -1 for let backend decide.
+.IP \(bu 2
+\fBtable-id\fR: Integer. Set to 0 for main table id 254.
+.IP \(bu 2
+\fBcwnd\fR: Integer. TCP congestion window. According to linux kernel, The
+\fBcwnd\fR property of route requires the \fBlock cwnd\fR flag been set at the same
+time, otherwise the \fBcwnd\fR will take effect. Hence, on querying, nmstate
+treat routes without \fBlock cwnd\fR flag as empty \fBcwnd\fR\&. When applying,
+nmstate backend always set \fBlock cwnd\fR\&. If you want to modify existing
+\fBcwnd\fR, like modifying other route properties, you need to mark old
+route as \fBstate: absnet\fR and append new route.
+.IP \(bu 2
+\fBvrf-name\fR: String. Store the route to the route table which specified VRF
+is binding to.
+
+.SH Route Rules
+This is the example of IP route rule:
+
+.EX
+route-rules:
+  config:
+  - ip-from: 192.168.3.2/32
+    priority: 1000
+    route-table: 200
+  - ip-from: 2001:db8:b::/64
+    priority: 1000
+    route-table: 200
+routes:
+  config:
+  - destination: 192.168.2.0/24
+    next-hop-interface: eth1
+    next-hop-address: 192.168.1.3
+    metric: 108
+    table-id: 200
+  - destination: 2001:db8:a::/64
+    next-hop-interface: eth1
+    next-hop-address: 2001:db8:1::2
+    metric: 108
+    table-id: 200
+.EE
+
+.PP
+Like \fBroutes\fR, the \fBroute-rules\fR is also using \fBstate: absent\fR for partial
+editing. For example:
+
+.EX
+---
+route-rules:
+  config:
+    - ip-from: 192.168.3.2/32
+      route-table: 200
+      state: absent
+.EE
+
+.PP
+Each route rule entry could contains these parameters:
+ * \fBfamily\fR: \fBipv4\fR or \fBipv6\fR\&. Only used when you would like to do
+   \fBfrom any to any\fR matching.
+ * \fBstate\fR: Only set to \fBabsent\fR for deleting matching route rules.
+ * \fBip-from\fR: String. When setting to empty string in absent route rule, it
+   will only delete route rule \fBwithout\fP \fBip-from\fR\&.
+ * \fBip-to\fR: String. When setting to empty string in absent route rule, it will
+   only delete route rule \fBwithout\fP \fBip-to\fR\&.
+ * \fBpriority\fR: Integer. Strongly suggested user to manually set priority
+   to make sure route rule acting in desired order. If not defined, nmstate
+   will add desired routes \fBafter\fP existing route rules.
+ * \fBroute-table\fR: Integer. Redirect matching packages to route table ID. Unset
+   or 0 will be changed to main table ID 254.
+ * \fBfwmark\fR: Integer or hex string. Select the \fBfwmark\fR value to match.
+ * \fBfwmask\fR: Integer or hex string. Select the \fBfwmask\fR value to match.
+ * \fBiif\fR: String. New in version 2.2.2. Incoming interface name.
+ * \fBaction\fR: New in version 2.2.2. \fBblackhole\fR or \fBunreachable\fR or \fBprohibit\fR
+   or undefined.
+
+.SH DNS Resolver
+The \fBdns-resolver\fR sections contains two sub-sections:
+ * \fBrunning\fR: The running effective state. The DNS server might be from DHCP(IPv6
+   autoconf) or manual setup.
+ * \fBconfig\fR:  The static saved DNS resolver config.  When applying, if this not
+   mentioned, current static DNS config will be preserved as it was. If
+   defined, will override current static DNS config.
+
+.PP
+For example:
+
+.EX
+dns-resolver:
+  running:
+    server:
+    - 2001:4860:4860::8888
+    - 2001:4860:4860::8844
+    - 8.8.4.4
+    search:
+    - example.com
+    - example.org
+  config:
+    server:
+    - 2001:4860:4860::8888
+    - 2001:4860:4860::8844
+    - 8.8.4.4
+    search:
+    - example.com
+    - example.org
+.EE
+
+.PP
+NetworkManager backend has two set of DNS configurations:
+ * Global DNS set by D-BUS interface or NetworkManager.conf.
+ * Interface DNS stored in NetworkManager connection as \fBipv4.dns\fR or
+   \fBipv6.dns.\fR
+
+.PP
+Nmstate will try to use global DNS via D-BUS interface call, and only use
+interface level DNS for any of these use case:
+ 1. Has IPv6 link-local address as name server: e.g. \fBfe80::deef:1%eth1\fR
+ 2. User want static DNS server appended before dynamic one. In this case,
+    user should define \fBauto-dns: true\fR explicitly along with static DNS.
+ 3. User want to force DNS server stored in interface for static IP
+    interface. This case, user need to state static DNS config along with
+    static IP config.
+
+.PP
+To purge the static DNS configure, please use
+
+.EX
+dns-resolver:
+  config: {}
+.EE
+
+.PP
+Please check DNS feature page for YAML examples
+\[la]../features/dns.md\[ra]\&.
+
+.SH Hostname
+Only available on nmstate version 2.1.1+.
+The \fBhostname\fR section contains these parameters:
+.IP \(bu 2
+\fBrunning\fR: The running active hostname.
+.IP \(bu 2
+\fBconfig\fR: The saved static hostname.
+
+.PP
+For example:
+
+.EX
+hostname:
+  running: "c9sr"
+  config: "c9ss"
+.EE
+
+.PP
+To remove static hostname, please set \fBrunning\fR or \fBconfig\fR as empty string.
+
+.SH OpenvSwitch Database
+Nmstate supports two types of OpenvSwitch Database modification:
+ * Interface level
+ * Global level.
+
+.PP
+For Interface level, only \fBexternal_ids\fR is supported. For example:
+
+.EX
+---
+interfaces:
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: ovs0
+    - name: eth1
+  ovs-db:
+    external_ids:
+      gris: 10
+- name: ovs0
+  type: ovs-interface
+  state: up
+  ovs-db:
+    external_ids:
+      gris: abc
+- name: eth1
+  ovs-db:
+    external_ids:
+      gris: xyz
+.EE
+
+.PP
+For global config, both \fBexternal_ids\fR and \fBother_config\fR are supported.
+For example:
+
+.EX
+ovs-db:
+  other_config:
+    stats-update-interval: "1000"
+  external_ids:
+    ovn-localnet-bridge-mappings: "ovn-external:breth0"
+.EE
