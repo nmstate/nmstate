@@ -209,9 +209,9 @@ impl MergedInterfaces {
                     ));
                 } else if let Some(kernel_name) = kernel_names.first() {
                     des_iface
-                        .change_port_name(&port_name, kernel_name.to_string());
+                        .change_port_name(port_name, kernel_name.to_string());
                     for_apply
-                        .change_port_name(&port_name, kernel_name.to_string());
+                        .change_port_name(port_name, kernel_name.to_string());
                     for_verify
                         .change_port_name(&port_name, kernel_name.to_string());
                 } else {
