@@ -27,12 +27,12 @@ fn get_iface<'a>(
         .unwrap()
 }
 
-fn get_routing_rules<'a>(iface: &Interface, ipv6: bool) -> Vec<RouteRuleEntry> {
+fn get_routing_rules(iface: &Interface, ipv6: bool) -> Vec<RouteRuleEntry> {
     let rules = match ipv6 {
         false => iface.base_iface().ipv4.as_ref().unwrap().rules.as_ref(),
         true => iface.base_iface().ipv6.as_ref().unwrap().rules.as_ref(),
     };
-    let mut rules: Vec<_> = rules.unwrap().into_iter().cloned().collect();
+    let mut rules: Vec<_> = rules.unwrap().iter().cloned().collect();
     rules.sort();
     rules
 }

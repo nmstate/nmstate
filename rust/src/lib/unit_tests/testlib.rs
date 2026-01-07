@@ -128,8 +128,7 @@ pub(crate) fn bond_with_ports(name: &str, ports: &[&str]) -> Interface {
 pub(crate) fn get_mac(iface: &Option<Interface>) -> Option<String> {
     iface
         .as_ref()
-        .map(|i| i.base_iface().mac_address.clone())
-        .flatten()
+        .and_then(|i| i.base_iface().mac_address.clone())
 }
 
 pub(crate) const TEST_NIC: &str = "eth1";

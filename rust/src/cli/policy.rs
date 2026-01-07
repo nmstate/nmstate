@@ -217,7 +217,7 @@ mod tests {
             .parse()
             .expect("Year should be a valid number");
         assert!(
-            year >= 2020 && year <= 2100,
+            (2020..=2100).contains(&year),
             "Year should be reasonable: {}",
             year
         );
@@ -227,7 +227,7 @@ mod tests {
             .parse()
             .expect("Month should be a valid number");
         assert!(
-            month >= 1 && month <= 12,
+            (1..=12).contains(&month),
             "Month should be between 1 and 12: {}",
             month
         );
@@ -237,7 +237,7 @@ mod tests {
             .parse()
             .expect("Day should be a valid number");
         assert!(
-            day >= 1 && day <= 31,
+            (1..=31).contains(&day),
             "Day should be between 1 and 31: {}",
             day
         );
