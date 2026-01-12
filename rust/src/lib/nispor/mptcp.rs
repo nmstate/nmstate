@@ -3,8 +3,8 @@
 use std::net::Ipv6Addr;
 
 use crate::{
-    ip::is_ipv6_unicast_link_local, BaseInterface, ErrorKind, MptcpAddressFlag,
-    MptcpConfig, NmstateError,
+    BaseInterface, ErrorKind, MptcpAddressFlag, MptcpConfig, NmstateError,
+    ip::is_ipv6_unicast_link_local,
 };
 
 pub(crate) fn get_mptcp_flags(
@@ -14,15 +14,15 @@ pub(crate) fn get_mptcp_flags(
     let mut flags = Vec::new();
     if let Some(mptcp_addrs) = np_iface.mptcp.as_ref() {
         for mptcp_addr in mptcp_addrs {
-            if mptcp_addr.address.to_string().as_str() == ip_addr {
-                if let Some(np_flags) = mptcp_addr.flags.as_ref() {
-                    for np_flag in np_flags {
-                        match MptcpAddressFlag::try_from(*np_flag) {
-                            Ok(f) => flags.push(f),
-                            Err(e) => {
-                                log::warn!("{e}");
-                                continue;
-                            }
+            if mptcp_addr.address.to_string().as_str() == ip_addr
+                && let Some(np_flags) = mptcp_addr.flags.as_ref()
+            {
+                for np_flag in np_flags {
+                    match MptcpAddressFlag::try_from(*np_flag) {
+                        Ok(f) => flags.push(f),
+                        Err(e) => {
+                            log::warn!("{e}");
+                            continue;
                         }
                     }
                 }
@@ -41,13 +41,12 @@ pub(crate) fn get_iface_mptcp_conf(
     if let Some(addrs) = iface.ipv4.as_ref().and_then(|i| i.addresses.as_ref())
     {
         for addr in addrs {
-            if let std::net::IpAddr::V4(ip_addr) = &addr.ip {
-                if ip_addr.is_loopback()
+            if let std::net::IpAddr::V4(ip_addr) = &addr.ip
+                && (ip_addr.is_loopback()
                     || ip_addr.is_link_local()
-                    || ip_addr.is_multicast()
-                {
-                    continue;
-                }
+                    || ip_addr.is_multicast())
+            {
+                continue;
             }
             has_mptcp_valid_ip_addr = true;
             if let Some(mptcp_flags) = addr.mptcp_flags.as_ref() {

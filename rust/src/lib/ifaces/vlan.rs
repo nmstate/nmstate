@@ -212,17 +212,15 @@ impl MergedInterface {
                     .as_ref()
                     .and_then(|v| v.reorder_headers.as_ref())
                     != Some(&false)
+                    && let Some(vlan_conf) = apply_iface.vlan.as_mut()
+                    && vlan_conf.reorder_headers.is_none()
                 {
-                    if let Some(vlan_conf) = apply_iface.vlan.as_mut() {
-                        if vlan_conf.reorder_headers.is_none() {
-                            vlan_conf.reorder_headers = Some(true);
-                        }
-                    }
-                }
-            } else if let Some(vlan_conf) = apply_iface.vlan.as_mut() {
-                if vlan_conf.reorder_headers.is_none() {
                     vlan_conf.reorder_headers = Some(true);
                 }
+            } else if let Some(vlan_conf) = apply_iface.vlan.as_mut()
+                && vlan_conf.reorder_headers.is_none()
+            {
+                vlan_conf.reorder_headers = Some(true);
             }
         }
 
@@ -232,21 +230,21 @@ impl MergedInterface {
             Some(Interface::Vlan(cur_iface)),
         ) = (&mut self.for_apply, &mut self.for_verify, &self.current)
         {
-            if let Some(apply_vlan) = &mut apply_iface.vlan {
-                if apply_vlan.base_iface.is_none() {
-                    apply_vlan.base_iface = cur_iface
-                        .vlan
-                        .as_ref()
-                        .and_then(|vlan| vlan.base_iface.clone());
-                }
+            if let Some(apply_vlan) = &mut apply_iface.vlan
+                && apply_vlan.base_iface.is_none()
+            {
+                apply_vlan.base_iface = cur_iface
+                    .vlan
+                    .as_ref()
+                    .and_then(|vlan| vlan.base_iface.clone());
             }
-            if let Some(verify_vlan) = &mut verify_iface.vlan {
-                if verify_vlan.base_iface.is_none() {
-                    verify_vlan.base_iface = cur_iface
-                        .vlan
-                        .as_ref()
-                        .and_then(|vlan| vlan.base_iface.clone());
-                }
+            if let Some(verify_vlan) = &mut verify_iface.vlan
+                && verify_vlan.base_iface.is_none()
+            {
+                verify_vlan.base_iface = cur_iface
+                    .vlan
+                    .as_ref()
+                    .and_then(|vlan| vlan.base_iface.clone());
             }
         }
     }

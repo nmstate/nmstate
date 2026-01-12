@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-use std::ops::BitXor;
+use std::{collections::HashSet, ops::BitXor};
 
-use super::super::nm_dbus::{
-    NmIpRouteRuleAction, NmSettingIp, NmSettingIpMethod,
+use super::{
+    super::nm_dbus::{NmIpRouteRuleAction, NmSettingIp, NmSettingIpMethod},
+    dns::nm_dns_to_nmstate,
 };
-
-use super::dns::nm_dns_to_nmstate;
-
 use crate::{
     AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpv4, InterfaceIpv6,
     Ipv6AddrGenMode, RouteRuleAction, RouteRuleEntry, WaitIp,

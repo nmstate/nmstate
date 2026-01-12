@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ip::sanitize_ip_network, unit_tests::testlib::new_eth_iface, BaseInterface,
-    ErrorKind, Interface, InterfaceState, Interfaces, MergedInterfaces,
+    BaseInterface, ErrorKind, Interface, InterfaceState, Interfaces,
+    MergedInterfaces, ip::sanitize_ip_network,
+    unit_tests::testlib::new_eth_iface,
 };
 
 fn gen_test_eth_ifaces() -> Interfaces {

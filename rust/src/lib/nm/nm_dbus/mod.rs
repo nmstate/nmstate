@@ -19,28 +19,11 @@ mod gen_conf;
 #[cfg(feature = "query_apply")]
 mod query_apply;
 
-pub use self::active_connection::NmActiveConnection;
-pub use self::connection::{
-    NmConnection, NmConnectionMultiConnect, NmIfaceType, NmIpRoute,
-    NmIpRouteRule, NmIpRouteRuleAction, NmRange, NmSetting8021X, NmSettingBond,
-    NmSettingBondPort, NmSettingBridge, NmSettingBridgePort,
-    NmSettingBridgeVlanRange, NmSettingConnection, NmSettingEthtool,
-    NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod, NmSettingIpVlan,
-    NmSettingLoopback, NmSettingMacSec, NmSettingMacVlan, NmSettingMatch,
-    NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
-    NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
-    NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
-    NmSettingUser, NmSettingVeth, NmSettingVlan, NmSettingVlanFlag,
-    NmSettingVpn, NmSettingVrf, NmSettingVxlan, NmSettingWired,
-    NmSettingsConnectionFlag, NmVlanProtocol,
-};
-pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
+pub(crate) use self::convert::ToDbusValue;
 #[cfg(feature = "query_apply")]
 pub use self::dns::{NmDnsEntry, NmGlobalDnsConfig};
-pub use self::error::{
-    ErrorKind, NmConnectionError, NmDeviceError, NmError, NmManagerError,
-    NmSettingError,
-};
+#[cfg(feature = "gen_conf")]
+pub(crate) use self::gen_conf::ToKeyfile;
 #[cfg(feature = "query_apply")]
 pub use self::lldp::{
     NmLldpNeighbor, NmLldpNeighbor8021Ppvid, NmLldpNeighbor8021Vlan,
@@ -49,7 +32,25 @@ pub use self::lldp::{
 };
 #[cfg(feature = "query_apply")]
 pub use self::nm_api::{NmApi, NmVersion, NmVersionInfo};
-
-pub(crate) use self::convert::ToDbusValue;
-#[cfg(feature = "gen_conf")]
-pub(crate) use self::gen_conf::ToKeyfile;
+pub use self::{
+    active_connection::NmActiveConnection,
+    connection::{
+        NmConnection, NmConnectionMultiConnect, NmIfaceType, NmIpRoute,
+        NmIpRouteRule, NmIpRouteRuleAction, NmRange, NmSetting8021X,
+        NmSettingBond, NmSettingBondPort, NmSettingBridge, NmSettingBridgePort,
+        NmSettingBridgeVlanRange, NmSettingConnection, NmSettingEthtool,
+        NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod, NmSettingIpVlan,
+        NmSettingLoopback, NmSettingMacSec, NmSettingMacVlan, NmSettingMatch,
+        NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
+        NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+        NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf,
+        NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth, NmSettingVlan,
+        NmSettingVlanFlag, NmSettingVpn, NmSettingVrf, NmSettingVxlan,
+        NmSettingWired, NmSettingsConnectionFlag, NmVlanProtocol,
+    },
+    device::{NmDevice, NmDeviceState, NmDeviceStateReason},
+    error::{
+        ErrorKind, NmConnectionError, NmDeviceError, NmError, NmManagerError,
+        NmSettingError,
+    },
+};

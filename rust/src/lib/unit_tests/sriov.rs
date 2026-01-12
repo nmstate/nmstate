@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    state::get_json_value_difference, unit_tests::testlib::new_eth_iface,
     BridgePortVlanMode, ErrorKind, EthernetConfig, EthernetDuplex, Interface,
     InterfaceType, Interfaces, MergedInterfaces, NetworkState, SrIovConfig,
-    SrIovVfConfig,
+    SrIovVfConfig, state::get_json_value_difference,
+    unit_tests::testlib::new_eth_iface,
 };
 
 #[test]
@@ -14,7 +14,7 @@ fn test_sriov_vf_mac_mix_case() {
 
     let mut cur_ifaces = Interfaces::new();
     let mut cur_iface = new_eth_iface("eth1");
-    if let Interface::Ethernet(ref mut eth_iface) = cur_iface {
+    if let Interface::Ethernet(eth_iface) = &mut cur_iface {
         let mut eth_conf = EthernetConfig::new();
         let mut sriov_conf = SrIovConfig::new();
         let mut vf_conf = SrIovVfConfig::new();
@@ -33,7 +33,7 @@ fn test_sriov_vf_mac_mix_case() {
 
     let mut des_ifaces = Interfaces::new();
     let mut des_iface = new_eth_iface("eth1");
-    if let Interface::Ethernet(ref mut eth_iface) = des_iface {
+    if let Interface::Ethernet(eth_iface) = &mut des_iface {
         let mut eth_conf = EthernetConfig::new();
         let mut sriov_conf = SrIovConfig::new();
         let mut vf_conf = SrIovVfConfig::new();
@@ -539,7 +539,7 @@ fn test_verify_sriov_port_name_ovs_bond() {
 fn test_sriov_vf_auto_fill_vf_conf() {
     let mut cur_ifaces = Interfaces::new();
     let mut cur_iface = new_eth_iface("eth1");
-    if let Interface::Ethernet(ref mut eth_iface) = cur_iface {
+    if let Interface::Ethernet(eth_iface) = &mut cur_iface {
         let mut eth_conf = EthernetConfig::new();
         let mut sriov_conf = SrIovConfig::new();
         let mut vfs = Vec::new();
@@ -565,23 +565,22 @@ fn test_sriov_vf_auto_fill_vf_conf() {
 
     let mut pre_apply_current = cur_ifaces.clone();
     for iface in pre_apply_current.kernel_ifaces.values_mut() {
-        if let Interface::Ethernet(ref mut eth_iface) = iface {
-            if let Some(vfs) = eth_iface
+        if let Interface::Ethernet(eth_iface) = iface
+            && let Some(vfs) = eth_iface
                 .ethernet
                 .as_mut()
                 .and_then(|eth_conf| eth_conf.sr_iov.as_mut())
                 .and_then(|sr_iov_conf| sr_iov_conf.vfs.as_mut())
-            {
-                for vf in vfs {
-                    vf.trust = Some(false);
-                }
+        {
+            for vf in vfs {
+                vf.trust = Some(false);
             }
         }
     }
 
     let mut des_ifaces = Interfaces::new();
     let mut des_iface = new_eth_iface("eth1");
-    if let Interface::Ethernet(ref mut eth_iface) = des_iface {
+    if let Interface::Ethernet(eth_iface) = &mut des_iface {
         let mut eth_conf = EthernetConfig::new();
         let mut sriov_conf = SrIovConfig::new();
         let mut vf_conf = SrIovVfConfig::new();

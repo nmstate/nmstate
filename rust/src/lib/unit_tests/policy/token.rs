@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::policy::token::{parse_str_to_capture_tokens, NetworkCaptureToken};
+use crate::policy::token::{NetworkCaptureToken, parse_str_to_capture_tokens};
 
 #[test]
 fn test_policy_token_quoted_string() {

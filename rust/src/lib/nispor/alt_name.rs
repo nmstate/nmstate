@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-use std::fmt::Write;
+use std::{collections::HashSet, fmt::Write};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -293,10 +292,10 @@ async fn save_systemd_network_link_file(
             };
             // Include driver in match rule in case we have two NIC holding the
             // same MAC. (e.g. M$ Azure - Microsoft Azure Network Adapter)
-            if let Some(cur_base_iface) = cur_base_iface.as_ref() {
-                if let Some(driver) = cur_base_iface.driver.as_ref() {
-                    write!(match_rules, "\nDriver={driver}").ok();
-                }
+            if let Some(cur_base_iface) = cur_base_iface.as_ref()
+                && let Some(driver) = cur_base_iface.driver.as_ref()
+            {
+                write!(match_rules, "\nDriver={driver}").ok();
             }
             match_rules
         }

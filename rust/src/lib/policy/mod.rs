@@ -9,6 +9,7 @@ mod route_rule;
 mod template;
 pub(crate) mod token;
 
-pub use self::capture::NetworkCaptureRules;
-pub use self::net_policy::NetworkPolicy;
-pub use self::template::NetworkStateTemplate;
+pub use self::{
+    capture::NetworkCaptureRules, net_policy::NetworkPolicy,
+    template::NetworkStateTemplate,
+};

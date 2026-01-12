@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ffi::{CStr, CString};
-use std::time::SystemTime;
+use std::{
+    ffi::{CStr, CString},
+    time::SystemTime,
+};
 
 use libc::{c_char, c_int};
 use nmstate::{NetworkPolicy, NetworkState};
 
-use crate::{init_logger, NMSTATE_FAIL, NMSTATE_PASS};
+use crate::{NMSTATE_FAIL, NMSTATE_PASS, init_logger};
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_net_state_from_policy(
     policy: *const c_char,
     current_state: *const c_char,

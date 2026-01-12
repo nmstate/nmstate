@@ -2,8 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::nm::nm_dbus::NmDevice;
-use crate::InterfaceType;
+use crate::{InterfaceType, nm::nm_dbus::NmDevice};
 
 pub(crate) fn create_index_for_nm_devs(
     nm_devs: &[NmDevice],

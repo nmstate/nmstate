@@ -4,7 +4,7 @@ description = "Nmstate C binding"
 version = "2.2.58"
 authors = ["Gris Ge <fge@redhat.com>"]
 license = "Apache-2.0"
-edition = "2021"
+edition.workspace = true
 rust-version.workspace = true
 build = "build.rs"
 

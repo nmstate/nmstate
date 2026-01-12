@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fs::File;
-use std::io::{stdin, stdout, Read, Write};
-use std::process::{Command, Stdio};
-use std::str::FromStr;
+use std::{
+    fs::File,
+    io::{Read, Write, stdin, stdout},
+    process::{Command, Stdio},
+    str::FromStr,
+};
 
 use nmstate::NetworkState;
 

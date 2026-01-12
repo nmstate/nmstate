@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::{
-    ErrorKind as NmErrorKind, NmConnectionError, NmError, NmManagerError,
-    NmSettingError,
+use crate::{
+    ErrorKind, NmstateError,
+    nm::nm_dbus::{
+        ErrorKind as NmErrorKind, NmConnectionError, NmError, NmManagerError,
+        NmSettingError,
+    },
 };
-
-use crate::{ErrorKind, NmstateError};
 
 pub(crate) fn nm_error_to_nmstate(nm_error: NmError) -> NmstateError {
     match nm_error.kind {

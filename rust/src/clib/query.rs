@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ffi::CString;
-use std::time::SystemTime;
+use std::{ffi::CString, time::SystemTime};
 
 use libc::{c_char, c_int};
 
-use crate::{init_logger, NMSTATE_FAIL, NMSTATE_PASS};
+use crate::{NMSTATE_FAIL, NMSTATE_PASS, init_logger};
 
 pub(crate) const NMSTATE_FLAG_KERNEL_ONLY: u32 = 1 << 1;
 pub(crate) const NMSTATE_FLAG_NO_VERIFY: u32 = 1 << 2;
@@ -17,7 +16,7 @@ pub(crate) const NMSTATE_FLAG_RUNNING_CONFIG_ONLY: u32 = 1 << 7;
 pub(crate) const NMSTATE_FLAG_YAML_OUTPUT: u32 = 1 << 8;
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_net_state_retrieve(
     flags: u32,
     state: *mut *mut c_char,

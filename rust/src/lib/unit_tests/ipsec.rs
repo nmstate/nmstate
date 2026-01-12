@@ -37,9 +37,11 @@ fn test_ipsec_hide_psk() {
     .unwrap();
 
     state.hide_secrets();
-    assert!(!serde_yaml::to_string(&state)
-        .unwrap()
-        .contains("TOP_SECRET"));
+    assert!(
+        !serde_yaml::to_string(&state)
+            .unwrap()
+            .contains("TOP_SECRET")
+    );
 }
 
 #[test]

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::marker::PhantomData;
-use std::str::FromStr;
+use std::{marker::PhantomData, str::FromStr};
 
-use serde::{de, de::IntoDeserializer, de::Visitor, Deserialize, Deserializer};
+use serde::{
+    Deserialize, Deserializer, de,
+    de::{IntoDeserializer, Visitor},
+};
 
 pub(crate) fn u8_or_string<'de, D>(deserializer: D) -> Result<u8, D::Error>
 where

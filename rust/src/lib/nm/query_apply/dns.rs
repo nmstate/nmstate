@@ -14,10 +14,9 @@ use super::super::{
         NmSettingIp,
     },
 };
-
 use crate::{
-    ip::is_ipv6_unicast_link_local, DnsClientState, DnsState, Interfaces,
-    MergedInterfaces, MergedNetworkState, NmstateError,
+    DnsClientState, DnsState, Interfaces, MergedInterfaces, MergedNetworkState,
+    NmstateError, ip::is_ipv6_unicast_link_local,
 };
 
 pub(crate) fn nm_dns_to_nmstate(
@@ -153,15 +152,15 @@ async fn retrieve_configured_dns_info(
     if !use_global_servers {
         let mut nm_ifaces_dns_confs: Vec<&DnsClientState> = Vec::new();
         for iface in ifaces.kernel_ifaces.values() {
-            if let Some(ip_conf) = iface.base_iface().ipv6.as_ref() {
-                if let Some(dns_conf) = ip_conf.dns.as_ref() {
-                    nm_ifaces_dns_confs.push(dns_conf);
-                }
+            if let Some(ip_conf) = iface.base_iface().ipv6.as_ref()
+                && let Some(dns_conf) = ip_conf.dns.as_ref()
+            {
+                nm_ifaces_dns_confs.push(dns_conf);
             }
-            if let Some(ip_conf) = iface.base_iface().ipv4.as_ref() {
-                if let Some(dns_conf) = ip_conf.dns.as_ref() {
-                    nm_ifaces_dns_confs.push(dns_conf);
-                }
+            if let Some(ip_conf) = iface.base_iface().ipv4.as_ref()
+                && let Some(dns_conf) = ip_conf.dns.as_ref()
+            {
+                nm_ifaces_dns_confs.push(dns_conf);
             }
         }
         nm_ifaces_dns_confs
@@ -377,17 +376,19 @@ fn cur_dns_ifaces_still_valid_for_dns(
 ) -> bool {
     let (cur_v4_ifaces, cur_v6_ifaces) = get_cur_dns_ifaces(merged_ifaces);
     for iface_name in &cur_v4_ifaces {
-        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-            if iface.is_changed() && !iface.is_iface_valid_for_dns(false) {
-                return false;
-            }
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name)
+            && iface.is_changed()
+            && !iface.is_iface_valid_for_dns(false)
+        {
+            return false;
         }
     }
     for iface_name in &cur_v6_ifaces {
-        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-            if iface.is_changed() && !iface.is_iface_valid_for_dns(true) {
-                return false;
-            }
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name)
+            && iface.is_changed()
+            && !iface.is_iface_valid_for_dns(true)
+        {
+            return false;
         }
     }
     true

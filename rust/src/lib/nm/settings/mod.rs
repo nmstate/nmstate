@@ -27,13 +27,12 @@ mod vrf;
 mod vxlan;
 mod wired;
 
-pub(crate) use self::connection::iface_to_nm_connections;
-pub(crate) use self::ip::fix_ip_dhcp_timeout;
-
-#[cfg(feature = "gen_conf")]
-pub(crate) use self::connection::uuid_from_name_and_type;
-
 #[cfg(feature = "query_apply")]
 pub(crate) use self::bond::get_bond_balance_slb;
+#[cfg(feature = "gen_conf")]
+pub(crate) use self::connection::uuid_from_name_and_type;
 #[cfg(feature = "query_apply")]
 pub(crate) use self::user::NMSTATE_DESCRIPTION;
+pub(crate) use self::{
+    connection::iface_to_nm_connections, ip::fix_ip_dhcp_timeout,
+};

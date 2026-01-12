@@ -14,8 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use log::error;
 

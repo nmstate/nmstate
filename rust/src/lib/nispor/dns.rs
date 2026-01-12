@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt::Write as _FmtWrite;
-use std::io::{Read, Write};
-use std::os::unix::fs::OpenOptionsExt;
+use std::{
+    fmt::Write as _FmtWrite,
+    io::{Read, Write},
+    os::unix::fs::OpenOptionsExt,
+};
 
 use crate::{
     DnsClientState, DnsState, ErrorKind, MergedDnsState, NmstateError,
@@ -23,12 +25,9 @@ pub(crate) fn get_dns() -> Option<DnsState> {
             for line in content.split('\n') {
                 if let Some(srv) =
                     line.strip_prefix("nameserver ").map(|s| s.trim())
+                    && !srv.is_empty()
                 {
-                    if !srv.is_empty() {
-                        conf.server
-                            .get_or_insert(Vec::new())
-                            .push(srv.to_string());
-                    }
+                    conf.server.get_or_insert(Vec::new()).push(srv.to_string());
                 }
                 if let Some(opts) =
                     line.strip_prefix("options ").map(|s| s.trim())

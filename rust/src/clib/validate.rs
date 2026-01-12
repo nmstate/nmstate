@@ -5,12 +5,12 @@ use std::ffi::{CStr, CString};
 use libc::{c_char, c_int};
 
 use crate::{
-    policy::c_str_to_net_policy, state::c_str_to_net_state, NMSTATE_FAIL,
-    NMSTATE_PASS,
+    NMSTATE_FAIL, NMSTATE_PASS, policy::c_str_to_net_policy,
+    state::c_str_to_net_state,
 };
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_validate(
     state_or_policy: *const c_char,
     cur_state: *const c_char,

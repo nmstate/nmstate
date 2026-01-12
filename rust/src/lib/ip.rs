@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-use std::fmt::Write;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-use std::str::FromStr;
+use std::{
+    collections::HashSet,
+    fmt::Write,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -291,25 +293,27 @@ impl InterfaceIpv4 {
             if self.auto_gateway.is_none() {
                 self.auto_gateway = Some(true);
             }
-            if let Some(addrs) = self.addresses.as_ref() {
-                if is_desired {
-                    for addr in addrs {
-                        log::info!(
-                            "Static addresses {addr} defined when dynamic IP \
-                             is enabled"
-                        );
-                    }
+            if let Some(addrs) = self.addresses.as_ref()
+                && is_desired
+            {
+                for addr in addrs {
+                    log::info!(
+                        "Static addresses {addr} defined when dynamic IP is \
+                         enabled"
+                    );
                 }
             }
         }
 
-        if let Some(forwarding) = self.forwarding {
-            if !self.enabled && forwarding && is_desired {
-                log::warn!(
-                    "Ignoring `forwarding: {forwarding}` as IPv4 is disabled",
-                );
-                self.forwarding = None;
-            }
+        if let Some(forwarding) = self.forwarding
+            && !self.enabled
+            && forwarding
+            && is_desired
+        {
+            log::warn!(
+                "Ignoring `forwarding: {forwarding}` as IPv4 is disabled",
+            );
+            self.forwarding = None;
         }
 
         if let Some(addrs) = self.addresses.as_mut() {
@@ -369,18 +373,15 @@ impl InterfaceIpv4 {
             self.dhcp_custom_hostname = None;
         }
         if self.dhcp_send_hostname == Some(false) {
-            if is_desired {
-                if let Some(custom_hostname) =
+            if is_desired
+                && let Some(custom_hostname) =
                     self.dhcp_custom_hostname.as_deref()
-                {
-                    if !custom_hostname.is_empty() {
-                        log::warn!(
-                            "Ignoring `dhcp-custom-hostname: \
-                             {custom_hostname}` as `dhcp-send-hostname` is \
-                             disabled"
-                        );
-                    }
-                }
+                && !custom_hostname.is_empty()
+            {
+                log::warn!(
+                    "Ignoring `dhcp-custom-hostname: {custom_hostname}` as \
+                     `dhcp-send-hostname` is disabled"
+                );
             }
             self.dhcp_custom_hostname = None;
         }
@@ -635,14 +636,14 @@ impl InterfaceIpv6 {
             if self.auto_gateway.is_none() {
                 self.auto_gateway = Some(true);
             }
-            if let Some(addrs) = self.addresses.as_ref() {
-                if is_desired {
-                    for addr in addrs {
-                        log::info!(
-                            "Static addresses {addr} defined when dynamic IP \
-                             is enabled"
-                        );
-                    }
+            if let Some(addrs) = self.addresses.as_ref()
+                && is_desired
+            {
+                for addr in addrs {
+                    log::info!(
+                        "Static addresses {addr} defined when dynamic IP is \
+                         enabled"
+                    );
                 }
             }
         }
@@ -705,18 +706,15 @@ impl InterfaceIpv6 {
             sanitize_ipv6_token_to_string(token)?;
         }
         if self.dhcp_send_hostname == Some(false) {
-            if is_desired {
-                if let Some(custom_hostname) =
+            if is_desired
+                && let Some(custom_hostname) =
                     self.dhcp_custom_hostname.as_deref()
-                {
-                    if !custom_hostname.is_empty() {
-                        log::warn!(
-                            "Ignoring `dhcp-custom-hostname: \
-                             {custom_hostname}` as `dhcp-send-hostname` is \
-                             disabled"
-                        );
-                    }
-                }
+                && !custom_hostname.is_empty()
+            {
+                log::warn!(
+                    "Ignoring `dhcp-custom-hostname: {custom_hostname}` as \
+                     `dhcp-send-hostname` is disabled"
+                );
             }
             self.dhcp_custom_hostname = None;
         }
@@ -971,11 +969,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
         })?;
 
         let prefix_length = if addr[1].is_empty() {
-            if ip.is_ipv6() {
-                128
-            } else {
-                32
-            }
+            if ip.is_ipv6() { 128 } else { 32 }
         } else {
             addr[1].parse::<u8>().map_err(|parse_error| {
                 let e = NmstateError::new(
@@ -1254,11 +1248,7 @@ pub(crate) fn sanitize_ip_network(
 }
 
 fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
-    if let Some(v) = v {
-        v.is_empty()
-    } else {
-        true
-    }
+    if let Some(v) = v { v.is_empty() } else { true }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]

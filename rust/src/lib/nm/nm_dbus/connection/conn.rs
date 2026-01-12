@@ -1,41 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use log::warn;
-
 use serde::{Deserialize, Serialize};
 use zvariant::{Signature, Type};
 
 use super::super::{
-    connection::bond::{NmSettingBond, NmSettingBondPort},
-    connection::bridge::{NmSettingBridge, NmSettingBridgePort},
-    connection::ethtool::NmSettingEthtool,
-    connection::hsr::NmSettingHsr,
-    connection::ieee8021x::NmSetting8021X,
-    connection::iface_match::NmSettingMatch,
-    connection::infiniband::NmSettingInfiniBand,
-    connection::ip::NmSettingIp,
-    connection::ipvlan::NmSettingIpVlan,
-    connection::loopback::NmSettingLoopback,
-    connection::mac_vlan::NmSettingMacVlan,
-    connection::macsec::NmSettingMacSec,
-    connection::ovs::{
-        NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
-        NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
-        NmSettingOvsPort,
-    },
-    connection::sriov::NmSettingSriov,
-    connection::user::NmSettingUser,
-    connection::veth::NmSettingVeth,
-    connection::vlan::NmSettingVlan,
-    connection::vpn::NmSettingVpn,
-    connection::vrf::NmSettingVrf,
-    connection::vxlan::NmSettingVxlan,
-    connection::wired::NmSettingWired,
-    convert::ToDbusValue,
     NmError, NmIfaceType,
+    connection::{
+        bond::{NmSettingBond, NmSettingBondPort},
+        bridge::{NmSettingBridge, NmSettingBridgePort},
+        ethtool::NmSettingEthtool,
+        hsr::NmSettingHsr,
+        ieee8021x::NmSetting8021X,
+        iface_match::NmSettingMatch,
+        infiniband::NmSettingInfiniBand,
+        ip::NmSettingIp,
+        ipvlan::NmSettingIpVlan,
+        loopback::NmSettingLoopback,
+        mac_vlan::NmSettingMacVlan,
+        macsec::NmSettingMacSec,
+        ovs::{
+            NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
+            NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+            NmSettingOvsPort,
+        },
+        sriov::NmSettingSriov,
+        user::NmSettingUser,
+        veth::NmSettingVeth,
+        vlan::NmSettingVlan,
+        vpn::NmSettingVpn,
+        vrf::NmSettingVrf,
+        vxlan::NmSettingVxlan,
+        wired::NmSettingWired,
+    },
+    convert::ToDbusValue,
 };
 
 const NM_AUTOCONENCT_PORT_DEFAULT: i32 = -1;
@@ -345,10 +345,10 @@ impl NmConnection {
     }
 
     pub fn uuid(&self) -> Option<&str> {
-        if let Some(nm_conn_set) = &self.connection {
-            if let Some(ref uuid) = nm_conn_set.uuid {
-                return Some(uuid);
-            }
+        if let Some(nm_conn_set) = &self.connection
+            && let Some(ref uuid) = nm_conn_set.uuid
+        {
+            return Some(uuid);
         }
         None
     }
@@ -508,44 +508,38 @@ pub(crate) async fn nm_con_get_from_obj_path(
         .call::<&str, (), NmConnection>("GetSettings", &())
         .await?;
     nm_conn.obj_path = con_obj_path.to_string();
-    if let Some(ieee_8021x_conf) = nm_conn.ieee8021x.as_mut() {
-        if let Ok(nm_secrets) = proxy
+    if let Some(ieee_8021x_conf) = nm_conn.ieee8021x.as_mut()
+        && let Ok(nm_secrets) = proxy
             .call::<&str, &str, NmConnectionDbusOwnedValue>(
                 "GetSecrets",
                 &"802-1x",
             )
             .await
-        {
-            if let Some(nm_secret) = nm_secrets.get("802-1x") {
-                ieee_8021x_conf.fill_secrets(nm_secret);
-            }
-        }
+        && let Some(nm_secret) = nm_secrets.get("802-1x")
+    {
+        ieee_8021x_conf.fill_secrets(nm_secret);
     }
-    if let Some(macsec_conf) = nm_conn.macsec.as_mut() {
-        if let Ok(nm_secrets) = proxy
+    if let Some(macsec_conf) = nm_conn.macsec.as_mut()
+        && let Ok(nm_secrets) = proxy
             .call::<&str, &str, NmConnectionDbusOwnedValue>(
                 "GetSecrets",
                 &"macsec",
             )
             .await
-        {
-            if let Some(nm_secret) = nm_secrets.get("macsec") {
-                macsec_conf.fill_secrets(nm_secret);
-            }
-        }
+        && let Some(nm_secret) = nm_secrets.get("macsec")
+    {
+        macsec_conf.fill_secrets(nm_secret);
     }
-    if let Some(vpn_conf) = nm_conn.vpn.as_mut() {
-        if let Ok(nm_secrets) = proxy
+    if let Some(vpn_conf) = nm_conn.vpn.as_mut()
+        && let Ok(nm_secrets) = proxy
             .call::<&str, &str, NmConnectionDbusOwnedValue>(
                 "GetSecrets",
                 &"vpn",
             )
             .await
-        {
-            if let Some(nm_secret) = nm_secrets.get("vpn") {
-                vpn_conf.fill_secrets(nm_secret);
-            }
-        }
+        && let Some(nm_secret) = nm_secrets.get("vpn")
+    {
+        vpn_conf.fill_secrets(nm_secret);
     }
     if let Ok(flags) = proxy.get_property::<u32>("Flags").await {
         nm_conn.flags = from_u32_to_vec_nm_conn_flags(flags);

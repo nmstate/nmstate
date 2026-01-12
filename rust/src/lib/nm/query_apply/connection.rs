@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::{
+    NmConnectionMatcher,
     error::nm_error_to_nmstate,
     nm_dbus::{
         self, NmActiveConnection, NmApi, NmConnection, NmIfaceType,
         NmSettingsConnectionFlag,
     },
-    NmConnectionMatcher,
 };
 use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
@@ -33,15 +33,15 @@ pub(crate) async fn delete_exist_connections(
                 !nm_conn.flags.contains(&NmSettingsConnectionFlag::Volatile)
             })
         {
-            if let Some(uuid) = saved_nm_conn.uuid() {
-                if !excluded_uuids.contains(&uuid) {
-                    uuids_to_delete.push(uuid);
-                    log::info!(
-                        "Deleting existing duplicate connection {uuid}: {}/{}",
-                        merged_iface.merged.name(),
-                        merged_iface.merged.iface_type(),
-                    );
-                }
+            if let Some(uuid) = saved_nm_conn.uuid()
+                && !excluded_uuids.contains(&uuid)
+            {
+                uuids_to_delete.push(uuid);
+                log::info!(
+                    "Deleting existing duplicate connection {uuid}: {}/{}",
+                    merged_iface.merged.name(),
+                    merged_iface.merged.iface_type(),
+                );
             }
         }
     }
@@ -187,24 +187,20 @@ async fn _activate_nm_connections(
             } else {
                 if let (Some(ctrller), Some(ctrller_type)) =
                     (nm_conn.controller(), nm_conn.controller_type())
+                    && nm_conn.iface_type() != Some(&NmIfaceType::OvsIface)
                 {
-                    if nm_conn.iface_type() != Some(&NmIfaceType::OvsIface) {
-                        // OVS port does not do auto port activation.
-                        if new_controllers.contains(&(ctrller, *ctrller_type))
-                            && ctrller_type != &NmIfaceType::OvsPort
-                        {
-                            log::info!(
-                                "Skip connection activation as its controller \
-                                 already activated its ports: {}: {}/{}",
-                                uuid,
-                                nm_conn.iface_name().unwrap_or(""),
-                                nm_conn
-                                    .iface_type()
-                                    .cloned()
-                                    .unwrap_or_default()
-                            );
-                            continue;
-                        }
+                    // OVS port does not do auto port activation.
+                    if new_controllers.contains(&(ctrller, *ctrller_type))
+                        && ctrller_type != &NmIfaceType::OvsPort
+                    {
+                        log::info!(
+                            "Skip connection activation as its controller \
+                             already activated its ports: {}: {}/{}",
+                            uuid,
+                            nm_conn.iface_name().unwrap_or(""),
+                            nm_conn.iface_type().cloned().unwrap_or_default()
+                        );
+                        continue;
                     }
                 }
                 log::info!(
@@ -242,14 +238,13 @@ pub(crate) async fn deactivate_nm_connections(
                 nm_conn.iface_name().unwrap_or(""),
                 nm_conn.iface_type().cloned().unwrap_or_default()
             );
-            if let Err(e) = nm_api.connection_deactivate(uuid).await {
-                if e.kind
+            if let Err(e) = nm_api.connection_deactivate(uuid).await
+                && e.kind
                     != nm_dbus::ErrorKind::Manager(
                         nm_dbus::NmManagerError::ConnectionNotActive,
                     )
-                {
-                    return Err(nm_error_to_nmstate(e));
-                }
+            {
+                return Err(nm_error_to_nmstate(e));
             }
         }
     }

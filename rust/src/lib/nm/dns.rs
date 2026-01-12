@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{dns::parse_dns_ipv6_link_local_srv, ip::is_ipv6_addr};
+use super::nm_dbus::{
+    NmActiveConnection, NmDevice, NmDeviceState, NmIfaceType,
+};
 use crate::{
     DnsClientState, ErrorKind, Interface, InterfaceType, MergedInterface,
     MergedInterfaces, MergedNetworkState, NmstateError,
-};
-
-use super::nm_dbus::{
-    NmActiveConnection, NmDevice, NmDeviceState, NmIfaceType,
+    dns::parse_dns_ipv6_link_local_srv, ip::is_ipv6_addr,
 };
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
@@ -130,10 +129,11 @@ fn find_dns_iface(
     // Try using current DNS interface if in desired list
     if !desired_only {
         for iface_name in cur_dns_ifaces {
-            if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-                if iface.is_changed() && iface.is_iface_valid_for_dns(is_ipv6) {
-                    return Some(iface_name.to_string());
-                }
+            if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name)
+                && iface.is_changed()
+                && iface.is_iface_valid_for_dns(is_ipv6)
+            {
+                return Some(iface_name.to_string());
             }
         }
     }
@@ -210,13 +210,12 @@ fn find_dns_iface(
 
     // Try again among undesired current interface
     for iface_name in cur_iface_names {
-        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-            if iface.is_iface_valid_for_dns(is_ipv6)
-                && (!is_external_managed(iface_name, nm_acs))
-                && (!is_unmanaged(iface_name, nm_devs))
-            {
-                return Some(iface_name.to_string());
-            }
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name)
+            && iface.is_iface_valid_for_dns(is_ipv6)
+            && (!is_external_managed(iface_name, nm_acs))
+            && (!is_unmanaged(iface_name, nm_devs))
+        {
+            return Some(iface_name.to_string());
         }
     }
 
@@ -260,30 +259,31 @@ pub(crate) fn purge_dns_config(
                         iface.merged.base_iface().state;
                 }
             }
-            if let Some(apply_iface) = iface.for_apply.as_mut() {
-                if apply_iface.base_iface().can_have_ip() {
-                    if is_ipv6 {
-                        if apply_iface.base_iface().ipv6.is_none() {
-                            apply_iface.base_iface_mut().ipv6.clone_from(
-                                &iface.merged.base_iface_mut().ipv6,
-                            );
-                        }
-                    } else if apply_iface.base_iface().ipv4.is_none() {
+            if let Some(apply_iface) = iface.for_apply.as_mut()
+                && apply_iface.base_iface().can_have_ip()
+            {
+                if is_ipv6 {
+                    if apply_iface.base_iface().ipv6.is_none() {
                         apply_iface
                             .base_iface_mut()
-                            .ipv4
-                            .clone_from(&iface.merged.base_iface_mut().ipv4);
+                            .ipv6
+                            .clone_from(&iface.merged.base_iface_mut().ipv6);
                     }
-
-                    set_iface_dns_conf(
-                        is_ipv6,
-                        apply_iface,
-                        Vec::new(),
-                        Vec::new(),
-                        Vec::new(),
-                        None,
-                    )?;
+                } else if apply_iface.base_iface().ipv4.is_none() {
+                    apply_iface
+                        .base_iface_mut()
+                        .ipv4
+                        .clone_from(&iface.merged.base_iface_mut().ipv4);
                 }
+
+                set_iface_dns_conf(
+                    is_ipv6,
+                    apply_iface,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    None,
+                )?;
             }
         }
     }
@@ -466,27 +466,21 @@ pub(crate) fn get_cur_dns_ifaces(
             continue;
         };
 
-        if let Some(ipv4) = &cur_iface.base_iface().ipv4 {
-            if ipv4.enabled {
-                if let Some(dns_conf) = &ipv4.dns {
-                    if !dns_conf.is_null()
-                        && !v4_ifaces.contains(&cur_iface.name().to_string())
-                    {
-                        v4_ifaces.push(cur_iface.name().to_string())
-                    }
-                }
-            }
+        if let Some(ipv4) = &cur_iface.base_iface().ipv4
+            && ipv4.enabled
+            && let Some(dns_conf) = &ipv4.dns
+            && !dns_conf.is_null()
+            && !v4_ifaces.contains(&cur_iface.name().to_string())
+        {
+            v4_ifaces.push(cur_iface.name().to_string())
         }
-        if let Some(ipv6) = &cur_iface.base_iface().ipv6 {
-            if ipv6.enabled {
-                if let Some(dns_conf) = &ipv6.dns {
-                    if !dns_conf.is_null()
-                        && !v6_ifaces.contains(&cur_iface.name().to_string())
-                    {
-                        v6_ifaces.push(cur_iface.name().to_string())
-                    }
-                }
-            }
+        if let Some(ipv6) = &cur_iface.base_iface().ipv6
+            && ipv6.enabled
+            && let Some(dns_conf) = &ipv6.dns
+            && !dns_conf.is_null()
+            && !v6_ifaces.contains(&cur_iface.name().to_string())
+        {
+            v6_ifaces.push(cur_iface.name().to_string())
         }
     }
     (v4_ifaces, v6_ifaces)
@@ -587,40 +581,36 @@ pub(crate) fn store_dns_search_or_option_to_iface(
     for iface_name in cur_v6_ifaces {
         if let Some(iface) =
             merged_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+            && iface.is_iface_valid_for_dns(true)
+            && let Some(apply_iface) = iface.for_apply.as_mut()
         {
-            if iface.is_iface_valid_for_dns(true) {
-                if let Some(apply_iface) = iface.for_apply.as_mut() {
-                    set_iface_dns_conf(
-                        true,
-                        apply_iface,
-                        Vec::new(),
-                        merged_state.dns.searches.clone(),
-                        merged_state.dns.options.clone(),
-                        Some(DEFAULT_DNS_PRIORITY),
-                    )?;
-                    return Ok(());
-                }
-            }
+            set_iface_dns_conf(
+                true,
+                apply_iface,
+                Vec::new(),
+                merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
+                Some(DEFAULT_DNS_PRIORITY),
+            )?;
+            return Ok(());
         }
     }
 
     for iface_name in cur_v4_ifaces {
         if let Some(iface) =
             merged_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+            && iface.is_iface_valid_for_dns(false)
+            && let Some(apply_iface) = iface.for_apply.as_mut()
         {
-            if iface.is_iface_valid_for_dns(false) {
-                if let Some(apply_iface) = iface.for_apply.as_mut() {
-                    set_iface_dns_conf(
-                        false,
-                        apply_iface,
-                        Vec::new(),
-                        merged_state.dns.searches.clone(),
-                        merged_state.dns.options.clone(),
-                        Some(DEFAULT_DNS_PRIORITY),
-                    )?;
-                    return Ok(());
-                }
-            }
+            set_iface_dns_conf(
+                false,
+                apply_iface,
+                Vec::new(),
+                merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
+                Some(DEFAULT_DNS_PRIORITY),
+            )?;
+            return Ok(());
         }
     }
 

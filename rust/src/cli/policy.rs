@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::io::{Read, Write};
+use std::{
+    collections::HashMap,
+    io::{Read, Write},
+};
 
 use nmstate::{NetworkPolicy, NetworkState};
 use serde::{Deserialize, Serialize};

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::io::{Read, Write};
-use std::os::unix::fs::OpenOptionsExt;
+use std::{
+    collections::{HashMap, hash_map::Entry},
+    io::{Read, Write},
+    os::unix::fs::OpenOptionsExt,
+};
 
 use crate::{DispatchConfig, ErrorKind, MergedInterfaces, NmstateError};
 
@@ -195,15 +196,13 @@ fn delete_dispatch_script(
     let file_path = gen_file_path(iface_name, nm_action);
     let path = std::path::Path::new(&file_path);
 
-    if path.exists() {
-        if let Err(e) = std::fs::remove_file(path) {
-            return Err(NmstateError::new(
-                ErrorKind::PermissionError,
-                format!(
-                    "Failed to remove dispatch script {file_path}, error: {e}"
-                ),
-            ));
-        }
+    if path.exists()
+        && let Err(e) = std::fs::remove_file(path)
+    {
+        return Err(NmstateError::new(
+            ErrorKind::PermissionError,
+            format!("Failed to remove dispatch script {file_path}, error: {e}"),
+        ));
     }
     Ok(())
 }

@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    nm::route_rule::store_route_rule_config,
-    unit_tests::testlib::{
-        gen_test_routes_conf, gen_test_rules_conf, new_eth_iface,
-        new_test_nic_with_static_ip, TEST_NIC, TEST_RULE_IPV4_FROM,
-        TEST_RULE_IPV4_TO, TEST_RULE_IPV6_FROM, TEST_RULE_IPV6_TO,
-        TEST_RULE_PRIORITY1, TEST_RULE_PRIORITY2, TEST_TABLE_ID1,
-        TEST_TABLE_ID2,
-    },
     Interface, InterfaceType, Interfaces, MergedNetworkState, NetworkState,
     RouteRuleEntry,
+    nm::route_rule::store_route_rule_config,
+    unit_tests::testlib::{
+        TEST_NIC, TEST_RULE_IPV4_FROM, TEST_RULE_IPV4_TO, TEST_RULE_IPV6_FROM,
+        TEST_RULE_IPV6_TO, TEST_RULE_PRIORITY1, TEST_RULE_PRIORITY2,
+        TEST_TABLE_ID1, TEST_TABLE_ID2, gen_test_routes_conf,
+        gen_test_rules_conf, new_eth_iface, new_test_nic_with_static_ip,
+    },
 };
 
 fn get_iface<'a>(

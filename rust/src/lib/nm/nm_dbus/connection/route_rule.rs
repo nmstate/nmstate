@@ -20,7 +20,7 @@ use std::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
+    connection::{DBUS_ASV_SIGNATURE, DbusDictionary},
     error::NmError,
 };
 

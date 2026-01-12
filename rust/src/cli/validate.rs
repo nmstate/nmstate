@@ -2,7 +2,7 @@
 
 use crate::{
     error::CliError,
-    state::{state_or_policy_from_file, NetworkStateOrPolicy},
+    state::{NetworkStateOrPolicy, state_or_policy_from_file},
 };
 
 pub(crate) fn validate(matches: &clap::ArgMatches) -> Result<String, CliError> {

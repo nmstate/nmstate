@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    unit_tests::testlib::gen_test_rule_entries, MergedRouteRules,
-    RouteRuleEntry, RouteRules,
+    MergedRouteRules, RouteRuleEntry, RouteRules,
+    unit_tests::testlib::gen_test_rule_entries,
 };
 
 #[test]

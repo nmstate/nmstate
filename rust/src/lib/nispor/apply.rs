@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    ErrorKind, Interface, InterfaceType, MergedInterface, MergedInterfaces,
+    MergedNetworkState, NmstateError,
     nispor::{
         apply_ifaces_alt_names,
         dns::apply_dns_conf_to_etc,
@@ -10,8 +12,6 @@ use crate::{
         veth::{nms_veth_conf_to_np, process_new_veth_peer},
         vlan::nms_vlan_conf_to_np,
     },
-    ErrorKind, Interface, InterfaceType, MergedInterface, MergedInterfaces,
-    MergedNetworkState, NmstateError,
 };
 
 pub(crate) async fn nispor_apply(
@@ -114,10 +114,10 @@ fn nmstate_iface_to_np(
 
     let mut np_iface_type = nmstate_iface_type_to_np(&nms_iface.iface_type());
 
-    if let Interface::Ethernet(iface) = nms_iface {
-        if iface.veth.is_some() {
-            np_iface_type = nispor::IfaceType::Veth;
-        }
+    if let Interface::Ethernet(iface) = nms_iface
+        && iface.veth.is_some()
+    {
+        np_iface_type = nispor::IfaceType::Veth;
     }
 
     np_iface.name = nms_iface.name().to_string();
@@ -165,15 +165,14 @@ async fn delete_ifaces(
             continue;
         }
 
-        if let Some(Interface::Ethernet(eth_iface)) = &iface.current {
-            if let Some(peer_name) = eth_iface
+        if let Some(Interface::Ethernet(eth_iface)) = &iface.current
+            && let Some(peer_name) = eth_iface
                 .veth
                 .as_ref()
                 .map(|veth_conf| veth_conf.peer.as_str())
-            {
-                deleted_veths.push(eth_iface.base.name.as_str());
-                deleted_veths.push(peer_name);
-            }
+        {
+            deleted_veths.push(eth_iface.base.name.as_str());
+            deleted_veths.push(peer_name);
         }
 
         if iface.for_apply.as_ref().is_some() {

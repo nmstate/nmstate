@@ -3,7 +3,8 @@
 use std::collections::HashSet;
 
 use super::super::{
-    connection::{prepare_nm_conns, PreparedNmConnections},
+    NmConnectionMatcher,
+    connection::{PreparedNmConnections, prepare_nm_conns},
     device::create_index_for_nm_devs,
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection, NmIfaceType, NmVersion, NmVersionInfo},
@@ -18,9 +19,7 @@ use super::super::{
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
-    NmConnectionMatcher,
 };
-
 use crate::{
     InterfaceType, MergedInterfaces, MergedNetworkState, NmstateError,
 };
@@ -197,48 +196,46 @@ async fn delete_ifaces(
 
         // Delete all existing connections for this interface
         for nm_conn in nm_conns_to_delete {
-            if let Some(uuid) = nm_conn.uuid() {
-                if !uuids_to_delete.contains(uuid) {
-                    log::info!(
-                        "Deleting NM connection for absent interface {}/{}: {}",
-                        &iface.name(),
-                        &iface.iface_type(),
-                        uuid
-                    );
-                    uuids_to_delete.insert(uuid);
-                }
+            if let Some(uuid) = nm_conn.uuid()
+                && !uuids_to_delete.contains(uuid)
+            {
+                log::info!(
+                    "Deleting NM connection for absent interface {}/{}: {}",
+                    &iface.name(),
+                    &iface.iface_type(),
+                    uuid
+                );
+                uuids_to_delete.insert(uuid);
             }
             // Delete OVS port profile along with OVS system and internal
             // Interface
-            if nm_conn.controller_type() == Some(&NmIfaceType::OvsPort) {
-                if let Some(ctrl) = nm_conn.controller() {
-                    if is_uuid(ctrl) {
-                        if !uuids_to_delete.contains(ctrl) {
+            if nm_conn.controller_type() == Some(&NmIfaceType::OvsPort)
+                && let Some(ctrl) = nm_conn.controller()
+            {
+                if is_uuid(ctrl) {
+                    if !uuids_to_delete.contains(ctrl) {
+                        log::info!(
+                            "Deleting NM OVS port connection {} for absent \
+                             OVS interface {}",
+                            ctrl,
+                            &iface.name(),
+                        );
+                        uuids_to_delete.insert(ctrl);
+                    }
+                } else {
+                    let nm_conns = conn_matcher
+                        .get_saved_by_name_type(ctrl, &NmIfaceType::OvsPort);
+                    for nm_conn in nm_conns {
+                        if let Some(uuid) = nm_conn.uuid()
+                            && !uuids_to_delete.contains(uuid)
+                        {
                             log::info!(
                                 "Deleting NM OVS port connection {} for \
                                  absent OVS interface {}",
-                                ctrl,
+                                uuid,
                                 &iface.name(),
                             );
-                            uuids_to_delete.insert(ctrl);
-                        }
-                    } else {
-                        let nm_conns = conn_matcher.get_saved_by_name_type(
-                            ctrl,
-                            &NmIfaceType::OvsPort,
-                        );
-                        for nm_conn in nm_conns {
-                            if let Some(uuid) = nm_conn.uuid() {
-                                if !uuids_to_delete.contains(uuid) {
-                                    log::info!(
-                                        "Deleting NM OVS port connection {} \
-                                         for absent OVS interface {}",
-                                        uuid,
-                                        &iface.name(),
-                                    );
-                                    uuids_to_delete.insert(uuid);
-                                }
-                            }
+                            uuids_to_delete.insert(uuid);
                         }
                     }
                 }
@@ -277,21 +274,20 @@ async fn delete_remain_virtual_interface_as_desired(
         })
         .map(|i| &i.merged)
     {
-        if iface.is_virtual() {
-            if let Some(nm_dev) =
+        if iface.is_virtual()
+            && let Some(nm_dev) =
                 nm_devs_indexed.get(&(iface.name(), iface.iface_type()))
-            {
-                log::info!(
-                    "Deleting interface {}/{}: {}",
-                    &iface.name(),
-                    &iface.iface_type(),
-                    &nm_dev.obj_path
-                );
-                // There might be an race with on-going profile/connection
-                // deletion, verification will raise error for it later.
-                if let Err(e) = nm_api.device_delete(&nm_dev.obj_path).await {
-                    log::debug!("Failed to delete interface {e:?}");
-                }
+        {
+            log::info!(
+                "Deleting interface {}/{}: {}",
+                &iface.name(),
+                &iface.iface_type(),
+                &nm_dev.obj_path
+            );
+            // There might be an race with on-going profile/connection
+            // deletion, verification will raise error for it later.
+            if let Err(e) = nm_api.device_delete(&nm_dev.obj_path).await {
+                log::debug!("Failed to delete interface {e:?}");
             }
         }
     }
@@ -312,18 +308,17 @@ async fn delete_orphan_ports(
         if nm_conn.iface_type() != Some(&NmIfaceType::OvsPort) {
             continue;
         }
-        if let Some(ctrl_uuid) = nm_conn.controller() {
-            if uuids_deleted.contains(ctrl_uuid) {
-                if let Some(uuid) = nm_conn.uuid() {
-                    log::info!(
-                        "Deleting NM orphan profile {}/{}: {}",
-                        nm_conn.iface_name().unwrap_or(""),
-                        nm_conn.iface_type().cloned().unwrap_or_default(),
-                        uuid
-                    );
-                    uuids_to_delete.push(uuid);
-                }
-            }
+        if let Some(ctrl_uuid) = nm_conn.controller()
+            && uuids_deleted.contains(ctrl_uuid)
+            && let Some(uuid) = nm_conn.uuid()
+        {
+            log::info!(
+                "Deleting NM orphan profile {}/{}: {}",
+                nm_conn.iface_name().unwrap_or(""),
+                nm_conn.iface_type().cloned().unwrap_or_default(),
+                uuid
+            );
+            uuids_to_delete.push(uuid);
         }
     }
     for uuid in &uuids_to_delete {
@@ -371,8 +366,7 @@ fn gen_nm_conn_need_to_deactivate_first(
                 ret.push(nm_conn.clone());
             } else if let Some(nm_applied_conn) =
                 conn_matcher.get_applied_by_uuid(uuid)
-            {
-                if (remove_routes_need_deactivate
+                && ((remove_routes_need_deactivate
                     && is_route_removed(nm_conn, nm_applied_conn))
                     || is_vrf_table_id_changed(nm_conn, nm_applied_conn)
                     || is_vlan_changed(nm_conn, nm_applied_conn)
@@ -388,10 +382,9 @@ fn gen_nm_conn_need_to_deactivate_first(
                         nm_conn,
                         &bond_queue_id_changed_ports,
                     )
-                    || is_ipvlan_changed(nm_conn, nm_applied_conn)
-                {
-                    ret.push((*nm_applied_conn).clone());
-                }
+                    || is_ipvlan_changed(nm_conn, nm_applied_conn))
+            {
+                ret.push((*nm_applied_conn).clone());
             }
         }
     }
@@ -448,16 +441,15 @@ fn is_bridge_port_changed_default_pvid(
     nm_conn: &NmConnection,
     default_pvid_changed_brs: &[&str],
 ) -> bool {
-    if nm_conn.controller_type() == Some(&NmIfaceType::Bridge) {
-        if let Some(ctrl_name) = nm_conn.controller() {
-            if default_pvid_changed_brs.contains(&ctrl_name) {
-                log::info!(
-                    "Reactivating linux bridge port as its controller has \
-                     `vlan-default-pvid` changes"
-                );
-                return true;
-            }
-        }
+    if nm_conn.controller_type() == Some(&NmIfaceType::Bridge)
+        && let Some(ctrl_name) = nm_conn.controller()
+        && default_pvid_changed_brs.contains(&ctrl_name)
+    {
+        log::info!(
+            "Reactivating linux bridge port as its controller has \
+             `vlan-default-pvid` changes"
+        );
+        return true;
     }
     false
 }
@@ -479,16 +471,14 @@ fn is_bond_port_queue_id_changed(
     nm_conn: &NmConnection,
     changed_ports: &[&str],
 ) -> bool {
-    if nm_conn.controller_type() == Some(&NmIfaceType::Bond) {
-        if let Some(iface_name) = nm_conn.iface_name() {
-            if changed_ports.contains(&iface_name) {
-                log::info!(
-                    "Reactivating bond port {iface_name} as its queue ID has \
-                     changed"
-                );
-                return true;
-            }
-        }
+    if nm_conn.controller_type() == Some(&NmIfaceType::Bond)
+        && let Some(iface_name) = nm_conn.iface_name()
+        && changed_ports.contains(&iface_name)
+    {
+        log::info!(
+            "Reactivating bond port {iface_name} as its queue ID has changed"
+        );
+        return true;
     }
     false
 }

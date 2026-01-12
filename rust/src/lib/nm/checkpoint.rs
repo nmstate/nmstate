@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::NmApi;
 use log::warn;
 
-use crate::{nm::error::nm_error_to_nmstate, NmstateError};
+use crate::{
+    NmstateError,
+    nm::{error::nm_error_to_nmstate, nm_dbus::NmApi},
+};
 
 // Wait maximum 60 seconds for rollback
 pub(crate) const CHECKPOINT_ROLLBACK_TIMEOUT: u32 = 60;

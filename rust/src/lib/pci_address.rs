@@ -9,8 +9,9 @@
 
 use std::str::FromStr;
 
-use crate::{ErrorKind, NmstateError};
 use serde::{Deserialize, Serialize};
+
+use crate::{ErrorKind, NmstateError};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(into = "String")]

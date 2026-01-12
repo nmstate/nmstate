@@ -66,16 +66,15 @@ impl HsrInterface {
         &mut self,
         is_desired: bool,
     ) -> Result<(), NmstateError> {
-        if is_desired {
-            if let Some(conf) = &mut self.hsr {
-                if let Some(address) = &mut conf.supervision_address {
-                    address.as_mut().make_ascii_uppercase();
-                    log::warn!(
-                        "The supervision-address is read-only, ignoring it on \
-                         desired state."
-                    );
-                }
-            }
+        if is_desired
+            && let Some(conf) = &mut self.hsr
+            && let Some(address) = &mut conf.supervision_address
+        {
+            address.as_mut().make_ascii_uppercase();
+            log::warn!(
+                "The supervision-address is read-only, ignoring it on desired \
+                 state."
+            );
         }
         Ok(())
     }
@@ -234,20 +233,19 @@ impl MergedInterfaces {
 impl MergedInterface {
     /// Explicitly disable IP on HSR ports
     pub(crate) fn post_inter_ifaces_process_hsr(&mut self) {
-        if let Some(apply_iface) = self.for_apply.as_mut() {
-            if apply_iface.is_up()
-                && apply_iface.base_iface().controller_type.as_ref()
-                    == Some(&InterfaceType::Hsr)
-            {
-                apply_iface.base_iface_mut().ipv4 = Some(InterfaceIpv4 {
-                    enabled: false,
-                    ..Default::default()
-                });
-                apply_iface.base_iface_mut().ipv6 = Some(InterfaceIpv6 {
-                    enabled: false,
-                    ..Default::default()
-                });
-            }
+        if let Some(apply_iface) = self.for_apply.as_mut()
+            && apply_iface.is_up()
+            && apply_iface.base_iface().controller_type.as_ref()
+                == Some(&InterfaceType::Hsr)
+        {
+            apply_iface.base_iface_mut().ipv4 = Some(InterfaceIpv4 {
+                enabled: false,
+                ..Default::default()
+            });
+            apply_iface.base_iface_mut().ipv6 = Some(InterfaceIpv6 {
+                enabled: false,
+                ..Default::default()
+            });
         }
     }
 }

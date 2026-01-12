@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::{
-    NmConnection, NmSettingSriovVf, NmSettingSriovVfVlan,
+use crate::{
+    EthernetInterface, SrIovVfConfig,
+    nm::nm_dbus::{NmConnection, NmSettingSriovVf, NmSettingSriovVfVlan},
 };
-use crate::{EthernetInterface, SrIovVfConfig};
 
 pub(crate) fn gen_nm_sriov_setting(
     iface: &EthernetInterface,

@@ -5,5 +5,4 @@ mod inter_ifaces;
 mod ip;
 mod net_state;
 
-pub use self::feature::NmstateFeature;
-pub use self::net_state::NmstateStatistic;
+pub use self::{feature::NmstateFeature, net_state::NmstateStatistic};

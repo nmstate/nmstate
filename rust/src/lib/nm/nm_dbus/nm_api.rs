@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
-use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::{
+    convert::TryFrom,
+    str::FromStr,
+    time::{Duration, Instant},
+};
 
 use log::debug;
 
 use super::{
+    NmIfaceType,
     active_connection::{
-        get_nm_ac_by_obj_path, nm_ac_obj_path_uuid_get, NmActiveConnection,
+        NmActiveConnection, get_nm_ac_by_obj_path, nm_ac_obj_path_uuid_get,
     },
-    connection::{nm_con_get_from_obj_path, NmConnection},
+    connection::{NmConnection, nm_con_get_from_obj_path},
     dbus::NmDbus,
     device::{NmDevice, NmDeviceState, NmDeviceStateReason},
     dns::{NmDnsEntry, NmGlobalDnsConfig},
@@ -19,7 +22,6 @@ use super::{
     query_apply::device::{
         nm_dev_delete, nm_dev_disconnect, nm_dev_from_obj_path, nm_dev_get_llpd,
     },
-    NmIfaceType,
 };
 
 pub struct NmApi<'a> {
@@ -148,10 +150,10 @@ impl NmApi<'_> {
     ) -> Result<(), NmError> {
         debug!("connection_deactivate: {uuid}");
         self.extend_timeout_if_required().await?;
-        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid).await {
-            if !nm_ac.is_empty() {
-                self.dbus.connection_deactivate(&nm_ac).await?;
-            }
+        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid).await
+            && !nm_ac.is_empty()
+        {
+            self.dbus.connection_deactivate(&nm_ac).await?;
         }
         Ok(())
     }
@@ -198,17 +200,16 @@ impl NmApi<'_> {
                         .as_ref()
                         .map(|c| c.iface_name.is_none())
                         .unwrap_or_default()
-                    {
-                        if let (Ok(nm_dev), Some(nm_set)) = (
+                        && let (Ok(nm_dev), Some(nm_set)) = (
                             nm_dev_from_obj_path(
                                 &self.dbus.connection,
                                 &nm_dev_obj_path,
                             )
                             .await,
                             nm_conn.connection.as_mut(),
-                        ) {
-                            nm_set.iface_name = Some(nm_dev.name.clone());
-                        }
+                        )
+                    {
+                        nm_set.iface_name = Some(nm_dev.name.clone());
                     }
                     nm_conns.push(nm_conn)
                 }
@@ -402,10 +403,10 @@ impl NmApi<'_> {
             // Due to bug https://bugzilla.redhat.com/2090946
             // NetworkManager daemon cannot remove static hostname, hence we
             // just delete the /etc/hostname file
-            if std::path::Path::new("/etc/hostname").exists() {
-                if let Err(e) = std::fs::remove_file("/etc/hostname") {
-                    log::error!("Failed to remove static /etc/hostname: {e}");
-                }
+            if std::path::Path::new("/etc/hostname").exists()
+                && let Err(e) = std::fs::remove_file("/etc/hostname")
+            {
+                log::error!("Failed to remove static /etc/hostname: {e}");
             }
             Ok(())
         } else {
@@ -521,14 +522,13 @@ impl FromStr for NmVersion {
             .take(3)
             .map(|v| v.parse::<u8>())
             .collect::<Result<Vec<u8>, _>>()
+            && ver.len() == 3
         {
-            if ver.len() == 3 {
-                return Ok(NmVersion {
-                    major: ver[0],
-                    minor: ver[1],
-                    micro: ver[2],
-                });
-            }
+            return Ok(NmVersion {
+                major: ver[0],
+                minor: ver[1],
+                micro: ver[2],
+            });
         }
         Err(NmError::new(
             ErrorKind::InvalidArgument,

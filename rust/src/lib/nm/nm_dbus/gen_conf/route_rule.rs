@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use log::warn;
 use std::collections::HashMap;
+
+use log::warn;
 
 use super::super::NmIpRouteRule;
 

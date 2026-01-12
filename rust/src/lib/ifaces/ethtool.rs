@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::hash_map::Iter;
-use std::collections::{BTreeMap, HashMap};
-use std::marker::PhantomData;
+use std::{
+    collections::{BTreeMap, HashMap, hash_map::Iter},
+    marker::PhantomData,
+};
 
 use serde::{
-    de, de::MapAccess, de::Visitor, Deserialize, Deserializer, Serialize,
-    Serializer,
+    Deserialize, Deserializer, Serialize, Serializer, de,
+    de::{MapAccess, Visitor},
 };
 
 use crate::MergedInterface;
@@ -533,13 +534,13 @@ pub struct EthtoolFecConfig {
 
 impl EthtoolFecConfig {
     pub(crate) fn sanitize(&mut self, is_desired: bool) {
-        if is_desired && self.auto == Some(true) {
-            if let Some(mode) = self.mode.take() {
-                log::info!(
-                    "Ignoring ethtool fec mode setting {mode} because auto \
-                     enabled"
-                );
-            }
+        if is_desired
+            && self.auto == Some(true)
+            && let Some(mode) = self.mode.take()
+        {
+            log::info!(
+                "Ignoring ethtool fec mode setting {mode} because auto enabled"
+            );
         }
     }
 }

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::str::FromStr;
+use std::{collections::HashMap, marker::PhantomData, str::FromStr};
 
-use serde::{de, de::Visitor, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de, de::Visitor};
 
 use crate::{
     BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType,
@@ -106,10 +104,9 @@ impl LinuxBridgeInterface {
     ) -> Result<(), NmstateError> {
         if let Some(opts) =
             self.bridge.as_ref().and_then(|b| b.options.as_ref())
+            && is_desired
         {
-            if is_desired {
-                opts.validate_vlan_default_pvid(self)?;
-            }
+            opts.validate_vlan_default_pvid(self)?;
         }
 
         if let Some(opts) =
@@ -181,19 +178,19 @@ impl LinuxBridgeInterface {
     }
 
     fn sort_ports(&mut self) {
-        if let Some(ref mut br_conf) = self.bridge {
-            if let Some(ref mut port_confs) = &mut br_conf.port {
-                port_confs.sort_unstable_by_key(|p| p.name.clone())
-            }
+        if let Some(br_conf) = self.bridge.as_mut()
+            && let Some(port_confs) = br_conf.port.as_mut()
+        {
+            port_confs.sort_unstable_by_key(|p| p.name.clone())
         }
     }
 
     fn remove_runtime_only_timers(&mut self) {
-        if let Some(ref mut br_conf) = self.bridge {
-            if let Some(ref mut opts) = &mut br_conf.options {
-                opts.gc_timer = None;
-                opts.hello_timer = None;
-            }
+        if let Some(br_conf) = self.bridge.as_mut()
+            && let Some(opts) = br_conf.options.as_mut()
+        {
+            opts.gc_timer = None;
+            opts.hello_timer = None;
         }
     }
 
@@ -269,10 +266,10 @@ impl LinuxBridgeInterface {
         }
 
         for (port_name, port_conf) in des_ports_index.iter() {
-            if let Some(cur_port_conf) = cur_ports_index.get(port_name) {
-                if port_conf.is_changed(cur_port_conf) {
-                    ret.push(port_name);
-                }
+            if let Some(cur_port_conf) = cur_ports_index.get(port_name)
+                && port_conf.is_changed(cur_port_conf)
+            {
+                ret.push(port_name);
             }
         }
         ret
@@ -334,10 +331,10 @@ impl LinuxBridgeInterface {
                 new_ports.push(new_port);
             }
         }
-        if !new_ports.is_empty() {
-            if let Some(br_conf) = self.bridge.as_mut() {
-                br_conf.port = Some(new_ports);
-            }
+        if !new_ports.is_empty()
+            && let Some(br_conf) = self.bridge.as_mut()
+        {
+            br_conf.port = Some(new_ports);
         }
     }
 }
@@ -582,17 +579,18 @@ impl LinuxBridgeOptions {
         &self,
         linux_bridge: &LinuxBridgeInterface,
     ) -> Result<(), NmstateError> {
-        if let Some(pvid) = self.vlan_default_pvid {
-            if pvid != 1 && !linux_bridge.vlan_filtering_is_enabled() {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Linux bridge {} has vlan-default-pvid different than \
-                         1 but VLAN filtering is not enabled.",
-                        linux_bridge.base.name.as_str()
-                    ),
-                ));
-            }
+        if let Some(pvid) = self.vlan_default_pvid
+            && pvid != 1
+            && !linux_bridge.vlan_filtering_is_enabled()
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Linux bridge {} has vlan-default-pvid different than 1 \
+                     but VLAN filtering is not enabled.",
+                    linux_bridge.base.name.as_str()
+                ),
+            ));
         }
 
         Ok(())
@@ -649,57 +647,54 @@ impl LinuxBridgeStpOptions {
     }
 
     pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
-        if let Some(hello_time) = self.hello_time {
-            if !(Self::HELLO_TIME_MIN..=Self::HELLO_TIME_MAX)
+        if let Some(hello_time) = self.hello_time
+            && !(Self::HELLO_TIME_MIN..=Self::HELLO_TIME_MAX)
                 .contains(&hello_time)
-            {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Desired STP hello time {} is not in the range of \
-                         [{},{}]",
-                        hello_time,
-                        Self::HELLO_TIME_MIN,
-                        Self::HELLO_TIME_MAX
-                    ),
-                );
-                log::error!("{e}");
-                return Err(e);
-            }
+        {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Desired STP hello time {} is not in the range of [{},{}]",
+                    hello_time,
+                    Self::HELLO_TIME_MIN,
+                    Self::HELLO_TIME_MAX
+                ),
+            );
+            log::error!("{e}");
+            return Err(e);
         }
 
-        if let Some(max_age) = self.max_age {
-            if !(Self::MAX_AGE_MIN..=Self::MAX_AGE_MAX).contains(&max_age) {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Desired STP max age {} is not in the range of [{},{}]",
-                        max_age,
-                        Self::MAX_AGE_MIN,
-                        Self::MAX_AGE_MAX
-                    ),
-                );
-                log::error!("{e}");
-                return Err(e);
-            }
+        if let Some(max_age) = self.max_age
+            && !(Self::MAX_AGE_MIN..=Self::MAX_AGE_MAX).contains(&max_age)
+        {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Desired STP max age {} is not in the range of [{},{}]",
+                    max_age,
+                    Self::MAX_AGE_MIN,
+                    Self::MAX_AGE_MAX
+                ),
+            );
+            log::error!("{e}");
+            return Err(e);
         }
-        if let Some(forward_delay) = self.forward_delay {
-            if !(Self::FORWARD_DELAY_MIN..=Self::FORWARD_DELAY_MAX)
+        if let Some(forward_delay) = self.forward_delay
+            && !(Self::FORWARD_DELAY_MIN..=Self::FORWARD_DELAY_MAX)
                 .contains(&forward_delay)
-            {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Desired STP forward delay {} is not in the range of \
-                         [{},{}]",
-                        forward_delay,
-                        Self::FORWARD_DELAY_MIN,
-                        Self::FORWARD_DELAY_MAX
-                    ),
-                );
-                log::error!("{e}");
-                return Err(e);
-            }
+        {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Desired STP forward delay {} is not in the range of \
+                     [{},{}]",
+                    forward_delay,
+                    Self::FORWARD_DELAY_MIN,
+                    Self::FORWARD_DELAY_MAX
+                ),
+            );
+            log::error!("{e}");
+            return Err(e);
         }
         Ok(())
     }

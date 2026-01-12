@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use serde::{
-    ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,
+    Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq,
 };
 
 use crate::{
@@ -162,10 +162,10 @@ impl Interfaces {
             .chain(self.user_ifaces.values_mut())
         {
             iface.base_iface_mut().hide_secrets();
-            if let Interface::MacSec(macsec_iface) = iface {
-                if let Some(macsec_conf) = macsec_iface.macsec.as_mut() {
-                    macsec_conf.hide_secrets();
-                }
+            if let Interface::MacSec(macsec_iface) = iface
+                && let Some(macsec_conf) = macsec_iface.macsec.as_mut()
+            {
+                macsec_conf.hide_secrets();
             }
             if let Interface::Ipsec(ipsec_iface) = iface {
                 ipsec_iface.hide_secrets();
@@ -256,20 +256,17 @@ impl Interfaces {
                     iface.remove_port(ignore_port);
                 }
             }
-            if iface.iface_type() == InterfaceType::Veth {
-                if let Interface::Ethernet(eth_iface) = iface {
-                    if let Some(veth_conf) = eth_iface.veth.as_ref() {
-                        if kernel_iface_names.contains(veth_conf.peer.as_str())
-                        {
-                            log::info!(
-                                "Veth interface {} is holding ignored peer {}",
-                                eth_iface.base.name,
-                                veth_conf.peer.as_str()
-                            );
-                            eth_iface.veth = None;
-                        }
-                    }
-                }
+            if iface.iface_type() == InterfaceType::Veth
+                && let Interface::Ethernet(eth_iface) = iface
+                && let Some(veth_conf) = eth_iface.veth.as_ref()
+                && kernel_iface_names.contains(veth_conf.peer.as_str())
+            {
+                log::info!(
+                    "Veth interface {} is holding ignored peer {}",
+                    eth_iface.base.name,
+                    veth_conf.peer.as_str()
+                );
+                eth_iface.veth = None;
             }
         }
     }
@@ -565,37 +562,35 @@ impl Interfaces {
         }) {
             if let Some(profile_name) =
                 cur_iface.base_iface().profile_name.as_ref()
+                && let Some(des_iface) = self.kernel_ifaces.get(profile_name)
             {
-                if let Some(des_iface) = self.kernel_ifaces.get(profile_name) {
-                    let mut new_iface =
-                        if des_iface.iface_type() == InterfaceType::Unknown {
-                            let mut new_iface_value =
-                                serde_json::to_value(des_iface)?;
-                            if let Some(obj) = new_iface_value.as_object_mut() {
-                                obj.insert(
-                                    "type".to_string(),
-                                    serde_json::Value::String(
-                                        cur_iface.iface_type().to_string(),
-                                    ),
-                                );
-                            }
-                            Interface::deserialize(new_iface_value)?
-                        } else {
-                            des_iface.clone()
-                        };
+                let mut new_iface = if des_iface.iface_type()
+                    == InterfaceType::Unknown
+                {
+                    let mut new_iface_value = serde_json::to_value(des_iface)?;
+                    if let Some(obj) = new_iface_value.as_object_mut() {
+                        obj.insert(
+                            "type".to_string(),
+                            serde_json::Value::String(
+                                cur_iface.iface_type().to_string(),
+                            ),
+                        );
+                    }
+                    Interface::deserialize(new_iface_value)?
+                } else {
+                    des_iface.clone()
+                };
 
-                    new_iface.base_iface_mut().identifier =
-                        Some(InterfaceIdentifier::MacAddress);
-                    new_iface
-                        .base_iface_mut()
-                        .mac_address
-                        .clone_from(&cur_iface.base_iface().mac_address);
-                    new_iface.base_iface_mut().name =
-                        cur_iface.name().to_string();
-                    new_iface.base_iface_mut().profile_name =
-                        Some(profile_name.to_string());
-                    changed_ifaces.push(new_iface);
-                }
+                new_iface.base_iface_mut().identifier =
+                    Some(InterfaceIdentifier::MacAddress);
+                new_iface
+                    .base_iface_mut()
+                    .mac_address
+                    .clone_from(&cur_iface.base_iface().mac_address);
+                new_iface.base_iface_mut().name = cur_iface.name().to_string();
+                new_iface.base_iface_mut().profile_name =
+                    Some(profile_name.to_string());
+                changed_ifaces.push(new_iface);
             }
         }
         for changed_iface in changed_ifaces {
@@ -1047,25 +1042,25 @@ impl MergedInterfaces {
             i.merged.is_up()
                 && i.merged.iface_type() != InterfaceType::OvsInterface
         }) {
-            if let Some(parent) = iface.merged.parent() {
-                if gone_ifaces.contains(&parent.to_string()) {
-                    if iface.is_desired() && iface.merged.is_up() {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Interface {} cannot be in up state as its \
-                                 parent {parent} has been marked as absent",
-                                iface.merged.name(),
-                            ),
-                        ));
-                    }
-                    log::info!(
-                        "Marking interface {} as absent as its parent {} is so",
-                        iface.merged.name(),
-                        parent
-                    );
-                    iface.mark_as_absent();
+            if let Some(parent) = iface.merged.parent()
+                && gone_ifaces.contains(&parent.to_string())
+            {
+                if iface.is_desired() && iface.merged.is_up() {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} cannot be in up state as its parent \
+                             {parent} has been marked as absent",
+                            iface.merged.name(),
+                        ),
+                    ));
                 }
+                log::info!(
+                    "Marking interface {} as absent as its parent {} is so",
+                    iface.merged.name(),
+                    parent
+                );
+                iface.mark_as_absent();
             }
         }
         Ok(())

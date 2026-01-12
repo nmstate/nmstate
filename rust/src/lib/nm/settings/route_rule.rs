@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::NmIpRouteRule;
-
 use crate::{
-    ip::is_ipv6_addr, ip::AddressFamily, ErrorKind, InterfaceIpAddr,
-    NmstateError, RouteRuleEntry,
+    ErrorKind, InterfaceIpAddr, NmstateError, RouteRuleEntry,
+    ip::{AddressFamily, is_ipv6_addr},
 };
 
 const AF_INET6: i32 = 10;
@@ -18,10 +17,10 @@ pub(crate) fn gen_nm_ip_rules<'a>(
     for rule in rules {
         let mut nm_rule = NmIpRouteRule::default();
         nm_rule.family = Some(if is_ipv6 { AF_INET6 } else { AF_INET });
-        if let Some(family) = rule.family {
-            if is_ipv6 != matches!(family, AddressFamily::IPv6) {
-                continue;
-            }
+        if let Some(family) = rule.family
+            && is_ipv6 != matches!(family, AddressFamily::IPv6)
+        {
+            continue;
         }
         if let Some(addr) = rule.ip_from.as_deref() {
             match (is_ipv6, is_ipv6_addr(addr)) {

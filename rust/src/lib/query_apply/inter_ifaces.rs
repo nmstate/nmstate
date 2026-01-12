@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    state::{gen_diff_json_value, merge_json_value},
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterfaces,
     NmstateError,
+    state::{gen_diff_json_value, merge_json_value},
 };
 
 impl Interfaces {
@@ -236,10 +236,10 @@ impl MergedInterfaces {
                 // Do not verify physical interface with state:down
                 if iface.is_up() {
                     iface.verify(cur_iface)?;
-                    if let Interface::Ethernet(eth_iface) = iface {
-                        if eth_iface.sriov_is_enabled() {
-                            eth_iface.verify_sriov(&current)?;
-                        }
+                    if let Interface::Ethernet(eth_iface) = iface
+                        && eth_iface.sriov_is_enabled()
+                    {
+                        eth_iface.verify_sriov(&current)?;
                     }
                 }
             } else if iface.is_up() {

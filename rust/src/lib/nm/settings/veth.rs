@@ -2,8 +2,8 @@
 
 use super::{
     super::{
-        nm_dbus::{NmConnection, NmIfaceType, NmSettingVeth},
         NmConnectionMatcher,
+        nm_dbus::{NmConnection, NmIfaceType, NmSettingVeth},
     },
     connection::gen_nm_conn_setting,
     ip::gen_nm_ip_setting,

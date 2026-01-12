@@ -43,27 +43,24 @@ pub(crate) fn process_new_veth_peer(
     merged_iface: &MergedInterface,
     merged_ifaces: &MergedInterfaces,
 ) -> Option<nispor::IfaceConf> {
-    if merged_iface.current.is_none() && merged_iface.merged.is_up() {
-        if let Some(Interface::Ethernet(apply_iface)) =
+    if merged_iface.current.is_none()
+        && merged_iface.merged.is_up()
+        && let Some(Interface::Ethernet(apply_iface)) =
             merged_iface.for_apply.as_ref()
+        && let Some(peer) = apply_iface.veth.as_ref().map(|v| v.peer.as_str())
+    {
+        // Mark new veth peer as up if not mentioned in desired state.
+        if merged_ifaces
+            .kernel_ifaces
+            .get(peer)
+            .map(|i| i.for_apply.is_some())
+            != Some(true)
         {
-            if let Some(peer) =
-                apply_iface.veth.as_ref().map(|v| v.peer.as_str())
-            {
-                // Mark new veth peer as up if not mentioned in desired state.
-                if merged_ifaces
-                    .kernel_ifaces
-                    .get(peer)
-                    .map(|i| i.for_apply.is_some())
-                    != Some(true)
-                {
-                    let mut np_iface = nispor::IfaceConf::default();
-                    np_iface.name = peer.to_string();
-                    np_iface.iface_type = Some(nispor::IfaceType::Veth);
-                    np_iface.state = nispor::IfaceState::Up;
-                    return Some(np_iface);
-                }
-            }
+            let mut np_iface = nispor::IfaceConf::default();
+            np_iface.name = peer.to_string();
+            np_iface.iface_type = Some(nispor::IfaceType::Veth);
+            np_iface.state = nispor::IfaceState::Up;
+            return Some(np_iface);
         }
     }
     None

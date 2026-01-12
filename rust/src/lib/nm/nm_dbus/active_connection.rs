@@ -3,10 +3,10 @@
 use super::NmIfaceType;
 #[cfg(feature = "query_apply")]
 use super::{
-    connection::nm_con_get_from_obj_path,
-    dbus::{obj_path_to_string, NM_DBUS_INTERFACE_AC, NM_DBUS_INTERFACE_ROOT},
-    query_apply::device::nm_dev_from_obj_path,
     ErrorKind, NmError,
+    connection::nm_con_get_from_obj_path,
+    dbus::{NM_DBUS_INTERFACE_AC, NM_DBUS_INTERFACE_ROOT, obj_path_to_string},
+    query_apply::device::nm_dev_from_obj_path,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

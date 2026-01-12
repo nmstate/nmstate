@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use serde::{Deserialize, Serialize};
 
-use super::super::{connection::DbusDictionary, NmError, ToDbusValue};
+use super::super::{NmError, ToDbusValue, connection::DbusDictionary};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -42,10 +41,10 @@ impl ToDbusValue for NmSettingHsr {
         if let Some(v) = &self.port2 {
             ret.insert("port2", zvariant::Value::new(v.clone()));
         }
-        if let Some(v) = &self.multicast_spec {
-            if *v > 0 {
-                ret.insert("multicast-spec", zvariant::Value::new(*v));
-            }
+        if let Some(v) = &self.multicast_spec
+            && *v > 0
+        {
+            ret.insert("multicast-spec", zvariant::Value::new(*v));
         }
         if let Some(v) = &self.prp {
             ret.insert("prp", zvariant::Value::new(*v));

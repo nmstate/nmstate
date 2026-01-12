@@ -264,17 +264,17 @@ impl std::fmt::Display for NmError {
 #[cfg(feature = "query_apply")]
 impl From<zbus::Error> for NmError {
     fn from(e: zbus::Error) -> Self {
-        if let zbus::Error::MethodError(dbus_err_kind, dbus_err_msg, _) = &e {
-            if dbus_err_kind.starts_with(NM_DBUS_ERR_PREFIX) {
-                return parse_nm_dbus_error(
-                    dbus_err_kind.as_str(),
-                    if let Some(dbus_err_msg) = dbus_err_msg.as_ref() {
-                        dbus_err_msg.as_str()
-                    } else {
-                        ""
-                    },
-                );
-            }
+        if let zbus::Error::MethodError(dbus_err_kind, dbus_err_msg, _) = &e
+            && dbus_err_kind.starts_with(NM_DBUS_ERR_PREFIX)
+        {
+            return parse_nm_dbus_error(
+                dbus_err_kind.as_str(),
+                if let Some(dbus_err_msg) = dbus_err_msg.as_ref() {
+                    dbus_err_msg.as_str()
+                } else {
+                    ""
+                },
+            );
         }
 
         log::warn!("Unknown DBUS error {e:?}");

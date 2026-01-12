@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-use std::ffi::OsStr;
-use std::fs;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashSet,
+    ffi::OsStr,
+    fs,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use serde::Deserialize;
 

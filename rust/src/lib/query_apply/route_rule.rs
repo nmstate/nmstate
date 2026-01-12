@@ -44,10 +44,10 @@ impl MergedRouteRules {
         let mut cur_rules: Vec<&RouteRuleEntry> = Vec::new();
         if let Some(rules) = current.config.as_ref() {
             for cur_rule in rules {
-                if let Some(iif) = cur_rule.iif.as_ref() {
-                    if ignored_ifaces.contains(&iif.as_str()) {
-                        continue;
-                    }
+                if let Some(iif) = cur_rule.iif.as_ref()
+                    && ignored_ifaces.contains(&iif.as_str())
+                {
+                    continue;
                 }
                 cur_rules.push(cur_rule);
             }

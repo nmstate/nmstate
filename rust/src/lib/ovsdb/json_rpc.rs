@@ -107,7 +107,7 @@ impl OvsDbJsonRpc {
                         format!(
                             "Failed to read data from OVSDB connection: {e}"
                         ),
-                    ))
+                    ));
                 }
             };
             log::debug!(

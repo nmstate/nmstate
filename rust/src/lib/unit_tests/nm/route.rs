@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    nm::route::store_route_config,
-    unit_tests::testlib::{
-        gen_test_routes_conf, new_eth_iface, new_test_nic_with_static_ip,
-        TEST_IPV4_ADDR1, TEST_IPV4_NET1, TEST_IPV6_ADDR1, TEST_IPV6_NET1,
-        TEST_NIC,
-    },
     InterfaceType, Interfaces, MergedNetworkState, NetworkState, RouteEntry,
     RouteState,
+    nm::route::store_route_config,
+    unit_tests::testlib::{
+        TEST_IPV4_ADDR1, TEST_IPV4_NET1, TEST_IPV6_ADDR1, TEST_IPV6_NET1,
+        TEST_NIC, gen_test_routes_conf, new_eth_iface,
+        new_test_nic_with_static_ip,
+    },
 };
 
 #[test]

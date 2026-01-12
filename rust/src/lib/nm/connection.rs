@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
+    NmConnectionMatcher,
     device::create_index_for_nm_devs,
     nm_dbus::{NmConnection, NmDevice, NmIfaceType},
     settings::{fix_ip_dhcp_timeout, iface_to_nm_connections},
-    NmConnectionMatcher,
 };
-
 use crate::{
     InterfaceType, MergedInterface, MergedInterfaces, MergedNetworkState,
     NmstateError,
@@ -124,10 +123,11 @@ pub(crate) fn prepare_nm_conns(
                     nm_devs_to_deactivate.push(nm_dev.clone());
                 }
             }
-            if iface.is_down() && gen_conf_mode {
-                if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
-                    nm_conn_set.autoconnect = Some(false);
-                }
+            if iface.is_down()
+                && gen_conf_mode
+                && let Some(nm_conn_set) = nm_conn.connection.as_mut()
+            {
+                nm_conn_set.autoconnect = Some(false);
             }
             nm_conns_to_update.push(nm_conn);
         }
@@ -153,68 +153,59 @@ fn can_skip_activation(
     // if the controller is desired to be down or absent, activating the
     // connection on the port will risk making the controller activate again,
     // therefore skip the activation on the port
-    if let Some(desired_iface) = merged_iface.for_apply.as_ref() {
-        if let (Some(ctrl_iface), Some(ctrl_type)) = (
+    if let Some(desired_iface) = merged_iface.for_apply.as_ref()
+        && let (Some(ctrl_iface), Some(ctrl_type)) = (
             desired_iface.base_iface().controller.as_deref(),
             desired_iface.base_iface().controller_type.as_ref(),
-        ) {
-            if let Some(merged_ctrl_iface) =
-                merged_ifaces.get_iface(ctrl_iface, ctrl_type.clone())
-            {
-                if merged_ctrl_iface.for_apply.is_some()
-                    && (merged_ctrl_iface.merged.is_absent()
-                        || merged_ctrl_iface.merged.is_down())
-                {
-                    log::info!(
-                        "Skipping activation of {} as its controller {} \
-                         desire to be down or absent",
-                        merged_iface.merged.name(),
-                        ctrl_iface
-                    );
-                    return true;
-                }
-            }
-        }
+        )
+        && let Some(merged_ctrl_iface) =
+            merged_ifaces.get_iface(ctrl_iface, ctrl_type.clone())
+        && merged_ctrl_iface.for_apply.is_some()
+        && (merged_ctrl_iface.merged.is_absent()
+            || merged_ctrl_iface.merged.is_down())
+    {
+        log::info!(
+            "Skipping activation of {} as its controller {} desire to be down \
+             or absent",
+            merged_iface.merged.name(),
+            ctrl_iface
+        );
+        return true;
     }
     // Reapply of connection never reactivate its subordinates, hence we do not
     // skip activation when modifying the connection.
-    if let Some(uuid) = nm_conn.uuid() {
-        if conn_matcher.is_activated(uuid) {
-            return false;
-        }
+    if let Some(uuid) = nm_conn.uuid()
+        && conn_matcher.is_activated(uuid)
+    {
+        return false;
     }
 
     if merged_iface.current.is_none()
         && merged_iface.for_apply.is_some()
         && merged_iface.merged.is_up()
+        && let Some(desired_iface) = merged_iface.for_apply.as_ref()
     {
-        if let Some(desired_iface) = merged_iface.for_apply.as_ref() {
-            if let (Some(ctrl_iface), Some(ctrl_type)) = (
-                desired_iface.base_iface().controller.as_deref(),
-                desired_iface.base_iface().controller_type.as_ref(),
-            ) {
-                if let Some(merged_ctrl_iface) =
-                    merged_ifaces.get_iface(ctrl_iface, ctrl_type.clone())
-                {
-                    if merged_ctrl_iface.current.is_none()
-                        && merged_ctrl_iface.for_apply.is_some()
-                        && merged_ctrl_iface.merged.is_up()
-                    {
-                        log::info!(
-                            "Skipping activation of {} as its controller {} \
-                             will automatically activate it",
-                            merged_iface.merged.name(),
-                            ctrl_iface
-                        );
-                        return true;
-                    }
-                }
-            }
+        if let (Some(ctrl_iface), Some(ctrl_type)) = (
+            desired_iface.base_iface().controller.as_deref(),
+            desired_iface.base_iface().controller_type.as_ref(),
+        ) && let Some(merged_ctrl_iface) =
+            merged_ifaces.get_iface(ctrl_iface, ctrl_type.clone())
+            && merged_ctrl_iface.current.is_none()
+            && merged_ctrl_iface.for_apply.is_some()
+            && merged_ctrl_iface.merged.is_up()
+        {
+            log::info!(
+                "Skipping activation of {} as its controller {} will \
+                 automatically activate it",
+                merged_iface.merged.name(),
+                ctrl_iface
+            );
+            return true;
+        }
 
-            // new OVS port on new OVS bridge can skip activation
-            if nm_conn.iface_type() == Some(&NmIfaceType::OvsPort) {
-                return true;
-            }
+        // new OVS port on new OVS bridge can skip activation
+        if nm_conn.iface_type() == Some(&NmIfaceType::OvsPort) {
+            return true;
         }
     }
     false

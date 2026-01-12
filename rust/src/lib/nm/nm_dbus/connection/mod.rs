@@ -45,43 +45,42 @@ mod vrf;
 mod vxlan;
 mod wired;
 
-pub use self::bond::{NmSettingBond, NmSettingBondPort};
-pub use self::bridge::{
-    NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
-};
-pub use self::conn::{
-    NmConnection, NmConnectionMultiConnect, NmRange, NmSettingConnection,
-    NmSettingsConnectionFlag,
-};
-pub use self::ethtool::NmSettingEthtool;
-pub use self::hsr::NmSettingHsr;
-pub use self::ieee8021x::NmSetting8021X;
-pub use self::iface_match::NmSettingMatch;
-pub use self::iface_type::NmIfaceType;
-pub use self::infiniband::NmSettingInfiniBand;
-pub use self::ip::{NmSettingIp, NmSettingIpMethod};
-pub use self::ipvlan::NmSettingIpVlan;
-pub use self::loopback::NmSettingLoopback;
-pub use self::mac_vlan::NmSettingMacVlan;
-pub use self::macsec::NmSettingMacSec;
-pub use self::ovs::{
-    NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
-    NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
-    NmSettingOvsPort,
-};
-pub use self::route::NmIpRoute;
-pub use self::route_rule::{NmIpRouteRule, NmIpRouteRuleAction};
-pub use self::sriov::{NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan};
-pub use self::user::NmSettingUser;
-pub use self::veth::NmSettingVeth;
-pub use self::vlan::{NmSettingVlan, NmSettingVlanFlag, NmVlanProtocol};
-pub use self::vpn::NmSettingVpn;
-pub use self::vrf::NmSettingVrf;
-pub use self::vxlan::NmSettingVxlan;
-pub use self::wired::NmSettingWired;
-
+pub(crate) use self::conn::{DBUS_ASV_SIGNATURE, DbusDictionary};
 #[cfg(feature = "query_apply")]
-pub(crate) use self::conn::{nm_con_get_from_obj_path, NmConnectionDbusValue};
-pub(crate) use self::conn::{DbusDictionary, DBUS_ASV_SIGNATURE};
+pub(crate) use self::conn::{NmConnectionDbusValue, nm_con_get_from_obj_path};
 #[cfg(feature = "query_apply")]
 pub(crate) use self::macros::_from_map;
+pub use self::{
+    bond::{NmSettingBond, NmSettingBondPort},
+    bridge::{NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange},
+    conn::{
+        NmConnection, NmConnectionMultiConnect, NmRange, NmSettingConnection,
+        NmSettingsConnectionFlag,
+    },
+    ethtool::NmSettingEthtool,
+    hsr::NmSettingHsr,
+    ieee8021x::NmSetting8021X,
+    iface_match::NmSettingMatch,
+    iface_type::NmIfaceType,
+    infiniband::NmSettingInfiniBand,
+    ip::{NmSettingIp, NmSettingIpMethod},
+    ipvlan::NmSettingIpVlan,
+    loopback::NmSettingLoopback,
+    mac_vlan::NmSettingMacVlan,
+    macsec::NmSettingMacSec,
+    ovs::{
+        NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
+        NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+        NmSettingOvsPort,
+    },
+    route::NmIpRoute,
+    route_rule::{NmIpRouteRule, NmIpRouteRuleAction},
+    sriov::{NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan},
+    user::NmSettingUser,
+    veth::NmSettingVeth,
+    vlan::{NmSettingVlan, NmSettingVlanFlag, NmVlanProtocol},
+    vpn::NmSettingVpn,
+    vrf::NmSettingVrf,
+    vxlan::NmSettingVxlan,
+    wired::NmSettingWired,
+};

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::net::Ipv6Addr;
+use std::{
+    collections::{HashMap, HashSet},
+    net::Ipv6Addr,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -78,30 +79,28 @@ impl Default for BondInterface {
 impl BondInterface {
     // * Do not merge bond options from current when bond mode is changing
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
-        if let Some(bond_conf) = self.bond.as_mut() {
-            if let (Some(des_bond_conf), Some(cur_bond_conf)) =
+        if let Some(bond_conf) = self.bond.as_mut()
+            && let (Some(des_bond_conf), Some(cur_bond_conf)) =
                 (desired.bond.as_ref(), current.bond.as_ref())
-            {
-                if des_bond_conf.mode != cur_bond_conf.mode {
-                    bond_conf.options.clone_from(&des_bond_conf.options);
-                }
-            }
+            && des_bond_conf.mode != cur_bond_conf.mode
+        {
+            bond_conf.options.clone_from(&des_bond_conf.options);
         }
     }
 
     fn drop_empty_arp_ip_target(&mut self) {
-        if let Some(ref mut bond_conf) = self.bond {
-            if let Some(ref mut bond_opts) = &mut bond_conf.options {
-                if let Some(ref mut arp_ip_target) = bond_opts.arp_ip_target {
-                    if arp_ip_target.is_empty() {
-                        bond_opts.arp_ip_target = None;
-                    }
-                }
-                if let Some(ref mut v) = bond_opts.ns_ip6_target {
-                    if v.is_empty() {
-                        bond_opts.ns_ip6_target = None;
-                    }
-                }
+        if let Some(bond_conf) = self.bond.as_mut()
+            && let Some(bond_opts) = bond_conf.options.as_mut()
+        {
+            if let Some(arp_ip_target) = bond_opts.arp_ip_target.as_ref()
+                && arp_ip_target.is_empty()
+            {
+                bond_opts.arp_ip_target = None;
+            }
+            if let Some(v) = bond_opts.ns_ip6_target.as_mut()
+                && v.is_empty()
+            {
+                bond_opts.ns_ip6_target = None;
             }
         }
     }
@@ -285,48 +284,47 @@ impl BondInterface {
     fn validate_conflict_in_port_and_port_configs(
         &self,
     ) -> Result<(), NmstateError> {
-        if let Some(bond_conf) = self.bond.as_ref() {
-            if let (Some(ports), Some(ports_config)) =
+        if let Some(bond_conf) = self.bond.as_ref()
+            && let (Some(ports), Some(ports_config)) =
                 (&bond_conf.port, &bond_conf.ports_config)
-            {
-                let ports: HashSet<&str> =
-                    ports.iter().map(String::as_str).collect();
-                let port_confs: HashSet<&str> =
-                    ports_config.iter().map(|p| p.name.as_str()).collect();
+        {
+            let ports: HashSet<&str> =
+                ports.iter().map(String::as_str).collect();
+            let port_confs: HashSet<&str> =
+                ports_config.iter().map(|p| p.name.as_str()).collect();
 
-                if ports != port_confs {
-                    let missing_in_config: Vec<&str> =
-                        ports.difference(&port_confs).copied().collect();
-                    let missing_in_ports: Vec<&str> =
-                        port_confs.difference(&ports).copied().collect();
+            if ports != port_confs {
+                let missing_in_config: Vec<&str> =
+                    ports.difference(&port_confs).copied().collect();
+                let missing_in_ports: Vec<&str> =
+                    port_confs.difference(&ports).copied().collect();
 
-                    let mut error_msg_detail = String::new();
+                let mut error_msg_detail = String::new();
 
-                    if !missing_in_config.is_empty() {
-                        error_msg_detail.push_str(&format!(
-                            "Ports in `port` but not in `ports_config`: {}. ",
-                            missing_in_config.join(", ")
-                        ));
-                    }
-                    if !missing_in_ports.is_empty() {
-                        error_msg_detail.push_str(&format!(
-                            "Ports in `ports_config` but not in `port`: {}. ",
-                            missing_in_ports.join(", ")
-                        ));
-                    }
-
-                    let e = NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "The port names specified in `port` conflict with \
-                             the port names specified in `ports-config` for \
-                             bond interface: {}. {}",
-                            &self.base.name, error_msg_detail
-                        ),
-                    );
-                    log::error!("{e}");
-                    return Err(e);
+                if !missing_in_config.is_empty() {
+                    error_msg_detail.push_str(&format!(
+                        "Ports in `port` but not in `ports_config`: {}. ",
+                        missing_in_config.join(", ")
+                    ));
                 }
+                if !missing_in_ports.is_empty() {
+                    error_msg_detail.push_str(&format!(
+                        "Ports in `ports_config` but not in `port`: {}. ",
+                        missing_in_ports.join(", ")
+                    ));
+                }
+
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "The port names specified in `port` conflict with the \
+                         port names specified in `ports-config` for bond \
+                         interface: {}. {}",
+                        &self.base.name, error_msg_detail
+                    ),
+                );
+                log::error!("{e}");
+                return Err(e);
             }
         }
 
@@ -430,10 +428,10 @@ impl BondInterface {
         }
 
         for (port_name, port_conf) in des_ports_index.iter() {
-            if let Some(cur_port_conf) = cur_ports_index.get(port_name) {
-                if port_conf.is_changed(cur_port_conf) {
-                    ret.push(port_name);
-                }
+            if let Some(cur_port_conf) = cur_ports_index.get(port_name)
+                && port_conf.is_changed(cur_port_conf)
+            {
+                ret.push(port_name);
             }
         }
         ret
@@ -1248,17 +1246,17 @@ impl BondOptions {
     }
 
     fn validate_ad_actor_system_mac_address(&self) -> Result<(), NmstateError> {
-        if let Some(ad_actor_system) = &self.ad_actor_system {
-            if ad_actor_system.to_uppercase().starts_with("01:00:5E") {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    "The ad_actor_system bond option cannot be an IANA \
-                     multicast address(prefix with 01:00:5E)"
-                        .to_string(),
-                );
-                log::error!("{e}");
-                return Err(e);
-            }
+        if let Some(ad_actor_system) = &self.ad_actor_system
+            && ad_actor_system.to_uppercase().starts_with("01:00:5E")
+        {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "The ad_actor_system bond option cannot be an IANA multicast \
+                 address(prefix with 01:00:5E)"
+                    .to_string(),
+            );
+            log::error!("{e}");
+            return Err(e);
         }
         Ok(())
     }
@@ -1266,16 +1264,16 @@ impl BondOptions {
     fn validate_miimon_and_arp_interval(&self) -> Result<(), NmstateError> {
         if let (Some(miimon), Some(arp_interval)) =
             (self.miimon, self.arp_interval)
+            && miimon > 0
+            && arp_interval > 0
         {
-            if miimon > 0 && arp_interval > 0 {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    "Bond miimon and arp interval are not compatible options."
-                        .to_string(),
-                );
-                log::error!("{e}");
-                return Err(e);
-            }
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Bond miimon and arp interval are not compatible options."
+                    .to_string(),
+            );
+            log::error!("{e}");
+            return Err(e);
         }
         Ok(())
     }
@@ -1355,25 +1353,25 @@ impl BondOptions {
                     ));
                 }
             } else {
-                if let Some(arp_ip_target) = self.arp_ip_target.as_ref() {
-                    if !arp_ip_target.is_empty() {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            "The `arp_ip_target` option is only valid when \
-                             'arp_interval' is enabled(>0)."
-                                .to_string(),
-                        ));
-                    }
+                if let Some(arp_ip_target) = self.arp_ip_target.as_ref()
+                    && !arp_ip_target.is_empty()
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "The `arp_ip_target` option is only valid when \
+                         'arp_interval' is enabled(>0)."
+                            .to_string(),
+                    ));
                 }
-                if let Some(ns_ip6_target) = self.ns_ip6_target.as_ref() {
-                    if !ns_ip6_target.is_empty() {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            "The `ns_ip6_target` option is only valid when \
-                             'arp_interval' is enabled(>0)."
-                                .to_string(),
-                        ));
-                    }
+                if let Some(ns_ip6_target) = self.ns_ip6_target.as_ref()
+                    && !ns_ip6_target.is_empty()
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "The `ns_ip6_target` option is only valid when \
+                         'arp_interval' is enabled(>0)."
+                            .to_string(),
+                    ));
                 }
             }
         }
@@ -1400,25 +1398,24 @@ impl MergedInterface {
                 bond_opts.validate_ad_actor_system_mac_address()?;
                 bond_opts.validate_miimon_and_arp_interval()?;
 
-                if let Interface::Bond(merged_iface) = &self.merged {
-                    if let Some(mode) =
+                if let Interface::Bond(merged_iface) = &self.merged
+                    && let Some(mode) =
                         merged_iface.bond.as_ref().and_then(|b| b.mode)
-                    {
-                        let cur_bond_opts =
-                            if let Some(Interface::Bond(cur_iface)) =
-                                self.current.as_ref()
-                            {
-                                cur_iface
-                                    .bond
-                                    .as_ref()
-                                    .and_then(|b| b.options.as_ref())
-                            } else {
-                                None
-                            };
-                        bond_opts.validate_balance_slb(cur_bond_opts, mode)?;
-                        bond_opts.validate_lacp_opts(mode)?;
-                        bond_opts.validate_arp_interval(cur_bond_opts, mode)?;
-                    }
+                {
+                    let cur_bond_opts =
+                        if let Some(Interface::Bond(cur_iface)) =
+                            self.current.as_ref()
+                        {
+                            cur_iface
+                                .bond
+                                .as_ref()
+                                .and_then(|b| b.options.as_ref())
+                        } else {
+                            None
+                        };
+                    bond_opts.validate_balance_slb(cur_bond_opts, mode)?;
+                    bond_opts.validate_lacp_opts(mode)?;
+                    bond_opts.validate_arp_interval(cur_bond_opts, mode)?;
                 }
             }
         }

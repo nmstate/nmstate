@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::NmSetting8021X;
-
 use crate::Ieee8021XConfig;
 
 pub(crate) fn nm_802_1x_to_nmstate(

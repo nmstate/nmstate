@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::{NmConnection, NmSettingVlanFlag};
-
 use crate::{VlanInterface, VlanProtocol, VlanRegistrationProtocol};
 
 const NM_802_1_AD: &str = "802.1ad";

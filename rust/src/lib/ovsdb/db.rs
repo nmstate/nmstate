@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use serde_json::Value;
 
 use super::{
-    json_rpc::OvsDbJsonRpc, OvsDbMethodEcho, OvsDbMethodTransact,
-    OvsDbOperation, OvsDbSelect,
+    OvsDbMethodEcho, OvsDbMethodTransact, OvsDbOperation, OvsDbSelect,
+    json_rpc::OvsDbJsonRpc,
 };
 use crate::{ErrorKind, NmstateError};
 
@@ -201,35 +201,35 @@ impl TryFrom<&Value> for OvsDbEntry {
         );
         let v = v.clone();
         let mut ret = OvsDbEntry::default();
-        if let Value::Object(mut v) = v {
-            if let Some(Value::String(n)) = v.remove("name") {
-                ret.name = n;
-                if let Some(Value::Array(uuid)) = v.remove("_uuid") {
-                    if let Some(Value::String(uuid)) = uuid.get(1) {
-                        ret.uuid = uuid.to_string();
-                    }
-                }
-                if let Some(Value::String(iface_type)) = v.remove("type") {
-                    ret.iface_type = iface_type;
-                }
-                if let Some(Value::Array(ids)) = v.remove("external_ids") {
-                    ret.external_ids = parse_str_map(&ids);
-                }
-                if let Some(Value::Array(cfgs)) = v.remove("other_config") {
-                    ret.other_config = parse_str_map(&cfgs);
-                }
-                if let Some(Value::Array(ports)) = v.remove("ports") {
-                    ret.ports = parse_uuid_array(&ports);
-                }
-                if let Some(Value::Array(ports)) = v.remove("interfaces") {
-                    ret.ports = parse_uuid_array(&ports);
-                }
-                for (key, value) in v.iter() {
-                    ret.options.insert(key.to_string(), value.clone());
-                }
-
-                return Ok(ret);
+        if let Value::Object(mut v) = v
+            && let Some(Value::String(n)) = v.remove("name")
+        {
+            ret.name = n;
+            if let Some(Value::Array(uuid)) = v.remove("_uuid")
+                && let Some(Value::String(uuid)) = uuid.get(1)
+            {
+                ret.uuid = uuid.to_string();
             }
+            if let Some(Value::String(iface_type)) = v.remove("type") {
+                ret.iface_type = iface_type;
+            }
+            if let Some(Value::Array(ids)) = v.remove("external_ids") {
+                ret.external_ids = parse_str_map(&ids);
+            }
+            if let Some(Value::Array(cfgs)) = v.remove("other_config") {
+                ret.other_config = parse_str_map(&cfgs);
+            }
+            if let Some(Value::Array(ports)) = v.remove("ports") {
+                ret.ports = parse_uuid_array(&ports);
+            }
+            if let Some(Value::Array(ports)) = v.remove("interfaces") {
+                ret.ports = parse_uuid_array(&ports);
+            }
+            for (key, value) in v.iter() {
+                ret.options.insert(key.to_string(), value.clone());
+            }
+
+            return Ok(ret);
         }
         log::error!("{e}");
         Err(e)
@@ -243,17 +243,16 @@ pub(crate) fn parse_str_map(v: &[Value]) -> HashMap<String, String> {
             "map" => {
                 if let Some(ids) = v.get(1).and_then(|i| i.as_array()) {
                     for kv in ids {
-                        if let Some(kv) = kv.as_array() {
-                            if let (
+                        if let Some(kv) = kv.as_array()
+                            && let (
                                 Some(Value::String(k)),
                                 Some(Value::String(v)),
                             ) = (kv.first(), kv.get(1))
-                            {
-                                if k == NM_RESERVED_EXTERNAL_ID {
-                                    continue;
-                                }
-                                ret.insert(k.to_string(), v.to_string());
+                        {
+                            if k == NM_RESERVED_EXTERNAL_ID {
+                                continue;
                             }
+                            ret.insert(k.to_string(), v.to_string());
                         }
                     }
                 }
@@ -273,17 +272,16 @@ pub(crate) fn parse_uuid_array(v: &[Value]) -> Vec<String> {
             "set" => {
                 if let Some(vs) = v.get(1).and_then(|i| i.as_array()) {
                     for v in vs {
-                        if let Some(kv) = v.as_array() {
-                            if let (
+                        if let Some(kv) = v.as_array()
+                            && let (
                                 Some(Value::String(k)),
                                 Some(Value::String(v)),
                             ) = (kv.first(), kv.get(1))
-                            {
-                                if k != "uuid" {
-                                    continue;
-                                }
-                                ret.push(v.to_string());
+                        {
+                            if k != "uuid" {
+                                continue;
                             }
+                            ret.push(v.to_string());
                         }
                     }
                 }

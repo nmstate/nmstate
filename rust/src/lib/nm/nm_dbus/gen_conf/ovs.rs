@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::ToDbusValue;
 use std::collections::HashMap;
 
 use super::super::{
@@ -8,6 +7,7 @@ use super::super::{
     NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
     NmSettingOvsPort, ToKeyfile,
 };
+use crate::nm::nm_dbus::ToDbusValue;
 
 impl ToKeyfile for NmSettingOvsBridge {}
 impl ToKeyfile for NmSettingOvsIface {}

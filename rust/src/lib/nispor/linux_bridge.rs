@@ -3,10 +3,10 @@
 use log::warn;
 
 use crate::{
-    nispor::linux_bridge_port_vlan::parse_port_vlan_conf, BaseInterface,
-    ErrorKind, LinuxBridgeConfig, LinuxBridgeInterface,
+    BaseInterface, ErrorKind, LinuxBridgeConfig, LinuxBridgeInterface,
     LinuxBridgeMulticastRouterType, LinuxBridgeOptions, LinuxBridgePortConfig,
     LinuxBridgeStpOptions, NmstateError, VlanProtocol,
+    nispor::linux_bridge_port_vlan::parse_port_vlan_conf,
 };
 
 pub(crate) fn np_bridge_to_nmstate(
@@ -77,7 +77,7 @@ fn np_bridge_options_to_nmstate(
     np_iface: &nispor::Iface,
 ) -> Result<LinuxBridgeOptions, NmstateError> {
     let mut options = LinuxBridgeOptions::default();
-    if let Some(ref np_bridge) = &np_iface.bridge {
+    if let Some(np_bridge) = &np_iface.bridge {
         options.stp = Some(get_stp_options(np_bridge)?);
         options.gc_timer = np_bridge.gc_timer;
         options.group_addr = np_bridge

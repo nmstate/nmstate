@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::DbusDictionary,
-    convert::mac_str_to_u8_array,
-    convert::{own_value_to_bytes_array, u8_array_to_mac_string},
     NmError, ToDbusValue,
+    connection::DbusDictionary,
+    convert::{
+        mac_str_to_u8_array, own_value_to_bytes_array, u8_array_to_mac_string,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]

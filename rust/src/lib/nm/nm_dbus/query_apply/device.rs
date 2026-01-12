@@ -3,11 +3,11 @@
 use std::convert::TryFrom;
 
 use super::super::{
+    ErrorKind, NmDevice, NmDeviceState, NmDeviceStateReason, NmError,
+    NmIfaceType,
     connection::DbusDictionary,
     dbus::{NM_DBUS_INTERFACE_DEV, NM_DBUS_INTERFACE_ROOT},
     lldp::NmLldpNeighbor,
-    ErrorKind, NmDevice, NmDeviceState, NmDeviceStateReason, NmError,
-    NmIfaceType,
 };
 
 const NM_DEVICE_TYPE_UNKNOWN: u32 = 0;

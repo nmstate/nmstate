@@ -38,35 +38,35 @@ impl MergedHostNameState {
             ));
         };
 
-        if let Some(running) = desired.running.as_ref() {
-            if Some(running) != current.running.as_ref() {
-                let e = NmstateError::new(
-                    ErrorKind::VerificationError,
-                    format!(
-                        "Verification fail, desire hostname.running: {}, \
-                         current: {:?}",
-                        running,
-                        current.running.as_ref()
-                    ),
-                );
-                log::error!("{e}");
-                return Err(e);
-            }
+        if let Some(running) = desired.running.as_ref()
+            && Some(running) != current.running.as_ref()
+        {
+            let e = NmstateError::new(
+                ErrorKind::VerificationError,
+                format!(
+                    "Verification fail, desire hostname.running: {}, current: \
+                     {:?}",
+                    running,
+                    current.running.as_ref()
+                ),
+            );
+            log::error!("{e}");
+            return Err(e);
         }
-        if let Some(config) = desired.config.as_ref() {
-            if Some(config) != current.config.as_ref() {
-                let e = NmstateError::new(
-                    ErrorKind::VerificationError,
-                    format!(
-                        "Verification fail, desire hostname.config: {}, \
-                         current: {:?}",
-                        config,
-                        current.config.as_ref()
-                    ),
-                );
-                log::error!("{e}");
-                return Err(e);
-            }
+        if let Some(config) = desired.config.as_ref()
+            && Some(config) != current.config.as_ref()
+        {
+            let e = NmstateError::new(
+                ErrorKind::VerificationError,
+                format!(
+                    "Verification fail, desire hostname.config: {}, current: \
+                     {:?}",
+                    config,
+                    current.config.as_ref()
+                ),
+            );
+            log::error!("{e}");
+            return Err(e);
         }
 
         Ok(())

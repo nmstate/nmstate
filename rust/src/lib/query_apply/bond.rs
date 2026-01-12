@@ -38,10 +38,10 @@ impl BondOptions {
     // Only allow update `balance_slb` as that is userspace value.
     // Other options should be provided by nispor via kernel netlink.
     pub(crate) fn update(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            if let Some(value) = other.balance_slb {
-                self.balance_slb = Some(value);
-            }
+        if let Some(other) = other
+            && let Some(value) = other.balance_slb
+        {
+            self.balance_slb = Some(value);
         }
     }
 }
@@ -52,39 +52,37 @@ impl MergedInterface {
         let mut des_queue_ids: HashMap<&str, u16> = HashMap::new();
         let mut cur_queue_ids: HashMap<&str, u16> = HashMap::new();
 
-        if let Some(Interface::Bond(des_iface)) = self.desired.as_ref() {
-            if let Some(port_confs) = des_iface
+        if let Some(Interface::Bond(des_iface)) = self.desired.as_ref()
+            && let Some(port_confs) = des_iface
                 .bond
                 .as_ref()
                 .and_then(|b| b.ports_config.as_ref())
+        {
+            for port_conf in port_confs
+                .iter()
+                .filter(|p| p.queue_id.is_some() && p.queue_id != Some(0))
             {
-                for port_conf in port_confs
-                    .iter()
-                    .filter(|p| p.queue_id.is_some() && p.queue_id != Some(0))
-                {
-                    des_queue_ids.insert(
-                        port_conf.name.as_str(),
-                        port_conf.queue_id.unwrap_or_default(),
-                    );
-                }
+                des_queue_ids.insert(
+                    port_conf.name.as_str(),
+                    port_conf.queue_id.unwrap_or_default(),
+                );
             }
         }
 
-        if let Some(Interface::Bond(cur_iface)) = self.current.as_ref() {
-            if let Some(port_confs) = cur_iface
+        if let Some(Interface::Bond(cur_iface)) = self.current.as_ref()
+            && let Some(port_confs) = cur_iface
                 .bond
                 .as_ref()
                 .and_then(|b| b.ports_config.as_ref())
+        {
+            for port_conf in port_confs
+                .iter()
+                .filter(|p| p.queue_id.is_some() && p.queue_id != Some(0))
             {
-                for port_conf in port_confs
-                    .iter()
-                    .filter(|p| p.queue_id.is_some() && p.queue_id != Some(0))
-                {
-                    cur_queue_ids.insert(
-                        port_conf.name.as_str(),
-                        port_conf.queue_id.unwrap_or_default(),
-                    );
-                }
+                cur_queue_ids.insert(
+                    port_conf.name.as_str(),
+                    port_conf.queue_id.unwrap_or_default(),
+                );
             }
         }
 

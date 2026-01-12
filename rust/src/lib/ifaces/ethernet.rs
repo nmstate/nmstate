@@ -176,12 +176,11 @@ impl MergedInterfaces {
         for iface in self.iter().filter(|i| {
             i.merged.iface_type() == InterfaceType::Ethernet && i.merged.is_up()
         }) {
-            if let Interface::Ethernet(eth_iface) = &iface.merged {
-                if let Some(v) =
+            if let Interface::Ethernet(eth_iface) = &iface.merged
+                && let Some(v) =
                     eth_iface.veth.as_ref().map(|v| v.peer.as_str())
-                {
-                    veth_peers.push(v);
-                }
+            {
+                veth_peers.push(v);
             }
         }
         for iface in self.iter().filter(|i| {
@@ -190,22 +189,21 @@ impl MergedInterfaces {
                 && i.current.is_none()
                 && i.merged.is_up()
         }) {
-            if let Some(Interface::Ethernet(eth_iface)) = &iface.desired {
-                if eth_iface.veth.is_none()
+            if let Some(Interface::Ethernet(eth_iface)) = &iface.desired
+                && eth_iface.veth.is_none()
                     && self.mode != NetworkStateMode::GenerateConfig
                     && !veth_peers.contains(&eth_iface.base.name.as_str())
                     // The `resolve_sriov_reference()` will raise error if
                     // SRIOV VF not found, so we skip check on them here.
                     && !eth_iface.base.name.starts_with("sriov:")
-                {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Ethernet interface {} does not exists",
-                            eth_iface.base.name.as_str()
-                        ),
-                    ));
-                }
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Ethernet interface {} does not exists",
+                        eth_iface.base.name.as_str()
+                    ),
+                ));
             }
         }
 
@@ -221,14 +219,11 @@ impl MergedInterfaces {
                 Some(Interface::Ethernet(des_eth_iface)),
                 Some(Interface::Ethernet(cur_eth_iface)),
             ) = (iface.desired.as_ref(), iface.current.as_ref())
-            {
-                if let (Some(veth_conf), Some(cur_veth_conf)) =
+                && let (Some(veth_conf), Some(cur_veth_conf)) =
                     (des_eth_iface.veth.as_ref(), cur_eth_iface.veth.as_ref())
-                {
-                    if veth_conf.peer != cur_veth_conf.peer {
-                        pending_deletions.push(cur_veth_conf.peer.to_string());
-                    }
-                }
+                && veth_conf.peer != cur_veth_conf.peer
+            {
+                pending_deletions.push(cur_veth_conf.peer.to_string());
             }
         }
 
@@ -240,10 +235,9 @@ impl MergedInterfaces {
         }) {
             if let Some(Interface::Ethernet(cur_eth_iface)) =
                 iface.current.as_ref()
+                && let Some(veth_conf) = cur_eth_iface.veth.as_ref()
             {
-                if let Some(veth_conf) = cur_eth_iface.veth.as_ref() {
-                    pending_deletions.push(veth_conf.peer.to_string());
-                }
+                pending_deletions.push(veth_conf.peer.to_string());
             }
         }
 
@@ -286,48 +280,45 @@ impl Interfaces {
                 Interface::Ethernet(des_iface),
                 Some(Interface::Ethernet(cur_iface)),
             ) = (iface, current.get_iface(iface.name(), InterfaceType::Veth))
-            {
-                if let (Some(des_peer), cur_peer) = (
+                && let (Some(des_peer), cur_peer) = (
                     des_iface.veth.as_ref().map(|v| v.peer.as_str()),
                     cur_iface.veth.as_ref().map(|v| v.peer.as_str()),
-                ) {
-                    let cur_peer = if let Some(c) = cur_peer {
-                        c
-                    } else {
-                        // The veth peer is in another namespace.
-                        let e = NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Veth interface {} is currently holding peer \
-                                 assigned to other namespace Please remove \
-                                 this veth pair before changing veth peer to \
-                                 {des_peer}",
-                                iface.name(),
-                            ),
-                        );
-                        log::error!("{e}");
-                        return Err(e);
-                    };
+                )
+            {
+                let cur_peer = if let Some(c) = cur_peer {
+                    c
+                } else {
+                    // The veth peer is in another namespace.
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Veth interface {} is currently holding peer \
+                             assigned to other namespace Please remove this \
+                             veth pair before changing veth peer to {des_peer}",
+                            iface.name(),
+                        ),
+                    );
+                    log::error!("{e}");
+                    return Err(e);
+                };
 
-                    if des_peer != cur_peer
-                        && ignored_veth_ifaces.contains(&&cur_peer.to_string())
-                    {
-                        let e = NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Veth interface {} is currently holding peer \
-                                 {} which is marked as ignored. Hence not \
-                                 allowing changing its peer to {}. Please \
-                                 remove this veth pair before changing veth \
-                                 peer",
-                                iface.name(),
-                                cur_peer,
-                                des_peer
-                            ),
-                        );
-                        log::error!("{e}");
-                        return Err(e);
-                    }
+                if des_peer != cur_peer
+                    && ignored_veth_ifaces.contains(&&cur_peer.to_string())
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Veth interface {} is currently holding peer {} \
+                             which is marked as ignored. Hence not allowing \
+                             changing its peer to {}. Please remove this veth \
+                             pair before changing veth peer",
+                            iface.name(),
+                            cur_peer,
+                            des_peer
+                        ),
+                    );
+                    log::error!("{e}");
+                    return Err(e);
                 }
             }
         }
@@ -343,17 +334,17 @@ impl Interfaces {
                 && i.iface_type() == InterfaceType::Veth
                 && !current.kernel_ifaces.contains_key(i.name())
         }) {
-            if let Interface::Ethernet(eth_iface) = iface {
-                if eth_iface.veth.is_none() {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Veth interface {} does not exist, peer name is \
-                             required for creating it",
-                            iface.name()
-                        ),
-                    ));
-                }
+            if let Interface::Ethernet(eth_iface) = iface
+                && eth_iface.veth.is_none()
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Veth interface {} does not exist, peer name is \
+                         required for creating it",
+                        iface.name()
+                    ),
+                ));
             }
         }
         Ok(())

@@ -122,74 +122,75 @@ mod unit_tests;
 #[cfg(feature = "query_apply")]
 mod validate;
 
-pub use crate::dispatch::DispatchConfig;
-pub(crate) use crate::dns::MergedDnsState;
-pub use crate::dns::{DnsClientState, DnsState};
-pub use crate::error::{ErrorKind, NmstateError};
-pub use crate::hostname::HostNameState;
-pub(crate) use crate::hostname::MergedHostNameState;
-pub use crate::ieee8021x::Ieee8021XConfig;
-pub(crate) use crate::iface::MergedInterface;
-pub use crate::iface::{
-    Interface, InterfaceIdentifier, InterfaceState, InterfaceType,
-    UnknownInterface,
-};
-pub(crate) use crate::ifaces::MergedInterfaces;
-pub use crate::ifaces::{
-    AltNameEntry, AltNameState, BaseInterface, BondAdSelect,
-    BondAllPortsActive, BondArpAllTargets, BondArpValidate, BondConfig,
-    BondFailOverMac, BondInterface, BondLacpRate, BondMode, BondOptions,
-    BondPortConfig, BondPrimaryReselect, BondXmitHashPolicy,
-    BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
-    BridgePortVlanRange, DummyInterface, EthernetConfig, EthernetDuplex,
-    EthernetInterface, EthtoolCoalesceConfig, EthtoolConfig,
-    EthtoolFeatureConfig, EthtoolFecConfig, EthtoolFecMode, EthtoolPauseConfig,
-    EthtoolRingConfig, HsrConfig, HsrInterface, HsrProtocol, InfiniBandConfig,
-    InfiniBandInterface, InfiniBandMode, Interfaces, IpVlanConfig,
-    IpVlanInterface, IpVlanMode, IpsecInterface, LibreswanAddressFamily,
-    LibreswanConfig, LibreswanConnectionType, LinuxBridgeConfig,
-    LinuxBridgeInterface, LinuxBridgeMulticastRouterType, LinuxBridgeOptions,
-    LinuxBridgePortConfig, LinuxBridgeStpOptions, LoopbackInterface,
-    MacSecConfig, MacSecInterface, MacSecOffload, MacSecValidate,
-    MacVlanConfig, MacVlanInterface, MacVlanMode, MacVtapConfig,
-    MacVtapInterface, MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
-    OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgeOptions, OvsBridgePortConfig, OvsBridgeStpOptions, OvsDpdkConfig,
-    OvsInterface, OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig,
-    VlanConfig, VlanInterface, VlanProtocol, VlanQosMapping,
-    VlanRegistrationProtocol, VrfConfig, VrfInterface, VxlanConfig,
-    VxlanInterface, XfrmInterface,
-};
-pub use crate::ip::{
-    AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4,
-    InterfaceIpv6, Ipv6AddrGenMode, WaitIp,
-};
-pub use crate::lldp::{
-    LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,
-    LldpMacPhy, LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs, LldpNeighborTlv,
-    LldpPortId, LldpPortIdType, LldpPpvids, LldpSystemCapabilities,
-    LldpSystemCapability, LldpSystemDescription, LldpSystemName, LldpVlan,
-    LldpVlans,
-};
-pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
-pub use crate::net_state::NetworkState;
-pub(crate) use crate::net_state::{MergedNetworkState, NetworkStateMode};
-pub(crate) use crate::ovn::MergedOvnConfiguration;
-pub use crate::ovn::{
-    OvnBridgeMapping, OvnBridgeMappingState, OvnConfiguration,
-};
-pub(crate) use crate::ovs::MergedOvsDbGlobalConfig;
-pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
-pub use crate::pci_address::PciAddress;
 #[cfg(feature = "query_apply")]
 pub use crate::policy::{
     NetworkCaptureRules, NetworkPolicy, NetworkStateTemplate,
 };
-pub(crate) use crate::route::MergedRoutes;
-pub use crate::route::{RouteEntry, RouteState, RouteType, Routes};
-pub(crate) use crate::route_rule::MergedRouteRules;
-pub use crate::route_rule::{
-    RouteRuleAction, RouteRuleEntry, RouteRuleState, RouteRules,
-};
 #[cfg(feature = "query_apply")]
 pub use crate::statistic::{NmstateFeature, NmstateStatistic};
+pub use crate::{
+    dispatch::DispatchConfig,
+    dns::{DnsClientState, DnsState},
+    error::{ErrorKind, NmstateError},
+    hostname::HostNameState,
+    ieee8021x::Ieee8021XConfig,
+    iface::{
+        Interface, InterfaceIdentifier, InterfaceState, InterfaceType,
+        UnknownInterface,
+    },
+    ifaces::{
+        AltNameEntry, AltNameState, BaseInterface, BondAdSelect,
+        BondAllPortsActive, BondArpAllTargets, BondArpValidate, BondConfig,
+        BondFailOverMac, BondInterface, BondLacpRate, BondMode, BondOptions,
+        BondPortConfig, BondPrimaryReselect, BondXmitHashPolicy,
+        BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+        BridgePortVlanRange, DummyInterface, EthernetConfig, EthernetDuplex,
+        EthernetInterface, EthtoolCoalesceConfig, EthtoolConfig,
+        EthtoolFeatureConfig, EthtoolFecConfig, EthtoolFecMode,
+        EthtoolPauseConfig, EthtoolRingConfig, HsrConfig, HsrInterface,
+        HsrProtocol, InfiniBandConfig, InfiniBandInterface, InfiniBandMode,
+        Interfaces, IpVlanConfig, IpVlanInterface, IpVlanMode, IpsecInterface,
+        LibreswanAddressFamily, LibreswanConfig, LibreswanConnectionType,
+        LinuxBridgeConfig, LinuxBridgeInterface,
+        LinuxBridgeMulticastRouterType, LinuxBridgeOptions,
+        LinuxBridgePortConfig, LinuxBridgeStpOptions, LoopbackInterface,
+        MacSecConfig, MacSecInterface, MacSecOffload, MacSecValidate,
+        MacVlanConfig, MacVlanInterface, MacVlanMode, MacVtapConfig,
+        MacVtapInterface, MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
+        OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
+        OvsBridgeOptions, OvsBridgePortConfig, OvsBridgeStpOptions,
+        OvsDpdkConfig, OvsInterface, OvsPatchConfig, SrIovConfig,
+        SrIovVfConfig, VethConfig, VlanConfig, VlanInterface, VlanProtocol,
+        VlanQosMapping, VlanRegistrationProtocol, VrfConfig, VrfInterface,
+        VxlanConfig, VxlanInterface, XfrmInterface,
+    },
+    ip::{
+        AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr,
+        InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, WaitIp,
+    },
+    lldp::{
+        LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,
+        LldpMacPhy, LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs,
+        LldpNeighborTlv, LldpPortId, LldpPortIdType, LldpPpvids,
+        LldpSystemCapabilities, LldpSystemCapability, LldpSystemDescription,
+        LldpSystemName, LldpVlan, LldpVlans,
+    },
+    mptcp::{MptcpAddressFlag, MptcpConfig},
+    net_state::NetworkState,
+    ovn::{OvnBridgeMapping, OvnBridgeMappingState, OvnConfiguration},
+    ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig},
+    pci_address::PciAddress,
+    route::{RouteEntry, RouteState, RouteType, Routes},
+    route_rule::{RouteRuleAction, RouteRuleEntry, RouteRuleState, RouteRules},
+};
+pub(crate) use crate::{
+    dns::MergedDnsState,
+    hostname::MergedHostNameState,
+    iface::MergedInterface,
+    ifaces::MergedInterfaces,
+    net_state::{MergedNetworkState, NetworkStateMode},
+    ovn::MergedOvnConfiguration,
+    ovs::MergedOvsDbGlobalConfig,
+    route::MergedRoutes,
+    route_rule::MergedRouteRules,
+};

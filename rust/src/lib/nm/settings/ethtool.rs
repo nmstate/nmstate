@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 
-use crate::nm::nm_dbus::{NmConnection, NmSettingEthtool};
 use crate::{
     ErrorKind, EthtoolCoalesceConfig, EthtoolFeatureConfig, EthtoolFecConfig,
     EthtoolFecMode, EthtoolPauseConfig, EthtoolRingConfig, Interface,
     NmstateError,
+    nm::nm_dbus::{NmConnection, NmSettingEthtool},
 };
 
 const KERNEL_ETHTOOL_FEATURE_2_NM: [(&str, &str); 10] = [

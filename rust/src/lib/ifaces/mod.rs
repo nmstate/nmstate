@@ -26,9 +26,6 @@ mod ovs;
 mod sriov;
 mod vlan;
 
-pub use self::alt_name::{AltNameEntry, AltNameState};
-pub(crate) use self::inter_ifaces::MergedInterfaces;
-pub use self::xfrm::XfrmInterface;
 pub use base::*;
 pub use bond::{
     BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
@@ -77,3 +74,9 @@ pub use vlan::{
 };
 pub use vrf::{VrfConfig, VrfInterface};
 pub use vxlan::{VxlanConfig, VxlanInterface};
+
+pub(crate) use self::inter_ifaces::MergedInterfaces;
+pub use self::{
+    alt_name::{AltNameEntry, AltNameState},
+    xfrm::XfrmInterface,
+};

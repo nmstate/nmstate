@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 
 use serde::{
-    ser::SerializeTuple, Deserialize, Deserializer, Serialize, Serializer,
+    Deserialize, Deserializer, Serialize, Serializer, ser::SerializeTuple,
 };
 
 use crate::{ErrorKind, NmstateError};
@@ -127,17 +126,16 @@ impl BridgePortVlanConfig {
                 ));
             }
 
-            if self.mode == Some(BridgePortVlanMode::Access) {
-                if let Some(tags) = self.trunk_tags.as_ref() {
-                    if !tags.is_empty() {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            "Bridge VLAN filtering access mode cannot have \
-                             trunk-tags defined"
-                                .to_string(),
-                        ));
-                    }
-                }
+            if self.mode == Some(BridgePortVlanMode::Access)
+                && let Some(tags) = self.trunk_tags.as_ref()
+                && !tags.is_empty()
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "Bridge VLAN filtering access mode cannot have trunk-tags \
+                     defined"
+                        .to_string(),
+                ));
             }
 
             if self.mode == Some(BridgePortVlanMode::Trunk)

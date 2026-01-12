@@ -27,12 +27,13 @@ mod validate;
 
 use env_logger::Builder;
 use log::LevelFilter;
+#[cfg(feature = "query_apply")]
+use validate::validate;
 
 #[cfg(feature = "query_apply")]
 use crate::apply::{
     apply_from_files, apply_from_stdin, commit, rollback, state_edit,
 };
-
 #[cfg(feature = "query_apply")]
 use crate::autoconf::autoconf;
 #[cfg(feature = "gen_conf")]
@@ -48,8 +49,6 @@ use crate::result::print_result_and_exit;
 use crate::service::ncl_service;
 #[cfg(feature = "query_apply")]
 use crate::statistic::statistic;
-#[cfg(feature = "query_apply")]
-use validate::validate;
 
 pub(crate) const DEFAULT_SERVICE_FOLDER: &str = "/etc/nmstate";
 pub(crate) const CONFIG_FOLDER_KEY: &str = "CONFIG_FOLDER";

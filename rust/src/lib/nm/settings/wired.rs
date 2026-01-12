@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::NmConnection;
-
-use crate::{Interface, InterfaceIdentifier};
+use crate::{Interface, InterfaceIdentifier, nm::nm_dbus::NmConnection};
 
 pub(crate) fn gen_nm_wired_setting(
     iface: &Interface,
@@ -27,27 +25,27 @@ pub(crate) fn gen_nm_wired_setting(
         flag_need_wired = true;
     }
 
-    if let Interface::Ethernet(eth_iface) = iface {
-        if let Some(eth_conf) = eth_iface.ethernet.as_ref() {
-            match eth_conf.auto_neg {
-                Some(true) => {
-                    flag_need_wired = true;
-                    nm_wired_set.auto_negotiate = Some(true);
-                    nm_wired_set.speed = None;
-                    nm_wired_set.duplex = None;
-                }
-                Some(false) => {
-                    flag_need_wired = true;
-                    nm_wired_set.auto_negotiate = Some(false);
-                    if let Some(v) = eth_conf.speed {
-                        nm_wired_set.speed = Some(v);
-                    }
-                    if let Some(v) = eth_conf.duplex {
-                        nm_wired_set.duplex = Some(format!("{v}"));
-                    }
-                }
-                None => (),
+    if let Interface::Ethernet(eth_iface) = iface
+        && let Some(eth_conf) = eth_iface.ethernet.as_ref()
+    {
+        match eth_conf.auto_neg {
+            Some(true) => {
+                flag_need_wired = true;
+                nm_wired_set.auto_negotiate = Some(true);
+                nm_wired_set.speed = None;
+                nm_wired_set.duplex = None;
             }
+            Some(false) => {
+                flag_need_wired = true;
+                nm_wired_set.auto_negotiate = Some(false);
+                if let Some(v) = eth_conf.speed {
+                    nm_wired_set.speed = Some(v);
+                }
+                if let Some(v) = eth_conf.duplex {
+                    nm_wired_set.duplex = Some(format!("{v}"));
+                }
+            }
+            None => (),
         }
     }
 

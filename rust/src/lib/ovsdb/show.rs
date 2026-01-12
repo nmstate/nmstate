@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
+use super::db::{OvsDbConnection, OvsDbEntry, parse_str_map};
 use crate::{
     BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
     BridgePortVlanRange, Interface, InterfaceType, Interfaces, NetworkState,
@@ -13,8 +14,6 @@ use crate::{
     OvsDbIfaceConfig, OvsDpdkConfig, OvsInterface, OvsPatchConfig,
     UnknownInterface,
 };
-
-use super::db::{parse_str_map, OvsDbConnection, OvsDbEntry};
 
 pub(crate) async fn ovsdb_is_running() -> bool {
     if let Ok(mut cli) = OvsDbConnection::new().await {
@@ -169,24 +168,22 @@ fn parse_ovs_bond_conf(
         }
     }
 
-    if bond_conf.mode.is_none() {
-        if let Some(Value::String(lacp)) = ovsdb_port.options.get("lacp") {
-            if lacp.as_str() == "active" {
-                bond_conf.mode = Some(OvsBridgeBondMode::Lacp);
-            }
-        }
+    if bond_conf.mode.is_none()
+        && let Some(Value::String(lacp)) = ovsdb_port.options.get("lacp")
+        && lacp.as_str() == "active"
+    {
+        bond_conf.mode = Some(OvsBridgeBondMode::Lacp);
     }
 
-    if let Some(Value::Number(v)) = ovsdb_port.options.get("bond_updelay") {
-        if let Some(v) = v.as_u64() {
-            bond_conf.bond_updelay = if v == 0 { None } else { Some(v as u32) };
-        }
+    if let Some(Value::Number(v)) = ovsdb_port.options.get("bond_updelay")
+        && let Some(v) = v.as_u64()
+    {
+        bond_conf.bond_updelay = if v == 0 { None } else { Some(v as u32) };
     }
-    if let Some(Value::Number(v)) = ovsdb_port.options.get("bond_downdelay") {
-        if let Some(v) = v.as_u64() {
-            bond_conf.bond_downdelay =
-                if v == 0 { None } else { Some(v as u32) };
-        }
+    if let Some(Value::Number(v)) = ovsdb_port.options.get("bond_downdelay")
+        && let Some(v) = v.as_u64()
+    {
+        bond_conf.bond_downdelay = if v == 0 { None } else { Some(v as u32) };
     }
     let external_ids = HashMap::from_iter(
         ovsdb_port
@@ -246,11 +243,9 @@ fn parse_ovs_vlan_conf(
                 }
             } else if let Some(Value::Number(trunk_tag)) =
                 ovsdb_port.options.get("trunks")
+                && let Some(tag) = trunk_tag.as_u64()
             {
-                if let Some(tag) = trunk_tag.as_u64() {
-                    ret.trunk_tags =
-                        Some(vec![BridgePortTrunkTag::Id(tag as u16)]);
-                }
+                ret.trunk_tags = Some(vec![BridgePortTrunkTag::Id(tag as u16)]);
             }
         }
         Some(ret)
@@ -321,20 +316,20 @@ fn parse_ovs_iface_dpdk_conf(
                 devargs: devargs.to_string(),
                 ..Default::default()
             };
-            if let Some(n_rxq) = options.get("n_rxq") {
-                if let Ok(i) = n_rxq.parse::<u32>() {
-                    conf.rx_queue = Some(i)
-                }
+            if let Some(n_rxq) = options.get("n_rxq")
+                && let Ok(i) = n_rxq.parse::<u32>()
+            {
+                conf.rx_queue = Some(i)
             }
-            if let Some(n_rxq_desc) = options.get("n_rxq_desc") {
-                if let Ok(i) = n_rxq_desc.parse::<u32>() {
-                    conf.n_rxq_desc = Some(i)
-                }
+            if let Some(n_rxq_desc) = options.get("n_rxq_desc")
+                && let Ok(i) = n_rxq_desc.parse::<u32>()
+            {
+                conf.n_rxq_desc = Some(i)
             }
-            if let Some(n_txq_desc) = options.get("n_txq_desc") {
-                if let Ok(i) = n_txq_desc.parse::<u32>() {
-                    conf.n_txq_desc = Some(i)
-                }
+            if let Some(n_txq_desc) = options.get("n_txq_desc")
+                && let Ok(i) = n_txq_desc.parse::<u32>()
+            {
+                conf.n_txq_desc = Some(i)
             }
             if let Some(lsc_interrupt) = options.get("dpdk-lsc-interrupt") {
                 conf.lsc_interrupt = match lsc_interrupt.as_str() {

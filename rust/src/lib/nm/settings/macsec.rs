@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::{NmConnection, NmSettingMacSec};
-
-use crate::{MacSecInterface, MacSecOffload};
+use crate::{
+    MacSecInterface, MacSecOffload,
+    nm::nm_dbus::{NmConnection, NmSettingMacSec},
+};
 
 pub(crate) fn gen_nm_macsec_setting(
     iface: &MacSecInterface,

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::str::FromStr;
+use std::{collections::HashMap, rc::Rc, str::FromStr};
 
 use super::nm_dbus::{NmActiveConnection, NmConnection, NmIfaceType};
 use crate::{
@@ -178,22 +176,20 @@ impl NmConnectionMatcher {
                 .and_then(|m| m.path.as_deref())
                 .and_then(|s| s.first()),
             nm_conn.iface_type(),
-        ) {
-            if let Some(pci) = nm_pci_addr
-                .strip_prefix("pci-")
-                .and_then(|s| PciAddress::from_str(s).ok())
-            {
-                if nm_iface_type == &NmIfaceType::Veth {
-                    self.saved_by_pci
-                        .entry((pci, NmIfaceType::Ethernet))
-                        .or_default()
-                        .push(nm_conn.clone())
-                }
+        ) && let Some(pci) = nm_pci_addr
+            .strip_prefix("pci-")
+            .and_then(|s| PciAddress::from_str(s).ok())
+        {
+            if nm_iface_type == &NmIfaceType::Veth {
                 self.saved_by_pci
-                    .entry((pci, *nm_iface_type))
+                    .entry((pci, NmIfaceType::Ethernet))
                     .or_default()
                     .push(nm_conn.clone())
             }
+            self.saved_by_pci
+                .entry((pci, *nm_iface_type))
+                .or_default()
+                .push(nm_conn.clone())
         }
     }
 
@@ -237,10 +233,10 @@ impl NmConnectionMatcher {
             .get(&(name.to_string(), *nm_iface_type))?;
 
         for nm_conn in nm_conns {
-            if let Some(uuid) = nm_conn.uuid() {
-                if self.acs_by_uuid.contains_key(uuid) {
-                    return Some(Rc::as_ref(nm_conn));
-                }
+            if let Some(uuid) = nm_conn.uuid()
+                && self.acs_by_uuid.contains_key(uuid)
+            {
+                return Some(Rc::as_ref(nm_conn));
             }
         }
 
@@ -353,23 +349,22 @@ impl NmConnectionMatcher {
         match base_iface.identifier {
             None | Some(InterfaceIdentifier::Name) => (),
             Some(InterfaceIdentifier::MacAddress) => {
-                if let Some(mac) = base_iface.mac_address.as_deref() {
-                    if let Some(nm_conns) = self.saved_by_mac.get(&(
+                if let Some(mac) = base_iface.mac_address.as_deref()
+                    && let Some(nm_conns) = self.saved_by_mac.get(&(
                         mac.to_uppercase(),
                         NmIfaceType::from(&base_iface.iface_type),
-                    )) {
-                        ret.extend(nm_conns.iter().map(Rc::as_ref));
-                    }
+                    ))
+                {
+                    ret.extend(nm_conns.iter().map(Rc::as_ref));
                 }
             }
             Some(InterfaceIdentifier::PciAddress) => {
-                if let Some(pci) = base_iface.pci_address {
-                    if let Some(nm_conns) = self
+                if let Some(pci) = base_iface.pci_address
+                    && let Some(nm_conns) = self
                         .saved_by_pci
                         .get(&(pci, NmIfaceType::from(&base_iface.iface_type)))
-                    {
-                        ret.extend(nm_conns.iter().map(Rc::as_ref));
-                    }
+                {
+                    ret.extend(nm_conns.iter().map(Rc::as_ref));
                 }
             }
         }
@@ -456,10 +451,10 @@ fn get_nm_connection_iface_name(
     nm_conn: &NmConnection,
     merged_ifaces: &MergedInterfaces,
 ) -> Option<String> {
-    if let Some(iface_name) = nm_conn.iface_name() {
-        if !iface_name.is_empty() {
-            return Some(iface_name.to_string());
-        }
+    if let Some(iface_name) = nm_conn.iface_name()
+        && !iface_name.is_empty()
+    {
+        return Some(iface_name.to_string());
     }
 
     if let (Some(vlan_parent), Some(vlan_id)) = (
@@ -477,33 +472,29 @@ fn get_nm_connection_iface_name(
     if nm_conn.iface_type().map(|nm_iface_type| {
         NM_IFACE_TYPES_USE_PARENT_MAC.contains(nm_iface_type)
     }) == Some(false)
-    {
-        if let Some(mac) = nm_conn
+        && let Some(mac) = nm_conn
             .wired
             .as_ref()
             .and_then(|s| s.mac_address.as_deref())
-        {
-            if let Some(name) = merged_ifaces
-                .kernel_ifaces
-                .values()
-                .filter_map(|i| i.current.as_ref())
-                .find_map(|iface| {
-                    let base_iface = iface.base_iface();
-                    if base_iface.mac_address.as_deref() == Some(mac)
-                        && (base_iface.iface_type == iface_type
-                            || ([InterfaceType::Veth, InterfaceType::Ethernet]
-                                .contains(&base_iface.iface_type)
-                                && iface_type == InterfaceType::Ethernet))
-                    {
-                        Some(base_iface.name.to_string())
-                    } else {
-                        None
-                    }
-                })
-            {
-                return Some(name);
-            }
-        }
+        && let Some(name) = merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter_map(|i| i.current.as_ref())
+            .find_map(|iface| {
+                let base_iface = iface.base_iface();
+                if base_iface.mac_address.as_deref() == Some(mac)
+                    && (base_iface.iface_type == iface_type
+                        || ([InterfaceType::Veth, InterfaceType::Ethernet]
+                            .contains(&base_iface.iface_type)
+                            && iface_type == InterfaceType::Ethernet))
+                {
+                    Some(base_iface.name.to_string())
+                } else {
+                    None
+                }
+            })
+    {
+        return Some(name);
     }
     if nm_conn.vpn.is_some() {
         return nm_conn.id().map(|i| i.to_string());
