@@ -8,7 +8,6 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ifaces::InterfaceNameSearch,
     ip::{is_ipv6_addr, sanitize_ip_network},
     ErrorKind, InterfaceType, MergedInterfaces, NmstateError,
 };
@@ -119,7 +118,7 @@ impl Routes {
         &mut self,
         merged_ifaces: &MergedInterfaces,
     ) -> Result<(), NmstateError> {
-        let iface_name_search = InterfaceNameSearch::new(merged_ifaces);
+        let iface_name_search = &merged_ifaces.iface_name_search;
 
         if let Some(config_routes) = self.config.as_mut() {
             for route in config_routes.iter_mut() {

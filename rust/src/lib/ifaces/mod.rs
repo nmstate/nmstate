@@ -27,7 +27,7 @@ mod sriov;
 mod vlan;
 
 pub use self::alt_name::{AltNameEntry, AltNameState};
-pub(crate) use self::inter_ifaces::{InterfaceNameSearch, MergedInterfaces};
+pub(crate) use self::inter_ifaces::MergedInterfaces;
 pub use self::xfrm::XfrmInterface;
 pub use base::*;
 pub use bond::{

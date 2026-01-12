@@ -18,6 +18,7 @@ def linux_bridge(
     extra_iface_state=None,
     create=True,
     kernel_mode=False,
+    ports=None,
 ):
     desired_state = {
         Interface.KEY: [
@@ -35,7 +36,12 @@ def linux_bridge(
         desired_iface_state[LinuxBridge.CONFIG_SUBTREE] = bridge_subtree_state
     if extra_iface_state:
         desired_iface_state.update(extra_iface_state)
-
+    if ports:
+        for port in ports:
+            desired_iface_state.setdefault(LinuxBridge.CONFIG_SUBTREE, {})
+            add_port_to_bridge(
+                desired_iface_state[LinuxBridge.CONFIG_SUBTREE], port
+            )
     if create:
         libnmstate.apply(desired_state, kernel_only=kernel_mode)
 
