@@ -364,14 +364,27 @@ impl MergedInterface {
                         || base_iface.ipv6.as_ref().map(|ipv6| ipv6.enabled)
                             == Some(true))
                 {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Interface {} cannot have IP enabled as it is \
-                             attached to a controller where IP is not allowed",
-                            base_iface.name.as_str()
-                        ),
-                    ));
+                    if let Some(ctrl) =
+                        apply_iface.base_iface().controller.as_ref()
+                    {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Interface {} cannot have IP enabled as it is \
+                                 attached to controller {ctrl} where IP is \
+                                 not allowed on its port",
+                                base_iface.name.as_str()
+                            ),
+                        ));
+                    } else {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Interface {} cannot have IP enabled",
+                                base_iface.name.as_str()
+                            ),
+                        ));
+                    }
                 }
             }
         }

@@ -397,7 +397,7 @@ pub(crate) fn gen_nm_conn_setting(
         .map(NmIfaceType::from);
     let ctrl_name = iface.base_iface().controller.as_deref();
     if let Some(ctrl_name) = ctrl_name {
-        if ctrl_name.is_empty() {
+        if ctrl_name.is_empty() || nm_ctrl_type == Some(NmIfaceType::Hsr) {
             nm_conn_set.controller = None;
             nm_conn_set.controller_type = None;
         } else if let Some(nm_ctrl_type) = nm_ctrl_type {

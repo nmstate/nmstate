@@ -126,8 +126,13 @@ impl std::fmt::Display for InterfaceType {
 
 impl InterfaceType {
     const USERSPACE_IFACE_TYPES: [Self; 2] = [Self::OvsBridge, Self::Ipsec];
-    const CONTROLLER_IFACES_TYPES: [Self; 4] =
-        [Self::Bond, Self::LinuxBridge, Self::OvsBridge, Self::Vrf];
+    const CONTROLLER_IFACES_TYPES: [Self; 5] = [
+        Self::Bond,
+        Self::LinuxBridge,
+        Self::OvsBridge,
+        Self::Vrf,
+        Self::Hsr,
+    ];
 
     // other interfaces are also considered as userspace
     pub(crate) fn is_userspace(&self) -> bool {
@@ -682,6 +687,7 @@ impl Interface {
                 Self::OvsBridge(iface) => iface.ports(),
                 Self::Bond(iface) => iface.ports(),
                 Self::Vrf(iface) => iface.ports(),
+                Self::Hsr(iface) => iface.ports(),
                 _ => None,
             }
         }
@@ -851,6 +857,7 @@ impl MergedInterface {
         self.post_inter_ifaces_process_vrf()?;
         self.post_inter_ifaces_process_bond()?;
         self.post_inter_ifaces_process_vlan();
+        self.post_inter_ifaces_process_hsr();
 
         if let Some(apply_iface) = self.for_apply.as_mut() {
             apply_iface.sanitize(true)?;
@@ -1050,7 +1057,7 @@ impl MergedInterface {
             }
         }
 
-        if !self.is_desired() {
+        if !self.is_changed() {
             self.mark_as_changed();
             if ctrl_state == InterfaceState::Up {
                 self.merged.base_iface_mut().state = InterfaceState::Up;
