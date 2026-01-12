@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, ErrorKind, Interface, InterfaceType, MergedInterfaces,
-    NmstateError,
+    BaseInterface, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
+    InterfaceType, MergedInterface, MergedInterfaces, NmstateError,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -54,6 +54,12 @@ impl Default for HsrInterface {
 impl HsrInterface {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn ports(&self) -> Option<Vec<&str>> {
+        self.hsr.as_ref().map(|hsr_conf| {
+            vec![hsr_conf.port1.as_str(), hsr_conf.port2.as_str()]
+        })
     }
 
     pub(crate) fn sanitize(
@@ -222,6 +228,27 @@ impl MergedInterfaces {
         }
 
         Ok(())
+    }
+}
+
+impl MergedInterface {
+    /// Explicitly disable IP on HSR ports
+    pub(crate) fn post_inter_ifaces_process_hsr(&mut self) {
+        if let Some(apply_iface) = self.for_apply.as_mut() {
+            if apply_iface.is_up()
+                && apply_iface.base_iface().controller_type.as_ref()
+                    == Some(&InterfaceType::Hsr)
+            {
+                apply_iface.base_iface_mut().ipv4 = Some(InterfaceIpv4 {
+                    enabled: false,
+                    ..Default::default()
+                });
+                apply_iface.base_iface_mut().ipv6 = Some(InterfaceIpv6 {
+                    enabled: false,
+                    ..Default::default()
+                });
+            }
+        }
     }
 }
 

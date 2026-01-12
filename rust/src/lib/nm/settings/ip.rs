@@ -9,8 +9,8 @@ use super::{
 use crate::nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 use crate::{
     BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
-    InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode,
-    NmstateError, RouteEntry, WaitIp,
+    InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, InterfaceType,
+    Ipv6AddrGenMode, NmstateError, RouteEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -259,7 +259,10 @@ pub(crate) fn gen_nm_ip_setting(
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let base_iface = iface.base_iface();
-    if base_iface.can_have_ip() {
+    // Explicitly disable IP on HSR ports.
+    if base_iface.can_have_ip()
+        || base_iface.controller_type == Some(InterfaceType::Hsr)
+    {
         gen_nm_ipv4_setting(base_iface.ipv4.as_ref(), routes, nm_conn)?;
         gen_nm_ipv6_setting(base_iface.ipv6.as_ref(), routes, nm_conn)?;
         apply_nmstate_wait_ip(base_iface, nm_conn);
