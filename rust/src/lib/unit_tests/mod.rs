@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
+mod alt_name;
+#[cfg(test)]
 mod base;
 #[cfg(test)]
 mod bond;

@@ -7,8 +7,6 @@ use crate::{
     MergedInterface, MergedInterfaces, NmstateError, OvsInterface,
 };
 
-use super::InterfaceNameSearch;
-
 fn is_port_overbook(
     port_to_ctrl: &mut HashMap<String, String>,
     port: &str,
@@ -163,9 +161,13 @@ impl MergedInterfaces {
     // to profile name.
     // Raise error when referring to a profile name has multiple interfaces.
     pub(crate) fn resolve_port_name_ref(&mut self) -> Result<(), NmstateError> {
-        let iface_name_search = InterfaceNameSearch::new(self);
+        let iface_name_search = &self.iface_name_search;
 
-        for iface in self.iter_mut() {
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .chain(self.user_ifaces.values_mut())
+        {
             let des_iface = if let Some(d) = iface.desired.as_mut() {
                 d
             } else {
@@ -189,10 +191,23 @@ impl MergedInterfaces {
             } else {
                 continue;
             };
-            for port_name in ports {
-                let kernel_names = iface_name_search.get(&port_name);
+            let mut resolved_ports: HashSet<&str> = HashSet::new();
+            for port_name in ports.iter() {
+                let kernel_names = iface_name_search.get(port_name);
                 // Prefer kernel name as port name
                 if kernel_names.contains(&port_name.as_str()) {
+                    if !resolved_ports.insert(port_name.as_str()) {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Controller {} ({}) has multiple ports \
+                                 pointing to the same kernel interface \
+                                 {port_name}",
+                                des_iface.name(),
+                                des_iface.iface_type()
+                            ),
+                        ));
+                    }
                     continue;
                 }
                 if kernel_names.len() > 1 {
@@ -208,12 +223,28 @@ impl MergedInterfaces {
                         ),
                     ));
                 } else if let Some(kernel_name) = kernel_names.first() {
+                    if !resolved_ports.insert(kernel_name) {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Controller {} ({}) has {port_name} pointing \
+                                 to the kernel interface {kernel_name}, but \
+                                 {kernel_name} is already defined in this \
+                                 controller port list",
+                                des_iface.name(),
+                                des_iface.iface_type()
+                            ),
+                        ));
+                    }
                     des_iface
                         .change_port_name(port_name, kernel_name.to_string());
                     for_apply
                         .change_port_name(port_name, kernel_name.to_string());
                     for_verify
-                        .change_port_name(&port_name, kernel_name.to_string());
+                        .change_port_name(port_name, kernel_name.to_string());
+                    iface
+                        .merged
+                        .change_port_name(port_name, kernel_name.to_string());
                 } else {
                     // This function is not responsible to validate whether
                     // port interface exists or not. For example,

@@ -1,16 +1,32 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import copy
+
 import pytest
 
 import libnmstate
 
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Bond
+from libnmstate.schema import Interface
+from libnmstate.schema import LinuxBridge
+from libnmstate.schema import OVSBridge
+from libnmstate.schema import Route
+from libnmstate.schema import VLAN
 
+from .testlib.bondlib import bond_interface
+from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
 from .testlib.env import is_k8s
 from .testlib.iproutelib import get_ip_link_alt_names
+from .testlib.ovslib import Bridge as OVSBridgeEnv
 from .testlib.retry import retry_till_true_or_timeout
+from .testlib.statelib import show_only
+from .testlib.statelib import state_match
+from .testlib.vlan import vlan_interface
 from .testlib.yaml import load_yaml
+from .testlib.route import assert_routes
+
 
 TEST_ALT_NAMES = [
     "port1",
@@ -18,6 +34,10 @@ TEST_ALT_NAMES = [
 ]
 
 RETRY_TIMEOUT = 10
+
+TEST_BOND_NIC = "bond99"
+TEST_BRIDGE_NIC = "br0"
+TEST_VLAN_NIC = "vlan101"
 
 
 @pytest.fixture
@@ -176,3 +196,90 @@ class TestAltNames:
         retry_till_true_or_timeout(
             RETRY_TIMEOUT, udev_trigger_check_alt_names, "eth1", TEST_ALT_NAMES
         )
+
+    # https://issues.redhat.com/browse/RHEL-126508
+    @pytest.mark.tier1
+    def test_ref_alt_name_in_bond(self, eth1_with_alt_names):
+        with bond_interface(TEST_BOND_NIC, [TEST_ALT_NAMES[0]]):
+            iface = show_only((TEST_BOND_NIC,))[Interface.KEY][0]
+            assert iface[Bond.CONFIG_SUBTREE][Bond.PORT] == ["eth1"]
+
+    # https://issues.redhat.com/browse/RHEL-126508
+    @pytest.mark.tier1
+    def test_ref_alt_name_in_linux_bridge(self, eth1_with_alt_names):
+        with linux_bridge(TEST_BRIDGE_NIC, {}, ports=[TEST_ALT_NAMES[0]]):
+            iface = show_only((TEST_BRIDGE_NIC,))[Interface.KEY][0]
+            assert state_match(
+                [{"name": "eth1"}],
+                iface[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE],
+            )
+
+    # https://issues.redhat.com/browse/RHEL-126508
+    @pytest.mark.tier1
+    def test_ref_alt_name_in_ovs_bridge(self, eth1_with_alt_names):
+        ovs_br = OVSBridgeEnv(TEST_BRIDGE_NIC)
+        ovs_br.add_system_port(TEST_ALT_NAMES[0])
+
+        with ovs_br.create():
+            iface = show_only((TEST_BRIDGE_NIC,))[Interface.KEY][0]
+            assert state_match(
+                [{"name": "eth1"}],
+                iface[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE],
+            )
+
+    # https://issues.redhat.com/browse/RHEL-126508
+    @pytest.mark.tier1
+    def test_ref_alt_name_in_vlan(self, eth1_with_alt_names):
+        with vlan_interface(TEST_VLAN_NIC, 101, TEST_ALT_NAMES[0]):
+            iface = show_only((TEST_VLAN_NIC,))[Interface.KEY][0]
+            assert iface[VLAN.CONFIG_SUBTREE][VLAN.BASE_IFACE] == "eth1"
+            assert iface[VLAN.CONFIG_SUBTREE][VLAN.ID] == 101
+
+    # https://issues.redhat.com/browse/RHEL-126508
+    @pytest.mark.tier1
+    def test_ref_alt_name_in_route(self, eth1_with_alt_names):
+        desired_state = load_yaml(
+            """---
+            routes:
+              config:
+                - destination: 203.0.113.0/24
+                  next-hop-address: 192.0.2.1
+                  next-hop-interface: reallyreallylonglonglonginterfacenmae
+                  metric: 109
+                - destination: 203.0.113.0/24
+                  next-hop-address: 192.0.2.2
+                  next-hop-interface: port1
+                  metric: 109
+                - destination: 2001:db8:2::/64
+                  next-hop-address: 2001:db8:1::2
+                  next-hop-interface: port1
+                - destination: 2001:db8:2::/64
+                  next-hop-address: 2001:db8:1::3
+                  next-hop-interface: reallyreallylonglonglonginterfacenmae
+            interfaces:
+            - name: eth1
+              type: ethernet
+              state: up
+              ipv4:
+                address:
+                - ip: 192.0.2.251
+                  prefix-length: 24
+                dhcp: false
+                enabled: true
+              ipv6:
+                enabled: true
+                autoconf: false
+                dhcp: false
+                address:
+                  - ip: 2001:db8:1::1
+                    prefix-length: 64
+            """
+        )
+        expected_routes = copy.deepcopy(desired_state[Route.KEY][Route.CONFIG])
+        libnmstate.apply(desired_state)
+
+        for route in expected_routes:
+            route[Route.NEXT_HOP_INTERFACE] = "eth1"
+
+        cur_state = libnmstate.show()
+        assert_routes(expected_routes, cur_state)

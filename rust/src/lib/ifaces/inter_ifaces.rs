@@ -752,6 +752,7 @@ pub(crate) struct MergedInterfaces {
     pub(crate) ignored_ifaces: Vec<(String, InterfaceType)>,
     pub(crate) memory_only: bool,
     pub(crate) mode: NetworkStateMode,
+    pub(crate) iface_name_search: InterfaceNameSearch,
 }
 
 impl MergedInterfaces {
@@ -856,6 +857,8 @@ impl MergedInterfaces {
                 );
             }
         }
+        let iface_name_search =
+            InterfaceNameSearch::new(merged_kernel_ifaces.values());
         let mut ret = Self {
             kernel_ifaces: merged_kernel_ifaces,
             user_ifaces: merged_user_ifaces,
@@ -863,6 +866,7 @@ impl MergedInterfaces {
             ignored_ifaces,
             memory_only,
             mode,
+            iface_name_search,
         };
 
         ret.process()?;
@@ -1070,9 +1074,8 @@ impl MergedInterfaces {
     // Use kernel interface name first, then fallback to profile name
     // Raise error when referring to a profile name has multiple interfaces.
     fn resolve_parent_name_ref(&mut self) -> Result<(), NmstateError> {
-        let iface_name_search = InterfaceNameSearch::new(self);
-
-        for iface in self.iter_mut() {
+        let iface_name_search = &self.iface_name_search;
+        for iface in self.kernel_ifaces.values_mut() {
             let des_iface = if let Some(d) = iface.desired.as_mut() {
                 d
             } else {
@@ -1119,6 +1122,7 @@ impl MergedInterfaces {
                 des_iface.change_parent_name(kernel_name);
                 for_apply.change_parent_name(kernel_name);
                 for_verify.change_parent_name(kernel_name);
+                iface.merged.change_parent_name(kernel_name);
             } else {
                 // This function is not responsible to validate whether
                 // port interface exists or not. For example,
@@ -1193,17 +1197,17 @@ fn get_ignored_ifaces(
 pub(crate) struct InterfaceNameSearch {
     kernel_nics: HashSet<String>,
     profile_2_kernel: HashMap<String, Vec<String>>,
+    alt_name_2_kernel: HashMap<String, String>,
 }
 
 impl InterfaceNameSearch {
-    pub(crate) fn new(merged_ifaces: &MergedInterfaces) -> Self {
+    pub(crate) fn new<'a, T>(merged_ifaces: T) -> Self
+    where
+        T: Iterator<Item = &'a MergedInterface> + Clone,
+    {
         let mut kernel_nics: HashSet<String> = HashSet::new();
 
-        for iface in merged_ifaces
-            .kernel_ifaces
-            .values()
-            .filter(|i| i.merged.is_up())
-        {
+        for iface in merged_ifaces.clone().filter(|i| i.merged.is_up()) {
             if let Some(cur_iface) = iface.current.as_ref() {
                 // Existing kernel interface
                 kernel_nics.insert(cur_iface.name().to_string());
@@ -1218,7 +1222,7 @@ impl InterfaceNameSearch {
         }
 
         let mut profile_2_kernel: HashMap<String, Vec<String>> = HashMap::new();
-        for iface in merged_ifaces.kernel_ifaces.values() {
+        for iface in merged_ifaces.clone() {
             let base_iface = iface.merged.base_iface();
             if let Some(profile_name) = base_iface.profile_name.as_deref() {
                 profile_2_kernel
@@ -1228,20 +1232,37 @@ impl InterfaceNameSearch {
             }
         }
 
+        let mut alt_name_2_kernel: HashMap<String, String> = HashMap::new();
+        for iface in merged_ifaces.clone().filter(|i| i.merged.is_up()) {
+            let base_iface = iface.merged.base_iface();
+            if let Some(alt_names) = base_iface.alt_names.as_deref() {
+                for alt_name in alt_names.iter().filter(|a| !a.is_absent()) {
+                    alt_name_2_kernel.insert(
+                        alt_name.name.to_string(),
+                        base_iface.name.to_string(),
+                    );
+                }
+            }
+        }
+
         Self {
             kernel_nics,
             profile_2_kernel,
+            alt_name_2_kernel,
         }
     }
 
-    /// Search interface kernel name by specified name.
-    /// If any kernel interface name matches with specified, return it
-    /// Vec with that interface name only.
-    /// If no kernel interface name found, search by profile name.
-    /// Because profile name can be duplicate among interfaces,
-    /// return Vec<&str> will contains all matches.
+    /// Search interface kernel name by specified name:
+    ///  * Kernel interface name
+    ///  * Kernel alternative name
+    ///  * Profile name. Because profile name can be duplicate among interfaces,
+    ///    return all matches.
     pub(crate) fn get<'a>(&'a self, name: &str) -> Vec<&'a str> {
-        if let Some(n) = self.kernel_nics.get(name) {
+        if let Some(n) = self
+            .kernel_nics
+            .get(name)
+            .or_else(|| self.alt_name_2_kernel.get(name))
+        {
             vec![n]
         } else if let Some(nics) = self.profile_2_kernel.get(name) {
             nics.as_slice().iter().map(|s| s.as_str()).collect()
