@@ -5,8 +5,8 @@ use std::hash::{Hash, Hasher};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::{is_ipv6_addr, sanitize_ip_network, AddressFamily},
     ErrorKind, InterfaceIpAddr, InterfaceType, NmstateError,
+    ip::{AddressFamily, is_ipv6_addr, sanitize_ip_network},
 };
 
 const ROUTE_RULE_DEFAULT_PRIORIRY: i64 = 30000;
@@ -153,35 +153,33 @@ impl RouteRuleEntry {
             log::error!("{e}");
             return Err(e);
         } else if let Some(family) = self.family {
-            if let Some(ip_from) = self.ip_from.as_ref() {
-                if is_ipv6_addr(ip_from.as_str())
+            if let Some(ip_from) = self.ip_from.as_ref()
+                && is_ipv6_addr(ip_from.as_str())
                     != matches!(family, AddressFamily::IPv6)
-                {
-                    let e = NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "The ip-from format mismatches with the family \
-                             set '{self}'"
-                        ),
-                    );
-                    log::error!("{e}");
-                    return Err(e);
-                }
+            {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "The ip-from format mismatches with the family set \
+                         '{self}'"
+                    ),
+                );
+                log::error!("{e}");
+                return Err(e);
             }
-            if let Some(ip_to) = self.ip_to.as_ref() {
-                if is_ipv6_addr(ip_to.as_str())
+            if let Some(ip_to) = self.ip_to.as_ref()
+                && is_ipv6_addr(ip_to.as_str())
                     != matches!(family, AddressFamily::IPv6)
-                {
-                    let e = NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "The ip-to format mismatches with the family set \
-                             {self}"
-                        ),
-                    );
-                    log::error!("{e}");
-                    return Err(e);
-                }
+            {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "The ip-to format mismatches with the family set \
+                         {self}"
+                    ),
+                );
+                log::error!("{e}");
+                return Err(e);
             }
         }
         Ok(())

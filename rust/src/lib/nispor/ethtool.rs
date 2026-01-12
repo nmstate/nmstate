@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{HashMap, HashSet};
-use std::sync::OnceLock;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::OnceLock,
+};
 
 use crate::{
     EthtoolCoalesceConfig, EthtoolConfig, EthtoolFecConfig, EthtoolFecMode,

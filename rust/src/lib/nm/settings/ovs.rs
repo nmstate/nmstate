@@ -2,12 +2,14 @@
 
 use std::collections::HashMap;
 
-use super::super::nm_dbus::{
-    NmConnection, NmIfaceType, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,
-    NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+use super::super::{
+    nm_dbus::{
+        NmConnection, NmIfaceType, NmRange, NmSettingOvsDpdk,
+        NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsOtherConfig,
+        NmSettingOvsPatch,
+    },
+    settings::connection::gen_nm_conn_setting,
 };
-use super::super::settings::connection::gen_nm_conn_setting;
-
 use crate::{
     BaseInterface, BridgePortTrunkTag, Interface, InterfaceType,
     MergedInterfaces, NmstateError, OvsBridgeBondMode, OvsBridgeInterface,
@@ -120,21 +122,21 @@ pub(crate) fn gen_nm_ovs_br_setting(
     let mut nm_ovs_br_set =
         nm_conn.ovs_bridge.as_ref().cloned().unwrap_or_default();
 
-    if let Some(br_conf) = &ovs_br_iface.bridge {
-        if let Some(br_opts) = &br_conf.options {
-            nm_ovs_br_set.stp = br_opts.stp.as_ref().and_then(|s| s.enabled);
-            nm_ovs_br_set.rstp = br_opts.rstp;
-            nm_ovs_br_set.mcast_snooping_enable = br_opts.mcast_snooping_enable;
-            if let Some(fail_mode) = &br_opts.fail_mode {
-                if !fail_mode.is_empty() {
-                    nm_ovs_br_set.fail_mode = Some(fail_mode.to_string());
-                }
-            }
-            if let Some(dp_type) = &br_opts.datapath {
-                if !dp_type.is_empty() {
-                    nm_ovs_br_set.datapath_type = Some(dp_type.to_string());
-                }
-            }
+    if let Some(br_conf) = &ovs_br_iface.bridge
+        && let Some(br_opts) = &br_conf.options
+    {
+        nm_ovs_br_set.stp = br_opts.stp.as_ref().and_then(|s| s.enabled);
+        nm_ovs_br_set.rstp = br_opts.rstp;
+        nm_ovs_br_set.mcast_snooping_enable = br_opts.mcast_snooping_enable;
+        if let Some(fail_mode) = &br_opts.fail_mode
+            && !fail_mode.is_empty()
+        {
+            nm_ovs_br_set.fail_mode = Some(fail_mode.to_string());
+        }
+        if let Some(dp_type) = &br_opts.datapath
+            && !dp_type.is_empty()
+        {
+            nm_ovs_br_set.datapath_type = Some(dp_type.to_string());
         }
     }
     nm_conn.ovs_bridge = Some(nm_ovs_br_set);
@@ -156,20 +158,20 @@ pub(crate) fn gen_nm_ovs_iface_setting(
         nm_ovs_patch.peer = Some(peer.to_string());
         nm_conn.ovs_patch = Some(nm_ovs_patch);
         nm_conn.ovs_iface = Some(nm_ovs_iface_set);
-    } else if let Some(dpdk_iface) = iface.dpdk.as_ref() {
-        if !dpdk_iface.devargs.is_empty() {
-            let mut nm_ovs_iface_set =
-                nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
-            nm_ovs_iface_set.iface_type = Some("dpdk".to_string());
-            let mut nm_ovs_dpdk = NmSettingOvsDpdk::default();
-            nm_ovs_dpdk.devargs = Some(dpdk_iface.devargs.to_string());
-            nm_ovs_dpdk.n_rxq = dpdk_iface.rx_queue;
-            nm_ovs_dpdk.n_rxq_desc = dpdk_iface.n_rxq_desc;
-            nm_ovs_dpdk.n_txq_desc = dpdk_iface.n_txq_desc;
-            nm_ovs_dpdk.lsc_interrupt = dpdk_iface.lsc_interrupt;
-            nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
-            nm_conn.ovs_iface = Some(nm_ovs_iface_set);
-        }
+    } else if let Some(dpdk_iface) = iface.dpdk.as_ref()
+        && !dpdk_iface.devargs.is_empty()
+    {
+        let mut nm_ovs_iface_set =
+            nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
+        nm_ovs_iface_set.iface_type = Some("dpdk".to_string());
+        let mut nm_ovs_dpdk = NmSettingOvsDpdk::default();
+        nm_ovs_dpdk.devargs = Some(dpdk_iface.devargs.to_string());
+        nm_ovs_dpdk.n_rxq = dpdk_iface.rx_queue;
+        nm_ovs_dpdk.n_rxq_desc = dpdk_iface.n_rxq_desc;
+        nm_ovs_dpdk.n_txq_desc = dpdk_iface.n_txq_desc;
+        nm_ovs_dpdk.lsc_interrupt = dpdk_iface.lsc_interrupt;
+        nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
+        nm_conn.ovs_iface = Some(nm_ovs_iface_set);
     }
     if nm_conn.ovs_iface.is_none() {
         let mut nm_set = NmSettingOvsIface::default();

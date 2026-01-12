@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
+    MergedInterfaces, OvsBridgeInterface,
     unit_tests::testlib::{
         bond_with_ports, bridge_with_ports, new_br_iface, new_eth_iface,
         new_nested_4_ifaces, new_ovs_br_iface, new_ovs_iface,
     },
-    ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
-    MergedInterfaces, OvsBridgeInterface,
 };
 
 #[test]
@@ -871,12 +871,16 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
         .as_ref()
         .unwrap();
 
-    assert!(merged_ifaces
-        .get_iface("eth1", InterfaceType::Ethernet)
-        .is_none());
-    assert!(merged_ifaces
-        .get_iface("eth2", InterfaceType::Ethernet)
-        .is_none());
+    assert!(
+        merged_ifaces
+            .get_iface("eth1", InterfaceType::Ethernet)
+            .is_none()
+    );
+    assert!(
+        merged_ifaces
+            .get_iface("eth2", InterfaceType::Ethernet)
+            .is_none()
+    );
 
     assert_eq!(br_iface.ports(), Some(vec![]));
 }
@@ -987,13 +991,15 @@ fn test_gen_topoligies_bridge_over_vlan() {
 
     assert_eq!(
         top,
-        vec![[
-            "static_ip4,auto_ip6".to_string(),
-            InterfaceType::LinuxBridge.to_string(),
-            InterfaceType::Vlan.to_string(),
-            InterfaceType::Ethernet.to_string()
+        vec![
+            [
+                "static_ip4,auto_ip6".to_string(),
+                InterfaceType::LinuxBridge.to_string(),
+                InterfaceType::Vlan.to_string(),
+                InterfaceType::Ethernet.to_string()
+            ]
+            .join(" -> ")
         ]
-        .join(" -> ")]
     );
 }
 
@@ -1049,12 +1055,14 @@ fn test_gen_topoligies_ovs_bridge() {
 
     assert_eq!(
         top,
-        vec![[
-            "static_ip4,auto_ip6".to_string(),
-            InterfaceType::OvsInterface.to_string(),
-            InterfaceType::OvsBridge.to_string(),
-            InterfaceType::Ethernet.to_string()
+        vec![
+            [
+                "static_ip4,auto_ip6".to_string(),
+                InterfaceType::OvsInterface.to_string(),
+                InterfaceType::OvsBridge.to_string(),
+                InterfaceType::Ethernet.to_string()
+            ]
+            .join(" -> ")
         ]
-        .join(" -> ")]
     );
 }

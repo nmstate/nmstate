@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::DbusDictionary, ErrorKind, NmError, ToDbusValue,
+    ErrorKind, NmError, ToDbusValue, connection::DbusDictionary,
 };
 
 const GLIB_FILE_PATH_PREFIX: &str = "file://";

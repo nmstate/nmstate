@@ -192,10 +192,10 @@ impl MergedOvsDbGlobalConfig {
         mut desired: Option<OvsDbGlobalConfig>,
         current: OvsDbGlobalConfig,
     ) -> Result<Self, NmstateError> {
-        if let Some(desired) = desired.as_mut() {
-            if !desired.is_purge() {
-                desired.sanitize()?;
-            }
+        if let Some(desired) = desired.as_mut()
+            && !desired.is_purge()
+        {
+            desired.sanitize()?;
         }
         Ok(Self { desired, current })
     }

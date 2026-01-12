@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    nm::dns::{reselect_dns_ifaces, store_dns_config_to_iface},
     DnsClientState, ErrorKind, InterfaceType, MergedNetworkState, NetworkState,
+    nm::dns::{reselect_dns_ifaces, store_dns_config_to_iface},
 };
 
 #[test]

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::{
-    NmConnection, NmSettingBridge, NmSettingBridgeVlanRange, NmVlanProtocol,
-};
-
 use crate::{
     BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode, Interface,
     LinuxBridgeInterface, LinuxBridgeOptions, LinuxBridgeStpOptions,
     MergedInterface, VlanProtocol,
+    nm::nm_dbus::{
+        NmConnection, NmSettingBridge, NmSettingBridgeVlanRange, NmVlanProtocol,
+    },
 };
 
 pub(crate) fn gen_nm_br_setting(

@@ -10,9 +10,8 @@ use crate::{
     LinuxBridgeInterface, LoopbackInterface, MacSecInterface, MacVlanInterface,
     MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
     VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
+    state::merge_json_value,
 };
-
-use crate::state::merge_json_value;
 
 #[derive(
     Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
@@ -118,7 +117,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Ipsec => "ipsec",
                 InterfaceType::Xfrm => "xfrm",
                 InterfaceType::IpVlan => "ipvlan",
-                InterfaceType::Other(ref s) => s,
+                InterfaceType::Other(s) => s,
             }
         )
     }
@@ -891,14 +890,13 @@ impl MergedInterface {
                 {
                     br_iface.special_merge(des_br_iface, cur_br_iface);
                 }
-            } else if let Interface::OvsBridge(br_iface) = &mut self.merged {
-                if let (
+            } else if let Interface::OvsBridge(br_iface) = &mut self.merged
+                && let (
                     Interface::OvsBridge(des_br_iface),
                     Interface::OvsBridge(cur_br_iface),
                 ) = (desired, current)
-                {
-                    br_iface.special_merge(des_br_iface, cur_br_iface);
-                }
+            {
+                br_iface.special_merge(des_br_iface, cur_br_iface);
             }
         }
     }
@@ -1013,13 +1011,13 @@ impl MergedInterface {
     // Store `Interface` with name and type into `for_apply`.
     // Do nothing if specified interface is already desired.
     pub(crate) fn mark_as_changed(&mut self) {
-        if self.desired.is_none() {
-            if let Some(cur_iface) = self.current.as_ref() {
-                let iface = cur_iface.clone_name_type_only();
-                self.for_apply = Some(iface);
-                self.preserve_current_controller_info();
-                self.preserve_current_identifer_info();
-            }
+        if self.desired.is_none()
+            && let Some(cur_iface) = self.current.as_ref()
+        {
+            let iface = cur_iface.clone_name_type_only();
+            self.for_apply = Some(iface);
+            self.preserve_current_controller_info();
+            self.preserve_current_identifer_info();
         }
     }
 
@@ -1037,24 +1035,23 @@ impl MergedInterface {
         ctrl_type: Option<InterfaceType>,
         ctrl_state: InterfaceState,
     ) -> Result<(), NmstateError> {
-        if self.merged.need_controller() && ctrl_name.is_empty() {
-            if let Some(org_ctrl) = self
+        if self.merged.need_controller()
+            && ctrl_name.is_empty()
+            && let Some(org_ctrl) = self
                 .current
                 .as_ref()
                 .and_then(|c| c.base_iface().controller.as_ref())
-            {
-                if Some(true) == self.for_apply.as_ref().map(|i| i.is_up()) {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Interface {} cannot live without controller, but \
-                             it is detached from original controller \
-                             {org_ctrl}, cannot apply desired `state:up`",
-                            self.merged.name()
-                        ),
-                    ));
-                }
-            }
+            && Some(true) == self.for_apply.as_ref().map(|i| i.is_up())
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Interface {} cannot live without controller, but it is \
+                     detached from original controller {org_ctrl}, cannot \
+                     apply desired `state:up`",
+                    self.merged.name()
+                ),
+            ));
         }
 
         if !self.is_changed() {
@@ -1118,23 +1115,19 @@ impl MergedInterface {
     }
 
     fn preserve_current_controller_info(&mut self) {
-        if let Some(apply_iface) = self.for_apply.as_mut() {
-            if apply_iface.base_iface().controller.is_none() {
-                if let Some(cur_iface) = self.current.as_ref() {
-                    if cur_iface.base_iface().controller.as_ref().is_some() {
-                        apply_iface
-                            .base_iface_mut()
-                            .controller
-                            .clone_from(&cur_iface.base_iface().controller);
-                        apply_iface
-                            .base_iface_mut()
-                            .controller_type
-                            .clone_from(
-                                &cur_iface.base_iface().controller_type,
-                            );
-                    }
-                }
-            }
+        if let Some(apply_iface) = self.for_apply.as_mut()
+            && apply_iface.base_iface().controller.is_none()
+            && let Some(cur_iface) = self.current.as_ref()
+            && cur_iface.base_iface().controller.as_ref().is_some()
+        {
+            apply_iface
+                .base_iface_mut()
+                .controller
+                .clone_from(&cur_iface.base_iface().controller);
+            apply_iface
+                .base_iface_mut()
+                .controller_type
+                .clone_from(&cur_iface.base_iface().controller_type);
         }
     }
 }

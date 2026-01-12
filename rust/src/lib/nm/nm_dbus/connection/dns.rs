@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
-use std::net::{Ipv4Addr, Ipv6Addr};
-use std::str::FromStr;
+use std::{
+    convert::TryFrom,
+    net::{Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+};
 
 use super::super::{ErrorKind, NmError};
 

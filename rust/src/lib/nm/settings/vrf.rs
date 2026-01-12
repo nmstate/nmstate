@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::NmSettingVrf;
-
 use crate::VrfConfig;
 
 impl From<&VrfConfig> for NmSettingVrf {

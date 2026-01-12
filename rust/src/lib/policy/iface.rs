@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Interface, Interfaces, NetworkState, NmstateError};
-
 use super::json::{search_item, update_items};
+use crate::{Interface, Interfaces, NetworkState, NmstateError};
 
 pub(crate) fn get_iface_match(
     prop_path: &[String],

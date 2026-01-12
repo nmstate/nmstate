@@ -2,16 +2,15 @@
 
 use std::str::FromStr;
 
+use super::super::{
+    NmConnectionMatcher,
+    nm_dbus::{NmActiveConnection, NmIfaceType, NmSettingVpn},
+    show::fill_iface_by_nm_conn_data,
+};
 use crate::{
     Interface, InterfaceState, InterfaceType, IpsecInterface,
     LibreswanAddressFamily, LibreswanConfig, LibreswanConnectionType,
     NmstateError,
-};
-
-use super::super::{
-    nm_dbus::{NmActiveConnection, NmIfaceType, NmSettingVpn},
-    show::fill_iface_by_nm_conn_data,
-    NmConnectionMatcher,
 };
 
 pub(crate) fn get_supported_vpn_ifaces(
@@ -34,37 +33,31 @@ pub(crate) fn get_supported_vpn_ifaces(
         } else {
             continue;
         };
-        if let Some(nm_set_vpn) = nm_conn.vpn.as_ref() {
-            if nm_set_vpn.service_type.as_deref()
+        if let Some(nm_set_vpn) = nm_conn.vpn.as_ref()
+            && nm_set_vpn.service_type.as_deref()
                 == Some(NmSettingVpn::SERVICE_TYPE_LIBRESWAN)
-            {
-                let name = match nm_conn.id() {
-                    Some(n) => n.to_string(),
-                    None => continue,
+        {
+            let name = match nm_conn.id() {
+                Some(n) => n.to_string(),
+                None => continue,
+            };
+            // taking profile name as interface name of VPN.
+            let mut iface = IpsecInterface::new();
+            iface.base.iface_type = InterfaceType::Ipsec;
+            // We are solely depend on NetworkManager reporting IPSec
+            // connection status, hence use NmActiveConnection.state
+            // for interface.state
+            iface.base.state =
+                if nm_ac.state == NmActiveConnection::STATE_ACTIVATED {
+                    InterfaceState::Up
+                } else {
+                    InterfaceState::Down
                 };
-                // taking profile name as interface name of VPN.
-                let mut iface = IpsecInterface::new();
-                iface.base.iface_type = InterfaceType::Ipsec;
-                // We are solely depend on NetworkManager reporting IPSec
-                // connection status, hence use NmActiveConnection.state
-                // for interface.state
-                iface.base.state =
-                    if nm_ac.state == NmActiveConnection::STATE_ACTIVATED {
-                        InterfaceState::Up
-                    } else {
-                        InterfaceState::Down
-                    };
-                iface.base.name = name;
-                iface.libreswan = Some(get_libreswan_conf(nm_set_vpn));
-                let mut iface = Interface::Ipsec(Box::new(iface));
-                fill_iface_by_nm_conn_data(
-                    &mut iface,
-                    None,
-                    Some(nm_conn),
-                    None,
-                );
-                ret.push(iface);
-            }
+            iface.base.name = name;
+            iface.libreswan = Some(get_libreswan_conf(nm_set_vpn));
+            let mut iface = Interface::Ipsec(Box::new(iface));
+            fill_iface_by_nm_conn_data(&mut iface, None, Some(nm_conn), None);
+            ret.push(iface);
         }
     }
     Ok(ret)

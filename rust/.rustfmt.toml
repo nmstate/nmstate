@@ -2,4 +2,6 @@ max_width = 80
 wrap_comments = true
 reorder_imports = true
 format_strings = true
-edition = "2021"
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+edition = "2024"

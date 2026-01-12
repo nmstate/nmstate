@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 
 use nmstate::{
     BaseInterface, BondConfig, BondInterface, BondMode, BondPortConfig,

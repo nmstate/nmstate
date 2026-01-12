@@ -3,10 +3,10 @@
 use std::collections::HashMap;
 
 use crate::{
+    ErrorKind, NetworkState, NetworkStateTemplate,
     policy::{
         capture::NetworkCaptureCommand, token::parse_str_to_template_tokens,
     },
-    ErrorKind, NetworkState, NetworkStateTemplate,
 };
 
 #[test]

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::NmConnection;
-
-use crate::InfiniBandInterface;
+use crate::{InfiniBandInterface, nm::nm_dbus::NmConnection};
 
 pub(crate) fn gen_nm_ib_setting(
     iface: &InfiniBandInterface,
@@ -11,13 +9,10 @@ pub(crate) fn gen_nm_ib_setting(
     let mut nm_ib_set =
         nm_conn.infiniband.as_ref().cloned().unwrap_or_default();
     if let Some(ib_conf) = iface.ib.as_ref() {
-        nm_ib_set.parent = ib_conf.base_iface.as_ref().and_then(|p| {
-            if p.is_empty() {
-                None
-            } else {
-                Some(p.clone())
-            }
-        });
+        nm_ib_set.parent = ib_conf
+            .base_iface
+            .as_ref()
+            .and_then(|p| if p.is_empty() { None } else { Some(p.clone()) });
         nm_ib_set.pkey = ib_conf.pkey.and_then(|p| {
             if p == u16::MAX {
                 None

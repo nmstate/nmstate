@@ -87,19 +87,18 @@ impl SrIovConfig {
                     address.make_ascii_uppercase()
                 }
 
-                if let Some(VlanProtocol::Ieee8021Ad) = vf.vlan_proto {
-                    if vf.vlan_id.unwrap_or_default() == 0
-                        && vf.qos.unwrap_or_default() == 0
-                    {
-                        let e = NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            "VLAN protocol 802.1ad is not allowed when both \
-                             VLAN ID and VLAN QoS are zero or unset"
-                                .to_string(),
-                        );
-                        log::error!("VF ID {}: {}", vf.id, e);
-                        return Err(e);
-                    }
+                if let Some(VlanProtocol::Ieee8021Ad) = vf.vlan_proto
+                    && vf.vlan_id.unwrap_or_default() == 0
+                    && vf.qos.unwrap_or_default() == 0
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "VLAN protocol 802.1ad is not allowed when both VLAN \
+                         ID and VLAN QoS are zero or unset"
+                            .to_string(),
+                    );
+                    log::error!("VF ID {}: {}", vf.id, e);
+                    return Err(e);
                 }
             }
             vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
@@ -374,20 +373,18 @@ fn get_sriov_vf_iface_name(
 ) -> Option<String> {
     if let Some(Interface::Ethernet(pf_iface)) =
         current.get_iface(pf_name, InterfaceType::Ethernet)
-    {
-        if let Some(vfs) = pf_iface
+        && let Some(vfs) = pf_iface
             .ethernet
             .as_ref()
             .and_then(|e| e.sr_iov.as_ref())
             .and_then(|s| s.vfs.as_ref())
-        {
-            for vf in vfs {
-                if vf.id == vf_id {
-                    if !vf.iface_name.is_empty() {
-                        return Some(vf.iface_name.clone());
-                    }
-                    break;
+    {
+        for vf in vfs {
+            if vf.id == vf_id {
+                if !vf.iface_name.is_empty() {
+                    return Some(vf.iface_name.clone());
                 }
+                break;
             }
         }
     }

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    nispor::ethtool::np_ethtool_to_nmstate,
-    nispor::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
-    nispor::mptcp::get_iface_mptcp_conf,
     AltNameEntry, BaseInterface, InterfaceState, InterfaceType, PciAddress,
+    nispor::{
+        ethtool::np_ethtool_to_nmstate,
+        ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
+        mptcp::get_iface_mptcp_conf,
+    },
 };
 
 fn np_iface_type_to_nmstate(
@@ -76,11 +78,7 @@ pub(crate) fn np_iface_to_base_iface(
         },
         min_mtu: if !running_config_only {
             if let Some(mtu) = np_iface.min_mtu {
-                if mtu >= 0 {
-                    Some(mtu as u64)
-                } else {
-                    None
-                }
+                if mtu >= 0 { Some(mtu as u64) } else { None }
             } else {
                 None
             }
@@ -89,11 +87,7 @@ pub(crate) fn np_iface_to_base_iface(
         },
         max_mtu: if !running_config_only {
             if let Some(mtu) = np_iface.max_mtu {
-                if mtu >= 0 {
-                    Some(mtu as u64)
-                } else {
-                    None
-                }
+                if mtu >= 0 { Some(mtu as u64) } else { None }
             } else {
                 None
             }
@@ -164,9 +158,5 @@ fn get_alt_names(np_iface: &nispor::Iface) -> Option<Vec<AltNameEntry>> {
         })
         .collect();
 
-    if ret.is_empty() {
-        None
-    } else {
-        Some(ret)
-    }
+    if ret.is_empty() { None } else { Some(ret) }
 }

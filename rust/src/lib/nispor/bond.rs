@@ -79,7 +79,7 @@ pub(crate) fn append_bond_port_config(
 
 fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
     let mut options = BondOptions::default();
-    if let Some(ref np_bond) = &np_iface.bond {
+    if let Some(np_bond) = &np_iface.bond {
         options.ad_actor_sys_prio = np_bond.ad_actor_sys_prio;
         options.ad_actor_system.clone_from(&np_bond.ad_actor_system);
         options.ad_select = np_bond.ad_select.as_ref().and_then(|r| match r {

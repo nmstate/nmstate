@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::super::nm_dbus::{
-    NmConnection, NmIfaceType, NmSettingConnection, NmSettingMacVlan,
-    NmSettingVeth, NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
-};
 use super::{
-    super::NmConnectionMatcher,
+    super::{
+        NmConnectionMatcher,
+        nm_dbus::{
+            NmConnection, NmIfaceType, NmSettingConnection, NmSettingMacVlan,
+            NmSettingVeth, NmSettingVrf, NmSettingVxlan,
+            NmSettingsConnectionFlag,
+        },
+    },
     bond::{gen_nm_bond_port_setting, gen_nm_bond_setting},
     bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     ethtool::gen_ethtool_setting,
@@ -30,7 +33,6 @@ use super::{
     vpn::gen_nm_ipsec_vpn_setting,
     wired::gen_nm_wired_setting,
 };
-
 use crate::{
     Interface, InterfaceIdentifier, InterfaceType, MergedInterface,
     MergedNetworkState, NmstateError, OvsBridgePortConfig,
@@ -79,15 +81,15 @@ pub(crate) fn iface_to_nm_connections(
             }
         } else if !iface.is_userspace() {
             // User want to convert unmanaged interface to managed
-            if let Some(cur_iface) = merged_iface.current.as_ref() {
-                if cur_iface.is_ignore() {
-                    return persisten_iface_cur_conf(
-                        cur_iface,
-                        merged_state,
-                        conn_matcher,
-                        gen_conf_mode,
-                    );
-                }
+            if let Some(cur_iface) = merged_iface.current.as_ref()
+                && cur_iface.is_ignore()
+            {
+                return persisten_iface_cur_conf(
+                    cur_iface,
+                    merged_state,
+                    conn_matcher,
+                    gen_conf_mode,
+                );
             }
         }
     }
@@ -251,63 +253,62 @@ pub(crate) fn iface_to_nm_connections(
     if let (Some(ctrl), Some(ctrl_type)) = (
         iface.base_iface().controller.as_ref(),
         iface.base_iface().controller_type.as_ref(),
-    ) {
-        if let Some(ctrl_iface) =
-            merged_state.interfaces.get_iface(ctrl, ctrl_type.clone())
-        {
-            match &ctrl_iface.merged {
-                Interface::Bond(bond_iface) => {
-                    gen_nm_bond_port_setting(bond_iface, &mut nm_conn);
-                }
-                Interface::LinuxBridge(br_iface) => {
-                    gen_nm_br_port_setting(br_iface, &mut nm_conn);
-                }
-                Interface::OvsBridge(ovs_br_iface) => {
-                    fix_ovs_iface_controller_setting(
-                        iface,
-                        &mut nm_conn,
-                        &merged_state.interfaces,
-                    );
-                    let ovs_port_name =
-                        match get_ovs_port_name(ovs_br_iface, iface.name()) {
-                            Some(name) => name,
-                            None => {
-                                // We are attaching iface to OVS bridge using
-                                // `controller` property
-                                iface.name().to_string()
-                            }
-                        };
-                    // When user attaching change controller property
-                    // on OVS system or internal interface, we should
-                    // modify it OVS port also.
-                    if !ctrl_iface.is_changed()
-                        && merged_iface
-                            .for_apply
+    ) && let Some(ctrl_iface) =
+        merged_state.interfaces.get_iface(ctrl, ctrl_type.clone())
+    {
+        match &ctrl_iface.merged {
+            Interface::Bond(bond_iface) => {
+                gen_nm_bond_port_setting(bond_iface, &mut nm_conn);
+            }
+            Interface::LinuxBridge(br_iface) => {
+                gen_nm_br_port_setting(br_iface, &mut nm_conn);
+            }
+            Interface::OvsBridge(ovs_br_iface) => {
+                fix_ovs_iface_controller_setting(
+                    iface,
+                    &mut nm_conn,
+                    &merged_state.interfaces,
+                );
+                let ovs_port_name =
+                    match get_ovs_port_name(ovs_br_iface, iface.name()) {
+                        Some(name) => name,
+                        None => {
+                            // We are attaching iface to OVS bridge using
+                            // `controller` property
+                            iface.name().to_string()
+                        }
+                    };
+                // When user attaching change controller property
+                // on OVS system or internal interface, we should
+                // modify it OVS port also.
+                if !ctrl_iface.is_changed()
+                    && merged_iface
+                        .for_apply
+                        .as_ref()
+                        .and_then(|i| i.base_iface().controller.as_ref())
+                        != merged_iface
+                            .current
                             .as_ref()
                             .and_then(|i| i.base_iface().controller.as_ref())
-                            != merged_iface.current.as_ref().and_then(|i| {
-                                i.base_iface().controller.as_ref()
-                            })
-                    {
-                        let exist_nm_ovs_port_conn = conn_matcher
-                            .get_prefered_saved_by_name_type(
-                                &ovs_port_name,
-                                &NmIfaceType::OvsPort,
-                            );
+                {
+                    let exist_nm_ovs_port_conn = conn_matcher
+                        .get_prefered_saved_by_name_type(
+                            &ovs_port_name,
+                            &NmIfaceType::OvsPort,
+                        );
 
-                        ret.push(create_ovs_port_nm_conn(
-                            ctrl,
-                            &OvsBridgePortConfig {
-                                name: ovs_port_name,
-                                ..Default::default()
-                            },
-                            exist_nm_ovs_port_conn,
-                            stable_uuid,
-                        )?);
-                    }
+                    ret.push(create_ovs_port_nm_conn(
+                        ctrl,
+                        &OvsBridgePortConfig {
+                            name: ovs_port_name,
+                            ..Default::default()
+                        },
+                        exist_nm_ovs_port_conn,
+                        stable_uuid,
+                    )?);
                 }
-                _ => (),
             }
+            _ => (),
         }
     }
 
@@ -365,10 +366,10 @@ pub(crate) fn gen_nm_conn_setting(
         });
         new_nm_conn_set.iface_type =
             Some(NmIfaceType::from(&iface.iface_type()));
-        if let Interface::Ethernet(eth_iface) = iface {
-            if eth_iface.veth.is_some() {
-                new_nm_conn_set.iface_type = Some(NmIfaceType::Veth);
-            }
+        if let Interface::Ethernet(eth_iface) = iface
+            && eth_iface.veth.is_some()
+        {
+            new_nm_conn_set.iface_type = Some(NmIfaceType::Veth);
         }
         new_nm_conn_set
     };

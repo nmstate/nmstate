@@ -57,10 +57,10 @@ impl SrIovConfig {
                 }
             };
 
-        if let Some(desired_autoprobe) = self.drivers_autoprobe {
-            if !desired_autoprobe {
-                return Ok(());
-            }
+        if let Some(desired_autoprobe) = self.drivers_autoprobe
+            && !desired_autoprobe
+        {
+            return Ok(());
         }
 
         if let Some(cur_autoprobe) = cur_pf_iface
@@ -68,10 +68,9 @@ impl SrIovConfig {
             .as_ref()
             .and_then(|eth_conf| eth_conf.sr_iov.as_ref())
             .and_then(|sriov_conf| sriov_conf.drivers_autoprobe.as_ref())
+            && !cur_autoprobe
         {
-            if !cur_autoprobe {
-                return Ok(());
-            }
+            return Ok(());
         }
 
         let vfs = if let Some(vfs) = cur_pf_iface

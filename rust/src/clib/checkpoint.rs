@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ffi::{CStr, CString};
-use std::time::SystemTime;
+use std::{
+    ffi::{CStr, CString},
+    time::SystemTime,
+};
 
 use libc::{c_char, c_int};
 
-use crate::{init_logger, NMSTATE_FAIL, NMSTATE_PASS};
+use crate::{NMSTATE_FAIL, NMSTATE_PASS, init_logger};
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_checkpoint_commit(
     checkpoint: *const c_char,
     log: *mut *mut c_char,
@@ -80,7 +82,7 @@ pub extern "C" fn nmstate_checkpoint_commit(
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_checkpoint_rollback(
     checkpoint: *const c_char,
     log: *mut *mut c_char,

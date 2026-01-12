@@ -125,23 +125,23 @@ impl BaseInterface {
             self.wait_ip = other.wait_ip;
         }
 
-        if other.ipv4.is_some() {
-            if let Some(ref other_ipv4) = other.ipv4 {
-                if let Some(ref mut self_ipv4) = self.ipv4 {
-                    self_ipv4.update(other_ipv4);
-                } else {
-                    self.ipv4.clone_from(&other.ipv4);
-                }
+        if other.ipv4.is_some()
+            && let Some(ref other_ipv4) = other.ipv4
+        {
+            if let Some(ref mut self_ipv4) = self.ipv4 {
+                self_ipv4.update(other_ipv4);
+            } else {
+                self.ipv4.clone_from(&other.ipv4);
             }
         }
 
-        if other.ipv6.is_some() {
-            if let Some(ref other_ipv6) = other.ipv6 {
-                if let Some(ref mut self_ipv6) = self.ipv6 {
-                    self_ipv6.update(other_ipv6);
-                } else {
-                    self.ipv6.clone_from(&other.ipv6);
-                }
+        if other.ipv6.is_some()
+            && let Some(ref other_ipv6) = other.ipv6
+        {
+            if let Some(ref mut self_ipv6) = self.ipv6 {
+                self_ipv6.update(other_ipv6);
+            } else {
+                self.ipv6.clone_from(&other.ipv6);
             }
         }
         if other.mptcp.is_some() {

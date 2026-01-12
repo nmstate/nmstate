@@ -14,11 +14,11 @@ impl EthernetInterface {
             sriov_conf.sanitize_desired_for_verify();
         }
 
-        if let Some(eth_conf) = self.ethernet.as_mut() {
-            if eth_conf.auto_neg == Some(true) {
-                eth_conf.speed = None;
-                eth_conf.duplex = None;
-            }
+        if let Some(eth_conf) = self.ethernet.as_mut()
+            && eth_conf.auto_neg == Some(true)
+        {
+            eth_conf.speed = None;
+            eth_conf.duplex = None;
         }
     }
 
@@ -51,10 +51,10 @@ impl EthernetInterface {
         &self,
         cur_ifaces: &Interfaces,
     ) -> Result<(), NmstateError> {
-        if let Some(eth_conf) = &self.ethernet {
-            if let Some(sriov_conf) = &eth_conf.sr_iov {
-                sriov_conf.verify_sriov(self.base.name.as_str(), cur_ifaces)?;
-            }
+        if let Some(eth_conf) = &self.ethernet
+            && let Some(sriov_conf) = &eth_conf.sr_iov
+        {
+            sriov_conf.verify_sriov(self.base.name.as_str(), cur_ifaces)?;
         }
         Ok(())
     }
@@ -96,20 +96,19 @@ fn is_sriov_supported(iface_name: &str) -> bool {
 impl Interfaces {
     pub(crate) fn check_sriov_capability(&self) -> Result<(), NmstateError> {
         for iface in self.kernel_ifaces.values() {
-            if let Interface::Ethernet(eth_iface) = iface {
-                if eth_iface.sriov_is_enabled()
-                    && !is_sriov_supported(iface.name())
-                {
-                    let e = NmstateError::new(
-                        ErrorKind::NotSupportedError,
-                        format!(
-                            "SR-IOV is not supported by interface {}",
-                            iface.name()
-                        ),
-                    );
-                    log::error!("{e}");
-                    return Err(e);
-                }
+            if let Interface::Ethernet(eth_iface) = iface
+                && eth_iface.sriov_is_enabled()
+                && !is_sriov_supported(iface.name())
+            {
+                let e = NmstateError::new(
+                    ErrorKind::NotSupportedError,
+                    format!(
+                        "SR-IOV is not supported by interface {}",
+                        iface.name()
+                    ),
+                );
+                log::error!("{e}");
+                return Err(e);
             }
         }
         Ok(())
@@ -129,10 +128,9 @@ impl NetworkState {
                 Interface::Ethernet(iface),
                 Some(Interface::Ethernet(cur_iface)),
             ) = (iface, current.interfaces.kernel_ifaces.get(iface.name()))
+                && (iface.sriov_is_enabled() || cur_iface.sriov_is_enabled())
             {
-                if iface.sriov_is_enabled() || cur_iface.sriov_is_enabled() {
-                    return true;
-                }
+                return true;
             }
         }
         false
@@ -168,16 +166,15 @@ impl NetworkState {
         }) {
             if let Some(true) =
                 iface.ethernet.as_ref().map(|e| e.sr_iov.is_some())
+                && let Some(eth_conf) = iface.ethernet.as_ref()
             {
-                if let Some(eth_conf) = iface.ethernet.as_ref() {
-                    pf_ifaces.push(Interface::Ethernet(Box::new(
-                        EthernetInterface {
-                            base: iface.base.clone_name_type_only(),
-                            ethernet: Some(eth_conf.clone()),
-                            ..Default::default()
-                        },
-                    )));
-                }
+                pf_ifaces.push(Interface::Ethernet(Box::new(
+                    EthernetInterface {
+                        base: iface.base.clone_name_type_only(),
+                        ethernet: Some(eth_conf.clone()),
+                        ..Default::default()
+                    },
+                )));
             }
         }
 

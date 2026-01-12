@@ -20,7 +20,6 @@ mod settings;
 #[cfg(feature = "query_apply")]
 mod show;
 
-pub(crate) use self::conn_matcher::NmConnectionMatcher;
 #[cfg(feature = "query_apply")]
 pub(crate) use checkpoint::{
     nm_checkpoint_create, nm_checkpoint_destroy, nm_checkpoint_rollback,
@@ -32,3 +31,5 @@ pub(crate) use gen_conf::nm_gen_conf;
 pub(crate) use query_apply::nm_apply;
 #[cfg(feature = "query_apply")]
 pub(crate) use show::nm_retrieve;
+
+pub(crate) use self::conn_matcher::NmConnectionMatcher;

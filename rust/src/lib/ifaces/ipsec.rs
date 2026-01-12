@@ -52,31 +52,30 @@ impl IpsecInterface {
     }
 
     pub(crate) fn hide_secrets(&mut self) {
-        if let Some(c) = self.libreswan.as_mut() {
-            if c.psk.is_some() {
-                c.psk = Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
-            }
+        if let Some(c) = self.libreswan.as_mut()
+            && c.psk.is_some()
+        {
+            c.psk = Some(NetworkState::PASSWORD_HID_BY_NMSTATE.to_string());
         }
     }
 
     // * IPv4 `dhcp: false` with empty static address list should be considered
     //   as IPv4 disabled.
     pub(crate) fn sanitize(&mut self, is_desired: bool) {
-        if let Some(ipv4_conf) = self.base.ipv4.as_mut() {
-            if ipv4_conf.dhcp == Some(false)
-                && ipv4_conf.enabled
-                && ipv4_conf.enabled_defined
-            {
-                if is_desired {
-                    log::info!(
-                        "Treating IPv4 `dhcp: false` for IPSec interface {} \
-                         as IPv4 disabled",
-                        self.base.name.as_str()
-                    );
-                }
-                ipv4_conf.enabled = false;
-                ipv4_conf.dhcp = None;
+        if let Some(ipv4_conf) = self.base.ipv4.as_mut()
+            && ipv4_conf.dhcp == Some(false)
+            && ipv4_conf.enabled
+            && ipv4_conf.enabled_defined
+        {
+            if is_desired {
+                log::info!(
+                    "Treating IPv4 `dhcp: false` for IPSec interface {} as \
+                     IPv4 disabled",
+                    self.base.name.as_str()
+                );
             }
+            ipv4_conf.enabled = false;
+            ipv4_conf.dhcp = None;
         }
     }
 }

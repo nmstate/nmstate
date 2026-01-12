@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::{NmConnection, NmSetting8021X};
-
 use crate::{Interface, NetworkState};
 
 pub(crate) fn gen_nm_802_1x_setting(

@@ -3,6 +3,8 @@
 use std::collections::HashMap;
 
 use crate::{
+    DummyInterface, Interface, InterfaceType, Interfaces, LoopbackInterface,
+    NetworkState, NmstateError, OvsInterface, UnknownInterface, XfrmInterface,
     nispor::{
         base_iface::np_iface_to_base_iface,
         bond::{append_bond_port_config, np_bond_to_nmstate},
@@ -23,8 +25,6 @@ use crate::{
         vrf::np_vrf_to_nmstate,
         vxlan::np_vxlan_to_nmstate,
     },
-    DummyInterface, Interface, InterfaceType, Interfaces, LoopbackInterface,
-    NetworkState, NmstateError, OvsInterface, UnknownInterface, XfrmInterface,
 };
 
 // Only report DNS config when `kernel_only: true`
@@ -184,11 +184,10 @@ fn set_controller_type(ifaces: &mut Interfaces) {
         }
     }
     for iface in ifaces.kernel_ifaces.values_mut() {
-        if let Some(ctrl) = iface.base_iface().controller.as_ref() {
-            if let Some(ctrl_type) = ctrl_to_type.get(ctrl) {
-                iface.base_iface_mut().controller_type =
-                    Some(ctrl_type.clone());
-            }
+        if let Some(ctrl) = iface.base_iface().controller.as_ref()
+            && let Some(ctrl_type) = ctrl_to_type.get(ctrl)
+        {
+            iface.base_iface_mut().controller_type = Some(ctrl_type.clone());
         }
     }
 }

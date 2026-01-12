@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+};
 
 use log::error;
 use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::DbusDictionary, ErrorKind, NmError, ToDbusValue,
+    ErrorKind, NmError, ToDbusValue, connection::DbusDictionary,
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]

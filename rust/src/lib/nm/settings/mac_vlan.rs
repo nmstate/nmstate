@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::NmSettingMacVlan;
-
-use crate::{MacVlanConfig, MacVtapConfig};
+use crate::{MacVlanConfig, MacVtapConfig, nm::nm_dbus::NmSettingMacVlan};
 
 impl From<&MacVlanConfig> for NmSettingMacVlan {
     fn from(config: &MacVlanConfig) -> Self {

@@ -156,19 +156,17 @@ impl BaseInterface {
     //  * `copy_mac_from` is skip_serializing
     //  * `permanent_mac_address` is skip_serializing
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
-        if let Some(ipv4) = self.ipv4.as_mut() {
-            if let (Some(d), Some(c)) =
+        if let Some(ipv4) = self.ipv4.as_mut()
+            && let (Some(d), Some(c)) =
                 (desired.ipv4.as_ref(), current.ipv4.as_ref())
-            {
-                ipv4.special_merge(d, c);
-            }
+        {
+            ipv4.special_merge(d, c);
         }
-        if let Some(ipv6) = self.ipv6.as_mut() {
-            if let (Some(d), Some(c)) =
+        if let Some(ipv6) = self.ipv6.as_mut()
+            && let (Some(d), Some(c)) =
                 (desired.ipv6.as_ref(), current.ipv6.as_ref())
-            {
-                ipv6.special_merge(d, c);
-            }
+        {
+            ipv6.special_merge(d, c);
         }
         if self.permanent_mac_address.is_none() {
             self.permanent_mac_address
@@ -250,20 +248,18 @@ impl BaseInterface {
         }
         if let Some(ipv6_conf) = self.ipv6.as_mut() {
             ipv6_conf.sanitize(is_desired)?;
-            if ipv6_conf.enabled {
-                if let Some(mtu) = self.mtu {
-                    if mtu < MINIMUM_IPV6_MTU {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "MTU should be >= {MINIMUM_IPV6_MTU} when \
-                                 IPv6 is enabled on interface {}, but got \
-                                 mtu: {mtu}",
-                                self.name.as_str()
-                            ),
-                        ));
-                    }
-                }
+            if ipv6_conf.enabled
+                && let Some(mtu) = self.mtu
+                && mtu < MINIMUM_IPV6_MTU
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "MTU should be >= {MINIMUM_IPV6_MTU} when IPv6 is \
+                         enabled on interface {}, but got mtu: {mtu}",
+                        self.name.as_str()
+                    ),
+                ));
             }
         }
         if let Some(lldp_conf) = self.lldp.as_mut() {
@@ -326,65 +322,63 @@ impl MergedInterface {
         if let (Some(desired), Some(current)) = (
             self.desired.as_ref().map(|i| i.base_iface()),
             self.current.as_ref().map(|i| i.base_iface()),
-        ) {
-            if let (Some(desire_mtu), Some(min_mtu), Some(max_mtu)) =
-                (desired.mtu, current.min_mtu, current.max_mtu)
-            {
-                if desire_mtu > max_mtu {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Desired MTU {} for interface {} is bigger than \
-                             maximum allowed MTU {}",
-                            desire_mtu, desired.name, max_mtu
-                        ),
-                    ));
-                } else if desire_mtu < min_mtu {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Desired MTU {} for interface {} is smaller than \
-                             minimum allowed MTU {}",
-                            desire_mtu, desired.name, min_mtu
-                        ),
-                    ));
-                }
+        ) && let (Some(desire_mtu), Some(min_mtu), Some(max_mtu)) =
+            (desired.mtu, current.min_mtu, current.max_mtu)
+        {
+            if desire_mtu > max_mtu {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired MTU {} for interface {} is bigger than \
+                         maximum allowed MTU {}",
+                        desire_mtu, desired.name, max_mtu
+                    ),
+                ));
+            } else if desire_mtu < min_mtu {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired MTU {} for interface {} is smaller than \
+                         minimum allowed MTU {}",
+                        desire_mtu, desired.name, min_mtu
+                    ),
+                ));
             }
         }
         Ok(())
     }
 
     fn validate_can_have_ip(&mut self) -> Result<(), NmstateError> {
-        if self.is_desired() && self.merged.is_up() {
-            if let Some(apply_iface) = self.for_apply.as_ref() {
-                let base_iface = apply_iface.base_iface();
-                if !base_iface.can_have_ip()
-                    && (base_iface.ipv4.as_ref().map(|ipv4| ipv4.enabled)
-                        == Some(true)
-                        || base_iface.ipv6.as_ref().map(|ipv6| ipv6.enabled)
-                            == Some(true))
+        if self.is_desired()
+            && self.merged.is_up()
+            && let Some(apply_iface) = self.for_apply.as_ref()
+        {
+            let base_iface = apply_iface.base_iface();
+            if !base_iface.can_have_ip()
+                && (base_iface.ipv4.as_ref().map(|ipv4| ipv4.enabled)
+                    == Some(true)
+                    || base_iface.ipv6.as_ref().map(|ipv6| ipv6.enabled)
+                        == Some(true))
+            {
+                if let Some(ctrl) = apply_iface.base_iface().controller.as_ref()
                 {
-                    if let Some(ctrl) =
-                        apply_iface.base_iface().controller.as_ref()
-                    {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Interface {} cannot have IP enabled as it is \
-                                 attached to controller {ctrl} where IP is \
-                                 not allowed on its port",
-                                base_iface.name.as_str()
-                            ),
-                        ));
-                    } else {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Interface {} cannot have IP enabled",
-                                base_iface.name.as_str()
-                            ),
-                        ));
-                    }
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} cannot have IP enabled as it is \
+                             attached to controller {ctrl} where IP is not \
+                             allowed on its port",
+                            base_iface.name.as_str()
+                        ),
+                    ));
+                } else {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} cannot have IP enabled",
+                            base_iface.name.as_str()
+                        ),
+                    ));
                 }
             }
         }
@@ -394,63 +388,62 @@ impl MergedInterface {
     /// Copy MAC address when identifier is [InterfaceIdentifier::MacAddress]
     /// Copy PCI address when identifier is [InterfaceIdentifier::PciAddress]
     pub(crate) fn preserve_current_identifer_info(&mut self) {
-        if self.for_apply.as_ref().map(|i| i.is_up()) == Some(true) {
-            if let (Some(apply_iface), Some(cur_iface)) =
+        if self.for_apply.as_ref().map(|i| i.is_up()) == Some(true)
+            && let (Some(apply_iface), Some(cur_iface)) =
                 (self.for_apply.as_mut(), self.current.as_ref())
-            {
-                match cur_iface.base_iface().identifier {
-                    Some(InterfaceIdentifier::MacAddress) => {
-                        if apply_iface.base_iface().identifier.is_none() {
+        {
+            match cur_iface.base_iface().identifier {
+                Some(InterfaceIdentifier::MacAddress) => {
+                    if apply_iface.base_iface().identifier.is_none() {
+                        apply_iface
+                            .base_iface_mut()
+                            .identifier
+                            .clone_from(&cur_iface.base_iface().identifier);
+                        if apply_iface.base_iface().mac_address.is_none() {
                             apply_iface
                                 .base_iface_mut()
-                                .identifier
-                                .clone_from(&cur_iface.base_iface().identifier);
-                            if apply_iface.base_iface().mac_address.is_none() {
-                                apply_iface
-                                    .base_iface_mut()
-                                    .mac_address
-                                    .clone_from(
-                                        &cur_iface.base_iface().mac_address,
-                                    );
-                            }
-                            if apply_iface.base_iface().profile_name.is_none() {
-                                apply_iface
-                                    .base_iface_mut()
-                                    .profile_name
-                                    .clone_from(
-                                        &cur_iface.base_iface().profile_name,
-                                    );
-                            }
+                                .mac_address
+                                .clone_from(
+                                    &cur_iface.base_iface().mac_address,
+                                );
                         }
-                    }
-                    Some(InterfaceIdentifier::PciAddress) => {
-                        if apply_iface.base_iface().identifier.is_none() {
+                        if apply_iface.base_iface().profile_name.is_none() {
                             apply_iface
                                 .base_iface_mut()
-                                .identifier
-                                .clone_from(&cur_iface.base_iface().identifier);
-                            if apply_iface.base_iface().pci_address.is_none() {
-                                apply_iface
-                                    .base_iface_mut()
-                                    .pci_address
-                                    .clone_from(
-                                        &cur_iface.base_iface().pci_address,
-                                    );
-                            }
-                            if apply_iface.base_iface().profile_name.is_none() {
-                                apply_iface
-                                    .base_iface_mut()
-                                    .profile_name
-                                    .clone_from(
-                                        &cur_iface.base_iface().profile_name,
-                                    );
-                            }
+                                .profile_name
+                                .clone_from(
+                                    &cur_iface.base_iface().profile_name,
+                                );
                         }
                     }
-                    // Do not use _ match here, we want developer to be
-                    // notified by compiler when new identifier been added.
-                    Some(InterfaceIdentifier::Name) | None => (),
                 }
+                Some(InterfaceIdentifier::PciAddress) => {
+                    if apply_iface.base_iface().identifier.is_none() {
+                        apply_iface
+                            .base_iface_mut()
+                            .identifier
+                            .clone_from(&cur_iface.base_iface().identifier);
+                        if apply_iface.base_iface().pci_address.is_none() {
+                            apply_iface
+                                .base_iface_mut()
+                                .pci_address
+                                .clone_from(
+                                    &cur_iface.base_iface().pci_address,
+                                );
+                        }
+                        if apply_iface.base_iface().profile_name.is_none() {
+                            apply_iface
+                                .base_iface_mut()
+                                .profile_name
+                                .clone_from(
+                                    &cur_iface.base_iface().profile_name,
+                                );
+                        }
+                    }
+                }
+                // Do not use _ match here, we want developer to be
+                // notified by compiler when new identifier been added.
+                Some(InterfaceIdentifier::Name) | None => (),
             }
         }
     }

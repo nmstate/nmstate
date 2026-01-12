@@ -1,26 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use log::warn;
-
 use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::dns::{
-        nm_ip_dns_options_to_value, nm_ip_dns_search_to_value,
-        nm_ip_dns_to_value, parse_nm_dns, parse_nm_dns_data,
-        parse_nm_dns_options, parse_nm_dns_search,
-    },
-    connection::route::{
-        nm_ip_routes_to_value, parse_nm_ip_route_data, NmIpRoute,
-    },
-    connection::route_rule::{
-        nm_ip_rules_to_value, parse_nm_ip_rule_data, NmIpRouteRule,
-    },
-    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
     ErrorKind, NmError, ToDbusValue,
+    connection::{
+        DBUS_ASV_SIGNATURE, DbusDictionary,
+        dns::{
+            nm_ip_dns_options_to_value, nm_ip_dns_search_to_value,
+            nm_ip_dns_to_value, parse_nm_dns, parse_nm_dns_data,
+            parse_nm_dns_options, parse_nm_dns_search,
+        },
+        route::{NmIpRoute, nm_ip_routes_to_value, parse_nm_ip_route_data},
+        route_rule::{
+            NmIpRouteRule, nm_ip_rules_to_value, parse_nm_ip_rule_data,
+        },
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -217,14 +215,14 @@ impl ToDbusValue for NmSettingIp {
         ret.insert("address-data", zvariant::Value::Array(addresss_data));
         ret.insert("route-data", nm_ip_routes_to_value(&self.routes)?);
         ret.insert("routing-rules", nm_ip_rules_to_value(&self.route_rules)?);
-        if let Some(dns_servers) = self.dns.as_ref() {
-            if !dns_servers.is_empty() {
-                // We still use the `dns` instead of `dns-data` as the
-                // `dns-data` is only supported by NM 1.41+ which is not widely
-                // available yet. And we do not know the NM version yet in this
-                // function context.
-                ret.insert("dns", nm_ip_dns_to_value(dns_servers)?);
-            }
+        if let Some(dns_servers) = self.dns.as_ref()
+            && !dns_servers.is_empty()
+        {
+            // We still use the `dns` instead of `dns-data` as the
+            // `dns-data` is only supported by NM 1.41+ which is not widely
+            // available yet. And we do not know the NM version yet in this
+            // function context.
+            ret.insert("dns", nm_ip_dns_to_value(dns_servers)?);
         }
         if let Some(dns_searches) = self.dns_search.as_ref() {
             ret.insert("dns-search", nm_ip_dns_search_to_value(dns_searches)?);

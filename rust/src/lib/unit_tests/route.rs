@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    query_apply::is_route_delayed_by_nm,
-    unit_tests::testlib::{
-        gen_merged_ifaces_for_route_test, gen_route_entry,
-        gen_test_route_entries, gen_test_routes_conf, TEST_IPV4_ADDR1,
-        TEST_IPV4_NET1, TEST_IPV6_ADDR1, TEST_IPV6_ADDR2, TEST_IPV6_NET1,
-        TEST_IPV6_NET2, TEST_NIC, TEST_ROUTE_METRIC,
-    },
     ErrorKind, InterfaceType, Interfaces, MergedRoutes, RouteEntry, RouteState,
     Routes,
+    query_apply::is_route_delayed_by_nm,
+    unit_tests::testlib::{
+        TEST_IPV4_ADDR1, TEST_IPV4_NET1, TEST_IPV6_ADDR1, TEST_IPV6_ADDR2,
+        TEST_IPV6_NET1, TEST_IPV6_NET2, TEST_NIC, TEST_ROUTE_METRIC,
+        gen_merged_ifaces_for_route_test, gen_route_entry,
+        gen_test_route_entries, gen_test_routes_conf,
+    },
 };
 
 #[test]

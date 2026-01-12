@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use serde::{de, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::{
     BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceState,
@@ -63,20 +63,20 @@ impl Default for OvsBridgeInterface {
 impl OvsBridgeInterface {
     // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
-        if let Some(br_conf) = &self.bridge {
-            if let Some(port_confs) = &br_conf.ports {
-                let mut port_names = Vec::new();
-                for port_conf in port_confs {
-                    if let Some(bond_conf) = &port_conf.bond {
-                        for port_name in bond_conf.ports() {
-                            port_names.push(port_name);
-                        }
-                    } else {
-                        port_names.push(port_conf.name.as_str());
+        if let Some(br_conf) = &self.bridge
+            && let Some(port_confs) = &br_conf.ports
+        {
+            let mut port_names = Vec::new();
+            for port_conf in port_confs {
+                if let Some(bond_conf) = &port_conf.bond {
+                    for port_name in bond_conf.ports() {
+                        port_names.push(port_name);
                     }
+                } else {
+                    port_names.push(port_conf.name.as_str());
                 }
-                return Some(port_names);
             }
+            return Some(port_names);
         }
         None
     }
@@ -87,24 +87,24 @@ impl OvsBridgeInterface {
 
     pub(crate) fn port_confs(&self) -> Vec<&OvsBridgePortConfig> {
         let mut ret: Vec<&OvsBridgePortConfig> = Vec::new();
-        if let Some(br_conf) = &self.bridge {
-            if let Some(port_confs) = &br_conf.ports {
-                for port_conf in port_confs {
-                    ret.push(port_conf)
-                }
+        if let Some(br_conf) = &self.bridge
+            && let Some(port_confs) = &br_conf.ports
+        {
+            for port_conf in port_confs {
+                ret.push(port_conf)
             }
         }
         ret
     }
 
     pub(crate) fn sort_ports(&mut self) {
-        if let Some(ref mut br_conf) = self.bridge {
-            if let Some(ref mut port_confs) = &mut br_conf.ports {
-                port_confs.sort_unstable_by_key(|p| p.name.clone());
-                for port_conf in port_confs {
-                    if let Some(ref mut bond_conf) = port_conf.bond {
-                        bond_conf.sort_ports();
-                    }
+        if let Some(br_conf) = self.bridge.as_mut()
+            && let Some(port_confs) = br_conf.ports.as_mut()
+        {
+            port_confs.sort_unstable_by_key(|p| p.name.clone());
+            for port_conf in port_confs {
+                if let Some(bond_conf) = port_conf.bond.as_mut() {
+                    bond_conf.sort_ports();
                 }
             }
         }
@@ -115,26 +115,27 @@ impl OvsBridgeInterface {
         &mut self,
         is_desired: bool,
     ) -> Result<(), NmstateError> {
-        if let Some(mtu) = self.base.mtu.as_ref() {
-            if is_desired {
-                log::warn!(
-                    "OVS Bridge {} could not hold 'mtu:{mtu}' configuration \
-                     as it only exists in OVS database, ignoring",
-                    self.base.name.as_str()
-                );
-            }
+        if let Some(mtu) = self.base.mtu.as_ref()
+            && is_desired
+        {
+            log::warn!(
+                "OVS Bridge {} could not hold 'mtu:{mtu}' configuration as it \
+                 only exists in OVS database, ignoring",
+                self.base.name.as_str()
+            );
         }
-        if let Some(mac) = self.base.mac_address.as_ref() {
-            if !mac.is_empty() && is_desired {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "OVS Bridge {} can not hold MAC address, please set \
-                         MAC address on OVS internal interface instead",
-                        self.base.name.as_str()
-                    ),
-                ));
-            }
+        if let Some(mac) = self.base.mac_address.as_ref()
+            && !mac.is_empty()
+            && is_desired
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "OVS Bridge {} can not hold MAC address, please set MAC \
+                     address on OVS internal interface instead",
+                    self.base.name.as_str()
+                ),
+            ));
         }
         self.base.mtu = None;
         self.base.ipv4 = None;
@@ -205,20 +206,18 @@ impl OvsBridgeInterface {
                         .unwrap_or_default()
                 })
             })
-        {
-            if let Some(bond_port_confs) = self
+            && let Some(bond_port_confs) = self
                 .bridge
                 .as_mut()
                 .and_then(|br_conf| br_conf.ports.as_mut())
                 .and_then(|ports| ports.get_mut(index))
                 .and_then(|port_conf| port_conf.bond.as_mut())
                 .and_then(|bond_conf| bond_conf.ports.as_mut())
-            {
-                for bond_port_conf in bond_port_confs {
-                    if bond_port_conf.name == origin_name {
-                        bond_port_conf.name = new_name;
-                        break;
-                    }
+        {
+            for bond_port_conf in bond_port_confs {
+                if bond_port_conf.name == origin_name {
+                    bond_port_conf.name = new_name;
+                    break;
                 }
             }
         }
@@ -246,10 +245,10 @@ impl OvsBridgeInterface {
                 new_ports.push(new_port);
             }
         }
-        if !new_ports.is_empty() {
-            if let Some(br_conf) = self.bridge.as_mut() {
-                br_conf.ports = Some(new_ports);
-            }
+        if !new_ports.is_empty()
+            && let Some(br_conf) = self.bridge.as_mut()
+        {
+            br_conf.ports = Some(new_ports);
         }
     }
 }
@@ -563,7 +562,7 @@ impl OvsBridgeBondConfig {
     }
 
     pub(crate) fn sort_ports(&mut self) {
-        if let Some(ref mut bond_ports) = self.ports {
+        if let Some(bond_ports) = self.ports.as_mut() {
             bond_ports.sort_unstable_by_key(|p| p.name.clone())
         }
     }
@@ -768,10 +767,10 @@ impl MergedInterface {
                     })
                 }
 
-                if let Some(br_conf) = verify_iface.bridge.as_mut() {
-                    if br_conf.ports.is_some() {
-                        br_conf.ports = Some(port_confs);
-                    }
+                if let Some(br_conf) = verify_iface.bridge.as_mut()
+                    && br_conf.ports.is_some()
+                {
+                    br_conf.ports = Some(port_confs);
                 }
             }
         }

@@ -3,7 +3,6 @@
 use std::io::Read;
 
 use super::super::nm_dbus::NmSettingConnection;
-
 use crate::{ErrorKind, MptcpAddressFlag, MptcpConfig, NmstateError};
 
 const NM_MPTCP_FLAG_ALSO_WITHOUT_DEFAULT_ROUTE: u32 = 0x08;

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::NmIpRoute;
-
 use crate::{
-    ip::is_ipv6_addr, InterfaceIpAddr, NmstateError, RouteEntry, RouteType,
+    InterfaceIpAddr, NmstateError, RouteEntry, RouteType, ip::is_ipv6_addr,
 };
 
 const IPV4_EMPTY_NEXT_HOP: &str = "0.0.0.0";

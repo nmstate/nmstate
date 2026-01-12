@@ -3,8 +3,8 @@
 use std::str::FromStr;
 
 use crate::{
-    nispor::mptcp::get_mptcp_flags, InterfaceIpAddr, InterfaceIpv4,
-    InterfaceIpv6, MergedInterface,
+    InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, MergedInterface,
+    nispor::mptcp::get_mptcp_flags,
 };
 
 pub(crate) fn np_ipv4_to_nmstate(
@@ -156,30 +156,28 @@ pub(crate) fn nmstate_ipv4_to_np(
     let mut np_ip_conf = nispor::IpConf::default();
 
     // delete ip addresses not in desired state
-    if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref() {
-        if let (Some(nms_cur_ipv4), Some(nms_des_ipv4)) = (
+    if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref()
+        && let (Some(nms_cur_ipv4), Some(nms_des_ipv4)) = (
             &nms_cur_iface.base_iface().ipv4,
             &nms_merged_iface.merged.base_iface().ipv4,
-        ) {
-            let des_ips: Vec<_> = nms_des_ipv4
-                .addresses
-                .as_deref()
-                .unwrap_or_default()
-                .iter()
-                .collect();
+        )
+    {
+        let des_ips: Vec<_> = nms_des_ipv4
+            .addresses
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .collect();
 
-            for nms_addr in
-                nms_cur_ipv4.addresses.as_deref().unwrap_or_default()
-            {
-                if !des_ips.contains(&nms_addr) {
-                    np_ip_conf.addresses.push({
-                        let mut ip_conf = nispor::IpAddrConf::default();
-                        ip_conf.address = nms_addr.ip.to_string();
-                        ip_conf.prefix_len = nms_addr.prefix_length;
-                        ip_conf.remove = true;
-                        ip_conf
-                    });
-                }
+        for nms_addr in nms_cur_ipv4.addresses.as_deref().unwrap_or_default() {
+            if !des_ips.contains(&nms_addr) {
+                np_ip_conf.addresses.push({
+                    let mut ip_conf = nispor::IpAddrConf::default();
+                    ip_conf.address = nms_addr.ip.to_string();
+                    ip_conf.prefix_len = nms_addr.prefix_length;
+                    ip_conf.remove = true;
+                    ip_conf
+                });
             }
         }
     }
@@ -204,30 +202,28 @@ pub(crate) fn nmstate_ipv6_to_np(
     let mut np_ip_conf = nispor::IpConf::default();
 
     // delete ip addresses not in desired state
-    if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref() {
-        if let (Some(nms_cur_ipv6), Some(nms_des_ipv6)) = (
+    if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref()
+        && let (Some(nms_cur_ipv6), Some(nms_des_ipv6)) = (
             &nms_cur_iface.base_iface().ipv6,
             &nms_merged_iface.merged.base_iface().ipv6,
-        ) {
-            let des_ips: Vec<_> = nms_des_ipv6
-                .addresses
-                .as_deref()
-                .unwrap_or_default()
-                .iter()
-                .collect();
+        )
+    {
+        let des_ips: Vec<_> = nms_des_ipv6
+            .addresses
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .collect();
 
-            for nms_addr in
-                nms_cur_ipv6.addresses.as_deref().unwrap_or_default()
-            {
-                if !des_ips.contains(&nms_addr) {
-                    np_ip_conf.addresses.push({
-                        let mut ip_conf = nispor::IpAddrConf::default();
-                        ip_conf.address = nms_addr.ip.to_string();
-                        ip_conf.prefix_len = nms_addr.prefix_length;
-                        ip_conf.remove = true;
-                        ip_conf
-                    });
-                }
+        for nms_addr in nms_cur_ipv6.addresses.as_deref().unwrap_or_default() {
+            if !des_ips.contains(&nms_addr) {
+                np_ip_conf.addresses.push({
+                    let mut ip_conf = nispor::IpAddrConf::default();
+                    ip_conf.address = nms_addr.ip.to_string();
+                    ip_conf.prefix_len = nms_addr.prefix_length;
+                    ip_conf.remove = true;
+                    ip_conf
+                });
             }
         }
     }

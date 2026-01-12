@@ -57,10 +57,10 @@ pub(crate) fn get_route_rules(
             }
         }
         // Filter out the routes with protocols that we do not support
-        if let Some(rule_protocol) = np_rule.protocol.as_ref() {
-            if !protocols.contains(rule_protocol) {
-                continue;
-            }
+        if let Some(rule_protocol) = np_rule.protocol.as_ref()
+            && !protocols.contains(rule_protocol)
+        {
+            continue;
         }
         rule.iif.clone_from(&np_rule.iif);
         rule.ip_to.clone_from(&np_rule.dst);

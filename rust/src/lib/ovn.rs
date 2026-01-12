@@ -197,17 +197,17 @@ impl MergedOvnConfiguration {
         let mut desired_ovn_maps: BTreeMap<&str, &str> = BTreeMap::new();
 
         for cur_map in current.bridge_mappings.as_ref().unwrap_or(&empty_vec) {
-            if let Some(cur_br) = cur_map.bridge.as_deref() {
-                if !deleted_localnets.contains(&cur_map.localnet.as_str()) {
-                    desired_ovn_maps.insert(cur_map.localnet.as_str(), cur_br);
-                }
+            if let Some(cur_br) = cur_map.bridge.as_deref()
+                && !deleted_localnets.contains(&cur_map.localnet.as_str())
+            {
+                desired_ovn_maps.insert(cur_map.localnet.as_str(), cur_br);
             }
         }
         for des_map in desired.bridge_mappings.as_ref().unwrap_or(&empty_vec) {
-            if let Some(des_br) = des_map.bridge.as_deref() {
-                if !des_map.is_absent() {
-                    desired_ovn_maps.insert(des_map.localnet.as_str(), des_br);
-                }
+            if let Some(des_br) = des_map.bridge.as_deref()
+                && !des_map.is_absent()
+            {
+                desired_ovn_maps.insert(des_map.localnet.as_str(), des_br);
             }
         }
 

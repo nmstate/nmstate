@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::net::{Ipv4Addr, Ipv6Addr};
-use std::str::FromStr;
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::is_ipv6_addr, ErrorKind, MergedInterface, MergedNetworkState,
-    NmstateError,
+    ErrorKind, MergedInterface, MergedNetworkState, NmstateError,
+    ip::is_ipv6_addr,
 };
 
 const SUPPORTED_DNS_OPTS_NO_VALUE: [&str; 15] = [

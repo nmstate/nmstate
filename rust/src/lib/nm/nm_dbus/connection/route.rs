@@ -5,8 +5,8 @@ use std::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
     NmError,
+    connection::{DBUS_ASV_SIGNATURE, DbusDictionary},
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
@@ -35,10 +35,10 @@ impl TryFrom<DbusDictionary> for NmIpRoute {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         let mut weight = _from_map!(v, "weight", u32::try_from)?;
-        if let Some(weight_num) = weight {
-            if weight_num == 0 {
-                weight = None;
-            }
+        if let Some(weight_num) = weight
+            && weight_num == 0
+        {
+            weight = None;
         }
         Ok(Self {
             dest: _from_map!(v, "dest", String::try_from)?,

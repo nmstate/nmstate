@@ -15,17 +15,16 @@
 // limitations under the License.
 //
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use serde::{Deserialize, Serialize};
 
 use super::super::{
-    connection::{DbusDictionary, DBUS_ASV_SIGNATURE},
+    NmError, NmVlanProtocol, ToDbusValue,
+    connection::{DBUS_ASV_SIGNATURE, DbusDictionary},
     convert::{
         mac_str_to_u8_array, own_value_to_bytes_array, u8_array_to_mac_string,
     },
-    NmError, NmVlanProtocol, ToDbusValue,
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]

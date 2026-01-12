@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    InterfaceType, NmstateError,
     nm::{
         error::nm_error_to_nmstate,
         nm_dbus::{ErrorKind, NmApi, NmDevice, NmDeviceError, NmIfaceType},
     },
-    InterfaceType, NmstateError,
 };
 
 fn nm_iface_type_to_nmstate(nm_iface_type: &NmIfaceType) -> InterfaceType {
@@ -48,10 +48,10 @@ pub(crate) async fn deactivate_nm_devices(
 ) -> Result<(), NmstateError> {
     for nm_dev in nm_devs {
         log::info!("Deactivating device {}", &nm_dev.name);
-        if let Err(e) = nm_api.device_disconnect(&nm_dev.obj_path).await {
-            if e.kind != ErrorKind::Device(NmDeviceError::NotActive) {
-                return Err(nm_error_to_nmstate(e));
-            }
+        if let Err(e) = nm_api.device_disconnect(&nm_dev.obj_path).await
+            && e.kind != ErrorKind::Device(NmDeviceError::NotActive)
+        {
+            return Err(nm_error_to_nmstate(e));
         }
     }
     Ok(())

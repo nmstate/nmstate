@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ffi::CString;
-use std::time::SystemTime;
+use std::{ffi::CString, time::SystemTime};
 
 use libc::{c_char, c_int};
 
 use crate::{
-    init_logger,
+    NMSTATE_FAIL, NMSTATE_PASS, init_logger,
     state::{c_str_to_net_state, is_state_in_json},
-    NMSTATE_FAIL, NMSTATE_PASS,
 };
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_generate_configurations(
     state: *const c_char,
     configs: *mut *mut c_char,

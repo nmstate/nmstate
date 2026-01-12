@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    BondMode, ErrorKind, HsrProtocol, Interface, InterfaceState, InterfaceType,
+    Interfaces, MergedInterfaces,
     unit_tests::testlib::{
         get_mac, new_eth_iface, new_ovs_br_iface, new_ovs_iface,
         new_unknown_iface, new_vlan_iface,
     },
-    BondMode, ErrorKind, HsrProtocol, Interface, InterfaceState, InterfaceType,
-    Interfaces, MergedInterfaces,
 };
 
 #[test]
@@ -91,11 +91,13 @@ fn test_vlan_over_ethernet_can_exist_after_ethernet_absent() {
         .as_ref()
         .unwrap();
     assert!(iface.is_absent());
-    assert!(merged_ifaces
-        .get_iface("eth0.10", InterfaceType::Vlan)
-        .unwrap()
-        .for_apply
-        .is_none());
+    assert!(
+        merged_ifaces
+            .get_iface("eth0.10", InterfaceType::Vlan)
+            .unwrap()
+            .for_apply
+            .is_none()
+    );
 }
 
 #[test]

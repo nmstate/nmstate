@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{hash_map::Entry, HashMap, HashSet};
-use std::hash::{Hash, Hasher};
-use std::net::Ipv4Addr;
-use std::str::FromStr;
+use std::{
+    collections::{HashMap, HashSet, hash_map::Entry},
+    hash::{Hash, Hasher},
+    net::Ipv4Addr,
+    str::FromStr,
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::{is_ipv6_addr, sanitize_ip_network},
     ErrorKind, InterfaceType, MergedInterfaces, NmstateError,
+    ip::{is_ipv6_addr, sanitize_ip_network},
 };
 
 const DEFAULT_TABLE_ID: u32 = 254; // main route table ID
@@ -509,23 +511,23 @@ impl RouteEntry {
                     ),
                 ));
             }
-            if let Some(dst) = self.destination.as_deref() {
-                if is_ipv6_addr(dst) {
-                    return Err(NmstateError::new(
-                        ErrorKind::NotSupportedError,
-                        "IPv6 ECMP route with weight is not supported yet"
-                            .to_string(),
-                    ));
-                }
-            }
-        }
-        if let Some(cwnd) = self.cwnd {
-            if cwnd == 0 {
+            if let Some(dst) = self.destination.as_deref()
+                && is_ipv6_addr(dst)
+            {
                 return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    "The value of 'cwnd' cannot be 0".to_string(),
+                    ErrorKind::NotSupportedError,
+                    "IPv6 ECMP route with weight is not supported yet"
+                        .to_string(),
                 ));
             }
+        }
+        if let Some(cwnd) = self.cwnd
+            && cwnd == 0
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "The value of 'cwnd' cannot be 0".to_string(),
+            ));
         }
         if self.mtu == Some(0) {
             return Err(NmstateError::new(
@@ -871,36 +873,26 @@ impl MergedRoutes {
 // 0.0.0.0/8 and its subnet cannot be used as the route destination network
 // for unicast route
 fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
-    if let Some(dst) = route.destination.as_deref() {
-        if !is_ipv6_addr(dst) {
-            let ip_net: Vec<&str> = dst.split('/').collect();
-            let ip_addr = Ipv4Addr::from_str(ip_net[0])?;
-            if ip_addr.octets()[0] == 0 {
-                if dst.contains('/') {
-                    let prefix = match ip_net[1].parse::<i32>() {
-                        Ok(p) => p,
-                        Err(_) => {
-                            return Err(NmstateError::new(
-                                ErrorKind::InvalidArgument,
-                                format!(
-                                    "The prefix of the route destination \
-                                     network '{dst}' is invalid"
-                                ),
-                            ));
-                        }
-                    };
-                    if prefix >= 8 && route.is_unicast() {
-                        let e = NmstateError::new(
+    if let Some(dst) = route.destination.as_deref()
+        && !is_ipv6_addr(dst)
+    {
+        let ip_net: Vec<&str> = dst.split('/').collect();
+        let ip_addr = Ipv4Addr::from_str(ip_net[0])?;
+        if ip_addr.octets()[0] == 0 {
+            if dst.contains('/') {
+                let prefix = match ip_net[1].parse::<i32>() {
+                    Ok(p) => p,
+                    Err(_) => {
+                        return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
-                            "0.0.0.0/8 and its subnet cannot be used as the \
-                             route destination for unicast route, please use \
-                             the default gateway 0.0.0.0/0 instead"
-                                .to_string(),
-                        );
-                        log::error!("{e}");
-                        return Err(e);
+                            format!(
+                                "The prefix of the route destination network \
+                                 '{dst}' is invalid"
+                            ),
+                        ));
                     }
-                } else if route.is_unicast() {
+                };
+                if prefix >= 8 && route.is_unicast() {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         "0.0.0.0/8 and its subnet cannot be used as the route \
@@ -911,9 +903,19 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
                     log::error!("{e}");
                     return Err(e);
                 }
+            } else if route.is_unicast() {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "0.0.0.0/8 and its subnet cannot be used as the route \
+                     destination for unicast route, please use the default \
+                     gateway 0.0.0.0/0 instead"
+                        .to_string(),
+                );
+                log::error!("{e}");
+                return Err(e);
             }
-            return Ok(());
         }
+        return Ok(());
     }
     Ok(())
 }

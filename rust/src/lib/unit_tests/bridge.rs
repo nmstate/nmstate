@@ -67,9 +67,11 @@ fn test_linux_bridge_ignore_port() {
     assert_eq!(des_iface.ports(), Some(vec!["eth2"]));
     assert_eq!(cur_iface.ports(), Some(vec!["eth2"]));
 
-    assert!(merged_ifaces
-        .get_iface("eth1", InterfaceType::Ethernet)
-        .is_none());
+    assert!(
+        merged_ifaces
+            .get_iface("eth1", InterfaceType::Ethernet)
+            .is_none()
+    );
 }
 
 #[test]
@@ -669,9 +671,10 @@ fn test_bridge_validate_diff_group_forward_mask_and_group_fwd_mask() {
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
-        assert!(e
-            .msg()
-            .contains("Linux bridge br0 has different group_forward_mask:"));
+        assert!(
+            e.msg()
+                .contains("Linux bridge br0 has different group_forward_mask:")
+        );
     }
 }
 

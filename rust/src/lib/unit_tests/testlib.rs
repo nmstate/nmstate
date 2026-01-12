@@ -285,8 +285,8 @@ fn new_test_nic2_with_static_ip() -> Interface {
     .unwrap()
 }
 
-pub(crate) fn gen_merged_ifaces_for_route_test(
-) -> (MergedInterfaces, Interfaces) {
+pub(crate) fn gen_merged_ifaces_for_route_test()
+-> (MergedInterfaces, Interfaces) {
     let mut ifaces = Interfaces::new();
     ifaces.push(new_test_nic_with_static_ip());
     ifaces.push(new_test_nic2_with_static_ip());

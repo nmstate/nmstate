@@ -65,12 +65,11 @@ impl MergedRoutes {
         let mut cur_routes: Vec<RouteEntry> = Vec::new();
         if let Some(cur_rts) = current.config.clone() {
             for mut cur_rt in cur_rts {
-                if let Some(via) = cur_rt.next_hop_iface.as_ref() {
-                    if ignored_ifaces.contains(&via.as_str())
-                        && cur_rt.route_type.is_none()
-                    {
-                        continue;
-                    }
+                if let Some(via) = cur_rt.next_hop_iface.as_ref()
+                    && ignored_ifaces.contains(&via.as_str())
+                    && cur_rt.route_type.is_none()
+                {
+                    continue;
                 }
                 cur_rt.sanitize_current_route_for_verify();
                 cur_routes.push(cur_rt);

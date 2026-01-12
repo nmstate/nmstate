@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    state::get_json_value_difference, ErrorKind, Interface, InterfaceType,
-    LinuxBridgeInterface, NmstateError,
+    ErrorKind, Interface, InterfaceType, LinuxBridgeInterface, NmstateError,
+    state::get_json_value_difference,
 };
 
 impl Interface {
@@ -49,27 +49,25 @@ impl Interface {
                 serde_json::Value::Number(des),
                 serde_json::Value::Number(cur),
             ) = (desire, current)
-            {
-                if desire.as_u64().unwrap_or(0) as i128
+                && desire.as_u64().unwrap_or(0) as i128
                     - cur.as_u64().unwrap_or(0) as i128
                     == 1
-                    && LinuxBridgeInterface::is_interger_rounded_up(&reference)
-                {
-                    let e = NmstateError::new(
-                        ErrorKind::KernelIntegerRoundedError,
-                        format!(
-                            "Linux kernel configured with 250 HZ will round \
-                             up/down the integer in linux bridge {} option \
-                             '{}' from {:?} to {:?}.",
-                            self.name(),
-                            reference,
-                            des,
-                            cur
-                        ),
-                    );
-                    log::error!("{e}");
-                    return Err(e);
-                }
+                && LinuxBridgeInterface::is_interger_rounded_up(&reference)
+            {
+                let e = NmstateError::new(
+                    ErrorKind::KernelIntegerRoundedError,
+                    format!(
+                        "Linux kernel configured with 250 HZ will round \
+                         up/down the integer in linux bridge {} option '{}' \
+                         from {:?} to {:?}.",
+                        self.name(),
+                        reference,
+                        des,
+                        cur
+                    ),
+                );
+                log::error!("{e}");
+                return Err(e);
             }
 
             Err(NmstateError::new(

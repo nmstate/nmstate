@@ -24,8 +24,6 @@ use libc::{c_char, c_int};
 use nmstate::NmstateError;
 use once_cell::sync::OnceCell;
 
-use crate::logger::MemoryLogger;
-
 #[cfg(feature = "query_apply")]
 pub use crate::apply::nmstate_net_state_apply;
 #[cfg(feature = "query_apply")]
@@ -34,6 +32,7 @@ pub use crate::checkpoint::{
 };
 #[cfg(feature = "gen_conf")]
 pub use crate::gen_conf::nmstate_generate_configurations;
+use crate::logger::MemoryLogger;
 #[cfg(feature = "query_apply")]
 pub use crate::policy::nmstate_net_state_from_policy;
 #[cfg(feature = "query_apply")]
@@ -49,7 +48,7 @@ pub use crate::format::nmstate_net_state_format;
 static INSTANCE: OnceCell<MemoryLogger> = OnceCell::new();
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_cstring_free(cstring: *mut c_char) {
     unsafe {
         if !cstring.is_null() {

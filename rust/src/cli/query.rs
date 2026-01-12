@@ -77,10 +77,10 @@ pub(crate) fn sort_netstate(
                     }
                 }
                 for (k, v) in iface.iter() {
-                    if let Value::String(ref name) = k {
-                        if IFACE_TOP_PRIORTIES.contains(&name.as_str()) {
-                            continue;
-                        }
+                    if let Value::String(name) = &k
+                        && IFACE_TOP_PRIORTIES.contains(&name.as_str())
+                    {
+                        continue;
                     }
                     new_iface.insert(k.clone(), v.clone());
                 }
@@ -152,13 +152,13 @@ fn filter_net_state_with_iface(
 
     if let Some(config_rules) = net_state.rules.config.as_ref() {
         for rule in config_rules {
-            if let Some(table_id) = rule.table_id {
-                if route_table_ids.contains(&table_id) {
-                    if let Some(rules) = ret.rules.config.as_mut() {
-                        rules.push(rule.clone());
-                    } else {
-                        ret.rules.config = Some(vec![rule.clone()]);
-                    }
+            if let Some(table_id) = rule.table_id
+                && route_table_ids.contains(&table_id)
+            {
+                if let Some(rules) = ret.rules.config.as_mut() {
+                    rules.push(rule.clone());
+                } else {
+                    ret.rules.config = Some(vec![rule.clone()]);
                 }
             }
         }

@@ -190,30 +190,26 @@ impl Interface {
         if let (Some(des_ip), Some(cur_ip)) = (
             self.base_iface_mut().ipv4.as_mut(),
             current.base_iface_mut().ipv4.as_mut(),
-        ) {
-            if let (Some(des_ip_addrs), Some(cur_ip_addrs)) =
-                (des_ip.addresses.as_ref(), cur_ip.addresses.as_mut())
-            {
-                if des_ip.allow_extra_address != Some(false) {
-                    cur_ip_addrs.retain(|i| des_ip_addrs.contains(i))
-                }
-                // Remove allow_extra_address as current does not have it
-                des_ip.allow_extra_address = None
+        ) && let (Some(des_ip_addrs), Some(cur_ip_addrs)) =
+            (des_ip.addresses.as_ref(), cur_ip.addresses.as_mut())
+        {
+            if des_ip.allow_extra_address != Some(false) {
+                cur_ip_addrs.retain(|i| des_ip_addrs.contains(i))
             }
+            // Remove allow_extra_address as current does not have it
+            des_ip.allow_extra_address = None
         }
         if let (Some(des_ip), Some(cur_ip)) = (
             self.base_iface_mut().ipv6.as_mut(),
             current.base_iface_mut().ipv6.as_mut(),
-        ) {
-            if let (Some(des_ip_addrs), Some(cur_ip_addrs)) =
-                (des_ip.addresses.as_ref(), cur_ip.addresses.as_mut())
-            {
-                if des_ip.allow_extra_address != Some(false) {
-                    cur_ip_addrs.retain(|i| des_ip_addrs.contains(i))
-                }
-                // Remove allow_extra_address as current does not have it
-                des_ip.allow_extra_address = None
+        ) && let (Some(des_ip_addrs), Some(cur_ip_addrs)) =
+            (des_ip.addresses.as_ref(), cur_ip.addresses.as_mut())
+        {
+            if des_ip.allow_extra_address != Some(false) {
+                cur_ip_addrs.retain(|i| des_ip_addrs.contains(i))
             }
+            // Remove allow_extra_address as current does not have it
+            des_ip.allow_extra_address = None
         }
     }
 }

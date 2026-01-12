@@ -3,18 +3,17 @@
 use std::collections::HashMap;
 
 use serde::{
-    ser::SerializeMap, Deserialize, Deserializer, Serialize, Serializer,
+    Deserialize, Deserializer, Serialize, Serializer, ser::SerializeMap,
 };
-
-use crate::{ErrorKind, NetworkState, NmstateError};
 
 use super::{
     iface::{get_iface_match, update_ifaces},
     json::{get_value_from_json, value_retain_only, value_to_string},
     route::{get_route_match, update_routes},
     route_rule::{get_route_rule_match, update_route_rules},
-    token::{parse_str_to_capture_tokens, NetworkCaptureToken},
+    token::{NetworkCaptureToken, parse_str_to_capture_tokens},
 };
+use crate::{ErrorKind, NetworkState, NmstateError};
 
 pub(crate) const PROPERTY_SPLITTER: &str = ".";
 const SORT_CAPTURE_MAX_ROUND: usize = 10;
@@ -543,11 +542,11 @@ fn process_tokens_without_pipe(
         ret.action = NetworkCaptureAction::Equal;
         let (key, key_capture) =
             get_condition_key(&tokens[..pos], line, &tokens[pos])?;
-        if ret.key_capture.is_none() {
-            if let Some((cap_name, pos)) = key_capture {
-                ret.key_capture = Some(cap_name);
-                ret.key_capture_pos = pos;
-            }
+        if ret.key_capture.is_none()
+            && let Some((cap_name, pos)) = key_capture
+        {
+            ret.key_capture = Some(cap_name);
+            ret.key_capture_pos = pos;
         }
         ret.key = key;
         let (value, value_capture) =
@@ -572,11 +571,11 @@ fn process_tokens_without_pipe(
         ret.action = NetworkCaptureAction::Replace;
         let (key, key_capture) =
             get_condition_key(&tokens[..pos], line, &tokens[pos])?;
-        if ret.key_capture.is_none() {
-            if let Some((cap_name, pos)) = key_capture {
-                ret.key_capture = Some(cap_name);
-                ret.key_capture_pos = pos;
-            }
+        if ret.key_capture.is_none()
+            && let Some((cap_name, pos)) = key_capture
+        {
+            ret.key_capture = Some(cap_name);
+            ret.key_capture_pos = pos;
         }
         ret.key = key;
         let (value, value_capture) =

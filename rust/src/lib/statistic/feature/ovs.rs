@@ -36,10 +36,9 @@ impl OvsBridgeInterface {
         let mut ret = Vec::new();
         if let Some(ports) =
             self.bridge.as_ref().and_then(|b| b.ports.as_deref())
+            && ports.iter().any(|p| p.bond.is_some())
         {
-            if ports.iter().any(|p| p.bond.is_some()) {
-                ret.push(NmstateFeature::OvsBond);
-            }
+            ret.push(NmstateFeature::OvsBond);
         }
         ret
     }

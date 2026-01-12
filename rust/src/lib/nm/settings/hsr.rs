@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::NmConnection;
-
-use crate::{HsrInterface, HsrProtocol};
+use crate::{HsrInterface, HsrProtocol, nm::nm_dbus::NmConnection};
 
 pub(crate) fn gen_nm_hsr_setting(
     iface: &HsrInterface,

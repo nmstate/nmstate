@@ -4,9 +4,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{NetworkState, NmstateError};
-
 use super::{NetworkCaptureRules, NetworkStateTemplate};
+use crate::{NetworkState, NmstateError};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]

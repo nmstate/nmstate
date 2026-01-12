@@ -18,9 +18,11 @@
 //!
 //! [`.link`]: https://www.freedesktop.org/software/systemd/man/systemd.link.html
 //! [`ifname=`]: https://www.man7.org/linux/man-pages/man7/dracut.cmdline.7.html
-use std::collections::HashMap;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use nmstate::{Interface, InterfaceType, NetworkState};
 
@@ -142,13 +144,11 @@ fn run_persist_immediately(
         }
         let iface_name = iface.name();
         let karg = format_ifname_karg(iface_name, &mac);
-        let driver = iface.base_iface().driver.as_deref().and_then(|d| {
-            if d.is_empty() {
-                None
-            } else {
-                Some(d)
-            }
-        });
+        let driver = iface
+            .base_iface()
+            .driver
+            .as_deref()
+            .and_then(|d| if d.is_empty() { None } else { Some(d) });
         log::info!(
             "Will persist the interface {iface_name} driver {} with MAC {mac}",
             driver.unwrap_or("unknown")
@@ -170,16 +170,16 @@ fn run_persist_immediately(
     }
 
     if !dry_run {
-        if let Some(parent) = stamp_path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir(parent)?;
-            }
+        if let Some(parent) = stamp_path.parent()
+            && !parent.exists()
+        {
+            std::fs::create_dir(parent)?;
         }
         std::fs::write(stamp_path, b"")?;
-        if !kargs.is_empty() {
-            if let Some(path) = kargsfile {
-                std::fs::write(path, kargs.join(" "))?;
-            }
+        if !kargs.is_empty()
+            && let Some(path) = kargsfile
+        {
+            std::fs::write(path, kargs.join(" "))?;
         }
     }
 
@@ -323,10 +323,10 @@ pub(crate) fn clean_up(
     }
     if !dry_run {
         std::fs::remove_file(stamp_path)?;
-        if !kargs.is_empty() {
-            if let Some(path) = kargsfile {
-                std::fs::write(path, kargs.join(" "))?;
-            }
+        if !kargs.is_empty()
+            && let Some(path) = kargsfile
+        {
+            std::fs::write(path, kargs.join(" "))?;
         }
     }
     Ok("".to_string())

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    state::get_json_value_difference, ErrorKind, MergedOvnConfiguration,
-    NmstateError, OvnConfiguration,
+    ErrorKind, MergedOvnConfiguration, NmstateError, OvnConfiguration,
+    state::get_json_value_difference,
 };
 
 impl MergedOvnConfiguration {

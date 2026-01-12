@@ -5,12 +5,12 @@ use std::ffi::CString;
 use libc::{c_char, c_int};
 
 use crate::{
-    state::{c_str_to_net_state, is_state_in_json},
     NMSTATE_FAIL, NMSTATE_PASS,
+    state::{c_str_to_net_state, is_state_in_json},
 };
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nmstate_generate_differences(
     new_state: *const c_char,
     old_state: *const c_char,

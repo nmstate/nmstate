@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use serde_json::{Map, Value};
 
 use super::{
-    db::parse_str_map, OvsDbConnection, OvsDbMethodTransact, OvsDbMutate,
-    OvsDbMutation, OvsDbOperation, OvsDbSelect, OvsDbUpdate, OVS_DB_NAME,
+    OVS_DB_NAME, OvsDbConnection, OvsDbMethodTransact, OvsDbMutate,
+    OvsDbMutation, OvsDbOperation, OvsDbSelect, OvsDbUpdate, db::parse_str_map,
 };
 use crate::{ErrorKind, MergedNetworkState, NmstateError, OvsDbGlobalConfig};
 

@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    nm::nm_gen_conf, Interface, MergedNetworkState, NetworkState,
-    NetworkStateMode, NmstateError,
+    Interface, MergedNetworkState, NetworkState, NetworkStateMode,
+    NmstateError, nm::nm_gen_conf,
 };
 
 impl NetworkState {

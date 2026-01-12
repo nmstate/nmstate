@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use serde::{Deserialize, Serialize};
 
-use super::super::{connection::DbusDictionary, NmError, ToDbusValue};
+use super::super::{NmError, ToDbusValue, connection::DbusDictionary};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -59,10 +58,10 @@ impl ToDbusValue for NmSettingMacSec {
         if let Some(v) = &self.mka_ckn {
             ret.insert("mka-ckn", zvariant::Value::new(v.clone()));
         }
-        if let Some(v) = &self.port {
-            if *v > 0 {
-                ret.insert("port", zvariant::Value::new(*v));
-            }
+        if let Some(v) = &self.port
+            && *v > 0
+        {
+            ret.insert("port", zvariant::Value::new(*v));
         }
         if let Some(v) = &self.validation {
             ret.insert("validation", zvariant::Value::new(*v));

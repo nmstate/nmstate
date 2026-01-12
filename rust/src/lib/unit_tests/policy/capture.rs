@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 
 use crate::{
+    NetworkState,
     policy::{
         capture::{NetworkCaptureAction, NetworkCaptureCommand},
         token::NetworkCaptureToken,
     },
-    NetworkState,
 };
 
 #[test]

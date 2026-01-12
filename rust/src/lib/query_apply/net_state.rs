@@ -3,6 +3,8 @@
 use std::future::Future;
 
 use crate::{
+    ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
+    NetworkStateMode, NmstateError,
     nispor::{
         apply_ifaces_alt_names, nispor_apply, nispor_retrieve,
         persist_alt_name_config, set_running_hostname,
@@ -12,11 +14,9 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
     ovsdb::{
-        ovsdb_apply_global_conf, ovsdb_is_running, ovsdb_retrieve,
-        DEFAULT_OVS_DB_SOCKET_PATH,
+        DEFAULT_OVS_DB_SOCKET_PATH, ovsdb_apply_global_conf, ovsdb_is_running,
+        ovsdb_retrieve,
     },
-    ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
-    NetworkStateMode, NmstateError,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;

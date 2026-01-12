@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::{de::IgnoredAny, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::IgnoredAny};
 
 const LLDP_SYS_CAP_OTHER: u16 = 1;
 const LLDP_SYS_CAP_REPEATER: u16 = 2;

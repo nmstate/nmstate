@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::nm::nm_dbus::{
-    NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
-    NmIfaceType, NmLldpNeighbor,
-};
-
 use super::{
+    NmConnectionMatcher,
     error::nm_error_to_nmstate,
     query_apply::{
         device::nm_dev_iface_type_to_nmstate, dispatch::get_dispatches,
@@ -15,7 +11,6 @@ use super::{
         retrieve_dns_state, vpn::get_supported_vpn_ifaces,
     },
     settings::get_bond_balance_slb,
-    NmConnectionMatcher,
 };
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
@@ -25,6 +20,10 @@ use crate::{
     MacVlanInterface, MacVtapInterface, MergedNetworkState, NetworkState,
     NetworkStateMode, NmstateError, OvsBridgeInterface, OvsInterface,
     PciAddress, UnknownInterface, VlanInterface, VrfInterface, VxlanInterface,
+    nm::nm_dbus::{
+        NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
+        NmIfaceType, NmLldpNeighbor,
+    },
 };
 
 /// The `current_state` is NetworkState retrieved by nispor, and will be used
@@ -106,16 +105,16 @@ pub(crate) async fn nm_retrieve(
 
         let nm_ac = conn_matcher.get_nm_ac(iface.base_iface());
 
-        if let Some(state_flag) = nm_ac.map(|nm_ac| nm_ac.state_flags) {
-            if (state_flag & NmActiveConnection::STATE_FLAG_EXTERNAL) > 0 {
-                log::debug!(
-                    "Found external managed interface {}/{}",
-                    iface.name(),
-                    iface.iface_type()
-                );
-                net_state.append_interface_data(iface);
-                continue;
-            }
+        if let Some(state_flag) = nm_ac.map(|nm_ac| nm_ac.state_flags)
+            && (state_flag & NmActiveConnection::STATE_FLAG_EXTERNAL) > 0
+        {
+            log::debug!(
+                "Found external managed interface {}/{}",
+                iface.name(),
+                iface.iface_type()
+            );
+            net_state.append_interface_data(iface);
+            continue;
         }
 
         let nm_saved_conn = conn_matcher.get_prefered_saved(iface.base_iface());
@@ -241,20 +240,19 @@ pub(crate) fn fill_iface_by_nm_conn_data(
             ..Default::default()
         };
         bond_iface.bond = Some(bond_config);
-    } else if let Interface::MacSec(mac_sec_iface) = iface {
-        if let Some(macsec_set) =
+    } else if let Interface::MacSec(mac_sec_iface) = iface
+        && let Some(macsec_set) =
             nm_applied_conn.and_then(|n| n.macsec.as_ref())
+    {
+        let mut macsec_config = MacSecConfig::new();
+        macsec_config.mka_ckn.clone_from(&macsec_set.mka_ckn);
+        // The `mka_cak` is stored in saved NmConnection only
+        if let Some(saved_conn) = nm_saved_conn.as_ref()
+            && let Some(macsec_saved_set) = saved_conn.macsec.as_ref()
         {
-            let mut macsec_config = MacSecConfig::new();
-            macsec_config.mka_ckn.clone_from(&macsec_set.mka_ckn);
-            // The `mka_cak` is stored in saved NmConnection only
-            if let Some(saved_conn) = nm_saved_conn.as_ref() {
-                if let Some(macsec_saved_set) = saved_conn.macsec.as_ref() {
-                    macsec_config.mka_cak.clone_from(&macsec_saved_set.mka_cak);
-                }
-            }
-            mac_sec_iface.macsec = Some(macsec_config);
+            macsec_config.mka_cak.clone_from(&macsec_saved_set.mka_cak);
         }
+        mac_sec_iface.macsec = Some(macsec_config);
     }
 }
 
@@ -415,13 +413,12 @@ fn fill_identifier(base_iface: &mut BaseInterface, nm_conn: &NmConnection) {
     base_iface.mac_address = None;
     base_iface.pci_address = None;
 
-    if let Some(nm_set) = nm_conn.wired.as_ref() {
-        if let Some(mac) = nm_set.mac_address.as_deref() {
-            if !mac.is_empty() {
-                base_iface.identifier = Some(InterfaceIdentifier::MacAddress);
-                base_iface.mac_address = Some(mac.to_string());
-            }
-        }
+    if let Some(nm_set) = nm_conn.wired.as_ref()
+        && let Some(mac) = nm_set.mac_address.as_deref()
+        && !mac.is_empty()
+    {
+        base_iface.identifier = Some(InterfaceIdentifier::MacAddress);
+        base_iface.mac_address = Some(mac.to_string());
     }
 
     if let Some(pci_addr_str) = nm_conn
@@ -430,11 +427,10 @@ fn fill_identifier(base_iface: &mut BaseInterface, nm_conn: &NmConnection) {
         .and_then(|s| s.path.as_ref())
         .and_then(|p| p.first())
         .and_then(|p| p.strip_prefix("pci-"))
+        && let Ok(pci_addr) = PciAddress::try_from(pci_addr_str)
     {
-        if let Ok(pci_addr) = PciAddress::try_from(pci_addr_str) {
-            base_iface.identifier = Some(InterfaceIdentifier::PciAddress);
-            base_iface.pci_address = Some(pci_addr);
-        }
+        base_iface.identifier = Some(InterfaceIdentifier::PciAddress);
+        base_iface.pci_address = Some(pci_addr);
     }
 }
 
@@ -446,12 +442,11 @@ fn get_connection_name(
     nm_conn: &NmConnection,
     saved_nm_conn: Option<&NmConnection>,
 ) -> Option<String> {
-    if let Some(saved_nm_conn) = saved_nm_conn.as_ref() {
-        if saved_nm_conn.uuid() == nm_conn.uuid() {
-            if let Some(nm_set) = saved_nm_conn.connection.as_ref() {
-                return nm_set.id.clone();
-            }
-        }
+    if let Some(saved_nm_conn) = saved_nm_conn.as_ref()
+        && saved_nm_conn.uuid() == nm_conn.uuid()
+        && let Some(nm_set) = saved_nm_conn.connection.as_ref()
+    {
+        return nm_set.id.clone();
     }
     if let Some(nm_set) = nm_conn.connection.as_ref() {
         return nm_set.id.clone();

@@ -2,8 +2,10 @@
 
 use std::collections::HashMap;
 
-use crate::nm::nm_dbus::{NmConnection, NmSettingVpn};
-use crate::{IpsecInterface, NetworkState};
+use crate::{
+    IpsecInterface, NetworkState,
+    nm::nm_dbus::{NmConnection, NmSettingVpn},
+};
 
 pub(crate) fn gen_nm_ipsec_vpn_setting(
     iface: &IpsecInterface,

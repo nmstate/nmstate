@@ -370,36 +370,32 @@ pub(crate) fn parse_str_to_template_tokens(
         .as_slice()
         .iter()
         .find(|c| matches!(c, &NetworkTemplateToken::ReferenceStart(_)))
-    {
-        if !ret
+        && !ret
             .as_slice()
             .iter()
             .any(|c| matches!(c, &NetworkTemplateToken::ReferenceEnd(_)))
-        {
-            return Err(NmstateError::new_policy_error(
-                "No reference end }} found".to_string(),
-                line,
-                token_start.pos(),
-            ));
-        }
+    {
+        return Err(NmstateError::new_policy_error(
+            "No reference end }} found".to_string(),
+            line,
+            token_start.pos(),
+        ));
     }
 
     if let Some(token_end) = ret
         .as_slice()
         .iter()
         .find(|c| matches!(c, &NetworkTemplateToken::ReferenceEnd(_)))
-    {
-        if !ret
+        && !ret
             .as_slice()
             .iter()
             .any(|c| matches!(c, &NetworkTemplateToken::ReferenceStart(_)))
-        {
-            return Err(NmstateError::new_policy_error(
-                "No reference start {{ found".to_string(),
-                line,
-                token_end.pos(),
-            ));
-        }
+    {
+        return Err(NmstateError::new_policy_error(
+            "No reference start {{ found".to_string(),
+            line,
+            token_end.pos(),
+        ));
     }
 
     if let (Some(token_start_pos), Some(token_end_pos)) = (

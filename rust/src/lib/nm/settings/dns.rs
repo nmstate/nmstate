@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::NmSettingIp;
-
 use crate::DnsClientState;
 
 pub(crate) fn apply_nm_dns_setting(

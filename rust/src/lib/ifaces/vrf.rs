@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -72,14 +71,12 @@ impl VrfInterface {
     ) -> Result<(), NmstateError> {
         // Ignoring the changes of MAC address of VRF as it is a layer 3
         // interface.
-        if is_desired {
-            if let Some(mac) = self.base.mac_address.as_ref() {
-                log::warn!(
-                    "Ignoring MAC address {mac} of VRF interface {} as it is \
-                     a layer 3(IP) interface",
-                    self.base.name.as_str()
-                );
-            }
+        if is_desired && let Some(mac) = self.base.mac_address.as_ref() {
+            log::warn!(
+                "Ignoring MAC address {mac} of VRF interface {} as it is a \
+                 layer 3(IP) interface",
+                self.base.name.as_str()
+            );
         }
         self.base.mac_address = None;
         if self.base.accept_all_mac_addresses == Some(false) {
@@ -266,18 +263,18 @@ impl Routes {
                         format!("VRF defined in Route '{rt}' does not exist"),
                     ));
                 };
-                if let Some(des_table_id) = rt.table_id {
-                    if des_table_id != table_id {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Route '{rt}' has both table id and VRF name \
-                                 defined, but desired table ID is {} while \
-                                 table ID for VRF {} is {}",
-                                des_table_id, vrf_name, table_id
-                            ),
-                        ));
-                    }
+                if let Some(des_table_id) = rt.table_id
+                    && des_table_id != table_id
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Route '{rt}' has both table id and VRF name \
+                             defined, but desired table ID is {} while table \
+                             ID for VRF {} is {}",
+                            des_table_id, vrf_name, table_id
+                        ),
+                    ));
                 }
                 rt.table_id = Some(table_id);
             }

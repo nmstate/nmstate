@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
-use super::{connection::_from_map, NmError};
+use super::{NmError, connection::_from_map};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NmDnsEntry {

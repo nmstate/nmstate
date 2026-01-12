@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::fmt::Write;
+use std::{collections::HashMap, fmt::Write};
 
 use serde::{Deserialize, Serialize};
-
-use crate::{ErrorKind, NetworkState, NmstateError};
 
 use super::{
     capture::get_value,
     token::{
-        parse_str_to_template_tokens, NetworkCaptureToken, NetworkTemplateToken,
+        NetworkCaptureToken, NetworkTemplateToken, parse_str_to_template_tokens,
     },
 };
+use crate::{ErrorKind, NetworkState, NmstateError};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
 #[non_exhaustive]

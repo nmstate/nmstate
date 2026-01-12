@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    ErrorKind, InterfaceIdentifier, MergedInterfaces, MergedNetworkState,
-    NmstateError,
-};
-
 use super::{
+    NmConnectionMatcher,
     connection::prepare_nm_conns,
     dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
     route::store_route_config,
     route_rule::store_route_rule_config,
     settings::uuid_from_name_and_type,
-    NmConnectionMatcher,
+};
+use crate::{
+    ErrorKind, InterfaceIdentifier, MergedInterfaces, MergedNetworkState,
+    NmstateError,
 };
 
 pub(crate) fn nm_gen_conf(
@@ -95,21 +94,17 @@ fn use_uuid_for_non_name_ref_parent(merged_ifaces: &mut MergedInterfaces) {
         .values()
         .filter_map(|i| i.for_apply.as_ref())
     {
-        if let Some(parent) = iface.parent() {
-            if let Some(parent_iface) = merged_ifaces.kernel_ifaces.get(parent)
-            {
-                if parent_iface.merged.base_iface().identifier
-                    != Some(InterfaceIdentifier::Name)
-                    && parent_iface.merged.base_iface().identifier.is_some()
-                {
-                    let parent_uuid = uuid_from_name_and_type(
-                        parent_iface.merged.name(),
-                        &parent_iface.merged.iface_type(),
-                    );
-                    pending_changes
-                        .push((iface.name().to_string(), parent_uuid));
-                }
-            }
+        if let Some(parent) = iface.parent()
+            && let Some(parent_iface) = merged_ifaces.kernel_ifaces.get(parent)
+            && parent_iface.merged.base_iface().identifier
+                != Some(InterfaceIdentifier::Name)
+            && parent_iface.merged.base_iface().identifier.is_some()
+        {
+            let parent_uuid = uuid_from_name_and_type(
+                parent_iface.merged.name(),
+                &parent_iface.merged.iface_type(),
+            );
+            pending_changes.push((iface.name().to_string(), parent_uuid));
         }
     }
     for (child_name, parent_uuid) in pending_changes {

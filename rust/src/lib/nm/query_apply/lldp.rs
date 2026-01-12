@@ -5,7 +5,6 @@ use std::fmt::Write;
 use super::super::nm_dbus::{
     NmConnection, NmLldpNeighbor, NmLldpNeighbor8021Vlan,
 };
-
 use crate::{
     LldpAddressFamily, LldpChassisId, LldpConfig, LldpMacPhy, LldpMaxFrameSize,
     LldpMgmtAddr, LldpMgmtAddrs, LldpNeighborTlv, LldpPortId, LldpPpvids,
@@ -130,12 +129,12 @@ fn get_port_id(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
 }
 
 fn get_sys_caps(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
-    if let Some(s) = nm_info.system_capabilities {
-        if let Ok(caps) = u16::try_from(s) {
-            return Some(LldpNeighborTlv::SystemCapabilities(
-                LldpSystemCapabilities::from(caps),
-            ));
-        }
+    if let Some(s) = nm_info.system_capabilities
+        && let Ok(caps) = u16::try_from(s)
+    {
+        return Some(LldpNeighborTlv::SystemCapabilities(
+            LldpSystemCapabilities::from(caps),
+        ));
     }
     None
 }
@@ -166,18 +165,19 @@ fn get_vlans(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
 }
 
 fn get_mac_phy_conf(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
-    if let Some(nm_conf) = nm_info.ieee_802_3_mac_phy_conf.as_ref() {
-        if let (Some(a), Some(p), Some(o)) = (
+    if let Some(nm_conf) = nm_info.ieee_802_3_mac_phy_conf.as_ref()
+        && let (Some(a), Some(p), Some(o)) = (
             nm_conf.autoneg,
             nm_conf.pmd_autoneg_cap,
             nm_conf.operational_mau_type,
-        ) {
-            if let (Ok(o), Ok(p)) = (u16::try_from(o), u16::try_from(p)) {
-                return Some(LldpNeighborTlv::Ieee8023MacPhyConf(
-                    LldpMacPhy::new(a > 0, o, p),
-                ));
-            }
-        }
+        )
+        && let (Ok(o), Ok(p)) = (u16::try_from(o), u16::try_from(p))
+    {
+        return Some(LldpNeighborTlv::Ieee8023MacPhyConf(LldpMacPhy::new(
+            a > 0,
+            o,
+            p,
+        )));
     }
     None
 }
@@ -204,38 +204,37 @@ fn get_mgmt_addrs(nm_info: &NmLldpNeighbor) -> Option<LldpNeighborTlv> {
                 nm_mgmt_addr.address.as_ref(),
                 nm_mgmt_addr.interface_number_subtype,
                 nm_mgmt_addr.interface_number,
-            ) {
-                if let Ok(at) = u16::try_from(at) {
-                    let mut mgmt_addr = LldpMgmtAddr::default();
-                    let at = LldpAddressFamily::from(at);
-                    let addr = match at {
-                        LldpAddressFamily::Ipv4 => {
-                            if a.len() != 4 {
-                                continue;
-                            }
-                            std::net::Ipv4Addr::new(a[0], a[1], a[2], a[3])
-                                .to_string()
-                        }
-                        LldpAddressFamily::Ipv6 => {
-                            if a.len() != 16 {
-                                continue;
-                            }
-                            let mut buff = [0u8; 16];
-                            buff.copy_from_slice(&a[..16]);
-                            std::net::Ipv6Addr::from(buff).to_string()
-                        }
-                        LldpAddressFamily::Mac => u8_addr_to_mac_string(a),
-                        _ => {
+            ) && let Ok(at) = u16::try_from(at)
+            {
+                let mut mgmt_addr = LldpMgmtAddr::default();
+                let at = LldpAddressFamily::from(at);
+                let addr = match at {
+                    LldpAddressFamily::Ipv4 => {
+                        if a.len() != 4 {
                             continue;
                         }
-                    };
+                        std::net::Ipv4Addr::new(a[0], a[1], a[2], a[3])
+                            .to_string()
+                    }
+                    LldpAddressFamily::Ipv6 => {
+                        if a.len() != 16 {
+                            continue;
+                        }
+                        let mut buff = [0u8; 16];
+                        buff.copy_from_slice(&a[..16]);
+                        std::net::Ipv6Addr::from(buff).to_string()
+                    }
+                    LldpAddressFamily::Mac => u8_addr_to_mac_string(a),
+                    _ => {
+                        continue;
+                    }
+                };
 
-                    mgmt_addr.address_subtype = at;
-                    mgmt_addr.address = addr;
-                    mgmt_addr.interface_number_subtype = it;
-                    mgmt_addr.interface_number = i;
-                    addrs.push(mgmt_addr);
-                }
+                mgmt_addr.address_subtype = at;
+                mgmt_addr.address = addr;
+                mgmt_addr.interface_number_subtype = it;
+                mgmt_addr.interface_number = i;
+                addrs.push(mgmt_addr);
             }
         }
         return Some(LldpNeighborTlv::ManagementAddresses(LldpMgmtAddrs::new(

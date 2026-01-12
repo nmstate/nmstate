@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::super::nm_dbus::NmConnection;
-
-use super::super::settings::NMSTATE_DESCRIPTION;
+use super::super::{nm_dbus::NmConnection, settings::NMSTATE_DESCRIPTION};
 
 pub(crate) fn get_description(nm_conn: &NmConnection) -> Option<String> {
     Some(

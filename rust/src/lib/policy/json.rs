@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ErrorKind, NmstateError};
-
 use super::capture::PROPERTY_SPLITTER;
+use crate::{ErrorKind, NmstateError};
 
 pub(crate) fn get_value_from_json(
     prop_path: &[String],
@@ -324,14 +323,14 @@ pub(crate) fn value_retain_only(
     data: &mut serde_json::Value,
     prop_path: &[String],
 ) {
-    if let Some(data) = data.as_object_mut() {
-        if !prop_path.is_empty() {
-            data.retain(|k, _| k == &prop_path[0]);
-            if prop_path.len() >= 2 {
-                if let Some(leaf) = data.get_mut(&prop_path[0]) {
-                    value_retain_only(leaf, &prop_path[1..]);
-                }
-            }
+    if let Some(data) = data.as_object_mut()
+        && !prop_path.is_empty()
+    {
+        data.retain(|k, _| k == &prop_path[0]);
+        if prop_path.len() >= 2
+            && let Some(leaf) = data.get_mut(&prop_path[0])
+        {
+            value_retain_only(leaf, &prop_path[1..]);
         }
     }
 }

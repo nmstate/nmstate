@@ -26,9 +26,10 @@ mod vlan;
 mod vrf;
 mod vxlan;
 
-pub(crate) use self::alt_name::{
-    apply_ifaces_alt_names, persist_alt_name_config,
-};
 pub(crate) use apply::nispor_apply;
 pub(crate) use hostname::set_running_hostname;
 pub(crate) use show::nispor_retrieve;
+
+pub(crate) use self::alt_name::{
+    apply_ifaces_alt_names, persist_alt_name_config,
+};

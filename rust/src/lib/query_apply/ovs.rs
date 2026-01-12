@@ -3,10 +3,11 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    state::get_json_value_difference, ErrorKind, Interface, InterfaceState,
-    InterfaceType, Interfaces, MergedInterfaces, MergedOvsDbGlobalConfig,
-    NetworkState, NmstateError, OvsBridgeBondConfig, OvsBridgeConfig,
-    OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig, OvsInterface,
+    ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
+    MergedInterfaces, MergedOvsDbGlobalConfig, NetworkState, NmstateError,
+    OvsBridgeBondConfig, OvsBridgeConfig, OvsBridgeInterface,
+    OvsDbGlobalConfig, OvsDbIfaceConfig, OvsInterface,
+    state::get_json_value_difference,
 };
 
 impl MergedOvsDbGlobalConfig {
@@ -186,10 +187,9 @@ impl MergedInterfaces {
                     // Remove allow_extra_patch_ports as current state
                     // does not have it
                     if let Some(Interface::OvsBridge(c)) = i.for_verify.as_mut()
+                        && let Some(c) = c.bridge.as_mut()
                     {
-                        if let Some(c) = c.bridge.as_mut() {
-                            c.allow_extra_patch_ports = None;
-                        }
+                        c.allow_extra_patch_ports = None;
                     }
                     Some(o)
                 } else {

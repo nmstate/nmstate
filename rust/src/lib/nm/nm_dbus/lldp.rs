@@ -5,8 +5,8 @@ use std::convert::TryFrom;
 use serde::Deserialize;
 
 use super::{
-    connection::{DbusDictionary, _from_map},
     NmError,
+    connection::{_from_map, DbusDictionary},
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]

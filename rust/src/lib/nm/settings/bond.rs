@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-use std::net::Ipv6Addr;
+use std::{collections::HashMap, net::Ipv6Addr};
 
-use crate::nm::nm_dbus::{NmConnection, NmSettingBond};
-
-use crate::{BondConfig, BondInterface, BondOptions};
+use crate::{
+    BondConfig, BondInterface, BondOptions,
+    nm::nm_dbus::{NmConnection, NmSettingBond},
+};
 
 const DEFAULT_ARP_MISSED_MAX: u8 = 2;
 
@@ -224,15 +224,15 @@ fn apply_bond_options(
             if v { "1".to_string() } else { "0".to_string() },
         );
     }
-    if let Some(v) = bond_opts.ns_ip6_target.as_ref() {
-        if !v.is_empty() {
-            let ip6_targets: Vec<String> =
-                v.iter().map(Ipv6Addr::to_string).collect();
-            nm_bond_set.options.insert(
-                "ns_ip6_target".to_string(),
-                ip6_targets.join(",").to_string(),
-            );
-        }
+    if let Some(v) = bond_opts.ns_ip6_target.as_ref()
+        && !v.is_empty()
+    {
+        let ip6_targets: Vec<String> =
+            v.iter().map(Ipv6Addr::to_string).collect();
+        nm_bond_set.options.insert(
+            "ns_ip6_target".to_string(),
+            ip6_targets.join(",").to_string(),
+        );
     }
 
     // Remove all empty string option
@@ -265,10 +265,10 @@ pub(crate) fn gen_nm_bond_port_setting(
 
     // NetworkManager 1.42.8- does not support priority, hence we do not touch
     // it unless non-default defined or pre-exist.
-    if let Some(v) = bond_port_conf.priority {
-        if nm_set.priority.is_some() || v != 0 {
-            nm_set.priority = Some(v);
-        }
+    if let Some(v) = bond_port_conf.priority
+        && (nm_set.priority.is_some() || v != 0)
+    {
+        nm_set.priority = Some(v);
     }
 
     if let Some(v) = bond_port_conf.queue_id {

@@ -59,18 +59,16 @@ impl MergedInterface {
         if let Some(iface) = self.for_apply.as_ref().map(|i| i.base_iface()) {
             if let Some(iface_flags) =
                 iface.mptcp.as_ref().and_then(|m| m.address_flags.as_ref())
+                && iface_flags.contains(&MptcpAddressFlag::Signal)
+                && iface_flags.contains(&MptcpAddressFlag::Fullmesh)
             {
-                if iface_flags.contains(&MptcpAddressFlag::Signal)
-                    && iface_flags.contains(&MptcpAddressFlag::Fullmesh)
-                {
-                    let e = NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        "MPTCP flags mustn't have both signal and fullmesh"
-                            .to_string(),
-                    );
-                    log::error!("{e}");
-                    return Err(e);
-                }
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "MPTCP flags mustn't have both signal and fullmesh"
+                        .to_string(),
+                );
+                log::error!("{e}");
+                return Err(e);
             }
             validate_iface_mptcp_and_addr_mptcp_flags(iface);
         }

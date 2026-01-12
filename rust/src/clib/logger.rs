@@ -3,11 +3,13 @@
 // This is based on the work of https://github.com/gahag/memory_logger
 // which is MIT licensed.
 
-use std::sync::{
-    atomic::{AtomicU16, Ordering},
-    Mutex,
+use std::{
+    sync::{
+        Mutex,
+        atomic::{AtomicU16, Ordering},
+    },
+    time::SystemTime,
 };
-use std::time::SystemTime;
 
 use serde::ser::{Serialize, SerializeMap, Serializer};
 

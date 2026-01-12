@@ -3,12 +3,13 @@
 use std::collections::HashSet;
 
 use super::{
-    super::nm_dbus::{NmApi, NmConnection, NmIfaceType},
-    super::show::fill_iface_by_nm_conn_data,
-    super::NmConnectionMatcher,
+    super::{
+        NmConnectionMatcher,
+        nm_dbus::{NmApi, NmConnection, NmIfaceType},
+        show::fill_iface_by_nm_conn_data,
+    },
     connection::{delete_connections, is_uuid},
 };
-
 use crate::{
     InterfaceType, MergedInterface, MergedInterfaces, NetworkState,
     NmstateError,

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{NetworkState, NmstateError, RouteRuleEntry, RouteRules};
-
 use super::json::{search_item, update_items};
+use crate::{NetworkState, NmstateError, RouteRuleEntry, RouteRules};
 
 pub(crate) fn get_route_rule_match(
     prop_path: &[String],

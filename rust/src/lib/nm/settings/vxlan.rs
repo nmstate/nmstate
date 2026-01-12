@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::nm_dbus::NmSettingVxlan;
-
 use crate::VxlanConfig;
 
 impl From<&VxlanConfig> for NmSettingVxlan {

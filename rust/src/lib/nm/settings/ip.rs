@@ -6,11 +6,11 @@ use super::{
     dns::apply_nm_dns_setting, route::gen_nm_ip_routes,
     route_rule::gen_nm_ip_rules,
 };
-use crate::nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 use crate::{
     BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
     InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, InterfaceType,
     Ipv6AddrGenMode, NmstateError, RouteEntry, WaitIp,
+    nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod},
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -164,7 +164,7 @@ fn gen_nm_ipv6_setting(
                 return Err(NmstateError::new(
                     ErrorKind::NotImplementedError,
                     "Autoconf without DHCP is not supported yet".to_string(),
-                ))
+                ));
             }
             (false, false) => {
                 let ipv6_routes =

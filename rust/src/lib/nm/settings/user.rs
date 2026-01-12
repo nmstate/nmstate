@@ -2,9 +2,10 @@
 
 use std::collections::HashMap;
 
-use crate::nm::nm_dbus::{NmConnection, NmSettingUser};
-
-use crate::Interface;
+use crate::{
+    Interface,
+    nm::nm_dbus::{NmConnection, NmSettingUser},
+};
 
 pub(crate) const NMSTATE_DESCRIPTION: &str = "nmstate.interface.description";
 
