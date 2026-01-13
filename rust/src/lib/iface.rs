@@ -744,6 +744,15 @@ impl Interface {
             br_iface.remove_port(port_name);
         } else if let Interface::Bond(iface) = self {
             iface.remove_port(port_name);
+        } else if let Interface::Vrf(iface) = self {
+            iface.remove_port(port_name);
+        } else {
+            log::error!(
+                "BUG: Interface::remove_port() been invoked against \
+                 unsupported interface type {} for interface {}",
+                self.iface_type(),
+                self.name(),
+            );
         }
     }
 

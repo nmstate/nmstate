@@ -145,6 +145,16 @@ impl VrfInterface {
             *port_name = new_name;
         }
     }
+
+    pub(crate) fn remove_port(&mut self, port_to_remove: &str) {
+        if let Some(ports) = self
+            .vrf
+            .as_mut()
+            .and_then(|vrf_conf| vrf_conf.port.as_mut())
+        {
+            ports.retain(|port_name| port_name != port_to_remove);
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
