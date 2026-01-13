@@ -15,7 +15,6 @@ from libnmstate.schema import Route
 from libnmstate.schema import VRF
 
 from .testlib import assertlib
-from .testlib import cmdlib
 from .testlib.apply import apply_with_description
 
 
@@ -125,70 +124,6 @@ def vrf1_with_eth1_and_eth2(eth1_up, eth2_up):
     )
 
     assertlib.assert_absent(TEST_VRF1)
-
-
-@pytest.fixture
-def unmanaged_port_up():
-    cmdlib.exec_cmd(
-        f"ip link add {TEST_VRF_VETH0} type veth peer {TEST_VRF_VETH1}".split()
-    )
-    cmdlib.exec_cmd(f"ip link set {TEST_VRF_VETH0} up".split())
-    cmdlib.exec_cmd(f"ip link set {TEST_VRF_VETH1} up".split())
-    yield TEST_VRF_VETH0
-    cmdlib.exec_cmd(f"ip link del {TEST_VRF_VETH0}".split())
-    apply_with_description(
-        "Delete the vrf interface test-vrf0 and veth device veth0",
-        {
-            Interface.KEY: [
-                {
-                    Interface.NAME: TEST_VRF_VETH0,
-                    Interface.TYPE: InterfaceType.VETH,
-                    Interface.STATE: InterfaceState.ABSENT,
-                },
-                {
-                    Interface.NAME: TEST_VRF0,
-                    Interface.TYPE: InterfaceType.VRF,
-                    Interface.STATE: InterfaceState.ABSENT,
-                },
-            ]
-        },
-    )
-
-
-@pytest.fixture
-def vrf1_with_unmanaged_port(unmanaged_port_up):
-    vrf_iface_info = {
-        Interface.NAME: TEST_VRF1,
-        Interface.TYPE: InterfaceType.VRF,
-        VRF.CONFIG_SUBTREE: {
-            VRF.PORT_SUBTREE: [unmanaged_port_up],
-            VRF.ROUTE_TABLE_ID: TEST_ROUTE_TABLE_ID1,
-        },
-    }
-    veth_iface_info = {
-        Interface.NAME: unmanaged_port_up,
-        Interface.TYPE: InterfaceType.ETHERNET,
-        Interface.STATE: InterfaceState.UP,
-    }
-    apply_with_description(
-        f"Attach ethernet {unmanaged_port_up} to the vrf interface test-vrf1 "
-        "and set vrf route table ID to 101",
-        {Interface.KEY: [vrf_iface_info, veth_iface_info]},
-    )
-    try:
-        yield vrf_iface_info
-    finally:
-        apply_with_description(
-            "Delete the test-vrf1 interface",
-            {
-                Interface.KEY: [
-                    {
-                        Interface.NAME: TEST_VRF1,
-                        Interface.STATE: InterfaceState.ABSENT,
-                    }
-                ]
-            },
-        )
 
 
 @pytest.fixture
@@ -407,9 +342,6 @@ class TestVrf:
             desired_state,
         )
         assertlib.assert_state_match(desired_state)
-
-    def test_takes_over_unmanaged_vrf(self, vrf1_with_unmanaged_port):
-        pass
 
     def test_vrf_ignore_mac_address(self, vrf0_with_port0):
         apply_with_description(

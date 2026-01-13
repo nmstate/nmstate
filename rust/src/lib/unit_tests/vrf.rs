@@ -287,3 +287,147 @@ fn test_route_vrf_name_table_id_conflict() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_vrf_verify_ports_mixed_with_ignore_ifaces() {
+    let pre_apply_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: ignore
+        - name: eth2
+          type: ethernet
+          state: up
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+            ports:
+            - eth1
+            - eth2
+        ",
+    )
+    .unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+            ports:
+            - eth2
+        ",
+    )
+    .unwrap();
+
+    let post_apply_ifaces: Interfaces = pre_apply_ifaces.clone();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&post_apply_ifaces).unwrap();
+}
+
+#[test]
+fn test_vrf_verify_with_all_ignore_ifaces_and_desire_empty() {
+    let pre_apply_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: ignore
+        - name: eth2
+          type: ethernet
+          state: ignore
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+            ports:
+            - eth1
+            - eth2
+        ",
+    )
+    .unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+            ports: []
+        ",
+    )
+    .unwrap();
+
+    let post_apply_ifaces: Interfaces = pre_apply_ifaces.clone();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&post_apply_ifaces).unwrap();
+}
+
+#[test]
+fn test_vrf_verify_with_all_ignore_ifaces_and_desire_full() {
+    let pre_apply_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+           - name: eth1
+             type: ethernet
+             state: ignore
+           - name: eth2
+             type: ethernet
+             state: ignore
+           - name: vrf0
+             type: vrf
+             state: up
+             vrf:
+               route-table-id: 100
+               ports:
+               - eth1
+               - eth2
+           ",
+    )
+    .unwrap();
+
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+           - name: vrf0
+             type: vrf
+             state: up
+             vrf:
+               route-table-id: 100
+               ports:
+               - eth1
+               - eth2
+           ",
+    )
+    .unwrap();
+
+    let post_apply_ifaces: Interfaces = pre_apply_ifaces.clone();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&post_apply_ifaces).unwrap();
+}
