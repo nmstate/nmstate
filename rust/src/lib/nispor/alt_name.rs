@@ -19,12 +19,21 @@ fn gen_nispor_iface_conf_for_alt_name(
     base_iface: &BaseInterface,
     cur_iface: Option<&BaseInterface>,
 ) -> Result<Option<nispor::IfaceConf>, NmstateError> {
-    if let Some(alt_names) = base_iface.alt_names.as_ref() {
+    let des_alt_names = if base_iface.state == InterfaceState::Absent {
+        // For absent interfaces, remove current alt-names
+        cur_iface.as_ref().and_then(|i| i.alt_names.as_ref())
+    } else {
+        base_iface.alt_names.as_ref()
+    };
+
+    if let Some(des_alt_names) = des_alt_names {
         let mut np_iface = nispor::IfaceConf::default();
 
         np_iface.state = match base_iface.state {
             InterfaceState::Up => nispor::IfaceState::Up,
             InterfaceState::Down => nispor::IfaceState::Down,
+            // Other function will delete this interface, for purging
+            InterfaceState::Absent => nispor::IfaceState::Down,
             _ => return Ok(None),
         };
 
@@ -37,15 +46,17 @@ fn gen_nispor_iface_conf_for_alt_name(
             .map(|entry| entry.name.as_str())
             .collect();
         let mut np_alt_names = Vec::new();
-        for alt_name in alt_names {
+        for des_alt_name in des_alt_names {
+            let des_alt_name_is_absent = des_alt_name.is_absent()
+                || base_iface.state == InterfaceState::Absent;
             match (
-                alt_name.is_absent(),
-                cur_alt_names.contains(&alt_name.name.as_str()),
+                des_alt_name_is_absent,
+                cur_alt_names.contains(&des_alt_name.name.as_str()),
             ) {
                 (true, true) | (false, false) => {
                     np_alt_names.push(nispor::AltNameConf::new(
-                        alt_name.name.to_string(),
-                        alt_name.is_absent(),
+                        des_alt_name.name.to_string(),
+                        des_alt_name_is_absent,
                     ));
                 }
                 (false, true) | (true, false) => {

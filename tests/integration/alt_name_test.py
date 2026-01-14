@@ -9,6 +9,7 @@ import libnmstate
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bond
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceAltName
 from libnmstate.schema import LinuxBridge
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import Route
@@ -283,3 +284,43 @@ class TestAltNames:
 
         cur_state = libnmstate.show()
         assert_routes(expected_routes, cur_state)
+
+    # https://issues.redhat.com/browse/RHEL-126481
+    @pytest.mark.tier1
+    @pytest.mark.parametrize(
+        "desired_state_yaml",
+        [
+            """---
+            interfaces:
+            - name: eth1
+              type: ethernet
+              state: absent
+            """,
+            """---
+            interfaces:
+            - name: eth1
+              type: ethernet
+              state: absent
+              alt-names:
+              - name: port1
+              - name: reallyreallylonglonglonginterfacenmae
+            """,
+        ],
+        ids=["without_alt_names", "with_alt_names"],
+    )
+    def test_del_alt_name_of_absent_iface(
+        self, eth1_with_alt_names, desired_state_yaml
+    ):
+        desired_state = load_yaml(desired_state_yaml)
+        libnmstate.apply(desired_state)
+
+        iface_state = show_only(("eth1",))[Interface.KEY][0]
+        assert not iface_state.get(InterfaceAltName.KEY)
+
+        # make sure systemd link file is also deleted
+        retry_till_true_or_timeout(
+            RETRY_TIMEOUT,
+            udev_trigger_check_alt_names,
+            "eth1",
+            [],
+        )
