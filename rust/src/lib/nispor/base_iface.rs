@@ -123,7 +123,7 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
     if iface.permanent_mac_address.is_empty() {
         // Bond port also hold perm_hwaddr which is the mac address before
         // this interface been assgined to bond as subordinate.
-        if let Some(bond_port_info) = &iface.bond_subordinate {
+        if let Some(bond_port_info) = &iface.bond_port {
             if bond_port_info.perm_hwaddr.is_empty() {
                 None
             } else {

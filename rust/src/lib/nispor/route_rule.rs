@@ -71,8 +71,8 @@ pub(crate) fn get_route_rules(
         rule.fwmask = np_rule.fw_mask;
         rule.suppress_prefix_length = np_rule.suppress_prefix_len;
         rule.family = match np_rule.address_family {
-            nispor::AddressFamily::IPv4 => Some(AddressFamily::IPv4),
-            nispor::AddressFamily::IPv6 => Some(AddressFamily::IPv6),
+            nispor::AddressFamily::Ipv4 => Some(AddressFamily::IPv4),
+            nispor::AddressFamily::Ipv6 => Some(AddressFamily::IPv6),
             _ => {
                 warn!(
                     "Unsupported route rule family {:?}",

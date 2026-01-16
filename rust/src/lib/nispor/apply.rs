@@ -91,7 +91,7 @@ pub(crate) fn nmstate_iface_type_to_np(
         InterfaceType::Ethernet => nispor::IfaceType::Ethernet,
         InterfaceType::Veth => nispor::IfaceType::Veth,
         InterfaceType::Vlan => nispor::IfaceType::Vlan,
-        _ => nispor::IfaceType::Unknown,
+        _ => nispor::IfaceType::Other(nms_iface_type.to_string()),
     }
 }
 
@@ -141,7 +141,11 @@ fn nmstate_iface_to_np(
 
     np_iface.mac_address.clone_from(&base_iface.mac_address);
 
-    if let Interface::Ethernet(eth_iface) = nms_iface {
+    // Do not set veth section if interface already exists.
+    // For changing veth peer, it is not supported yet by kernel only mode
+    if let Interface::Ethernet(eth_iface) = nms_iface
+        && nms_merged_iface.current.is_none()
+    {
         np_iface.veth = nms_veth_conf_to_np(eth_iface.veth.as_ref());
     } else if let Interface::Vlan(vlan_iface) = nms_iface {
         np_iface.vlan = nms_vlan_conf_to_np(vlan_iface.vlan.as_ref());

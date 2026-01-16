@@ -107,13 +107,13 @@ fn np_bridge_options_to_nmstate(
             np_bridge.multicast_query_use_ifaddr;
         options.multicast_router =
             np_bridge.multicast_router.as_ref().and_then(|r| match r {
-                nispor::BridgePortMulticastRouterType::Disabled => {
+                nispor::BridgeMulticastRouterType::Disabled => {
                     Some(LinuxBridgeMulticastRouterType::Disabled)
                 }
-                nispor::BridgePortMulticastRouterType::TempQuery => {
+                nispor::BridgeMulticastRouterType::TempQuery => {
                     Some(LinuxBridgeMulticastRouterType::Auto)
                 }
-                nispor::BridgePortMulticastRouterType::Perm => {
+                nispor::BridgeMulticastRouterType::Perm => {
                     Some(LinuxBridgeMulticastRouterType::Enabled)
                 }
                 _ => {
@@ -128,10 +128,10 @@ fn np_bridge_options_to_nmstate(
             np_bridge.multicast_startup_query_interval;
         options.vlan_protocol =
             np_bridge.vlan_protocol.as_ref().and_then(|v| match v {
-                nispor::BridgeVlanProtocol::Ieee8021Q => {
+                nispor::VlanProtocol::Ieee8021Q => {
                     Some(VlanProtocol::Ieee8021Q)
                 }
-                nispor::BridgeVlanProtocol::Ieee8021AD => {
+                nispor::VlanProtocol::Ieee8021AD => {
                     Some(VlanProtocol::Ieee8021Ad)
                 }
                 _ => {

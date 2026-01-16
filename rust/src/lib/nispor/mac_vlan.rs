@@ -5,9 +5,6 @@ use crate::{
     MacVtapInterface, MacVtapMode,
 };
 
-const MACVLAN_FLAG_NOPROMISC: u16 = 1;
-const MACVTAP_FLAG_NOPROMISC: u16 = 1;
-
 pub(crate) fn np_mac_vlan_to_nmstate(
     np_iface: &nispor::Iface,
     base_iface: BaseInterface,
@@ -32,7 +29,9 @@ pub(crate) fn np_mac_vlan_to_nmstate(
                     }
                 },
                 accept_all_mac: Some(
-                    np_vlan_info.flags & MACVLAN_FLAG_NOPROMISC == 0,
+                    !np_vlan_info
+                        .flags
+                        .contains(&nispor::MacVlanFlag::NoPromisc),
                 ),
                 base_iface: np_vlan_info.base_iface.clone(),
             });
@@ -68,7 +67,9 @@ pub(crate) fn np_mac_vtap_to_nmstate(
                     }
                 },
                 accept_all_mac: Some(
-                    np_vtap_info.flags & MACVTAP_FLAG_NOPROMISC == 0,
+                    !np_vtap_info
+                        .flags
+                        .contains(&nispor::MacVtapFlag::NoPromisc),
                 ),
                 base_iface: np_vtap_info.base_iface.clone(),
             });

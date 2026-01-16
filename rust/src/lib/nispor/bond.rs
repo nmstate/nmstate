@@ -21,7 +21,7 @@ pub(crate) fn np_bond_to_nmstate(
     if let Some(np_bond) = &np_iface.bond {
         bond_conf.port = Some(
             np_bond
-                .subordinates
+                .ports
                 .as_slice()
                 .iter()
                 .map(|iface_name| iface_name.to_string())
@@ -29,7 +29,7 @@ pub(crate) fn np_bond_to_nmstate(
         );
         bond_conf.ports_config = Some(
             np_bond
-                .subordinates
+                .ports
                 .as_slice()
                 .iter()
                 .map(|iface_name| {
@@ -65,7 +65,7 @@ pub(crate) fn append_bond_port_config(
     for port_np_iface in port_np_ifaces {
         let mut port_conf = BondPortConfig::new();
         port_conf.name = port_np_iface.name.to_string();
-        if let Some(np_port_info) = &port_np_iface.bond_subordinate {
+        if let Some(np_port_info) = &port_np_iface.bond_port {
             port_conf.priority = Some(np_port_info.prio);
             port_conf.queue_id = Some(np_port_info.queue_id);
         }
@@ -92,14 +92,12 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
             }
         });
         options.ad_user_port_key = np_bond.ad_user_port_key;
-        options.all_slaves_active = np_bond
-            .all_subordinates_active
-            .as_ref()
-            .and_then(|r| match r {
-                nispor::BondAllSubordinatesActive::Dropped => {
+        options.all_slaves_active =
+            np_bond.all_ports_active.as_ref().and_then(|r| match r {
+                nispor::BondAllPortActive::Dropped => {
                     Some(BondAllPortsActive::Dropped)
                 }
-                nispor::BondAllSubordinatesActive::Delivered => {
+                nispor::BondAllPortActive::Delivered => {
                     Some(BondAllPortsActive::Delivered)
                 }
                 _ => {
@@ -171,7 +169,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
         options.min_links = np_bond.min_links;
         options.num_grat_arp = np_bond.num_grat_arp;
         options.num_unsol_na = np_bond.num_unsol_na;
-        options.packets_per_slave = np_bond.packets_per_subordinate;
+        options.packets_per_slave = np_bond.packets_per_port;
         options.primary.clone_from(&np_bond.primary);
         options.primary_reselect =
             np_bond.primary_reselect.as_ref().and_then(|r| match r {
