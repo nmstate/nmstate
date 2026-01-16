@@ -9,7 +9,7 @@ pub(crate) fn np_vrf_to_nmstate(
     let vrf_conf = np_iface.vrf.as_ref().map(|np_vrf_info| VrfConfig {
         table_id: Some(np_vrf_info.table_id),
         port: {
-            let mut ports = np_vrf_info.subordinates.clone();
+            let mut ports = np_vrf_info.ports.clone();
             ports.sort_unstable();
             Some(ports)
         },

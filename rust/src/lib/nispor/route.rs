@@ -143,10 +143,10 @@ fn np_routetype_to_nmstate(
     let destination = match &np_route.dst {
         Some(dst) => Some(dst.to_string()),
         None => match np_route.address_family {
-            nispor::AddressFamily::IPv4 => {
+            nispor::AddressFamily::Ipv4 => {
                 Some(IPV4_DEFAULT_GATEWAY.to_string())
             }
-            nispor::AddressFamily::IPv6 => {
+            nispor::AddressFamily::Ipv6 => {
                 Some(IPV6_DEFAULT_GATEWAY.to_string())
             }
             _ => {
@@ -161,7 +161,7 @@ fn np_routetype_to_nmstate(
 
     let mut route_entry = RouteEntry::new();
     route_entry.destination = destination;
-    if np_route.address_family == nispor::AddressFamily::IPv6 {
+    if np_route.address_family == nispor::AddressFamily::Ipv6 {
         route_entry.next_hop_iface = np_route.oif.as_ref().cloned();
     }
     route_entry.metric = np_route.metric.map(i64::from);
@@ -198,10 +198,10 @@ fn np_route_to_nmstate(
     let destination = match &np_route.dst {
         Some(dst) => Some(dst.to_string()),
         None => match np_route.address_family {
-            nispor::AddressFamily::IPv4 => {
+            nispor::AddressFamily::Ipv4 => {
                 Some(IPV4_DEFAULT_GATEWAY.to_string())
             }
-            nispor::AddressFamily::IPv6 => {
+            nispor::AddressFamily::Ipv6 => {
                 Some(IPV6_DEFAULT_GATEWAY.to_string())
             }
             _ => {
@@ -220,10 +220,10 @@ fn np_route_to_nmstate(
         Some(gateway.to_string())
     } else {
         match np_route.address_family {
-            nispor::AddressFamily::IPv4 => {
+            nispor::AddressFamily::Ipv4 => {
                 Some(IPV4_EMPTY_NEXT_HOP_ADDRESS.to_string())
             }
-            nispor::AddressFamily::IPv6 => {
+            nispor::AddressFamily::Ipv6 => {
                 Some(IPV6_EMPTY_NEXT_HOP_ADDRESS.to_string())
             }
             _ => {
@@ -280,7 +280,7 @@ fn flat_multipath_route(
             new_np_route.oif = Some(mp_route.iface.to_string());
             let mut route =
                 np_route_to_nmstate(&new_np_route, table_id_to_vrf_names);
-            if np_route.address_family == nispor::AddressFamily::IPv4 {
+            if np_route.address_family == nispor::AddressFamily::Ipv4 {
                 route.weight = Some(mp_route.weight);
             }
             ret.push(route);

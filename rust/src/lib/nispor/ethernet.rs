@@ -48,15 +48,13 @@ fn gen_eth_conf(np_iface: &nispor::Iface) -> EthernetConfig {
     if let Some(ethtool_info) = &np_iface.ethtool
         && let Some(link_mode_info) = &ethtool_info.link_mode
     {
-        if link_mode_info.speed > 0 {
-            eth_conf.speed = Some(link_mode_info.speed);
-        }
+        eth_conf.speed = link_mode_info.speed;
         eth_conf.auto_neg = Some(link_mode_info.auto_negotiate);
         match link_mode_info.duplex {
-            nispor::EthtoolLinkModeDuplex::Full => {
+            Some(nispor::EthtoolLinkModeDuplex::Full) => {
                 eth_conf.duplex = Some(EthernetDuplex::Full);
             }
-            nispor::EthtoolLinkModeDuplex::Half => {
+            Some(nispor::EthtoolLinkModeDuplex::Half) => {
                 eth_conf.duplex = Some(EthernetDuplex::Half);
             }
             _ => (),
