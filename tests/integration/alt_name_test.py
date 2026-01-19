@@ -324,3 +324,113 @@ class TestAltNames:
             "eth1",
             [],
         )
+
+    # https://issues.redhat.com/browse/RHEL-126510
+    @pytest.mark.tier1
+    def test_ref_alt_name_as_interface_name(self, eth1_with_alt_names):
+        desired_state = load_yaml(
+            """---
+                interfaces:
+                - name: reallyreallylonglonglonginterfacenmae
+                  type: ethernet
+                  state: up
+                  mtu: 1280
+                """
+        )
+        libnmstate.apply(desired_state)
+
+        iface_state = show_only(("eth1",))[Interface.KEY][0]
+        assert iface_state[Interface.MTU] == 1280
+
+    # https://issues.redhat.com/browse/RHEL-126510
+    @pytest.mark.tier1
+    def test_remove_interface_ref_by_alt_name(self, eth1_with_alt_names):
+        desired_state = load_yaml(
+            """---
+                interfaces:
+                - name: reallyreallylonglonglonginterfacenmae
+                  type: ethernet
+                  state: absent
+                """
+        )
+        libnmstate.apply(desired_state)
+
+        # Since we mark eth1 as absent, it should not hold any alt-names
+        iface_state = show_only(("eth1",))[Interface.KEY][0]
+        assert not iface_state.get(InterfaceAltName.KEY)
+
+        # make sure systemd link file is also deleted
+        retry_till_true_or_timeout(
+            RETRY_TIMEOUT,
+            udev_trigger_check_alt_names,
+            "eth1",
+            [],
+        )
+
+    @pytest.mark.parametrize(
+        "desired_state_yaml",
+        [
+            """---
+            interfaces:
+            - name: reallyreallylonglonglonginterfacenmae
+              type: ethernet
+              state: absent
+            - name: eth1
+              type: ethernet
+              state: up
+            """,
+            """---
+            interfaces:
+            - name: reallyreallylonglonglonginterfacenmae
+              type: ethernet
+              state: up
+            - name: eth1
+              type: ethernet
+              state: absent
+            """,
+            """---
+            interfaces:
+            - name: reallyreallylonglonglonginterfacenmae
+              type: ethernet
+              state: up
+            - name: eth1
+              type: ethernet
+              state: up
+            """,
+        ],
+        ids=["absent_up", "up_absent", "up_up"],
+    )
+    def test_ref_alt_name_conflict_in_desire(
+        self, eth1_with_alt_names, desired_state_yaml
+    ):
+        desired_state = load_yaml(desired_state_yaml)
+        with pytest.raises(NmstateValueError):
+            libnmstate.apply(desired_state)
+
+    def test_both_alt_name_iface_and_kernel_iface_mark_as_absent(
+        self, eth1_with_alt_names
+    ):
+        desired_state = load_yaml(
+            """---
+            interfaces:
+            - name: reallyreallylonglonglonginterfacenmae
+              type: ethernet
+              state: absent
+            - name: eth1
+              type: ethernet
+              state: absent
+            """
+        )
+        libnmstate.apply(desired_state)
+
+        # Since we mark eth1 as absent, it should not hold any alt-names
+        iface_state = show_only(("eth1",))[Interface.KEY][0]
+        assert not iface_state.get(InterfaceAltName.KEY)
+
+        # make sure systemd link file is also deleted
+        retry_till_true_or_timeout(
+            RETRY_TIMEOUT,
+            udev_trigger_check_alt_names,
+            "eth1",
+            [],
+        )

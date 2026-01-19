@@ -4,7 +4,10 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, ErrorKind, MergedInterfaces, NmstateError};
+use crate::{
+    BaseInterface, ErrorKind, InterfaceIdentifier, Interfaces,
+    MergedInterfaces, NmstateError,
+};
 
 #[derive(
     Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
@@ -128,6 +131,86 @@ impl MergedInterfaces {
                         );
                     }
                 }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Interfaces {
+    pub(crate) fn resolve_alt_name_reference_in_desired(
+        &mut self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        let mut alt_name_to_kernel_name: HashMap<&str, &str> = HashMap::new();
+        // Pending changes: HashMap<alt_name, resolved_kernel_name>
+        let mut pending_changes: HashMap<String, String> = HashMap::new();
+
+        for cur_iface in current.kernel_ifaces.values() {
+            if let Some(alt_names) = cur_iface.base_iface().alt_names.as_ref() {
+                for alt_name in alt_names {
+                    alt_name_to_kernel_name
+                        .insert(alt_name.name.as_str(), cur_iface.name());
+                }
+            }
+        }
+
+        for des_iface in self.kernel_ifaces.values() {
+            // Skip on desire interface which is not `identifier: Some(name)` or
+            // `identifier: None`
+            if !matches!(
+                des_iface.base_iface().identifier.as_ref(),
+                None | Some(InterfaceIdentifier::Name)
+            ) {
+                continue;
+            }
+            if !current.kernel_ifaces.contains_key(des_iface.name())
+                && let Some(kernel_name) =
+                    alt_name_to_kernel_name.get(des_iface.name())
+            {
+                // It is OK to have both alt-name and kernel interface marked
+                // as absent
+                if let Some(exist_kernel_iface) =
+                    self.kernel_ifaces.get(*kernel_name)
+                    && !(exist_kernel_iface.is_absent()
+                        && des_iface.is_absent())
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {}/({}) is alt-name of kernel \
+                             interface {kernel_name}, but desired state also \
+                             contains a conflicting configuration for kernel \
+                             interface {kernel_name}, please merge them",
+                            des_iface.name(),
+                            des_iface.iface_type(),
+                        ),
+                    ));
+                }
+                pending_changes.insert(
+                    des_iface.name().to_string(),
+                    kernel_name.to_string(),
+                );
+            }
+        }
+
+        for (alt_name, kernel_name) in pending_changes.drain() {
+            if let Some(mut des_iface) = self.kernel_ifaces.remove(&alt_name) {
+                // Move interface name to profile name if profile name not
+                // defined in desire or current state.
+                if des_iface.is_up()
+                    && des_iface.base_iface().profile_name.is_none()
+                    && current
+                        .kernel_ifaces
+                        .get(&kernel_name)
+                        .and_then(|i| i.base_iface().profile_name.as_ref())
+                        .is_none()
+                {
+                    des_iface.base_iface_mut().profile_name =
+                        Some(des_iface.base_iface().name.to_string());
+                }
+                des_iface.base_iface_mut().name = kernel_name;
+                self.push(des_iface);
             }
         }
         Ok(())

@@ -786,6 +786,7 @@ impl MergedInterfaces {
             desired.resolve_pci_identifier(&current)?;
             desired.resolve_unknown_ifaces(&current)?;
             desired.resolve_mac_identifier_in_desired(&current)?;
+            desired.resolve_alt_name_reference_in_desired(&current)?;
         }
 
         desired.auto_managed_controller_ports(&current);
