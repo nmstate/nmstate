@@ -101,7 +101,7 @@ impl SrIovConfig {
                     return Err(e);
                 }
             }
-            vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
+            vfs.sort_unstable_by_key(|a| a.id);
         }
 
         Ok(())
@@ -118,7 +118,7 @@ impl SrIovConfig {
                     address.make_ascii_uppercase()
                 }
             }
-            vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
+            vfs.sort_unstable_by_key(|a| a.id);
 
             if !vfs.is_empty() {
                 let total_vfs = self.total_vfs.unwrap_or_else(|| {
