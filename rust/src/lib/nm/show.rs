@@ -15,11 +15,12 @@ use super::{
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
     EthernetInterface, HsrInterface, InfiniBandInterface, Interface,
-    InterfaceIdentifier, InterfaceState, InterfaceType, IpVlanInterface,
-    LinuxBridgeInterface, LoopbackInterface, MacSecConfig, MacSecInterface,
-    MacVlanInterface, MacVtapInterface, MergedNetworkState, NetworkState,
-    NetworkStateMode, NmstateError, OvsBridgeInterface, OvsInterface,
-    PciAddress, UnknownInterface, VlanInterface, VrfInterface, VxlanInterface,
+    InterfaceIdentifier, InterfaceState, InterfaceType, IpTunnelInterface,
+    IpVlanInterface, LinuxBridgeInterface, LoopbackInterface, MacSecConfig,
+    MacSecInterface, MacVlanInterface, MacVtapInterface, MergedNetworkState,
+    NetworkState, NetworkStateMode, NmstateError, OvsBridgeInterface,
+    OvsInterface, PciAddress, UnknownInterface, VlanInterface, VrfInterface,
+    VxlanInterface,
     nm::nm_dbus::{
         NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
         NmIfaceType, NmLldpNeighbor,
@@ -354,6 +355,11 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
                 ..Default::default()
             }
         })),
+        InterfaceType::IpTunnel => Interface::IpTunnel({
+            let mut iface = IpTunnelInterface::new();
+            iface.base = base_iface;
+            Box::new(iface)
+        }),
         InterfaceType::IpVlan => Interface::IpVlan({
             let mut iface = IpVlanInterface::new();
             iface.base = base_iface;

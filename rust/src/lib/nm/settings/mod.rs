@@ -10,6 +10,7 @@ mod ieee8021x;
 mod iface_match;
 mod infiniband;
 mod ip;
+mod ip_tunnel;
 mod ipvlan;
 mod loopback;
 mod mac_vlan;

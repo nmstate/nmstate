@@ -33,6 +33,8 @@ mod infiniband;
 #[cfg(test)]
 mod ip;
 #[cfg(test)]
+mod ip_tunnel;
+#[cfg(test)]
 mod ipsec;
 #[cfg(test)]
 mod lldp;

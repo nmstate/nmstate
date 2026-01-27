@@ -12,6 +12,7 @@ mod hostname;
 mod hsr;
 mod infiniband;
 mod ip;
+mod ip_tunnel;
 mod ipvlan;
 mod linux_bridge;
 mod linux_bridge_port_vlan;

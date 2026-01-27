@@ -29,6 +29,7 @@ mod iface_match;
 mod iface_type;
 mod infiniband;
 mod ip;
+mod ip_tunnel;
 mod ipvlan;
 mod loopback;
 mod mac_vlan;
@@ -64,6 +65,7 @@ pub use self::{
     iface_type::NmIfaceType,
     infiniband::NmSettingInfiniBand,
     ip::{NmSettingIp, NmSettingIpMethod},
+    ip_tunnel::{NmSettingIpTunnel, NmSettingIpTunnelFlag},
     ipvlan::NmSettingIpVlan,
     loopback::NmSettingLoopback,
     mac_vlan::NmSettingMacVlan,

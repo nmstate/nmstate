@@ -17,6 +17,7 @@ use super::super::{
         iface_match::NmSettingMatch,
         infiniband::NmSettingInfiniBand,
         ip::NmSettingIp,
+        ip_tunnel::NmSettingIpTunnel,
         ipvlan::NmSettingIpVlan,
         loopback::NmSettingLoopback,
         mac_vlan::NmSettingMacVlan,
@@ -121,6 +122,7 @@ pub struct NmConnection {
     pub hsr: Option<NmSettingHsr>,
     pub vpn: Option<NmSettingVpn>,
     pub ipvlan: Option<NmSettingIpVlan>,
+    pub ip_tunnel: Option<NmSettingIpTunnel>,
     #[serde(rename = "match")]
     pub iface_match: Option<NmSettingMatch>,
     #[serde(skip)]
@@ -200,6 +202,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             loopback: _from_map!(v, "loopback", NmSettingLoopback::try_from)?,
             hsr: _from_map!(v, "hsr", NmSettingHsr::try_from)?,
             vpn: _from_map!(v, "vpn", NmSettingVpn::try_from)?,
+            ip_tunnel: _from_map!(v, "ip-tunnel", NmSettingIpTunnel::try_from)?,
             ipvlan: _from_map!(v, "ipvlan", NmSettingIpVlan::try_from)?,
             iface_match: _from_map!(v, "match", NmSettingMatch::try_from)?,
             _other: v,
@@ -323,6 +326,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.vpn {
             ret.insert("vpn", v.to_value()?);
+        }
+        if let Some(v) = &self.ip_tunnel {
+            ret.insert("ip-tunnel", v.to_value()?);
         }
         if let Some(ipvlan) = &self.ipvlan {
             ret.insert("ipvlan", ipvlan.to_value()?);

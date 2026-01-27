@@ -27,6 +27,7 @@ fn nm_iface_type_to_nmstate(nm_iface_type: &NmIfaceType) -> InterfaceType {
         NmIfaceType::Loopback => InterfaceType::Loopback,
         NmIfaceType::Macsec => InterfaceType::MacSec,
         NmIfaceType::Hsr => InterfaceType::Hsr,
+        NmIfaceType::IpTunnel => InterfaceType::IpTunnel,
         NmIfaceType::Ipvlan => InterfaceType::IpVlan,
         _ => InterfaceType::Other(nm_iface_type.to_string()),
     }

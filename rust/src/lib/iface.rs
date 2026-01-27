@@ -6,10 +6,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
-    HsrInterface, InfiniBandInterface, IpVlanInterface, IpsecInterface,
-    LinuxBridgeInterface, LoopbackInterface, MacSecInterface, MacVlanInterface,
-    MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
-    VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
+    HsrInterface, InfiniBandInterface, IpTunnelInterface, IpVlanInterface,
+    IpsecInterface, LinuxBridgeInterface, LoopbackInterface, MacSecInterface,
+    MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
+    OvsInterface, VlanInterface, VrfInterface, VxlanInterface, XfrmInterface,
     state::merge_json_value,
 };
 
@@ -36,6 +36,9 @@ pub enum InterfaceType {
     /// HSR interface.
     /// Deserialize and serialize from/to 'hsr'.
     Hsr,
+    /// IP Tunnel interface.
+    /// Deserialize and serialize from/to 'ip-tunnel'.
+    IpTunnel,
     /// Loopback interface.
     /// Deserialize and serialize from/to 'loopback'.
     Loopback,
@@ -101,6 +104,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Dummy => "dummy",
                 InterfaceType::Ethernet => "ethernet",
                 InterfaceType::Hsr => "hsr",
+                InterfaceType::IpTunnel => "ip-tunnel",
                 InterfaceType::Loopback => "loopback",
                 InterfaceType::MacVlan => "mac-vlan",
                 InterfaceType::MacVtap => "mac-vtap",
@@ -280,6 +284,8 @@ pub enum Interface {
     Xfrm(Box<XfrmInterface>),
     /// Linux IPVLAN interface
     IpVlan(Box<IpVlanInterface>),
+    /// IP Tunnel interface.
+    IpTunnel(Box<IpTunnelInterface>),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -389,6 +395,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = InfiniBandInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::InfiniBand(Box::new(inner)))
+            }
+            Some(InterfaceType::IpTunnel) => {
+                let inner = IpTunnelInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::IpTunnel(Box::new(inner)))
             }
             Some(InterfaceType::Loopback) => {
                 let inner = LoopbackInterface::deserialize(v)
@@ -520,6 +531,11 @@ impl Interface {
                 };
                 Self::InfiniBand(Box::new(new_iface))
             }
+            Self::IpTunnel(iface) => {
+                let mut new_iface = IpTunnelInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::IpTunnel(Box::new(new_iface))
+            }
             Self::Loopback(iface) => {
                 let mut new_iface = LoopbackInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -639,6 +655,7 @@ impl Interface {
             Self::Loopback(iface) => &iface.base,
             Self::MacSec(iface) => &iface.base,
             Self::Ipsec(iface) => &iface.base,
+            Self::IpTunnel(iface) => &iface.base,
             Self::Xfrm(iface) => &iface.base,
             Self::IpVlan(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
@@ -663,6 +680,7 @@ impl Interface {
             Self::Loopback(iface) => &mut iface.base,
             Self::MacSec(iface) => &mut iface.base,
             Self::Ipsec(iface) => &mut iface.base,
+            Self::IpTunnel(iface) => &mut iface.base,
             Self::Xfrm(iface) => &mut iface.base,
             Self::IpVlan(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
@@ -719,6 +737,7 @@ impl Interface {
             Interface::Ipsec(iface) => iface.sanitize(is_desired),
             Interface::Vlan(iface) => iface.sanitize(is_desired)?,
             Interface::IpVlan(iface) => iface.sanitize(is_desired)?,
+            Interface::IpTunnel(iface) => iface.sanitize(is_desired)?,
             _ => (),
         }
         Ok(())

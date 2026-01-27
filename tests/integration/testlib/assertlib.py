@@ -10,6 +10,7 @@ from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
 from libnmstate.schema import InfiniBand
+from libnmstate.schema import IpTunnel
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
@@ -114,6 +115,10 @@ def _prepare_state_for_verify(desired_state_data, kernel_only=False):
     # Nmstate always show veth as ethernet to simplify the verification.
     _use_ethernet_type_for_veth(full_desired_state)
     _use_ethernet_type_for_veth(current_state)
+    # Remove read-only cap-* flags used by kernel to describe
+    # tunnel capabilities
+    _remove_cap_flags_from_ip_tunnel(full_desired_state)
+    _remove_cap_flags_from_ip_tunnel(current_state)
 
     return full_desired_state, current_state
 
@@ -263,3 +268,16 @@ def _use_ethernet_type_for_veth(state):
     for iface_state in state.state[Interface.KEY]:
         if iface_state[Interface.TYPE] == InterfaceType.VETH:
             iface_state[Interface.TYPE] = InterfaceType.ETHERNET
+
+
+def _remove_cap_flags_from_ip_tunnel(state):
+    for iface_state in state.state[Interface.KEY]:
+        if iface_state[Interface.TYPE] != InterfaceType.IP_TUNNEL:
+            continue
+        ip_tunnel_config = iface_state.get(IpTunnel.CONFIG_SUBTREE)
+        if ip_tunnel_config and IpTunnel.IP6TUN_FLAGS in ip_tunnel_config:
+            ip_tunnel_config[IpTunnel.IP6TUN_FLAGS] = [
+                flag
+                for flag in ip_tunnel_config[IpTunnel.IP6TUN_FLAGS]
+                if not flag.startswith("cap-")
+            ]

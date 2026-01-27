@@ -12,6 +12,7 @@ mod iface;
 mod infiniband;
 mod inter_ifaces;
 mod ip;
+mod ip_tunnel;
 mod ipsec;
 mod ipvlan;
 mod linux_bridge;
