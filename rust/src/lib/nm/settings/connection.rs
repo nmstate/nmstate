@@ -17,6 +17,7 @@ use super::{
     iface_match::apply_iface_match,
     infiniband::gen_nm_ib_setting,
     ip::gen_nm_ip_setting,
+    ip_tunnel::gen_nm_ip_tunnel_setting,
     ipvlan::gen_nm_ipvlan_setting,
     loopback::gen_nm_loopback_setting,
     macsec::gen_nm_macsec_setting,
@@ -228,6 +229,9 @@ pub(crate) fn iface_to_nm_connections(
         }
         Interface::Hsr(iface) => {
             gen_nm_hsr_setting(iface, &mut nm_conn);
+        }
+        Interface::IpTunnel(iface) => {
+            gen_nm_ip_tunnel_setting(iface, &mut nm_conn);
         }
         Interface::Ipsec(iface) => {
             gen_nm_ipsec_vpn_setting(iface, &mut nm_conn);

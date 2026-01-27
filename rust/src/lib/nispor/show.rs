@@ -14,6 +14,7 @@ use crate::{
         hostname::get_hostname_state,
         hsr::np_hsr_to_nmstate,
         infiniband::np_ib_to_nmstate,
+        ip_tunnel::np_ip_tunnel_to_nmstate,
         ipvlan::np_ipvlan_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
@@ -149,6 +150,9 @@ pub(crate) async fn nispor_retrieve(
             }
             InterfaceType::IpVlan => Interface::IpVlan(Box::new(
                 np_ipvlan_to_nmstate(np_iface, base_iface),
+            )),
+            InterfaceType::IpTunnel => Interface::IpTunnel(Box::new(
+                np_ip_tunnel_to_nmstate(np_iface, base_iface),
             )),
             _ => {
                 log::debug!(

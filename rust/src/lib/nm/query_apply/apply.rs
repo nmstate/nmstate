@@ -13,9 +13,9 @@ use super::super::{
         deactivate_nm_connections, deactivate_nm_devices,
         delete_exist_connections, delete_orphan_ovs_ports,
         dispatch::apply_dispatch_script, dns::store_dns_config, is_hsr_changed,
-        is_ipvlan_changed, is_mptcp_flags_changed, is_route_removed,
-        is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
-        is_vxlan_changed, save_nm_connections,
+        is_ip_tunnel_changed, is_ipvlan_changed, is_mptcp_flags_changed,
+        is_route_removed, is_veth_peer_changed, is_vlan_changed,
+        is_vrf_table_id_changed, is_vxlan_changed, save_nm_connections,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -337,6 +337,7 @@ async fn delete_orphan_ports(
 //  https://issues.redhat.com/browse/RHEL-67324
 // * NM cannot change VRF table ID, so we deactivate first
 // * VLAN config changed.
+// * IP tunnel config changed.
 // * Veth peer changed.
 // * HSR config changed.
 // * NM cannot reapply changes to MPTCP flags.
@@ -371,6 +372,7 @@ fn gen_nm_conn_need_to_deactivate_first(
                     || is_vrf_table_id_changed(nm_conn, nm_applied_conn)
                     || is_vlan_changed(nm_conn, nm_applied_conn)
                     || is_hsr_changed(nm_conn, nm_applied_conn)
+                    || is_ip_tunnel_changed(nm_conn, nm_applied_conn)
                     || is_vxlan_changed(nm_conn, nm_applied_conn)
                     || is_veth_peer_changed(nm_conn, nm_applied_conn)
                     || is_mptcp_flags_changed(nm_conn, nm_applied_conn)

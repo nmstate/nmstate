@@ -15,6 +15,9 @@ impl Interface {
         if let Interface::OvsBridge(iface) = self {
             iface.sanitize_current_for_verify()
         }
+        if let Interface::IpTunnel(iface) = self {
+            iface.sanitize_current_for_verify();
+        }
     }
 
     // This function will clean up desired state before verification
@@ -23,6 +26,8 @@ impl Interface {
         if let Interface::Ethernet(iface) = self {
             iface.sanitize_desired_for_verify();
         } else if let Interface::Hsr(iface) = self {
+            iface.sanitize_desired_for_verify();
+        } else if let Interface::IpTunnel(iface) = self {
             iface.sanitize_desired_for_verify();
         }
     }
@@ -262,7 +267,7 @@ impl Interface {
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 19] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 20] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -280,6 +285,7 @@ impl InterfaceType {
         InterfaceType::Vrf,
         InterfaceType::Hsr,
         InterfaceType::Ipsec,
+        InterfaceType::IpTunnel,
         InterfaceType::Xfrm,
         InterfaceType::IpVlan,
     ];

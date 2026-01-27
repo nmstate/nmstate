@@ -9,6 +9,7 @@ mod ethernet;
 mod ethtool;
 mod hsr;
 pub(crate) mod inter_ifaces;
+mod ip_tunnel;
 mod ipsec;
 mod ipvlan;
 mod loopback;
@@ -47,6 +48,9 @@ pub use ethtool::{
 pub use hsr::{HsrConfig, HsrInterface, HsrProtocol};
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
 pub use inter_ifaces::*;
+pub use ip_tunnel::{
+    Ip6TunnelFlag, IpTunnelConfig, IpTunnelInterface, IpTunnelMode,
+};
 pub use ipsec::{
     IpsecInterface, LibreswanAddressFamily, LibreswanConfig,
     LibreswanConnectionType,

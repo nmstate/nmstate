@@ -132,6 +132,7 @@ class InterfaceType:
     LOOPBACK = "loopback"
     IPSEC = "ipsec"
     IPVLAN = "ipvlan"
+    IP_TUNNEL = "ip-tunnel"
 
     VIRT_TYPES = (
         BOND,
@@ -145,6 +146,7 @@ class InterfaceType:
         VETH,
         VLAN,
         VXLAN,
+        IP_TUNNEL,
         IPSEC,
         IPVLAN,
     )
@@ -518,6 +520,21 @@ class IpVlan:
         L2 = "l2"
         L3 = "l3"
         L3S = "l3s"
+
+
+class IpTunnel:
+    CONFIG_SUBTREE = "ip-tunnel"
+    MODE = "mode"
+    BASE_IFACE = "base-iface"
+    LOCAL = "local"
+    REMOTE = "remote"
+    TTL = "ttl"
+    TOS = "tos"
+    FLOW_LABEL = "flow-label"
+    IP6TUN_FLAGS = "ip6tun-flags"
+    PMTU_DISC = "pmtu-disc"
+    ENCAP_LIMIT = "encap-limit"
+    FWMARK = "fwmark"
 
 
 class Ieee8021X:

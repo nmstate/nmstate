@@ -1,0 +1,10 @@
+---
+interfaces:
+  - name: ipip0
+    type: ip-tunnel
+    state: up
+    ip-tunnel:
+      mode: ipip
+      local: 192.0.2.1
+      remote: 192.0.2.2
+      ttl: 255

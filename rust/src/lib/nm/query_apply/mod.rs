@@ -8,6 +8,7 @@ pub(crate) mod dns;
 mod hsr;
 mod ieee8021x;
 mod ip;
+mod ip_tunnel;
 mod ipvlan;
 mod lldp;
 mod mptcp;
@@ -34,6 +35,7 @@ pub(crate) use self::{
         nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
         query_nmstate_wait_ip,
     },
+    ip_tunnel::is_ip_tunnel_changed,
     ipvlan::is_ipvlan_changed,
     lldp::{get_lldp, is_lldp_enabled},
     mptcp::is_mptcp_flags_changed,

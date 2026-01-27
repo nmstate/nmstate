@@ -1,0 +1,13 @@
+---
+interfaces:
+  - name: ip6ip60
+    type: ip-tunnel
+    state: up
+    ip-tunnel:
+      mode: ip6ip6
+      local: '2001:db8::ffff'
+      remote: '2001:db8::1'
+      ttl: 255
+      flow-label: 4224
+      ip6tun-flags:
+        - ign-encap-limit
