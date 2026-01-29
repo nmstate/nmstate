@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
-    InterfaceType, MergedInterface, MergedInterfaces, NmstateError,
+    InterfaceState, InterfaceType, MergedInterface, MergedInterfaces,
+    NmstateError,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -187,7 +188,7 @@ impl MergedInterfaces {
 
         for (hsr_iface, hsr_conf, mac) in
             self.kernel_ifaces.iter().filter_map(|(_, iface)| {
-                if !iface.is_desired() {
+                if !iface.is_desired() || !iface.merged.is_up() {
                     return None;
                 }
 
@@ -238,6 +239,10 @@ impl MergedInterfaces {
         for (ifname, mac) in pending_changes {
             if let Some(iface) = self.kernel_ifaces.get_mut(&ifname) {
                 iface.mark_as_changed();
+                if let Some(for_apply) = iface.for_apply.as_mut() {
+                    for_apply.base_iface_mut().state = InterfaceState::Up;
+                }
+                iface.merged.base_iface_mut().state = InterfaceState::Up;
                 iface.set_copy_from_mac(mac.clone());
             }
         }
