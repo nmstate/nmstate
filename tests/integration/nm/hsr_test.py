@@ -46,7 +46,7 @@ def clean_up():
     libnmstate.apply(state)
 
 
-def test_auto_disable_ip_of_hsr_ports(eth1_up_with_auto_ip, eth1_up, clean_up):
+def test_auto_disable_ip_of_hsr_ports(eth1_up_with_auto_ip, eth2_up, clean_up):
     state = load_yaml(
         """---
             interfaces:
