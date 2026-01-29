@@ -63,6 +63,9 @@ def test_auto_disable_ip_of_hsr_ports(eth1_up_with_auto_ip, eth2_up, clean_up):
     )
     libnmstate.apply(state)
 
+    assert "eth1" in exec_cmd("nmcli c show --active".split(), check=True)[1]
+    assert "eth2" in exec_cmd("nmcli c show --active".split(), check=True)[1]
+
     assert (
         exec_cmd("nmcli -g ipv4.method c show eth1".split(), check=True)[1]
         == "disabled\n"

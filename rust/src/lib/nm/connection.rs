@@ -49,7 +49,9 @@ pub(crate) fn prepare_nm_conns(
     let nm_devs_indexed = create_index_for_nm_devs(nm_devs);
     let mut nm_devs_to_deactivate: Vec<NmDevice> = ifaces
         .iter()
-        .filter(|iface| iface.merged.is_down())
+        .filter(|iface| {
+            iface.for_apply.as_ref().map(|i| i.is_down()) == Some(true)
+        })
         .filter_map(|iface| {
             nm_devs_indexed
                 .get(&(iface.merged.name(), iface.merged.iface_type()))
