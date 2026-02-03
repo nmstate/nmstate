@@ -1,4 +1,22 @@
 # Changelog
+## [2.2.58] - 2026-02-03
+### Breaking changes
+ - Bump minimum supported Rust version to 1.88. (69298a1b)
+ - Relicensed the whole project to Apache 2.0. (b649a737, 83b21b8a)
+
+### New features
+ - Support for HSR "interlink" property. (e7481ab9)
+ - Support referring interface name using its alt-name. (2a2e4dd0)
+ - Support referring alt-name as port/parent/next-hop-interface. (b1e46e16)
+
+### Bug fixes
+ - nm hsr: do not deactivate undesired HSR port. (0896bd90)
+ - vrf: Handle ignore interface when verifying desired state. (3db8a2fd)
+ - alt-name: Remove alt-names when interface marked as absent. (34014ebe)
+ - hsr: Automatically disable IP on hsr port. (60d41134)
+ - bond: Improve bond mode and option deserialize. (1ee9d54e)
+ - RPM: Fix spec file for time crate dependency. (dda18144)
+
 ## [2.2.57] - 2025-12-09
 ### Breaking changes
  - N/A
