@@ -26,6 +26,6 @@ __all__ = [
     "validate",
 ]
 
-__version__ = "2.2.58"
+__version__ = "2.2.59"
 
 BASE_ON_RUST = True
