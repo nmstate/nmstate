@@ -26,12 +26,28 @@ pub(crate) fn store_route_config(
                             .base_iface_mut()
                             .ipv4
                             .clone_from(&iface.merged.base_iface_mut().ipv4);
+                        if let Some(addrs) = apply_iface
+                            .base_iface_mut()
+                            .ipv4
+                            .as_mut()
+                            .and_then(|i| i.addresses.as_mut())
+                        {
+                            addrs.retain(|addr| !addr.is_protocol_other());
+                        }
                     }
                     if apply_iface.base_iface_mut().ipv6.is_none() {
                         apply_iface
                             .base_iface_mut()
                             .ipv6
                             .clone_from(&iface.merged.base_iface_mut().ipv6);
+                        if let Some(addrs) = apply_iface
+                            .base_iface_mut()
+                            .ipv6
+                            .as_mut()
+                            .and_then(|i| i.addresses.as_mut())
+                        {
+                            addrs.retain(|addr| !addr.is_protocol_other());
+                        }
                     }
                     apply_iface.base_iface_mut().routes = Some(rts.clone());
                 }

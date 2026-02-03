@@ -1,13 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Interface, InterfaceIpv4, InterfaceIpv6, RouteEntry};
+use crate::{
+    Interface, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, RouteEntry,
+};
+
+// Protocol is query only, keeping it would break the address equality
+// used by process_allow_extra_address()
+fn sanitize_addrs_for_verify(addrs: &mut Vec<InterfaceIpAddr>) {
+    for addr in addrs.iter_mut() {
+        addr.protocol = None;
+    }
+    addrs.sort_unstable();
+    addrs.dedup();
+}
 
 impl InterfaceIpv4 {
     // Sort addresses and dedup
     pub(crate) fn sanitize_current_for_verify(&mut self) {
         if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
+            sanitize_addrs_for_verify(addrs);
         }
         if self.dhcp_custom_hostname.is_none() {
             self.dhcp_custom_hostname = Some(String::new());
@@ -32,8 +43,7 @@ impl InterfaceIpv4 {
                 // false as it might varied depend on whether have route on it
                 self.enabled_defined = false;
             } else {
-                addrs.sort_unstable();
-                addrs.dedup();
+                sanitize_addrs_for_verify(addrs);
             }
         }
         // We do not verify prefix_route_metric or auto_route_metric if set to
@@ -103,8 +113,7 @@ impl InterfaceIpv6 {
     // Sort addresses and dedup
     pub(crate) fn sanitize_current_for_verify(&mut self) {
         if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
+            sanitize_addrs_for_verify(addrs);
         }
 
         // None IPv6 token should be treat as "::"
@@ -134,8 +143,7 @@ impl InterfaceIpv6 {
     // Sort addresses and dedup
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
         if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
+            sanitize_addrs_for_verify(addrs);
         }
     }
     pub(crate) fn update(&mut self, other: &Self) {

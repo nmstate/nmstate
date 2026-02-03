@@ -471,9 +471,25 @@ fn preserve_current_ip(iface: &mut Interface, cur_iface: Option<&Interface>) {
     if iface.base_iface().ipv4.is_none() {
         iface.base_iface_mut().ipv4 =
             cur_iface.as_ref().and_then(|i| i.base_iface().ipv4.clone());
+        if let Some(addrs) = iface
+            .base_iface_mut()
+            .ipv4
+            .as_mut()
+            .and_then(|ip| ip.addresses.as_mut())
+        {
+            addrs.retain(|addr| !addr.is_protocol_other())
+        }
     }
     if iface.base_iface().ipv6.is_none() {
         iface.base_iface_mut().ipv6 =
             cur_iface.as_ref().and_then(|i| i.base_iface().ipv6.clone());
+        if let Some(addrs) = iface
+            .base_iface_mut()
+            .ipv6
+            .as_mut()
+            .and_then(|ip| ip.addresses.as_mut())
+        {
+            addrs.retain(|addr| !addr.is_protocol_other())
+        }
     }
 }

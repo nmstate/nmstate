@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    BaseInterface, ErrorKind, Interface, InterfaceIpv6, InterfaceState,
-    Interfaces, MergedInterfaces, RouteEntry, ip::sanitize_ip_network,
-    unit_tests::testlib::new_eth_iface,
+    AddressProtocol, BaseInterface, ErrorKind, Interface, InterfaceIpv4,
+    InterfaceIpv6, InterfaceState, Interfaces, MergedInterfaces, RouteEntry,
+    ip::sanitize_ip_network, unit_tests::testlib::new_eth_iface,
 };
 
 fn gen_test_eth_ifaces() -> Interfaces {
@@ -815,4 +815,135 @@ fn test_disable_ipv6_where_selective() {
     assert!(eth2_ipv6.enabled_defined);
     assert_eq!(eth2_ipv6.dhcp, Some(true));
     assert_eq!(eth2_ipv6.autoconf, Some(true));
+}
+
+#[test]
+fn test_address_protocol_parse() {
+    let ipv4: InterfaceIpv4 = serde_yaml::from_str(
+        r#"---
+enabled: true
+dhcp: false
+address:
+- ip: "192.0.2.1"
+  prefix-length: 24
+  protocol: lo
+- ip: "192.0.2.2"
+  prefix-length: 24
+  protocol: ra
+- ip: "192.0.2.3"
+  prefix-length: 24
+  protocol: kernel_ll
+- ip: "192.0.2.4"
+  prefix-length: 24
+  protocol: "0x54"
+- ip: "192.0.2.5"
+  prefix-length: 24
+  protocol: 84
+"#,
+    )
+    .unwrap();
+
+    let protocols: Vec<_> = ipv4
+        .addresses
+        .as_deref()
+        .unwrap()
+        .iter()
+        .map(|a| a.protocol)
+        .collect();
+    assert_eq!(
+        protocols,
+        vec![
+            Some(AddressProtocol::Loopback),
+            Some(AddressProtocol::RouterAnnouncement),
+            Some(AddressProtocol::LinkLocal),
+            Some(AddressProtocol::Other(0x54)),
+            Some(AddressProtocol::Other(84)),
+        ]
+    );
+}
+
+#[test]
+fn test_address_protocol_invalid() {
+    for protocol in ["bogus", "\"0x1ff\"", "300", "-1"] {
+        let result: Result<InterfaceIpv4, _> = serde_yaml::from_str(&format!(
+            r#"---
+enabled: true
+dhcp: false
+address:
+- ip: "192.0.2.1"
+  prefix-length: 24
+  protocol: {protocol}
+"#
+        ));
+        assert!(result.is_err(), "protocol {protocol} should fail to parse");
+    }
+}
+
+#[test]
+fn test_sanitize_desired_remove_other_protocol_address() {
+    let mut ipv4: InterfaceIpv4 = serde_yaml::from_str(
+        r#"---
+enabled: true
+dhcp: false
+address:
+- ip: "192.0.2.1"
+  prefix-length: 24
+- ip: "192.0.2.2"
+  prefix-length: 24
+  protocol: "0x54"
+"#,
+    )
+    .unwrap();
+
+    ipv4.sanitize(true).unwrap();
+
+    let addrs = ipv4.addresses.as_deref().unwrap();
+    assert_eq!(addrs.len(), 1);
+    assert_eq!(addrs[0].ip.to_string(), "192.0.2.1");
+}
+
+#[test]
+fn test_verify_ignore_current_address_protocol() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: "true"
+    dhcp: "false"
+    address:
+    - ip: "192.168.1.1"
+      prefix-length: "24"
+"#,
+    )
+    .unwrap();
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: "true"
+    dhcp: "false"
+    address:
+    - ip: "192.168.1.1"
+      prefix-length: "24"
+      protocol: lo
+    - ip: "192.168.1.2"
+      prefix-length: "24"
+      protocol: "0x54"
+"#,
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
 }

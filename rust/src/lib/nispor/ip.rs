@@ -3,8 +3,8 @@
 use std::str::FromStr;
 
 use crate::{
-    InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, MergedInterface,
-    nispor::mptcp::get_mptcp_flags,
+    AddressProtocol, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
+    MergedInterface, nispor::mptcp::get_mptcp_flags,
 };
 
 pub(crate) fn np_ipv4_to_nmstate(
@@ -53,6 +53,7 @@ pub(crate) fn np_ipv4_to_nmstate(
                     } else {
                         None
                     },
+                    protocol: np_addr.protocol.map(AddressProtocol::from),
                     ..Default::default()
                 }),
                 Err(e) => {
@@ -127,6 +128,7 @@ pub(crate) fn np_ipv6_to_nmstate(
                     } else {
                         None
                     },
+                    protocol: np_addr.protocol.map(AddressProtocol::from),
                     ..Default::default()
                 }),
                 Err(e) => {
@@ -162,15 +164,29 @@ pub(crate) fn nmstate_ipv4_to_np(
             &nms_merged_iface.merged.base_iface().ipv4,
         )
     {
-        let des_ips: Vec<_> = nms_des_ipv4
+        // Compare without query-only protocol, else the kernel-assigned tag
+        // alone marks an address for removal
+        let des_ips: Vec<InterfaceIpAddr> = nms_des_ipv4
             .addresses
             .as_deref()
             .unwrap_or_default()
             .iter()
+            .cloned()
+            .map(|mut a| {
+                a.protocol = None;
+                a
+            })
             .collect();
 
         for nms_addr in nms_cur_ipv4.addresses.as_deref().unwrap_or_default() {
-            if !des_ips.contains(&nms_addr) {
+            // Address managed by external tool, sanitize removed it from
+            // desired state, but it should stay in kernel
+            if nms_addr.is_protocol_other() {
+                continue;
+            }
+            let mut cmp_addr = nms_addr.clone();
+            cmp_addr.protocol = None;
+            if !des_ips.contains(&cmp_addr) {
                 np_ip_conf.addresses.push({
                     let mut ip_conf = nispor::IpAddrConf::default();
                     ip_conf.address = nms_addr.ip.to_string();
@@ -208,15 +224,29 @@ pub(crate) fn nmstate_ipv6_to_np(
             &nms_merged_iface.merged.base_iface().ipv6,
         )
     {
-        let des_ips: Vec<_> = nms_des_ipv6
+        // Compare without query-only protocol, else the kernel-assigned tag
+        // alone marks an address for removal
+        let des_ips: Vec<InterfaceIpAddr> = nms_des_ipv6
             .addresses
             .as_deref()
             .unwrap_or_default()
             .iter()
+            .cloned()
+            .map(|mut a| {
+                a.protocol = None;
+                a
+            })
             .collect();
 
         for nms_addr in nms_cur_ipv6.addresses.as_deref().unwrap_or_default() {
-            if !des_ips.contains(&nms_addr) {
+            // Address managed by external tool, sanitize removed it from
+            // desired state, but it should stay in kernel
+            if nms_addr.is_protocol_other() {
+                continue;
+            }
+            let mut cmp_addr = nms_addr.clone();
+            cmp_addr.protocol = None;
+            if !des_ips.contains(&cmp_addr) {
                 np_ip_conf.addresses.push({
                     let mut ip_conf = nispor::IpAddrConf::default();
                     ip_conf.address = nms_addr.ip.to_string();
