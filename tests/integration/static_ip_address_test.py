@@ -1313,3 +1313,49 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
         kernel_only=True,
     )
     assertlib.assert_state_match(new_desired_state, kernel_only=True)
+
+
+def test_ignore_ip_addr_with_other_protocol(eth1_up):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            - ip: 192.0.2.250
+              prefix-length: 24
+              protocol: 0x84
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+              - ip: 2001:db8:1::2
+                prefix-length: 64
+                protocol: 0x84
+        """
+    )
+    libnmstate.apply(desired_state)
+
+    cur_state = statelib.show_only(("eth1",))[Interface.KEY][0]
+    cur_ipv4_addrs = [
+        addr[InterfaceIPv4.ADDRESS_IP]
+        for addr in cur_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
+    ]
+    cur_ipv6_addrs = [
+        addr[InterfaceIPv6.ADDRESS_IP]
+        for addr in cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    ]
+
+    assert "192.0.2.251" in cur_ipv4_addrs
+    assert "192.0.2.250" not in cur_ipv4_addrs
+    assert "2001:db8:1::1" in cur_ipv6_addrs
+    assert "2001:db8:1::2" not in cur_ipv6_addrs
