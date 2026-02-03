@@ -240,6 +240,10 @@ impl InterfaceIpv4 {
                     a.valid_life_time = None;
                     a.preferred_life_time = None;
                 });
+                // Ignore other protocol address
+                addrs.retain(|addr| {
+                    !matches!(addr.protocol, Some(AddressProtocol::Other(_)))
+                });
             }
         }
     }
@@ -279,6 +283,7 @@ impl InterfaceIpv4 {
     // * Remove auto IP address.
     // * Set DHCP options to None if DHCP is false
     // * Remove mptcp_flags is they are for query only
+    // * Remove address holding protocol: `AddressProtocol::Other(d)`
     pub(crate) fn sanitize(
         &mut self,
         is_desired: bool,
@@ -386,6 +391,21 @@ impl InterfaceIpv4 {
             self.dhcp_custom_hostname = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
+            addrs.retain(|addr| {
+                if let Some(AddressProtocol::Other(d)) = addr.protocol {
+                    if is_desired {
+                        log::warn!(
+                            "Ignoring IPv4 address {}/{} with protocol: \
+                             0x{d:x}",
+                            &addr.ip,
+                            addr.prefix_length
+                        );
+                    }
+                    false
+                } else {
+                    true
+                }
+            });
             for addr in addrs.iter_mut() {
                 addr.mptcp_flags = None;
             }
@@ -660,6 +680,18 @@ impl InterfaceIpv6 {
                             );
                         }
                         false
+                    } else if let Some(AddressProtocol::Other(d)) =
+                        addr.protocol
+                    {
+                        if is_desired {
+                            log::warn!(
+                                "Ignoring IPv6 address {}/{} with protocol: \
+                                 0x{d:x}",
+                                &addr.ip,
+                                addr.prefix_length
+                            );
+                        }
+                        false
                     } else {
                         true
                     }
@@ -906,6 +938,18 @@ pub struct InterfaceIpAddr {
         alias = "preferred-lft"
     )]
     pub preferred_life_time: Option<String>,
+    /// IP address protocol.
+    /// This property is query only, nmstate will not set protocol for desired
+    /// IP address yet.
+    /// Nmstate will not preserve IP address holding
+    /// `AddressProtocol::Other(d)` from current state during apply action
+    /// because they are considered to be managed by external tools.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_enum_string_or_integer"
+    )]
+    pub protocol: Option<AddressProtocol>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -916,6 +960,7 @@ impl Default for InterfaceIpAddr {
             mptcp_flags: None,
             valid_life_time: None,
             preferred_life_time: None,
+            protocol: None,
         }
     }
 }
@@ -986,6 +1031,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             mptcp_flags: None,
             valid_life_time: None,
             preferred_life_time: None,
+            protocol: None,
         })
     }
 }
@@ -1410,5 +1456,138 @@ fn apply_ip_prefix_len(ip: IpAddr, prefix_length: usize) -> IpAddr {
             u32::from(i) & (u32::MAX << (IPV4_ADDR_LEN - prefix_length)),
         )
         .into(),
+    }
+}
+
+#[derive(
+    Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize,
+)]
+#[serde(into = "String")]
+#[non_exhaustive]
+pub enum AddressProtocol {
+    Loopback,
+    RouterAnnouncement,
+    LinkLocal,
+    Other(u8),
+}
+
+impl From<AddressProtocol> for String {
+    fn from(v: AddressProtocol) -> Self {
+        v.to_string()
+    }
+}
+
+// Using iproute string here
+impl std::fmt::Display for AddressProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Loopback => write!(f, "lo"),
+            Self::RouterAnnouncement => write!(f, "ra"),
+            Self::LinkLocal => write!(f, "kernel_ll"),
+            Self::Other(d) => write!(f, "0x{d:x}"),
+        }
+    }
+}
+
+impl std::convert::TryFrom<&str> for AddressProtocol {
+    type Error = NmstateError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(match value {
+            "lo" => Self::Loopback,
+            "ra" => Self::RouterAnnouncement,
+            "kernel_ll" => Self::LinkLocal,
+            v => {
+                if let Some(s) = v.strip_prefix("0x") {
+                    u8::from_str_radix(s, 16)
+                        .map_err(|_| {
+                            NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Invalid address protocol '{v}', should \
+                                     lo, ra, kernel_ll or integer from 1 to \
+                                     255"
+                                ),
+                            )
+                        })?
+                        .into()
+                } else {
+                    v.parse::<u8>()
+                        .map_err(|_| {
+                            NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Invalid address protocol '{v}', should \
+                                     lo, ra, kernel_ll or integer from 1 to \
+                                     255"
+                                ),
+                            )
+                        })?
+                        .into()
+                }
+            }
+        })
+    }
+}
+
+impl From<nispor::AddressProtocol> for AddressProtocol {
+    fn from(d: nispor::AddressProtocol) -> Self {
+        match d {
+            nispor::AddressProtocol::Loopback => Self::Loopback,
+            nispor::AddressProtocol::RouterAnnouncement => {
+                Self::RouterAnnouncement
+            }
+            nispor::AddressProtocol::LinkLocal => Self::LinkLocal,
+            _ => Self::Other(u8::from(d)),
+        }
+    }
+}
+
+impl From<AddressProtocol> for nispor::AddressProtocol {
+    fn from(v: AddressProtocol) -> Self {
+        match v {
+            AddressProtocol::Loopback => Self::Loopback,
+            AddressProtocol::RouterAnnouncement => Self::RouterAnnouncement,
+            AddressProtocol::LinkLocal => Self::LinkLocal,
+            AddressProtocol::Other(d) => Self::Other(d),
+        }
+    }
+}
+
+const IFAPROT_KERNEL_LO: u8 = 1;
+const IFAPROT_KERNEL_RA: u8 = 2;
+const IFAPROT_KERNEL_LL: u8 = 3;
+
+impl From<u8> for AddressProtocol {
+    fn from(d: u8) -> Self {
+        match d {
+            IFAPROT_KERNEL_LO => Self::Loopback,
+            IFAPROT_KERNEL_RA => Self::RouterAnnouncement,
+            IFAPROT_KERNEL_LL => Self::LinkLocal,
+            _ => Self::Other(d),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AddressProtocol {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let err_msg = "Invalid address protocol 'd', should be lo, ra, \
+                       kernel_ll or integer from 1 to 255";
+        let v = serde_json::Value::deserialize(deserializer)?;
+        if let Some(v) = v.as_str() {
+            Self::try_from(v)
+                .map_err(|e| serde::de::Error::custom(e.to_string()))
+        } else if let Some(d) = v.as_u64() {
+            if d > u8::MAX as u64 {
+                Err(serde::de::Error::custom(err_msg))
+            } else {
+                Ok(Self::from(d as u8))
+            }
+        } else {
+            Err(serde::de::Error::custom(err_msg))
+        }
     }
 }

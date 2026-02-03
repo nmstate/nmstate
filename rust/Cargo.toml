@@ -34,3 +34,7 @@ tokio = { version = "1.30", features = ["rt", "net", "time"] }
 platforms = ["*-unknown-linux-gnu"]
 tier = "2"
 all-features = true
+
+# BUG: Remove this before merge
+[patch.crates-io]
+nispor = { git = "https://github.com/nispor/nispor.git" }

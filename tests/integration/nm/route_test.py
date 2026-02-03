@@ -22,10 +22,12 @@ from libnmstate.error import NmstateVerificationError
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
+IPV4_ADDRESS3 = "192.0.2.253"
 IPV4_TEST_NET1 = "203.0.113.0/24"
 IPV4_GATEWAY1 = "192.0.2.1"
 IPV6_ADDRESS1 = "2001:db8:1::1"
 IPV6_ADDRESS2 = "2001:db8:1::2"
+IPV6_ADDRESS3 = "2001:db8:1::3"
 IPV6_TEST_NET1 = "2001:db8:e::/64"
 IPV6_GATEWAY1 = "2001:db8:1::f"
 TEST_GATEAY4 = "192.0.2.1"
@@ -488,3 +490,164 @@ def test_apply_absent_routes_to_ignored_iface(
             and route[Route.DESTINATION] == IPV6_TEST_NET1
             for route in routes
         )
+
+
+@pytest.fixture
+def external_managed_dummy1_with_static_ip_and_other_protocol_addr():
+    with nm_unmanaged_dummy(DUMMY1):
+        exec_cmd(
+            f"ip addr add {IPV4_ADDRESS1} dev {DUMMY1}".split(),
+            check=True,
+        )
+        exec_cmd(
+            f"ip addr add {IPV4_ADDRESS3} proto 84 dev {DUMMY1}".split(),
+            check=True,
+        )
+        exec_cmd(
+            f"ip addr add {IPV6_ADDRESS1} dev {DUMMY1}".split(),
+            check=True,
+        )
+        exec_cmd(
+            f"ip addr add {IPV6_ADDRESS3} proto 84 dev {DUMMY1}".split(),
+            check=True,
+        )
+        exec_cmd(f"nmcli d set {DUMMY1} managed true".split(), check=True)
+        yield
+
+
+# TODO: Add OCP jira issue and mark as tier1
+def test_modify_route_of_ext_iface_should_ignore_other_protocol_addr(
+    external_managed_dummy1_with_static_ip_and_other_protocol_addr,
+):
+    desired_routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: DUMMY1,
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: DUMMY1,
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.TABLE_ID: 254,
+        },
+    ]
+    libnmstate.apply({Route.KEY: {Route.CONFIG: desired_routes}})
+
+    cur_state = libnmstate.show()
+    assert_routes(desired_routes, cur_state)
+
+    # The NM saved config should not contains IPV4_ADDRESS3 and IPV6_ADDRESS3
+
+    assert (
+        IPV4_ADDRESS1
+        in exec_cmd(
+            f"nmcli -f ipv4.addresses c show {DUMMY1}".split(), check=True
+        )[1]
+    )
+    assert (
+        IPV4_ADDRESS3
+        not in exec_cmd(
+            f"nmcli -f ipv4.addresses c show {DUMMY1}".split(), check=True
+        )[1]
+    )
+    assert (
+        IPV6_ADDRESS1
+        in exec_cmd(
+            f"nmcli -f ipv6.addresses c show {DUMMY1}".split(), check=True
+        )[1]
+    )
+    assert (
+        IPV6_ADDRESS3
+        not in exec_cmd(
+            f"nmcli -f ipv6.addresses c show {DUMMY1}".split(), check=True
+        )[1]
+    )
+
+
+@pytest.fixture
+def eth1_with_static_ip_and_other_protocol_addr(eth1_up):
+    libnmstate.apply(
+        yaml.load(
+            f"""---
+            interfaces:
+            - name: eth1
+              state: up
+              ipv4:
+                address:
+                - ip: {IPV4_ADDRESS1}
+                  prefix-length: 24
+                dhcp: false
+                enabled: true
+              ipv6:
+                address:
+                  - ip: {IPV6_ADDRESS1}
+                    prefix-length: 64
+                autoconf: false
+                dhcp: false
+                enabled: true
+            """,
+            Loader=yaml.SafeLoader,
+        )
+    )
+    exec_cmd(
+        f"ip addr add {IPV4_ADDRESS3} proto 84 dev eth1".split(),
+        check=True,
+    )
+    exec_cmd(
+        f"ip addr add {IPV6_ADDRESS3} proto 84 dev eth1".split(),
+        check=True,
+    )
+    yield
+
+
+# TODO: Add OCP jira issue and mark as tier1
+def test_modify_route_of_iface_should_ignore_other_protocol_addr(
+    eth1_with_static_ip_and_other_protocol_addr,
+):
+    desired_routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.TABLE_ID: 254,
+        },
+    ]
+    libnmstate.apply({Route.KEY: {Route.CONFIG: desired_routes}})
+
+    cur_state = libnmstate.show()
+    assert_routes(desired_routes, cur_state)
+
+    # The NM saved config should not contains IPV4_ADDRESS3 and IPV6_ADDRESS3
+
+    assert (
+        IPV4_ADDRESS1
+        in exec_cmd(
+            f"nmcli -f ipv4.addresses c show eth1".split(), check=True
+        )[1]
+    )
+    assert (
+        IPV4_ADDRESS3
+        not in exec_cmd(
+            f"nmcli -f ipv4.addresses c show eth1".split(), check=True
+        )[1]
+    )
+    assert (
+        IPV6_ADDRESS1
+        in exec_cmd(
+            f"nmcli -f ipv6.addresses c show eth1".split(), check=True
+        )[1]
+    )
+    assert (
+        IPV6_ADDRESS3
+        not in exec_cmd(
+            f"nmcli -f ipv6.addresses c show eth1".split(), check=True
+        )[1]
+    )

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{MergedNetworkState, NmstateError};
+use crate::{AddressProtocol, MergedNetworkState, NmstateError};
 
 pub(crate) fn store_route_config(
     merged_state: &mut MergedNetworkState,
@@ -26,12 +26,40 @@ pub(crate) fn store_route_config(
                             .base_iface_mut()
                             .ipv4
                             .clone_from(&iface.merged.base_iface_mut().ipv4);
+                        if let Some(addrs) = apply_iface
+                            .base_iface_mut()
+                            .ipv4
+                            .as_mut()
+                            .and_then(|i| i.addresses.as_mut())
+                        {
+                            // Ignore other protocol address
+                            addrs.retain(|addr| {
+                                !matches!(
+                                    addr.protocol,
+                                    Some(AddressProtocol::Other(_))
+                                )
+                            });
+                        }
                     }
                     if apply_iface.base_iface_mut().ipv6.is_none() {
                         apply_iface
                             .base_iface_mut()
                             .ipv6
                             .clone_from(&iface.merged.base_iface_mut().ipv6);
+                        if let Some(addrs) = apply_iface
+                            .base_iface_mut()
+                            .ipv6
+                            .as_mut()
+                            .and_then(|i| i.addresses.as_mut())
+                        {
+                            // Ignore other protocol address
+                            addrs.retain(|addr| {
+                                !matches!(
+                                    addr.protocol,
+                                    Some(AddressProtocol::Other(_))
+                                )
+                            });
+                        }
                     }
                     apply_iface.base_iface_mut().routes = Some(rts.clone());
                 }

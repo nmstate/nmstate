@@ -3,8 +3,8 @@
 use std::str::FromStr;
 
 use crate::{
-    InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, MergedInterface,
-    nispor::mptcp::get_mptcp_flags,
+    AddressProtocol, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
+    MergedInterface, nispor::mptcp::get_mptcp_flags,
 };
 
 pub(crate) fn np_ipv4_to_nmstate(
@@ -53,6 +53,7 @@ pub(crate) fn np_ipv4_to_nmstate(
                     } else {
                         None
                     },
+                    protocol: np_addr.protocol.map(AddressProtocol::from),
                     ..Default::default()
                 }),
                 Err(e) => {
@@ -127,6 +128,7 @@ pub(crate) fn np_ipv6_to_nmstate(
                     } else {
                         None
                     },
+                    protocol: np_addr.protocol.map(AddressProtocol::from),
                     ..Default::default()
                 }),
                 Err(e) => {

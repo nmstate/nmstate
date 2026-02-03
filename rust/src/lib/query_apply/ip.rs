@@ -34,6 +34,9 @@ impl InterfaceIpv4 {
             } else {
                 addrs.sort_unstable();
                 addrs.dedup();
+                for addr in addrs {
+                    addr.protocol = None;
+                }
             }
         }
     }
@@ -125,6 +128,9 @@ impl InterfaceIpv6 {
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.sort_unstable();
             addrs.dedup();
+            for addr in addrs {
+                addr.protocol = None;
+            }
         }
     }
     pub(crate) fn update(&mut self, other: &Self) {

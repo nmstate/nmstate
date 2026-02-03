@@ -34,8 +34,8 @@ use super::{
     wired::gen_nm_wired_setting,
 };
 use crate::{
-    Interface, InterfaceIdentifier, InterfaceType, MergedInterface,
-    MergedNetworkState, NmstateError, OvsBridgePortConfig,
+    AddressProtocol, Interface, InterfaceIdentifier, InterfaceType,
+    MergedInterface, MergedNetworkState, NmstateError, OvsBridgePortConfig,
 };
 
 pub(crate) fn iface_to_nm_connections(
@@ -467,9 +467,31 @@ fn preserve_current_ip(iface: &mut Interface, cur_iface: Option<&Interface>) {
     if iface.base_iface().ipv4.is_none() {
         iface.base_iface_mut().ipv4 =
             cur_iface.as_ref().and_then(|i| i.base_iface().ipv4.clone());
+        // Ignore other protocol address
+        if let Some(addrs) = iface
+            .base_iface_mut()
+            .ipv4
+            .as_mut()
+            .and_then(|ip| ip.addresses.as_mut())
+        {
+            addrs.retain(|addr| {
+                !matches!(addr.protocol, Some(AddressProtocol::Other(_)))
+            })
+        }
     }
     if iface.base_iface().ipv6.is_none() {
         iface.base_iface_mut().ipv6 =
             cur_iface.as_ref().and_then(|i| i.base_iface().ipv6.clone());
+        // Ignore other protocol address
+        if let Some(addrs) = iface
+            .base_iface_mut()
+            .ipv6
+            .as_mut()
+            .and_then(|ip| ip.addresses.as_mut())
+        {
+            addrs.retain(|addr| {
+                !matches!(addr.protocol, Some(AddressProtocol::Other(_)))
+            })
+        }
     }
 }
