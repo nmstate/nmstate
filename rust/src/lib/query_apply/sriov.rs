@@ -10,6 +10,7 @@ use crate::{
 impl SrIovConfig {
     // * Set 'vfs: []' to None which is just reverting all VF config to default.
     // * Set `vf.iface_name` empty string,
+    // * Set `max_vfs` as None because it is query only
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
         if let Some(vfs) = self.vfs.as_mut() {
             for vf in vfs.iter_mut() {
@@ -19,6 +20,7 @@ impl SrIovConfig {
                 self.vfs = None;
             }
         }
+        self.max_vfs = None;
     }
 
     pub(crate) fn update(&mut self, other: Option<&SrIovConfig>) {

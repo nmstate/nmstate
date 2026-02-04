@@ -62,6 +62,14 @@ pub struct SrIovConfig {
     /// The number of VFs enabled on PF.
     /// Deserialize and serialize from/to `total-vfs`.
     pub total_vfs: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    /// Query only property for the maximum number of VFs supported on PF.
+    /// Deserialize and serialize from/to `max-vfs`.
+    pub max_vfs: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// VF specific configurations.
     /// * Setting to `Some(Vec::new())` will revert all VF configurations back
@@ -404,6 +412,28 @@ impl MergedInterface {
             self.for_verify.as_mut(),
             self.current.as_ref(),
         ) {
+            if let Some(max_vfs) = cur_iface
+                .ethernet
+                .as_ref()
+                .and_then(|e| e.sr_iov.as_ref())
+                .and_then(|s| s.max_vfs)
+                && let Some(total_vfs) = apply_iface
+                    .ethernet
+                    .as_ref()
+                    .and_then(|e| e.sr_iov.as_ref())
+                    .and_then(|s| s.total_vfs)
+                && max_vfs < total_vfs
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired VFS count {total_vfs} exceeded the maximum \
+                         supported VFS count {max_vfs} for interface {}",
+                        apply_iface.base.name
+                    ),
+                ));
+            }
+
             let cur_conf =
                 cur_iface.ethernet.as_ref().and_then(|e| e.sr_iov.as_ref());
             if let (Some(apply_conf), Some(verify_conf)) = (
