@@ -93,6 +93,7 @@ fn gen_sriov_conf(sriov_info: &nispor::SriovInfo) -> SrIovConfig {
         vfs.push(vf);
     }
     ret.total_vfs = Some(vfs.len() as u32);
+    ret.max_vfs = sriov_info.max_num_vfs;
     ret.vfs = Some(vfs);
     ret
 }

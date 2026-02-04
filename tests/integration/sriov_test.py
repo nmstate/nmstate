@@ -6,6 +6,7 @@ import os
 import pytest
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bond
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Ethtool
@@ -58,6 +59,11 @@ def find_vf_iface_name(pf_name, vf_id):
     return os.listdir(
         f"/sys/class/net/{pf_name}/device/virtfn{vf_id}/net"
     ).pop()
+
+
+def get_max_vfs_count(pf_name):
+    with open(f"/sys/class/net/{pf_name}/device/sriov_totalvfs", "r") as fd:
+        return int(fd.read())
 
 
 @pytest.fixture
@@ -554,6 +560,45 @@ class TestSrIov:
                     Interface.NAME: pf_name,
                     Ethernet.CONFIG_SUBTREE: {
                         Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2},
+                    },
+                }
+            ]
+        }
+        libnmstate.apply(desired_state)
+        vf_ifaces = get_sriov_vf_names(pf_name)
+        assert len(vf_ifaces) == 2
+
+    def test_raise_error_if_exceeded_maximum_supported_vfs_count(self):
+        pf_name = _test_nic_name()
+        max_vfs = get_max_vfs_count(pf_name)
+
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Ethernet.CONFIG_SUBTREE: {
+                        Ethernet.SRIOV_SUBTREE: {
+                            Ethernet.SRIOV.TOTAL_VFS: max_vfs + 1
+                        },
+                    },
+                }
+            ]
+        }
+        with pytest.raises(NmstateValueError):
+            libnmstate.apply(desired_state)
+
+    def test_ignore_query_only_prop_max_vfs(self, disable_sriov):
+        pf_name = _test_nic_name()
+
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Ethernet.CONFIG_SUBTREE: {
+                        Ethernet.SRIOV_SUBTREE: {
+                            Ethernet.SRIOV.TOTAL_VFS: 2,
+                            Ethernet.SRIOV.MAX_VFS: 0,
+                        },
                     },
                 }
             ]

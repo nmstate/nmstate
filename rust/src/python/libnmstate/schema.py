@@ -301,6 +301,7 @@ class Ethernet:
     class SRIOV:
         DRIVERS_AUTOPROBE = "drivers-autoprobe"
         TOTAL_VFS = "total-vfs"
+        MAX_VFS = "max-vfs"
         VFS_SUBTREE = "vfs"
 
         class VFS:

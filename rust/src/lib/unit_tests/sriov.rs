@@ -903,3 +903,88 @@ fn test_sriov_not_allow_802_1ad_vlan_protocol_for_vlan_0_and_qos_0() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_desired_sriov_vfs_count_exceeded_max() {
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 64
+        ",
+    )
+    .unwrap();
+
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 0
+              max-vfs: 63",
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("maximum"));
+        assert!(e.msg().contains("63"));
+        assert!(e.msg().contains("64"));
+        assert!(e.msg().contains("eth1"));
+    }
+}
+
+#[test]
+fn test_ignore_sriov_max_vfs_when_verify() {
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 62
+              max-vfs: 64
+        ",
+    )
+    .unwrap();
+
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 0
+              max-vfs: 63
+        ",
+    )
+    .unwrap();
+
+    let post_apply_current = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 62
+              max-vfs: 63",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    merged_ifaces.verify(&post_apply_current).unwrap();
+}
