@@ -54,7 +54,11 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             } else {
                 None
             },
-            auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
+            auto_route_metric: if dhcp == Some(true) {
+                nm_ip_setting.route_metric.map(|i| i as u32)
+            } else {
+                None
+            },
             dhcp_send_hostname: if enabled && dhcp == Some(true) {
                 Some(dhcp_send_hostname)
             } else {
@@ -123,7 +127,11 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                     None
                 }
             },
-            auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
+            auto_route_metric: if autoconf == Some(true) {
+                nm_ip_setting.route_metric.map(|i| i as u32)
+            } else {
+                None
+            },
             dhcp_send_hostname: if enabled && dhcp == Some(true) {
                 Some(nm_ip_setting.dhcp_send_hostname.unwrap_or(true))
             } else {

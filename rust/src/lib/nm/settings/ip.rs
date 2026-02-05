@@ -15,6 +15,7 @@ use crate::{
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
 const ADDR_GEN_MODE_STABLE_PRIVACY: i32 = 1;
+const DEFAULT_ROUTE_METRIC: i64 = -1;
 
 fn gen_nm_ipv4_setting(
     iface_ip: Option<&InterfaceIpv4>,
@@ -106,6 +107,8 @@ fn gen_nm_ipv4_setting(
                 }
             }
         }
+    } else {
+        nm_setting.route_metric = None;
     }
     if iface_ip.enabled {
         if let Some(routes) = routes {
@@ -232,6 +235,7 @@ fn gen_nm_ipv6_setting(
         }
     } else {
         nm_setting.token = None;
+        nm_setting.route_metric = None;
     }
     if iface_ip.enabled {
         if let Some(routes) = routes {
