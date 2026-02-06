@@ -90,6 +90,8 @@ mod error;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
 mod hostname;
+#[cfg(feature = "query_apply")]
+mod kernel_checkpoint;
 mod ieee8021x;
 mod iface;
 mod ifaces;

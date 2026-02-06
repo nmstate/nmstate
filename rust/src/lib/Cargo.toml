@@ -27,7 +27,7 @@ workspace = true
 
 [dependencies.uuid]
 workspace = true
-features = ["v5"]
+features = ["v4", "v5"]
 
 [dependencies.log]
 workspace = true
@@ -47,6 +47,10 @@ workspace = true
 workspace = true
 optional = true
 
+[dependencies.libc]
+workspace = true
+optional = true
+
 [dependencies.tokio]
 workspace = true
 optional = true
@@ -56,6 +60,6 @@ serde_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
-query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio"]
+query_apply = ["dep:nispor", "dep:nix", "dep:libc", "dep:zbus", "dep:tokio"]
 gen_conf = []
 gen_revert = []

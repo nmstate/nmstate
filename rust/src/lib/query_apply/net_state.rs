@@ -5,6 +5,11 @@ use std::future::Future;
 use crate::{
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
     NetworkStateMode, NmstateError,
+    kernel_checkpoint::{
+        is_kernel_checkpoint, kernel_checkpoint_create,
+        kernel_checkpoint_destroy, kernel_checkpoint_get,
+        spawn_timeout_watchdog,
+    },
     nispor::{
         apply_ifaces_alt_names, nispor_apply, nispor_retrieve,
         persist_alt_name_config, set_running_hostname,
@@ -33,7 +38,7 @@ const MAX_SUPPORTED_INTERFACES: usize = 1000;
 
 impl NetworkState {
     /// Rollback a checkpoint.
-    /// Not available for `kernel only` mode.
+    /// Supports both NetworkManager and kernel checkpoints.
     /// Only available for feature `query_apply`.
     pub fn checkpoint_rollback(checkpoint: &str) -> Result<(), NmstateError> {
         let rt = tokio::runtime::Builder::new_current_thread()
@@ -50,16 +55,45 @@ impl NetworkState {
     }
 
     /// Rollback a checkpoint.
-    /// Not available for `kernel only` mode.
+    /// Supports both NetworkManager and kernel checkpoints.
     /// Only available for feature `query_apply`.
     pub async fn checkpoint_rollback_async(
         checkpoint: &str,
     ) -> Result<(), NmstateError> {
-        nm_checkpoint_rollback(checkpoint).await
+        if is_kernel_checkpoint(checkpoint) {
+            // Handle kernel checkpoint rollback
+            match kernel_checkpoint_get(checkpoint)? {
+                Some(revert_state) => {
+                    log::info!("Rolling back kernel checkpoint {}", checkpoint);
+
+                    let mut cur_net_state = NetworkState::new();
+                    cur_net_state.set_kernel_only(true);
+                    cur_net_state.retrieve_async().await?;
+
+                    let merged_revert = MergedNetworkState::new(
+                        revert_state,
+                        cur_net_state,
+                        NetworkStateMode::Apply,
+                        false,
+                    )?;
+
+                    nispor_apply(&merged_revert).await?;
+                    kernel_checkpoint_destroy(checkpoint);
+                    log::info!("Rolled back kernel checkpoint {}", checkpoint);
+                    Ok(())
+                }
+                None => Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Kernel checkpoint {} not found", checkpoint),
+                )),
+            }
+        } else {
+            nm_checkpoint_rollback(checkpoint).await
+        }
     }
 
     /// Commit a checkpoint.
-    /// Not available for `kernel only` mode.
+    /// Supports both NetworkManager and kernel checkpoints.
     /// Only available for feature `query_apply`.
     pub fn checkpoint_commit(checkpoint: &str) -> Result<(), NmstateError> {
         let rt = tokio::runtime::Builder::new_current_thread()
@@ -76,12 +110,19 @@ impl NetworkState {
     }
 
     /// Commit a checkpoint.
-    /// Not available for `kernel only` mode.
+    /// Supports both NetworkManager and kernel checkpoints.
     /// Only available for feature `query_apply`.
     pub async fn checkpoint_commit_async(
         checkpoint: &str,
     ) -> Result<(), NmstateError> {
-        nm_checkpoint_destroy(checkpoint).await
+        if is_kernel_checkpoint(checkpoint) {
+            // Handle kernel checkpoint commit
+            kernel_checkpoint_destroy(checkpoint);
+            log::info!("Committed kernel checkpoint {}", checkpoint);
+            Ok(())
+        } else {
+            nm_checkpoint_destroy(checkpoint).await
+        }
     }
 
     /// Retrieve the `NetworkState`.
@@ -192,7 +233,6 @@ impl NetworkState {
         if !self.kernel_only {
             self.apply_with_nm_backend().await
         } else {
-            // TODO: Need checkpoint for kernel only mode
             self.apply_without_nm_backend().await
         }
     }
@@ -376,6 +416,11 @@ impl NetworkState {
         cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve_async().await?;
 
+        // Generate revert state BEFORE applying for rollback capability
+        let revert_state = self.generate_revert(&cur_net_state)?;
+        let checkpoint_id = kernel_checkpoint_create(revert_state)?;
+        log::info!("Created kernel checkpoint {}", &checkpoint_id);
+
         let merged_state = MergedNetworkState::new(
             self.clone(),
             cur_net_state.clone(),
@@ -383,12 +428,69 @@ impl NetworkState {
             self.memory_only,
         )?;
 
-        nispor_apply(&merged_state).await?;
+        // Apply with rollback on failure
+        match self
+            .apply_kernel_with_checkpoint(&merged_state, &cur_net_state)
+            .await
+        {
+            Ok(()) => {
+                if !self.no_commit {
+                    kernel_checkpoint_destroy(&checkpoint_id);
+                    log::info!("Committed kernel checkpoint {}", &checkpoint_id);
+                } else {
+                    let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
+                    let checkpoint_path =
+                        crate::kernel_checkpoint::storage::get_checkpoint_path(
+                            &checkpoint_id,
+                        );
+                    if let Err(e) = spawn_timeout_watchdog(
+                        &checkpoint_id,
+                        &checkpoint_path,
+                        timeout,
+                    ) {
+                        log::warn!(
+                            "Failed to spawn timeout watchdog: {}, \
+                             checkpoint {} will not auto-rollback",
+                            e,
+                            &checkpoint_id
+                        );
+                    }
+                    log::info!(
+                        "Kernel checkpoint {} awaiting commit, \
+                         auto-rollback in {}s",
+                        &checkpoint_id,
+                        timeout
+                    );
+                    // Print checkpoint ID so user can commit/rollback later
+                    println!("{}", checkpoint_id);
+                }
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("Apply failed, rolling back: {}", e);
+                if let Err(rollback_err) =
+                    self.rollback_kernel_checkpoint(&checkpoint_id).await
+                {
+                    log::error!("Rollback also failed: {}", rollback_err);
+                }
+                Err(e)
+            }
+        }
+    }
+
+    async fn apply_kernel_with_checkpoint(
+        &self,
+        merged_state: &MergedNetworkState,
+        cur_net_state: &NetworkState,
+    ) -> Result<(), NmstateError> {
+        nispor_apply(merged_state).await?;
+
         if let Some(running_hostname) =
             self.hostname.as_ref().and_then(|c| c.running.as_ref())
         {
             set_running_hostname(running_hostname)?;
         }
+
         if !self.no_verify {
             with_retry(
                 VERIFY_RETRY_INTERVAL_MILLISECONDS,
@@ -402,6 +504,43 @@ impl NetworkState {
             .await
         } else {
             Ok(())
+        }
+    }
+
+    async fn rollback_kernel_checkpoint(
+        &self,
+        checkpoint_id: &str,
+    ) -> Result<(), NmstateError> {
+        match kernel_checkpoint_get(checkpoint_id)? {
+            Some(revert_state) => {
+                log::info!(
+                    "Rolling back to kernel checkpoint {}",
+                    checkpoint_id
+                );
+
+                let mut cur_net_state = NetworkState::new();
+                cur_net_state.set_kernel_only(true);
+                cur_net_state.retrieve_async().await?;
+
+                let merged_revert = MergedNetworkState::new(
+                    revert_state,
+                    cur_net_state,
+                    NetworkStateMode::Apply,
+                    self.memory_only,
+                )?;
+
+                nispor_apply(&merged_revert).await?;
+                kernel_checkpoint_destroy(checkpoint_id);
+                log::info!("Rolled back kernel checkpoint {}", checkpoint_id);
+                Ok(())
+            }
+            None => {
+                log::warn!(
+                    "Kernel checkpoint {} not found, skipping rollback",
+                    checkpoint_id
+                );
+                Ok(())
+            }
         }
     }
 
