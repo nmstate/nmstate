@@ -480,13 +480,14 @@ def test_gen_conf_route_next_hop_iface_ref_by_mac(eth1_eth2_up_with_no_config):
         assert_routes(expected_routes, cur_state)
 
 
-def test_gen_conf_route_initcwnd_mtu_quickack_advmss():
+def test_gen_conf_route_initcwnd_mtu_quickack_advmss_lock_mtu():
     desired_state = load_yaml(
         """---
         routes:
           config:
               - destination: 203.0.113.0/24
                 mtu: 1550
+                lock-mtu: true
                 advmss: 1200
                 next-hop-address: 192.0.2.252
                 next-hop-interface: eth1
@@ -496,6 +497,7 @@ def test_gen_conf_route_initcwnd_mtu_quickack_advmss():
                 quickack: true
               - destination: 2001:db8:a::/64
                 mtu: 1280
+                lock-mtu: true
                 advmss: 1300
                 next-hop-address: 2001:db8:1::2
                 next-hop-interface: eth1

@@ -56,6 +56,7 @@ class Route:
     MTU = "mtu"
     QUICKACK = "quickack"
     ADVMSS = "advmss"
+    LOCK_MTU = "lock-mtu"
     VRF_NAME = "vrf-name"
 
 
