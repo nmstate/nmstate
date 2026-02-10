@@ -864,3 +864,76 @@ fn test_route_advmss_deserialize_from_string() {
 
     assert_eq!(route.advmss, Some(1500));
 }
+
+#[test]
+fn test_route_lock_mtu_not_equal() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1280
+        lock-mtu: true
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1280
+        lock-mtu: false
+        "#,
+    )
+    .unwrap();
+
+    assert!(route1 != route2);
+}
+
+#[test]
+fn test_route_lock_mtu_is_match() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1280
+        lock-mtu: true
+        "#,
+    )
+    .unwrap();
+
+    let route2: RouteEntry = serde_yaml::from_str(
+        r#"
+        state: absent
+        lock-mtu: true
+        "#,
+    )
+    .unwrap();
+
+    assert!(route2.is_match(&route1));
+}
+
+#[test]
+fn test_route_lock_mtu_display() {
+    let route1: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: "2001:db8::/64"
+        mtu: 1280
+        lock-mtu: true
+        "#,
+    )
+    .unwrap();
+
+    let route1_str = route1.to_string();
+
+    assert!(route1_str.contains("lock-mtu: true"));
+}
+
+#[test]
+fn test_route_lock_mtu_deserialize_from_string() {
+    let route = serde_yaml::from_str::<RouteEntry>(
+        r#"
+        lock-mtu: "true"
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(route.lock_mtu, Some(true));
+}

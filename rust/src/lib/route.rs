@@ -303,6 +303,13 @@ pub struct RouteEntry {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub advmss: Option<u32>,
+    /// Lock route MTU, preventing Path MTU Discovery from adjusting it
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub lock_mtu: Option<bool>,
     /// Store the routes to the route table specified VRF bind to.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vrf_name: Option<String>,
@@ -416,6 +423,9 @@ impl RouteEntry {
         if self.advmss.is_some() && self.advmss != other.advmss {
             return false;
         }
+        if self.lock_mtu.is_some() && self.lock_mtu != other.lock_mtu {
+            return false;
+        }
         if self.vrf_name.is_some() && self.vrf_name != other.vrf_name {
             return false;
         }
@@ -436,6 +446,7 @@ impl RouteEntry {
                     .map(|d| is_ipv6_addr(d.as_str()))
                     .unwrap_or_default(),
                 self.quickack.unwrap_or_default(),
+                self.lock_mtu.unwrap_or_default(),
             ],
             vec![
                 self.next_hop_iface
@@ -629,6 +640,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.advmss {
             props.push(format!("advmss: {v}"));
+        }
+        if let Some(v) = self.lock_mtu {
+            props.push(format!("lock-mtu: {v}"));
         }
         if let Some(v) = self.vrf_name.as_ref() {
             props.push(format!("vrf-name: {v}"));

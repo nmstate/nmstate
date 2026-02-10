@@ -31,6 +31,7 @@ const IPV4_EMPTY_NEXT_HOP_ADDRESS: &str = "0.0.0.0";
 const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 
 // kernel values
+const RTAX_MTU: u32 = 2;
 const RTAX_CWND: u32 = 7;
 
 pub(crate) async fn get_routes(
@@ -185,8 +186,11 @@ fn np_routetype_to_nmstate(
     }
     // according to `man ip-route`, cwnd is useless without the lock flag, so
     // we require both cwnd and its lock flag to consider cwnd as set.
-    let cwnd_lock = np_route.lock.unwrap_or(0) & (1 << RTAX_CWND) != 0;
+    let lock = np_route.lock.unwrap_or(0);
+    let cwnd_lock = lock & (1 << RTAX_CWND) != 0;
     route_entry.cwnd = if cwnd_lock { np_route.cwnd } else { None };
+    let mtu_lock = lock & (1 << RTAX_MTU) != 0;
+    route_entry.lock_mtu = mtu_lock.then_some(true);
 
     route_entry
 }
@@ -249,11 +253,14 @@ fn np_route_to_nmstate(
         .map(|n| n.to_string());
     // according to `man ip-route`, cwnd is useless without the lock flag, so
     // we require both cwnd and its lock flag to consider cwnd as set.
-    let cwnd_lock = np_route.lock.unwrap_or(0) & (1 << RTAX_CWND) != 0;
+    let lock = np_route.lock.unwrap_or(0);
+    let cwnd_lock = lock & (1 << RTAX_CWND) != 0;
     route_entry.cwnd = if cwnd_lock { np_route.cwnd } else { None };
     route_entry.initcwnd = np_route.initcwnd;
     route_entry.initrwnd = np_route.initrwnd;
     route_entry.mtu = np_route.mtu;
+    let mtu_lock = lock & (1 << RTAX_MTU) != 0;
+    route_entry.lock_mtu = mtu_lock.then_some(true);
     route_entry.quickack = np_route.quickack.map(|q| q > 0);
     route_entry.advmss = np_route.advmss;
 
