@@ -116,4 +116,5 @@ function create_container {
       echo "Waiting for systemd in container to be ready..."
       sleep 0.1;
   done
+  container_exec "dnf clean all -y"
 }
