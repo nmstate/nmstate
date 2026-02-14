@@ -1708,3 +1708,70 @@ def test_delete_bond_with_mac_restriction(bond99_with_mac_restriction):
     libnmstate.apply(state)
 
     assertlib.assert_absent(BOND99)
+
+
+@pytest.fixture
+def empty_br0():
+    with linux_bridge("br0", {}):
+        yield
+
+
+def test_attach_new_bond_to_existing_bridge(empty_br0):
+    with bond_interface(
+        name=BOND99,
+        port=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+            },
+        },
+        create=False,
+    ) as state:
+        state[Interface.KEY][0][Interface.CONTROLLER] = "br0"
+        libnmstate.apply(state)
+        assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def cleanup_vlan():
+    yield
+    libnmstate.apply(
+        yaml.load(
+            """---
+            interfaces:
+              - name: bond99.101
+                type: vlan
+                state: absent
+                """,
+            Loader=yaml.SafeLoader,
+        )
+    )
+
+
+def test_attach_new_vlan_of_new_bond_to_exist_bridge(empty_br0, cleanup_vlan):
+    with bond_interface(
+        name=BOND99,
+        port=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+            },
+        },
+        create=False,
+    ) as state:
+        state[Interface.KEY].append(
+            yaml.load(
+                """
+                name: bond99.101
+                type: vlan
+                state: up
+                controller: br0
+                vlan:
+                  base-iface: eth1
+                  id: 101
+                """,
+                Loader=yaml.SafeLoader,
+            )
+        )
+        libnmstate.apply(state)
+        assertlib.assert_state_match(state)

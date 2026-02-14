@@ -1066,3 +1066,194 @@ fn test_gen_topoligies_ovs_bridge() {
         ]
     );
 }
+
+#[test]
+fn test_attach_bond_to_exist_bridge() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: bond0
+          type: bond
+          state: up
+          controller: br0
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - eth2
+            - eth1",
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+        - name: eth2
+          type: ethernet
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port: []",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let bond_iface = merged_ifaces
+        .kernel_ifaces
+        .get("bond0")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+    let eth1_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth1")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+    let eth2_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth2")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+
+    assert!(bond_iface.base_iface().is_up_priority_valid());
+    assert!(eth1_iface.base_iface().is_up_priority_valid());
+    assert!(eth2_iface.base_iface().is_up_priority_valid());
+    assert!(
+        eth1_iface.base_iface().up_priority
+            > bond_iface.base_iface().up_priority
+    );
+    assert!(
+        eth2_iface.base_iface().up_priority
+            > bond_iface.base_iface().up_priority
+    );
+}
+
+#[test]
+fn test_attach_ethernet_to_exist_bridge() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          controller: br0",
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+        - name: eth2
+          type: ethernet
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port: []",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let eth1_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth1")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+
+    assert!(eth1_iface.base_iface().is_up_priority_valid());
+}
+
+#[test]
+fn test_attach_new_vlan_of_new_bond_to_exist_bridge() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: bond0.100
+          type: vlan
+          state: up
+          controller: br0
+          vlan:
+            base-iface: bond0
+            id: 100
+        - name: bond0
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - eth2
+            - eth1",
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+        - name: eth2
+          type: ethernet
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port: []",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let vlan_iface = merged_ifaces
+        .kernel_ifaces
+        .get("bond0.100")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+    let bond_iface = merged_ifaces
+        .kernel_ifaces
+        .get("bond0")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+    let eth1_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth1")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+    let eth2_iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth2")
+        .and_then(|i| i.for_apply.as_ref())
+        .unwrap();
+
+    assert!(bond_iface.base_iface().is_up_priority_valid());
+    assert!(eth1_iface.base_iface().is_up_priority_valid());
+    assert!(eth2_iface.base_iface().is_up_priority_valid());
+    assert!(vlan_iface.base_iface().is_up_priority_valid());
+    // VLAN should activate after bond
+    assert!(
+        vlan_iface.base_iface().up_priority
+            > bond_iface.base_iface().up_priority
+    );
+    // bond port should activate after bond
+    assert!(
+        eth1_iface.base_iface().up_priority
+            > bond_iface.base_iface().up_priority
+    );
+    assert!(
+        eth2_iface.base_iface().up_priority
+            > bond_iface.base_iface().up_priority
+    );
+}
