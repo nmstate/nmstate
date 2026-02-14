@@ -430,62 +430,68 @@ impl MergedInterfaces {
         // Use the push order to allow user providing help on dependency order
 
         for (iface_name, iface_type) in &self.insert_order {
-            let iface = match self.get_iface(iface_name, iface_type.clone()) {
-                Some(i) => {
-                    if let Some(i) = i.for_apply.as_ref() {
-                        i
-                    } else {
-                        continue;
-                    }
-                }
-                None => continue,
+            let Some(iface) = self
+                .get_iface(iface_name, iface_type.clone())
+                .and_then(|i| i.for_apply.as_ref())
+            else {
+                continue;
             };
-            if !iface.is_up() {
+            if !iface.is_up() || iface.base_iface().is_up_priority_valid() {
                 continue;
             }
 
-            if iface.base_iface().is_up_priority_valid() {
+            let Some(ctrl_name) = iface.base_iface().controller.as_ref() else {
+                continue;
+            };
+
+            if ctrl_name.is_empty() {
                 continue;
             }
-
-            if let Some(ref ctrl_name) = iface.base_iface().controller {
-                if ctrl_name.is_empty() {
-                    continue;
-                }
-                let ctrl_iface = self
-                    .get_iface(
-                        ctrl_name,
-                        iface
-                            .base_iface()
-                            .controller_type
-                            .clone()
-                            .unwrap_or_default(),
-                    )
-                    .and_then(|i| i.for_apply.as_ref());
-                if let Some(ctrl_iface) = ctrl_iface {
-                    if let Some(ctrl_pri) = pending_changes.remove(ctrl_name) {
-                        pending_changes.insert(ctrl_name.to_string(), ctrl_pri);
-                        pending_changes
-                            .insert(iface_name.to_string(), ctrl_pri + 1);
-                    } else if ctrl_iface.base_iface().is_up_priority_valid() {
-                        pending_changes.insert(
-                            iface_name.to_string(),
-                            ctrl_iface.base_iface().up_priority + 1,
-                        );
-                    } else {
-                        // Its controller does not have valid up priority yet.
-                        log::debug!(
-                            "Controller {ctrl_name} of {iface_name} is has no \
-                             up priority"
-                        );
-                        ret = false;
-                    }
+            let Some(ctrl_iface) = self.get_iface(
+                ctrl_name,
+                iface
+                    .base_iface()
+                    .controller_type
+                    .clone()
+                    .unwrap_or_default(),
+            ) else {
+                log::error!(
+                    "BUG: validate_controller_not_in_port_list() should \
+                     already validate the existence of controller interface, \
+                     should never hit this: {self:?}"
+                );
+                continue;
+            };
+            if let Some(ctrl_iface) = ctrl_iface.for_apply.as_ref() {
+                if let Some(ctrl_pri) = pending_changes.remove(ctrl_name) {
+                    pending_changes.insert(ctrl_name.to_string(), ctrl_pri);
+                    pending_changes
+                        .insert(iface_name.to_string(), ctrl_pri + 1);
+                } else if ctrl_iface.base_iface().is_up_priority_valid() {
+                    pending_changes.insert(
+                        iface_name.to_string(),
+                        ctrl_iface.base_iface().up_priority + 1,
+                    );
                 } else {
-                    // Interface has no controller defined in desire
-                    continue;
+                    // Its controller does not have valid up priority yet.
+                    log::debug!(
+                        "Controller {ctrl_name} of {iface_name} has no up \
+                         priority"
+                    );
+                    ret = false;
+                }
+            } else if ctrl_iface.current.is_some() {
+                // Controller interface already exists in current state but not
+                // mentioned in desired, just activate with top priority.
+                if iface.parent().is_none() {
+                    pending_changes.insert(iface_name.to_string(), 1);
                 }
             } else {
-                continue;
+                log::error!(
+                    "BUG: Controller interface {} does not have current and \
+                     for_apply which should never happens: {self:?}",
+                    ctrl_iface.merged.name()
+                );
             }
         }
 
