@@ -1163,7 +1163,8 @@ def eth1_eth2_up_with_description(eth1_up, eth2_up):
 def test_policy_create_bridge_by_description_of_port(
     eth1_eth2_up_with_description,
 ):
-    policy = load_yaml("""---
+    policy = load_yaml(
+        """---
         capture:
           primary-nic: interfaces.description == "primary"
           secondary-nic: interfaces.description == "secondary"
@@ -1183,7 +1184,8 @@ def test_policy_create_bridge_by_description_of_port(
                 port:
                   - name: "{{ capture.primary-nic.interfaces.0.name }}"
                   - name: "{{ capture.secondary-nic.interfaces.0.name }}"
-        """)
+        """
+    )
     eth2_mac = get_mac_address("eth2")
     cur_state = libnmstate.show()
     desired_state = libnmstate.gen_net_state_from_policy(policy, cur_state)
@@ -1208,12 +1210,14 @@ def test_policy_create_bridge_by_description_of_port(
     finally:
         apply_with_description(
             "Delete bridge linux-br0",
-            load_yaml("""---
+            load_yaml(
+                """---
                 interfaces:
                 - name: linux-br0
                   type: linux-bridge
                   state: absent
-                """),
+                """
+            ),
             verify_change=False,
         )
 
@@ -1382,11 +1386,15 @@ def test_change_mtu_with_stable_link_up(bridge0_with_port0):
 
 @pytest.fixture
 def down_bridge0(bridge0_with_port0):
-    libnmstate.apply(load_yaml(f"""---
+    libnmstate.apply(
+        load_yaml(
+            f"""---
         interfaces:
         - name: {TEST_BRIDGE0}
           type: linux-bridge
-          state: down"""))
+          state: down"""
+        )
+    )
     yield
 
 
@@ -1397,7 +1405,9 @@ def dummy1_up():
 
 
 def test_changed_port_list_of_down_linux_bridge(down_bridge0, dummy1_up):
-    libnmstate.apply(load_yaml(f"""---
+    libnmstate.apply(
+        load_yaml(
+            f"""---
       interfaces:
         - name: {TEST_BRIDGE0}
           type: linux-bridge
@@ -1407,7 +1417,9 @@ def test_changed_port_list_of_down_linux_bridge(down_bridge0, dummy1_up):
               stp:
                 enabled: false
             port:
-              - name: dummy1"""))
+              - name: dummy1"""
+        )
+    )
 
     current_state = show_only([TEST_BRIDGE0])
     br_iface = current_state[Interface.KEY][0]

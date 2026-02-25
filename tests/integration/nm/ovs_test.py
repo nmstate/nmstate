@@ -525,7 +525,8 @@ def test_do_not_touch_ovs_port_when_not_desired_internal_iface(
 
 
 def test_gc_on_ovs_dpdk():
-    desired_state = load_yaml("""---
+    desired_state = load_yaml(
+        """---
         interfaces:
         - name: ovs0
           type: ovs-interface
@@ -544,7 +545,8 @@ def test_gc_on_ovs_dpdk():
               datapath: "netdev"
             port:
             - name: ovs0
-        """)
+        """
+    )
     confs = libnmstate.generate_configurations(desired_state)["NetworkManager"]
     ovs_iface_conf = [conf for conf in confs if conf[0].startswith("ovs0-if")][
         0
@@ -636,7 +638,9 @@ def test_ovs_port_has_autoconnect_ports(eth1_up):
 
 @pytest.fixture
 def down_br0(eth1_up):
-    libnmstate.apply(load_yaml("""---
+    libnmstate.apply(
+        load_yaml(
+            """---
         interfaces:
         - name: ovs0
           type: ovs-interface
@@ -647,10 +651,14 @@ def down_br0(eth1_up):
             port:
             - name: ovs0
             - name: eth1
-        """))
+        """
+        )
+    )
     # Due to NM bug https://issues.redhat.com/browse/RHEL-149781 ,
     # we have to explicitly mark OVS ports down also
-    libnmstate.apply(load_yaml("""---
+    libnmstate.apply(
+        load_yaml(
+            """---
         interfaces:
         - name: br0
           type: ovs-bridge
@@ -660,19 +668,27 @@ def down_br0(eth1_up):
           state: down
         - name: eth1
           type: ethernet
-          state: down"""))
+          state: down"""
+        )
+    )
     yield
-    libnmstate.apply(load_yaml("""---
+    libnmstate.apply(
+        load_yaml(
+            """---
         interfaces:
         - name: br0
           type: ovs-bridge
-          state: absent"""))
+          state: absent"""
+        )
+    )
 
 
 def test_changed_port_list_of_down_ovs_bridge_delete_orphans(
     down_br0, eth2_up
 ):
-    libnmstate.apply(load_yaml("""---
+    libnmstate.apply(
+        load_yaml(
+            """---
       interfaces:
         - name: br0
           type: ovs-bridge
@@ -682,7 +698,9 @@ def test_changed_port_list_of_down_ovs_bridge_delete_orphans(
               stp:
                 enabled: false
             port:
-              - name: eth2"""))
+              - name: eth2"""
+        )
+    )
 
     cur_nm_conns = cmdlib.exec_cmd("nmcli c show".split())[1]
     # NM ovs-port and ovs-iface connection for ovs0 should be deleted
