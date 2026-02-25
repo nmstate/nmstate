@@ -1801,7 +1801,9 @@ def test_crate_ovs_bond(cleanup_ovs_bridge, eth1_up, eth2_up, bond_mode):
                 port:
                 - name: eth1
                 - name: eth2
-            """.format(bond_mode=bond_mode),
+            """.format(
+            bond_mode=bond_mode
+        ),
         Loader=yaml.SafeLoader,
     )
     libnmstate.apply(desired_state)
@@ -2333,11 +2335,13 @@ def cleanup_20480_test_bridge():
     yield
     desired_state = {Interface.KEY: []}
     for i in range(0, 15):
-        iface_state = load_yaml(f"""
+        iface_state = load_yaml(
+            f"""
             name: br{i}
             type: ovs-bridge
             state: absent
-            """)
+            """
+        )
         desired_state[Interface.KEY].append(iface_state)
     libnmstate.apply(desired_state)
 
@@ -2350,7 +2354,8 @@ def cleanup_20480_test_bridge():
 def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
     desired_state = {Interface.KEY: []}
     for i in range(0, 15):
-        iface_state = load_yaml(f"""
+        iface_state = load_yaml(
+            f"""
             name: br{i}
             type: ovs-bridge
             state: up
@@ -2360,7 +2365,8 @@ def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
             ovs-db:
               external_ids:
                 key0: value0
-            """)
+            """
+        )
         for j in range(0, 255):
             iface_state[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS][
                 f"key{j}"
@@ -2373,7 +2379,9 @@ def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
 def down_bridge1(bridge_with_ports):
     # Due to NM bug https://issues.redhat.com/browse/RHEL-149781 ,
     # we have to explicitly mark OVS ports down also
-    libnmstate.apply(load_yaml(f"""---
+    libnmstate.apply(
+        load_yaml(
+            f"""---
         interfaces:
         - name: {BRIDGE1}
           type: ovs-bridge
@@ -2383,7 +2391,9 @@ def down_bridge1(bridge_with_ports):
           state: down
         - name: eth1
           type: ethernet
-          state: down"""))
+          state: down"""
+        )
+    )
     yield
 
 
@@ -2394,7 +2404,9 @@ def dummy1_up():
 
 
 def test_changed_port_list_of_down_ovs_bridge(down_bridge1, dummy1_up):
-    libnmstate.apply(load_yaml(f"""---
+    libnmstate.apply(
+        load_yaml(
+            f"""---
       interfaces:
         - name: {BRIDGE1}
           type: ovs-bridge
@@ -2404,7 +2416,9 @@ def test_changed_port_list_of_down_ovs_bridge(down_bridge1, dummy1_up):
               stp:
                 enabled: false
             port:
-              - name: dummy1"""))
+              - name: dummy1"""
+        )
+    )
 
     cur_state = statelib.show_only((BRIDGE1,))
     br_iface = cur_state[Interface.KEY][0]
