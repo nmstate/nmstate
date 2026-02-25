@@ -31,6 +31,7 @@ from .testlib import iprule
 from .testlib import statelib
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import linux_bridge
+from .testlib.dummy import dummy_interface
 from .testlib.env import is_k8s
 from .testlib.genconf import gen_conf_apply
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
@@ -41,7 +42,6 @@ from .testlib.servicelib import disable_service
 from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
 from .testlib.yaml import load_yaml
-
 
 BOND1 = "bond1"
 BRIDGE0 = "br0"
@@ -1801,9 +1801,7 @@ def test_crate_ovs_bond(cleanup_ovs_bridge, eth1_up, eth2_up, bond_mode):
                 port:
                 - name: eth1
                 - name: eth2
-            """.format(
-            bond_mode=bond_mode
-        ),
+            """.format(bond_mode=bond_mode),
         Loader=yaml.SafeLoader,
     )
     libnmstate.apply(desired_state)
@@ -2335,13 +2333,11 @@ def cleanup_20480_test_bridge():
     yield
     desired_state = {Interface.KEY: []}
     for i in range(0, 15):
-        iface_state = load_yaml(
-            f"""
+        iface_state = load_yaml(f"""
             name: br{i}
             type: ovs-bridge
             state: absent
-            """
-        )
+            """)
         desired_state[Interface.KEY].append(iface_state)
     libnmstate.apply(desired_state)
 
@@ -2354,8 +2350,7 @@ def cleanup_20480_test_bridge():
 def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
     desired_state = {Interface.KEY: []}
     for i in range(0, 15):
-        iface_state = load_yaml(
-            f"""
+        iface_state = load_yaml(f"""
             name: br{i}
             type: ovs-bridge
             state: up
@@ -2365,11 +2360,54 @@ def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
             ovs-db:
               external_ids:
                 key0: value0
-            """
-        )
+            """)
         for j in range(0, 255):
             iface_state[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS][
                 f"key{j}"
             ] = f"longlonglonglonglonglonglonglonglonglong{j}"
         desired_state[Interface.KEY].append(iface_state)
     libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def down_bridge1(bridge_with_ports):
+    # Due to NM bug https://issues.redhat.com/browse/RHEL-149781 ,
+    # we have to explicitly mark OVS ports down also
+    libnmstate.apply(load_yaml(f"""---
+        interfaces:
+        - name: {BRIDGE1}
+          type: ovs-bridge
+          state: down
+        - name: {PORT1}
+          type: ovs-interface
+          state: down
+        - name: eth1
+          type: ethernet
+          state: down"""))
+    yield
+
+
+@pytest.fixture
+def dummy1_up():
+    with dummy_interface("dummy1"):
+        yield
+
+
+def test_changed_port_list_of_down_ovs_bridge(down_bridge1, dummy1_up):
+    libnmstate.apply(load_yaml(f"""---
+      interfaces:
+        - name: {BRIDGE1}
+          type: ovs-bridge
+          state: up
+          bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+              - name: dummy1"""))
+
+    cur_state = statelib.show_only((BRIDGE1,))
+    br_iface = cur_state[Interface.KEY][0]
+    br_ports = br_iface[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE]
+    assert len(br_ports) == 1
+    assert br_ports[0][LinuxBridge.Port.NAME] == "dummy1"

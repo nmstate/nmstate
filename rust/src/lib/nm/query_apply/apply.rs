@@ -4,18 +4,18 @@ use std::collections::HashSet;
 
 use super::super::{
     NmConnectionMatcher,
-    connection::{PreparedNmConnections, prepare_nm_conns},
+    connection::{PreparedNmConnections, is_uuid, prepare_nm_conns},
     device::create_index_for_nm_devs,
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection, NmIfaceType, NmVersion, NmVersionInfo},
     query_apply::{
-        activate_nm_connections, connection::is_uuid,
-        deactivate_nm_connections, deactivate_nm_devices,
-        delete_exist_connections, delete_orphan_ovs_ports,
-        dispatch::apply_dispatch_script, dns::store_dns_config, is_hsr_changed,
-        is_ip_tunnel_changed, is_ipvlan_changed, is_mptcp_flags_changed,
-        is_route_removed, is_veth_peer_changed, is_vlan_changed,
-        is_vrf_table_id_changed, is_vxlan_changed, save_nm_connections,
+        activate_nm_connections, deactivate_nm_connections,
+        deactivate_nm_devices, delete_exist_connections,
+        delete_orphan_ovs_ports, dispatch::apply_dispatch_script,
+        dns::store_dns_config, is_hsr_changed, is_ip_tunnel_changed,
+        is_ipvlan_changed, is_mptcp_flags_changed, is_route_removed,
+        is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
+        is_vxlan_changed, save_nm_connections,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -106,6 +106,7 @@ pub(crate) async fn nm_apply(
         to_store: nm_conns_to_store,
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_devs_to_deactivate,
+        to_delete: nm_conns_to_delete,
     } = prepare_nm_conns(
         &merged_state,
         &conn_matcher,
@@ -114,6 +115,13 @@ pub(crate) async fn nm_apply(
         is_retry,
         ipv4_forward_support,
     )?;
+
+    for uuid in &nm_conns_to_delete {
+        nm_api
+            .connection_delete(uuid)
+            .await
+            .map_err(nm_error_to_nmstate)?;
+    }
 
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
         &merged_state.interfaces,

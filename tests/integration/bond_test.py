@@ -29,6 +29,7 @@ from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
+from .testlib.dummy import dummy_interface
 from .testlib.env import is_k8s
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
@@ -1775,3 +1776,49 @@ def test_attach_new_vlan_of_new_bond_to_exist_bridge(empty_br0, cleanup_vlan):
         )
         libnmstate.apply(state)
         assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def bond99_down_with_2_ports_in_config(bond99_with_2_port):
+    libnmstate.apply(
+        yaml.load(
+            """
+            interfaces:
+              - name: bond99
+                type: bond
+                state: down
+            """,
+            Loader=yaml.SafeLoader,
+        )
+    )
+    yield
+
+
+@pytest.fixture
+def dummy1_up():
+    with dummy_interface("dummy1"):
+        yield
+
+
+def test_changed_port_list_of_down_bond(
+    bond99_down_with_2_ports_in_config, dummy1_up
+):
+    libnmstate.apply(
+        yaml.load(
+            """
+            interfaces:
+            - name: bond99
+              type: bond
+              state: up
+              link-aggregation:
+                mode: balance-rr
+                port:
+                  - dummy1
+            """,
+            Loader=yaml.SafeLoader,
+        )
+    )
+
+    bond_iface = statelib.show_only(("bond99",))[Interface.KEY][0]
+
+    assert bond_iface[Bond.CONFIG_SUBTREE][Bond.PORT] == ["dummy1"]

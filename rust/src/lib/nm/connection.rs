@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use super::{
     NmConnectionMatcher,
     device::create_index_for_nm_devs,
@@ -16,6 +18,7 @@ pub(crate) struct PreparedNmConnections {
     pub(crate) to_store: Vec<NmConnection>,
     pub(crate) to_activate: Vec<NmConnection>,
     pub(crate) to_deactivate: Vec<NmDevice>,
+    pub(crate) to_delete: Vec<String>,
 }
 
 pub(crate) fn prepare_nm_conns(
@@ -137,11 +140,24 @@ pub(crate) fn prepare_nm_conns(
 
     fix_ip_dhcp_timeout(&mut nm_conns_to_update);
 
-    Ok(PreparedNmConnections {
+    let mut ret = PreparedNmConnections {
         to_store: nm_conns_to_update,
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_devs_to_deactivate,
-    })
+        to_delete: Vec::new(),
+    };
+
+    // When port list is desired on controller interface, we need to update
+    // saved NmConnection to prevent undesired port attached by
+    // `auto-connect-ports: true`. Hence we use this Vec to track
+    // port list desired ifaces.
+    detach_saved_nm_conn_from_controller(
+        &mut ret,
+        &merged_state.interfaces,
+        conn_matcher,
+    );
+
+    Ok(ret)
 }
 
 // When a new virtual interface is desired, if its controller is also newly
@@ -211,4 +227,148 @@ fn can_skip_activation(
         }
     }
     false
+}
+
+// If a controller has port list desired, detach saved inactive NmConnection
+// from this controller
+fn detach_saved_nm_conn_from_controller(
+    prepared_conns: &mut PreparedNmConnections,
+    merged_ifaces: &MergedInterfaces,
+    conn_matcher: &NmConnectionMatcher,
+) {
+    // Only need to check inactive NmConnection because active NmConnection
+    // is already processed by `MergedInterfaces::handle_changed_ports()`.
+    let saved_inactive_port_nm_conn: Vec<&NmConnection> = conn_matcher
+        .saved_iter()
+        .filter(|nm_conn| {
+            if let Some(uuid) = nm_conn.uuid() {
+                !conn_matcher.is_uuid_activated(uuid)
+                    && !is_prepared_to_store(prepared_conns, uuid)
+                    && nm_conn.controller().is_some()
+            } else {
+                false
+            }
+        })
+        .collect();
+
+    if saved_inactive_port_nm_conn.is_empty() {
+        return;
+    }
+
+    let mut changed_ctrl_names: HashSet<(&str, NmIfaceType)> = HashSet::new();
+    let mut changed_ctrl_uuids: HashSet<(&str, NmIfaceType)> = HashSet::new();
+
+    for merged_iface in merged_ifaces.iter().filter(|merged_iface| {
+        is_ctrl_iface_desired_port_changes(merged_iface)
+            && merged_iface.for_apply.as_ref().map(|i| i.is_up()) == Some(true)
+    }) {
+        let ctrl_iface_name = merged_iface.merged.name();
+        let ctrl_iface_type = &merged_iface.merged.base_iface().iface_type;
+        let ctrl_nm_iface_type = NmIfaceType::from(ctrl_iface_type);
+        if let Some(ctrl_nm_conn) = prepared_conns
+            .to_activate
+            .as_slice()
+            .iter()
+            .find(|nm_conn| {
+                nm_conn.iface_name() == Some(ctrl_iface_name)
+                    && nm_conn.iface_type() == Some(&ctrl_nm_iface_type)
+            })
+            && let Some(uuid) = ctrl_nm_conn.uuid()
+        {
+            changed_ctrl_names.insert((ctrl_iface_name, ctrl_nm_iface_type));
+            changed_ctrl_uuids.insert((uuid, ctrl_nm_iface_type));
+        }
+    }
+
+    let mut orphan_ovs_port_uuids: HashSet<&str> = HashSet::new();
+    let mut orphan_ovs_port_names: HashSet<&str> = HashSet::new();
+
+    for nm_conn in saved_inactive_port_nm_conn.as_slice() {
+        if let Some(ctrl_name) = nm_conn.controller()
+            && let Some(nm_ctrl_type) = nm_conn.controller_type()
+            && ((is_uuid(ctrl_name)
+                && changed_ctrl_uuids.contains(&(ctrl_name, *nm_ctrl_type)))
+                || changed_ctrl_names.contains(&(ctrl_name, *nm_ctrl_type)))
+        {
+            if nm_conn.iface_type() == Some(&NmIfaceType::OvsPort) {
+                if let Some(uuid) = nm_conn.uuid() {
+                    log::debug!("Deleting orphan OVS port {uuid}");
+                    log::info!(
+                        "Deleting connection {uuid}: {}/ovs-port",
+                        nm_conn.iface_name().unwrap_or_default(),
+                    );
+                    prepared_conns.to_delete.push(uuid.to_string());
+                    orphan_ovs_port_uuids.insert(uuid);
+                    if let Some(ovs_port_iface_name) = nm_conn.iface_name() {
+                        orphan_ovs_port_names.insert(ovs_port_iface_name);
+                    }
+                }
+            } else {
+                let mut changed_nm_conn = (*nm_conn).clone();
+                if let Some(nm_conn_set) = changed_nm_conn.connection.as_mut() {
+                    log::debug!(
+                        "Detaching inactive controller port {}: {}/{}",
+                        nm_conn.uuid().unwrap_or_default(),
+                        nm_conn.iface_name().unwrap_or_default(),
+                        nm_conn.iface_type().unwrap_or(&NmIfaceType::Unknown)
+                    );
+                    nm_conn_set.controller = None;
+                    nm_conn_set.controller_type = None;
+                    changed_nm_conn.bond_port = None;
+                    changed_nm_conn.bridge_port = None;
+                    prepared_conns.to_store.push(changed_nm_conn);
+                }
+            }
+        }
+    }
+
+    // Detach OVS system and internal interface which refer to orphan OVS ports
+    for nm_conn in saved_inactive_port_nm_conn {
+        if nm_conn.controller_type() == Some(&NmIfaceType::OvsPort)
+            && let Some(ctrl_name) = nm_conn.controller()
+            && (is_uuid(ctrl_name)
+                && orphan_ovs_port_uuids.contains(&ctrl_name)
+                || orphan_ovs_port_names.contains(&ctrl_name))
+        {
+            // OVS internal interface cannot live without its parent
+            if nm_conn.iface_type() == Some(&NmIfaceType::OvsIface) {
+                if let Some(uuid) = nm_conn.uuid() {
+                    prepared_conns.to_delete.push(uuid.to_string());
+                }
+            } else {
+                let mut changed_nm_conn = nm_conn.clone();
+                if let Some(nm_conn_set) = changed_nm_conn.connection.as_mut() {
+                    log::debug!(
+                        "Detaching inactive OVS interface {}: {}/{}",
+                        nm_conn.uuid().unwrap_or_default(),
+                        nm_conn.iface_name().unwrap_or_default(),
+                        nm_conn.iface_type().unwrap_or(&NmIfaceType::Unknown)
+                    );
+                    nm_conn_set.controller = None;
+                    nm_conn_set.controller_type = None;
+                    changed_nm_conn.ovs_iface = None;
+                    prepared_conns.to_store.push(changed_nm_conn);
+                }
+            }
+        }
+    }
+}
+
+fn is_prepared_to_store(
+    prepared_conns: &PreparedNmConnections,
+    uuid: &str,
+) -> bool {
+    prepared_conns
+        .to_store
+        .as_slice()
+        .iter()
+        .any(|nm_conn| nm_conn.uuid() == Some(uuid))
+}
+
+fn is_ctrl_iface_desired_port_changes(merged_iface: &MergedInterface) -> bool {
+    merged_iface.for_apply.as_ref().map(|i| i.ports().is_some()) == Some(true)
+}
+
+pub(crate) fn is_uuid(value: &str) -> bool {
+    uuid::Uuid::parse_str(value).is_ok()
 }

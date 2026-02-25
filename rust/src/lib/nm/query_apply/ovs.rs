@@ -5,10 +5,11 @@ use std::collections::HashSet;
 use super::{
     super::{
         NmConnectionMatcher,
+        connection::is_uuid,
         nm_dbus::{NmApi, NmConnection, NmIfaceType},
         show::fill_iface_by_nm_conn_data,
     },
-    connection::{delete_connections, is_uuid},
+    connection::delete_connections,
 };
 use crate::{
     InterfaceType, MergedInterface, MergedInterfaces, NetworkState,

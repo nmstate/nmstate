@@ -312,7 +312,3 @@ async fn reapply_or_activate(
 
     Ok(())
 }
-
-pub(crate) fn is_uuid(value: &str) -> bool {
-    uuid::Uuid::parse_str(value).is_ok()
-}
