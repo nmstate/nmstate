@@ -32,13 +32,13 @@ from .testlib.bridgelib import generate_vlan_id_config
 from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
+from .testlib.dummy import dummy_interface
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import show_only
 from .testlib.vlan import vlan_interface
 from .testlib.yaml import load_yaml
-
 
 TEST_BRIDGE0 = "linux-br0"
 TEST_TAP0 = "test-tap0"
@@ -1163,8 +1163,7 @@ def eth1_eth2_up_with_description(eth1_up, eth2_up):
 def test_policy_create_bridge_by_description_of_port(
     eth1_eth2_up_with_description,
 ):
-    policy = load_yaml(
-        """---
+    policy = load_yaml("""---
         capture:
           primary-nic: interfaces.description == "primary"
           secondary-nic: interfaces.description == "secondary"
@@ -1184,8 +1183,7 @@ def test_policy_create_bridge_by_description_of_port(
                 port:
                   - name: "{{ capture.primary-nic.interfaces.0.name }}"
                   - name: "{{ capture.secondary-nic.interfaces.0.name }}"
-        """
-    )
+        """)
     eth2_mac = get_mac_address("eth2")
     cur_state = libnmstate.show()
     desired_state = libnmstate.gen_net_state_from_policy(policy, cur_state)
@@ -1210,14 +1208,12 @@ def test_policy_create_bridge_by_description_of_port(
     finally:
         apply_with_description(
             "Delete bridge linux-br0",
-            load_yaml(
-                """---
+            load_yaml("""---
                 interfaces:
                 - name: linux-br0
                   type: linux-bridge
                   state: absent
-                """
-            ),
+                """),
             verify_change=False,
         )
 
@@ -1382,3 +1378,39 @@ def test_change_mtu_with_stable_link_up(bridge0_with_port0):
     )
 
     assertlib.assert_state(desired_state)
+
+
+@pytest.fixture
+def down_bridge0(bridge0_with_port0):
+    libnmstate.apply(load_yaml(f"""---
+        interfaces:
+        - name: {TEST_BRIDGE0}
+          type: linux-bridge
+          state: down"""))
+    yield
+
+
+@pytest.fixture
+def dummy1_up():
+    with dummy_interface("dummy1"):
+        yield
+
+
+def test_changed_port_list_of_down_linux_bridge(down_bridge0, dummy1_up):
+    libnmstate.apply(load_yaml(f"""---
+      interfaces:
+        - name: {TEST_BRIDGE0}
+          type: linux-bridge
+          state: up
+          bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+              - name: dummy1"""))
+
+    current_state = show_only([TEST_BRIDGE0])
+    br_iface = current_state[Interface.KEY][0]
+    br_ports = br_iface[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE]
+    assert len(br_ports) == 1
+    assert br_ports[0][LinuxBridge.Port.NAME] == "dummy1"
