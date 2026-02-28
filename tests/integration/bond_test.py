@@ -1768,7 +1768,7 @@ def test_attach_new_vlan_of_new_bond_to_exist_bridge(empty_br0, cleanup_vlan):
                 state: up
                 controller: br0
                 vlan:
-                  base-iface: eth1
+                  base-iface: bond99
                   id: 101
                 """,
                 Loader=yaml.SafeLoader,
