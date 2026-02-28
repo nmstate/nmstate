@@ -1,4 +1,17 @@
 # Changelog
+## [2.2.59] - 2026-02-28
+### Breaking changes
+ - N/A
+
+### New features
+ - route: add support for lock-mtu option. (1dbe70f2)
+ - iptunnel: introduce support for ipip/sit/ip6ip6/ipip6 tunnels. (c7587b0b)
+
+### Bug fixes
+ - nm: Fix error when modify port list of down interface. (521465eb)
+ - ifaces: Fix error when referring existing controller. (0b0555d5)
+ - SRIOV: Raise error if desired VFS count exceeded the max. (f58aa386)
+
 ## [2.2.58] - 2026-02-03
 ### Breaking changes
  - Bump minimum supported Rust version to 1.88. (69298a1b)
