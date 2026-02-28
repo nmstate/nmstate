@@ -127,7 +127,7 @@ impl MergedInterfaces {
     }
 
     pub(crate) fn validate_hsr_mac(&self) -> Result<(), NmstateError> {
-        for hsr_iface in self.kernel_ifaces.iter().filter_map(|(_, iface)| {
+        for hsr_iface in self.kernel_ifaces.values().filter_map(|iface| {
             if let Interface::Hsr(hsr_iface) = iface.desired.as_ref()? {
                 let hsr_conf = hsr_iface.hsr.as_ref()?;
 
@@ -187,7 +187,7 @@ impl MergedInterfaces {
         let mut pending_changes = Vec::new();
 
         for (hsr_iface, hsr_conf, mac) in
-            self.kernel_ifaces.iter().filter_map(|(_, iface)| {
+            self.kernel_ifaces.values().filter_map(|iface| {
                 if !iface.is_desired() || !iface.merged.is_up() {
                     return None;
                 }
