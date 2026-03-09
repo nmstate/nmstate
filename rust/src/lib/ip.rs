@@ -105,7 +105,11 @@ struct InterfaceIp {
         rename = "dhcp-custom-hostname"
     )]
     pub dhcp_custom_hostname: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub forwarding: Option<bool>,
 }
 
