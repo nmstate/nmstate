@@ -22,6 +22,7 @@ state: up
 ipv4:
   enabled: "true"
   dhcp: "false"
+  forwarding: "true"
   address:
   - ip: "192.168.1.1"
     prefix-length: "24"
@@ -39,6 +40,7 @@ ipv6:
 
     assert!(ipv4_conf.enabled);
     assert_eq!(ipv4_conf.dhcp, Some(false));
+    assert_eq!(ipv4_conf.forwarding, Some(true));
     assert_eq!(
         ipv4_conf.addresses.as_deref().unwrap()[0].ip.to_string(),
         "192.168.1.1"
