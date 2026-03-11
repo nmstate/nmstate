@@ -57,14 +57,25 @@ function exec_cmd {
     fi
 }
 
+# Some command like DNF might fail in container, hence we retry on failure
+function exec_cmd_with_retry {
+    if [ ! -z ${RUN_BAREMETAL} ];then
+        bash -c "$1"
+    elif [ ! -z ${RUN_K8S} ]; then
+        k8s::kubectl_exec "$1"
+    else
+        container_exec_with_retry "$1"
+    fi
+}
+
 function install_nmstate {
     if [ $INSTALL_NMSTATE == "true" ];then
         if [ -n "$COMPILED_RPMS_DIR" ];then
             exec_cmd "rpm -ivh ${COMPILED_RPMS_DIR}/*.rpm || exit 1"
         else
             exec_cmd "make srpm"
-            exec_cmd "dnf install -y 'dnf-command(builddep)'"
-            exec_cmd "dnf builddep -y *.src.rpm"
+            exec_cmd_with_retry "dnf install -y 'dnf-command(builddep)'"
+            exec_cmd_with_retry "dnf builddep -y *.src.rpm"
             exec_cmd "rm -f *.src.rpm"
             exec_cmd "make rpm"
             exec_cmd "rpm -ivh *.rpm"
@@ -186,16 +197,16 @@ function upgrade_nm_from_copr {
     local copr_repo=$1
     # The repoid for a Copr repo is the name with the slash replaces by a colon
     local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
-    exec_cmd "dnf5 install --assumeyes 'dnf5-command(copr)' || \
-              dnf install --assumeyes 'dnf-command(copr)'"
+    exec_cmd_with_retry "dnf5 install --assumeyes 'dnf5-command(copr)' || \
+                         dnf install --assumeyes 'dnf-command(copr)'"
     exec_cmd "dnf copr enable --assumeyes ${copr_repo}"
     # centos-stream NetworkManager package is providing the alpha builds.
     # Sometimes it could be greater than the one packaged on Copr.
     exec_cmd "systemctl stop NetworkManager"
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
-    exec_cmd "dnf install --assumeyes NetworkManager NetworkManager-ovs  \
-        --disablerepo '*' --enablerepo '${copr_repo_id}'"
-    exec_cmd "dnf install --assumeyes NetworkManager-libreswan"
+    exec_cmd_with_retry "dnf install --assumeyes NetworkManager \
+        NetworkManager-ovs --disablerepo '*' --enablerepo '${copr_repo_id}'"
+    exec_cmd_with_retry "dnf install --assumeyes NetworkManager-libreswan"
 }
 
 function upgrade_nm_from_rpm_dir {
@@ -204,8 +215,8 @@ function upgrade_nm_from_rpm_dir {
     find $nm_rpm_dir -name \*.rpm -exec cp -v {} "${EXPORT_DIR}/nm_rpms/" \;
     exec_cmd "systemctl stop NetworkManager"
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
-    exec_cmd "dnf install -y ${CONT_EXPORT_DIR}/nm_rpms/*.rpm"
-    exec_cmd "rpm -q NetworkManager-libreswan || \
+    exec_cmd_with_retry "dnf install -y ${CONT_EXPORT_DIR}/nm_rpms/*.rpm"
+    exec_cmd_with_retry "rpm -q NetworkManager-libreswan || \
         dnf install -y NetworkManager-libreswan"
     # It is fragile for the system to have connectivity check enabled in the
     # integration testing, NM will add the penalty metric to the route when the

@@ -12,6 +12,13 @@ function container_exec {
         /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
 }
 
+function container_exec_with_retry {
+    time ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
+        /bin/bash -c "cd $CONTAINER_WORKSPACE && $1" ||
+    time ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
+        /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
+}
+
 function open_shell {
     res=$?
     [ "$res" -ne 0 ] && echo "*** ERROR: $res"
