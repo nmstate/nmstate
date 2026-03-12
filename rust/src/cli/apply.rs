@@ -46,7 +46,15 @@ where
     let timeout = if matches.try_contains_id("TIMEOUT").unwrap_or_default() {
         match matches.try_get_one::<String>("TIMEOUT") {
             Ok(Some(t)) => match u32::from_str(t) {
-                Ok(i) => i,
+                Ok(i) => {
+                    if !no_commit {
+                        log::warn!(
+                            "--timeout is only effective when used with \
+                             --no-commit. The timeout value will be ignored."
+                        );
+                    }
+                    i
+                }
                 Err(e) => {
                     return Err(CliError {
                         code: crate::error::EX_DATAERR,
