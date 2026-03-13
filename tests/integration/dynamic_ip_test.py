@@ -94,11 +94,12 @@ dhcp-range={ipv4_prefix}.200,{ipv4_prefix}.250,255.255.255.0,48h
 enable-ra
 dhcp-range={ipv6_prefix}::100,{ipv6_prefix}::fff,ra-names,slaac,64,480h
 dhcp-range={ipv6_classless_route}::100,{ipv6_classless_route}::fff,static
-dhcp-option=option:classless-static-route,{classless_rt},{classless_rt_dst}
+dhcp-option=option:classless-static-route,0.0.0.0/0,{server_ip},{classless_rt},{classless_rt_dst}
 dhcp-option=option:dns-server,{v4_dns_server}
 """.format(
     **{
         "iface": DHCP_SRV_NIC,
+        "server_ip": DHCP_SRV_IP4,
         "ipv4_prefix": DHCP_SRV_IP4_PREFIX,
         "ipv6_prefix": DHCP_SRV_IP6_PREFIX,
         "classless_rt": IPV4_CLASSLESS_ROUTE_DST_NET1,
