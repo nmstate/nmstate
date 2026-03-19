@@ -2,7 +2,7 @@
 
 use crate::{
     BondMode, ErrorKind, HsrProtocol, Interface, InterfaceState, InterfaceType,
-    Interfaces, MergedInterfaces,
+    Interfaces, MergedInterface, MergedInterfaces,
     unit_tests::testlib::{
         get_mac, new_eth_iface, new_ovs_br_iface, new_ovs_iface,
         new_unknown_iface, new_vlan_iface,
@@ -945,4 +945,31 @@ fn test_sort_ovs_bridge_with_same_name() {
     assert_eq!(sorted_ifaces_1[0].iface_type(), InterfaceType::OvsBridge);
     assert_eq!(sorted_ifaces_1[1].name(), "br-ex");
     assert_eq!(sorted_ifaces_1[1].iface_type(), InterfaceType::OvsInterface);
+}
+
+#[test]
+fn test_error_when_merge_two_different_type_ifaces() {
+    let desired = serde_yaml::from_str::<Interface>(
+        r"---
+        name: gretap0
+        type: ethernet
+        state: up
+        ethernet: {}
+        ",
+    )
+    .unwrap();
+    let current = serde_yaml::from_str::<Interface>(
+        r"---
+        name: gretap0
+        type: ip-tunnel
+        state: up
+        ip-tunnel: {}
+        ",
+    )
+    .unwrap();
+
+    let error = MergedInterface::new(Some(desired), Some(current)).unwrap_err();
+
+    assert_eq!(error.kind(), ErrorKind::InvalidArgument);
+    assert!(error.msg().contains("different interface type"));
 }
