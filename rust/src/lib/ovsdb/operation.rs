@@ -13,6 +13,8 @@ pub(crate) enum OvsDbOperation {
     Select(OvsDbSelect),
     Update(OvsDbUpdate),
     Mutate(OvsDbMutate),
+    Insert(OvsDbInsert),
+    Delete(OvsDbDelete),
 }
 
 impl OvsDbOperation {
@@ -21,6 +23,8 @@ impl OvsDbOperation {
             Self::Select(s) => s.to_value(),
             Self::Update(s) => s.to_value(),
             Self::Mutate(s) => s.to_value(),
+            Self::Insert(s) => s.to_value(),
+            Self::Delete(s) => s.to_value(),
         }
     }
 }
@@ -121,4 +125,70 @@ impl OvsDbMutate {
         ret.insert("mutations".to_string(), Value::Array(mutations));
         Value::Object(ret)
     }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct OvsDbInsert {
+    pub(crate) table: String,
+    pub(crate) row: HashMap<String, Value>,
+    pub(crate) uuid_name: Option<String>,
+}
+
+impl OvsDbInsert {
+    pub(crate) fn to_value(&self) -> Value {
+        let mut ret = Map::new();
+        ret.insert("op".to_string(), Value::String("insert".to_string()));
+        ret.insert("table".to_string(), Value::String(self.table.clone()));
+        let mut row_map = Map::new();
+        for (k, v) in self.row.iter() {
+            row_map.insert(k.to_string(), v.clone());
+        }
+        ret.insert("row".to_string(), Value::Object(row_map));
+        if let Some(ref uuid_name) = self.uuid_name {
+            ret.insert(
+                "uuid-name".to_string(),
+                Value::String(uuid_name.clone()),
+            );
+        }
+        Value::Object(ret)
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct OvsDbDelete {
+    pub(crate) table: String,
+    pub(crate) conditions: Vec<OvsDbCondition>,
+}
+
+impl OvsDbDelete {
+    pub(crate) fn to_value(&self) -> Value {
+        let mut ret = Map::new();
+        ret.insert("op".to_string(), Value::String("delete".to_string()));
+        ret.insert("table".to_string(), Value::String(self.table.clone()));
+        let condition_values: Vec<Value> =
+            self.conditions.iter().map(|c| c.to_value()).collect();
+        ret.insert("where".to_string(), Value::Array(condition_values));
+        Value::Object(ret)
+    }
+}
+
+pub(crate) fn build_set_value(items: &[Value]) -> Value {
+    Value::Array(vec![
+        Value::String("set".to_string()),
+        Value::Array(items.to_vec()),
+    ])
+}
+
+pub(crate) fn named_uuid_ref(name: &str) -> Value {
+    Value::Array(vec![
+        Value::String("named-uuid".to_string()),
+        Value::String(name.to_string()),
+    ])
+}
+
+pub(crate) fn uuid_ref(uuid: &str) -> Value {
+    Value::Array(vec![
+        Value::String("uuid".to_string()),
+        Value::String(uuid.to_string()),
+    ])
 }

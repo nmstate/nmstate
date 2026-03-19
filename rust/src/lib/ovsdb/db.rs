@@ -17,9 +17,9 @@ pub(crate) const DEFAULT_OVS_DB_SOCKET_PATH: &str = "/run/openvswitch/db.sock";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct OvsDbCondition {
-    column: String,
-    function: String,
-    value: Value,
+    pub(crate) column: String,
+    pub(crate) function: String,
+    pub(crate) value: Value,
 }
 
 impl OvsDbCondition {

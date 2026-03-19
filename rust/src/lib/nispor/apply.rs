@@ -41,6 +41,8 @@ pub(crate) async fn nispor_apply(
     let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
     for merged_iface in ifaces.iter().filter(|i| {
         i.merged.iface_type() != InterfaceType::Unknown
+            && i.merged.iface_type() != InterfaceType::OvsBridge
+            && i.merged.iface_type() != InterfaceType::OvsInterface
             && !i.merged.is_absent()
             && i.for_apply.as_ref().is_some()
     }) {
