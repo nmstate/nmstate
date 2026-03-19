@@ -1167,6 +1167,20 @@ fn merge_desire_with_current(
     desired: &Interface,
     current: &Interface,
 ) -> Result<Interface, NmstateError> {
+    // No need to handle InterfaceType::Unknown, `resolve_unknown_ifaces()`
+    // already checked.
+    if desired.iface_type() != current.iface_type() {
+        return Err(NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Desired interface {} holds different interface type than \
+                 current: desired {} vs current {}",
+                desired.name(),
+                desired.iface_type(),
+                current.iface_type()
+            ),
+        ));
+    }
     let mut desired_value = serde_json::to_value(desired)?;
     let current_value = serde_json::to_value(current)?;
     merge_json_value(&mut desired_value, &current_value);
