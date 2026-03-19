@@ -14,8 +14,8 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
     ovsdb::{
-        DEFAULT_OVS_DB_SOCKET_PATH, ovsdb_apply_global_conf, ovsdb_is_running,
-        ovsdb_retrieve,
+        DEFAULT_OVS_DB_SOCKET_PATH, ovsdb_apply_bridges,
+        ovsdb_apply_global_conf, ovsdb_is_running, ovsdb_retrieve,
     },
 };
 
@@ -384,6 +384,10 @@ impl NetworkState {
         )?;
 
         nispor_apply(&merged_state).await?;
+        if ovsdb_is_running().await {
+            ovsdb_apply_bridges(&merged_state).await?;
+            ovsdb_apply_global_conf(&merged_state).await?;
+        }
         if let Some(running_hostname) =
             self.hostname.as_ref().and_then(|c| c.running.as_ref())
         {
