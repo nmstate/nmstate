@@ -18,7 +18,6 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.veth import veth_interface
 
-
 LLDPTEST1 = "lldptest1"
 LLDPTEST1_PEER = "lldptest1.peer"
 LLDPTEST2 = "lldptest2"

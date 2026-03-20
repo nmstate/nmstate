@@ -2330,7 +2330,7 @@ def test_append_static_dns_before_auto_dns(dhcpcli_up_with_dns_cleanup):
 def test_static_ipv6_route_not_covert_auto_ip(dhcpcli_up_with_dynamic_ip):
     iface_state = dhcpcli_up_with_dynamic_ip[Interface.KEY][0]
 
-    (pre_dhcpv4_addrs, pre_dhcpv6_addrs) = get_dhcp_addr(iface_state)
+    pre_dhcpv4_addrs, pre_dhcpv6_addrs = get_dhcp_addr(iface_state)
 
     state_yml = """---
     routes:
@@ -2349,7 +2349,7 @@ def test_static_ipv6_route_not_covert_auto_ip(dhcpcli_up_with_dynamic_ip):
     assert _poll(_has_dhcpv6_addr)
 
     current_state = statelib.show_only((DHCP_CLI_NIC,))
-    (new_dhcpv4_addrs, new_dhcpv6_addrs) = get_dhcp_addr(
+    new_dhcpv4_addrs, new_dhcpv6_addrs = get_dhcp_addr(
         current_state[Interface.KEY][0]
     )
     assert pre_dhcpv4_addrs == new_dhcpv4_addrs

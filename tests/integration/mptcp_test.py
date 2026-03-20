@@ -15,7 +15,6 @@ from libnmstate.schema import Mptcp
 from .testlib import assertlib
 from .testlib import cmdlib
 
-
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV6_ADDRESS1 = "2001:db8:1::1"
 

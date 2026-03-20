@@ -12,7 +12,6 @@ from libnmstate.schema import Veth
 from ..testlib import cmdlib
 from ..testlib.veth import veth_interface
 
-
 VETH1 = "veth1"
 VETH1PEER = "veth1peer"
 VETH1PEER2 = "veth1ep"

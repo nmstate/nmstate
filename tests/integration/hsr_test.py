@@ -14,7 +14,6 @@ from .testlib.env import nm_minor_version
 from .testlib.hsrlib import hsr_interface
 from .testlib.ifacelib import get_mac_address
 
-
 ETH1 = "eth1"
 ETH2 = "eth2"
 ETH3 = "eth3"

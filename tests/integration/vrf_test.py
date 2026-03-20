@@ -17,7 +17,6 @@ from libnmstate.schema import VRF
 from .testlib import assertlib
 from .testlib.apply import apply_with_description
 
-
 TEST_VRF0 = "test-vrf0"
 TEST_VRF1 = "test-vrf1"
 TEST_VRF_PORT0 = "eth1"

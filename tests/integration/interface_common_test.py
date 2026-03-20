@@ -17,7 +17,6 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.genconf import gen_conf_apply
 
-
 DUMMY_INTERFACE = "dummy_test"
 
 

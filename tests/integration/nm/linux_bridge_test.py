@@ -24,7 +24,6 @@ from ..testlib.env import nm_minor_version
 from ..testlib.statelib import show_only
 from ..testlib.yaml import load_yaml
 
-
 BRIDGE0 = "brtest0"
 DUMMY0 = "dummy0"
 DUMMY1 = "dummy1"

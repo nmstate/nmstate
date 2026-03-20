@@ -23,7 +23,6 @@ from .testlib.servicelib import disable_service
 from .testlib.statelib import show_only
 from .testlib.yaml import load_yaml
 
-
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
 EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
 IPV6_DNS_NAMESERVERS = ["2001:4860:4860::8888", "2606:4700:4700::1111"]

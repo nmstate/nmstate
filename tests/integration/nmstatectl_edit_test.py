@@ -5,7 +5,6 @@ import os
 
 from .testlib import cmdlib
 
-
 RC_SUCCESS = 0
 
 

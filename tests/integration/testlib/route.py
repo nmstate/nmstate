@@ -4,7 +4,6 @@ import copy
 
 from libnmstate.schema import Route
 
-
 KERNEL_DEFAULT_TABLE_ID = 254
 
 

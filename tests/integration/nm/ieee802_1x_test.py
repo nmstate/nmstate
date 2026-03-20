@@ -17,7 +17,6 @@ from ..testlib.veth import create_veth_pair
 from ..testlib.veth import remove_veth_pair
 from ..testlib.statelib import show_only
 
-
 TEST_1X_CLI_NIC = "1x_cli"
 TEST_1X_SRV_NIC = "1x_srv"
 TEST_1X_NET_NAME_SPACE = "test_802_1x"

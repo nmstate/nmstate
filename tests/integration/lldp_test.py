@@ -18,7 +18,6 @@ from .testlib import statelib
 from .testlib.veth import create_veth_pair
 from .testlib.veth import remove_veth_pair
 
-
 LLDPTEST = "lldptest"
 LLDPTEST_PEER = "lldptest.peer"
 

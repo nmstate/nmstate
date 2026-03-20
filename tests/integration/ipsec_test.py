@@ -17,7 +17,6 @@ from .testlib.ipsec import IpsecTestEnv
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import show_only
 
-
 RETRY_COUNT = 10
 
 IPSEC_CONN_NAME = "ipsec-cli-conn"

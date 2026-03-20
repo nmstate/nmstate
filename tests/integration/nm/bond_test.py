@@ -26,7 +26,6 @@ from ..testlib.nmplugin import nm_service_restart
 from ..testlib.retry import retry_till_true_or_timeout
 from ..testlib.vlan import vlan_interface
 
-
 BOND0 = "bondtest0"
 TEST_VLAN = "bondtest.101"
 TEST_VLAN_ID = 101
@@ -261,7 +260,7 @@ def bond0_with_mac_ref_ports(eth1_up, eth2_up):
 
 
 def test_absent_bond_peserve_bond_port_in_mac_ref(bond0_with_mac_ref_ports):
-    (eth1_mac, eth2_mac) = bond0_with_mac_ref_ports
+    eth1_mac, eth2_mac = bond0_with_mac_ref_ports
     port1_nm_conn_uuid = cmdlib.exec_cmd(
         "nmcli -g connection.uuid c show port1".split(),
         check=True,
