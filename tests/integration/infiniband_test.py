@@ -22,7 +22,6 @@ from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import linux_bridge
 from .testlib.bridgelib import add_port_to_bridge
 
-
 TEST_BRIDGE0 = "linux-br0"
 TEST_BOND99 = "bond99"
 TEST_PKEY1 = "0x80fe"

@@ -20,7 +20,6 @@ from .testlib.veth import create_veth_pair
 from .testlib.veth import remove_veth_pair
 from .testlib.ipsec import IpsecTestEnv
 
-
 REPORT_HEADER = """RPMs: {rpms}
 OS: {osname}
 nmstate: {nmstate_version}

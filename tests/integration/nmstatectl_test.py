@@ -26,7 +26,6 @@ from .testlib.examplelib import load_example
 from .testlib.statelib import state_match
 from .testlib.statelib import show_only
 
-
 APPLY_CMD = ["nmstatectl", "apply"]
 SET_CMD = ["nmstatectl", "set"]
 SHOW_CMD = ["nmstatectl", "show"]

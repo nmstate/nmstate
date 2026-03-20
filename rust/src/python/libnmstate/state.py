@@ -2,7 +2,6 @@
 
 from collections.abc import Mapping
 
-
 PASSWORD_HID_BY_NMSTATE = "<_password_hid_by_nmstate>"
 
 

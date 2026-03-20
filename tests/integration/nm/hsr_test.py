@@ -7,7 +7,6 @@ import libnmstate
 from ..testlib.yaml import load_yaml
 from ..testlib.cmdlib import exec_cmd
 
-
 HSR_NIC = "hsr0"
 
 

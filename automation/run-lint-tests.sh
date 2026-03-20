@@ -8,6 +8,8 @@ PROJECT_PATH="$(dirname $EXEC_PATH)"
 
 cd $PROJECT_PATH
 
+black --version
+
 black \
     --check \
     --diff \
@@ -15,10 +17,14 @@ black \
     rust/src/python/libnmstate \
     tests/integration
 
+flake8 --version
+
 flake8 \
     --statistics \
     rust/src/python/setup.py \
     rust/src/python/libnmstate \
     tests/integration
+
+yamllint --version
 
 yamllint examples/

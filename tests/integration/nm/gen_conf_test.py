@@ -23,7 +23,6 @@ from ..testlib.ifacelib import get_mac_address
 from ..testlib.route import assert_routes
 from ..testlib.statelib import show_only
 
-
 NM_CONFIG_FOLDER = "/etc/NetworkManager/system-connections"
 MAX_RETRY_COUNT = 20
 

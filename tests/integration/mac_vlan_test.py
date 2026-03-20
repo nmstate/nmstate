@@ -11,7 +11,6 @@ from libnmstate.schema import MacVlan
 
 from .testlib import assertlib
 
-
 ETH1 = "eth1"
 MACVLAN0 = "macvlan0"
 

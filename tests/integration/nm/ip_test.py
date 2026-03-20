@@ -13,7 +13,6 @@ from ..testlib import cmdlib
 from ..testlib import assertlib
 from ..testlib.statelib import show_only
 
-
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.1"
 IPV4_NET1 = "198.51.100.0/24"

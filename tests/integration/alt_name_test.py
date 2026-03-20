@@ -28,7 +28,6 @@ from .testlib.vlan import vlan_interface
 from .testlib.yaml import load_yaml
 from .testlib.route import assert_routes
 
-
 TEST_ALT_NAMES = [
     "port1",
     "reallyreallylonglonglonginterfacenmae",

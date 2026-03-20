@@ -7,7 +7,6 @@ import yaml
 
 import libnmstate
 
-
 PATH_MAX = 4096
 
 

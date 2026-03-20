@@ -19,7 +19,6 @@ from .testlib import statelib
 from .testlib.apply import apply_with_description
 from .testlib.veth import veth_interface
 
-
 VETH1 = "veth1"
 VETH1PEER = "veth1peer"
 VETH2PEER = "veth2peer"
