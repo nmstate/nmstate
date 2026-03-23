@@ -2398,3 +2398,23 @@ def test_enable_ipv4_forwarding_on_auto_iface_without_dhcp_srv():
         )
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
+
+
+def test_different_auto_route_metric_and_prefix_route_metric(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: True,
+                    InterfaceIPv4.PREFIX_ROUTE_METRIC: 901,
+                    InterfaceIPv4.AUTO_ROUTE_METRIC: 902,
+                },
+            }
+        ]
+    }
+    with pytest.raises((libnmstate.error.NmstateNotSupportedError)):
+        libnmstate.apply(desired_state)

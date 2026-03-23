@@ -2,7 +2,7 @@
 
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceState, Interfaces,
-    MergedInterfaces, ip::sanitize_ip_network,
+    MergedInterfaces, RouteEntry, ip::sanitize_ip_network,
     unit_tests::testlib::new_eth_iface,
 };
 
@@ -22,7 +22,6 @@ state: up
 ipv4:
   enabled: "true"
   dhcp: "false"
-  forwarding: "true"
   address:
   - ip: "192.168.1.1"
     prefix-length: "24"
@@ -40,7 +39,6 @@ ipv6:
 
     assert!(ipv4_conf.enabled);
     assert_eq!(ipv4_conf.dhcp, Some(false));
-    assert_eq!(ipv4_conf.forwarding, Some(true));
     assert_eq!(
         ipv4_conf.addresses.as_deref().unwrap()[0].ip.to_string(),
         "192.168.1.1"
@@ -630,4 +628,102 @@ ipv6:
     let err_str = err.to_string();
 
     assert!(err_str.starts_with("InvalidArgument:"));
+}
+
+#[test]
+fn test_no_error_on_diff_auto_metric_without_dhcpv4() {
+    let mut iface: Interface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          auto-route-metric: 100
+          prefix-route-metric: 101"#,
+    )
+    .unwrap();
+
+    iface.sanitize(true).unwrap();
+}
+
+#[test]
+fn test_no_error_on_diff_auto_metric_if_one_is_default() {
+    for (auto_metric, prefix_metric) in [
+        (RouteEntry::USE_DEFAULT_METRIC, 101),
+        (101, RouteEntry::USE_DEFAULT_METRIC),
+    ] {
+        let mut iface: Interface = serde_yaml::from_str(&format!(
+            r#"---
+            name: eth1
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: true
+              auto-route-metric: {auto_metric}
+              prefix-route-metric: {prefix_metric}"#,
+        ))
+        .unwrap();
+
+        iface.sanitize(true).unwrap();
+
+        let base_iface = iface.base_iface();
+
+        assert_eq!(
+            base_iface.ipv4.as_ref().and_then(|i| i.auto_route_metric),
+            Some(101)
+        );
+        assert_eq!(
+            base_iface.ipv4.as_ref().and_then(|i| i.prefix_route_metric),
+            Some(101)
+        );
+    }
+}
+
+#[test]
+fn test_error_on_diff_auto_metric_with_dhcpv4() {
+    let mut iface: Interface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: true
+          auto-route-metric: 100
+          prefix-route-metric: 101"#,
+    )
+    .unwrap();
+
+    let error = iface.sanitize(true).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::NotSupportedError);
+    assert!(error.msg().contains("Different"));
+    assert!(error.msg().contains("ipv4.auto-route-metric"));
+    assert!(error.msg().contains("ipv4.prefix-route-metric"));
+}
+
+#[test]
+fn test_error_on_route_metric_out_of_range() {
+    for prop_name in ["auto-route-metric", "prefix-route-metric"] {
+        for invalid_value in [-2i64, u32::MAX as i64 + 1] {
+            let mut iface: Interface = serde_yaml::from_str(&format!(
+                r#"---
+                name: eth1
+                type: ethernet
+                state: up
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                  {prop_name}: {invalid_value}"#
+            ))
+            .unwrap();
+
+            let error = iface.sanitize(true).unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::InvalidArgument);
+            assert!(error.msg().contains("Invalid value"));
+            assert!(error.msg().contains(&format!("ipv4.{prop_name}")));
+        }
+    }
 }

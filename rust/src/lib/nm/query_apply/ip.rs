@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpv4, InterfaceIpv6,
-    Ipv6AddrGenMode, RouteRuleAction, RouteRuleEntry, WaitIp,
+    Ipv6AddrGenMode, RouteEntry, RouteRuleAction, RouteRuleEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -54,7 +54,8 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             } else {
                 None
             },
-            auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
+            // -1 is a special value meaning use NetworkManager's default metric
+            auto_route_metric: nm_ip_setting.route_metric.or(Some(-1)),
             dhcp_send_hostname: if enabled && dhcp == Some(true) {
                 Some(dhcp_send_hostname)
             } else {
@@ -72,6 +73,9 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             } else {
                 None
             },
+            prefix_route_metric: nm_ip_setting
+                .route_metric
+                .or(Some(RouteEntry::USE_DEFAULT_METRIC)),
             ..Default::default()
         }
     } else {
@@ -123,7 +127,8 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                     None
                 }
             },
-            auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
+            // -1 is a special value meaning use NetworkManager's default metric
+            auto_route_metric: nm_ip_setting.route_metric.or(Some(-1)),
             dhcp_send_hostname: if enabled && dhcp == Some(true) {
                 Some(nm_ip_setting.dhcp_send_hostname.unwrap_or(true))
             } else {

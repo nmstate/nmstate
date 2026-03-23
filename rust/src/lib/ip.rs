@@ -11,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, DnsClientState, ErrorKind, MergedInterface,
-    MptcpAddressFlag, NmstateError, RouteRuleEntry,
+    MptcpAddressFlag, NmstateError, RouteEntry, RouteRuleEntry,
 };
 
 const AF_INET: u8 = 2;
@@ -83,9 +83,9 @@ struct InterfaceIp {
         skip_serializing_if = "Option::is_none",
         rename = "auto-route-metric",
         default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
+        deserialize_with = "crate::deserializer::option_i64_or_string"
     )]
-    pub auto_route_metric: Option<u32>,
+    pub auto_route_metric: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
     #[serde(
@@ -105,12 +105,15 @@ struct InterfaceIp {
         rename = "dhcp-custom-hostname"
     )]
     pub dhcp_custom_hostname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub forwarding: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
+        rename = "prefix-route-metric",
         default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
+        deserialize_with = "crate::deserializer::option_i64_or_string"
     )]
-    pub forwarding: Option<bool>,
+    pub prefix_route_metric: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
@@ -184,7 +187,7 @@ pub struct InterfaceIpv4 {
     /// Metric for routes retrieved from DHCP server.
     /// Only available for DHCPv4 enabled interface.
     /// Deserialize from `auto-route-metric`
-    pub auto_route_metric: Option<u32>,
+    pub auto_route_metric: Option<i64>,
     /// Whether to include hostname in DHCP request.
     /// If the hostname is FQDN, the `Fully Qualified Domain Name (FQDN)`
     /// option(81) defined in RFC 4702 will be used.
@@ -203,6 +206,9 @@ pub struct InterfaceIpv4 {
     pub dhcp_custom_hostname: Option<String>,
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<HashSet<RouteRuleEntry>>,
+    /// Metric for routes of prefixes directly connected to the interface.
+    /// Deserialize from `prefix-route-metric`
+    pub prefix_route_metric: Option<i64>,
 }
 
 impl InterfaceIpv4 {
@@ -276,6 +282,69 @@ impl InterfaceIpv4 {
         self.sanitize(false).ok();
     }
 
+    pub(crate) fn sanitize_auto_metric_and_prefix_metric(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        if let Some(prefix_metric) = self.prefix_route_metric
+            && prefix_metric != RouteEntry::USE_DEFAULT_METRIC
+            && let Some(auto_metric) = self.auto_route_metric
+            && auto_metric != RouteEntry::USE_DEFAULT_METRIC
+            && prefix_metric != auto_metric
+        {
+            return Err(NmstateError::new(
+                ErrorKind::NotSupportedError,
+                format!(
+                    "Different value of ipv4.auto-route-metric ({}) and \
+                     ipv4.prefix-route-metric ({}) are not supported yet by \
+                     NetworkManager",
+                    auto_metric, prefix_metric,
+                ),
+            ));
+        }
+
+        if let Some(metric) = self.prefix_route_metric
+            && (metric < RouteEntry::USE_DEFAULT_METRIC
+                || metric > u32::MAX as i64)
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid value for ipv4.prefix-route-metric: {metric}, \
+                     should be in range of [{};{}]",
+                    RouteEntry::USE_DEFAULT_METRIC,
+                    u32::MAX,
+                ),
+            ));
+        }
+        if let Some(metric) = self.auto_route_metric
+            && (metric < RouteEntry::USE_DEFAULT_METRIC
+                || metric > u32::MAX as i64)
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid value for ipv4.auto-route-metric: {metric}, \
+                     should be in range of [{};{}]",
+                    RouteEntry::USE_DEFAULT_METRIC,
+                    u32::MAX,
+                ),
+            ));
+        }
+
+        if self.prefix_route_metric == Some(RouteEntry::USE_DEFAULT_METRIC)
+            && self.auto_route_metric.is_some()
+        {
+            self.prefix_route_metric = self.auto_route_metric;
+        }
+        if self.auto_route_metric == Some(RouteEntry::USE_DEFAULT_METRIC)
+            && self.prefix_route_metric.is_some()
+        {
+            self.auto_route_metric = self.prefix_route_metric;
+        }
+
+        Ok(())
+    }
+
     // * Remove link-local address
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP enabled and
     //   those options is None
@@ -283,6 +352,7 @@ impl InterfaceIpv4 {
     // * Remove auto IP address.
     // * Set DHCP options to None if DHCP is false
     // * Remove mptcp_flags is they are for query only
+    // * Validate auto metric and prefix metric
     pub(crate) fn sanitize(
         &mut self,
         is_desired: bool,
@@ -359,6 +429,7 @@ impl InterfaceIpv4 {
         if !self.enabled {
             self.dhcp = None;
             self.addresses = None;
+            self.prefix_route_metric = None;
         }
 
         if self.dhcp != Some(true) {
@@ -393,6 +464,9 @@ impl InterfaceIpv4 {
             for addr in addrs.iter_mut() {
                 addr.mptcp_flags = None;
             }
+        }
+        if is_desired && self.enabled {
+            self.sanitize_auto_metric_and_prefix_metric()?;
         }
         Ok(())
     }
@@ -446,6 +520,7 @@ impl From<InterfaceIp> for InterfaceIpv4 {
             dhcp_send_hostname: ip.dhcp_send_hostname,
             dhcp_custom_hostname: ip.dhcp_custom_hostname,
             forwarding: ip.forwarding,
+            prefix_route_metric: ip.prefix_route_metric,
             ..Default::default()
         }
     }
@@ -472,6 +547,7 @@ impl From<InterfaceIpv4> for InterfaceIp {
             dhcp_send_hostname: ip.dhcp_send_hostname,
             dhcp_custom_hostname: ip.dhcp_custom_hostname,
             forwarding: ip.forwarding,
+            prefix_route_metric: ip.prefix_route_metric,
             ..Default::default()
         }
     }
@@ -552,7 +628,7 @@ pub struct InterfaceIpv6 {
     /// Metric for routes retrieved from DHCP server.
     /// Only available for autoconf enabled interface.
     /// Deserialize from `auto-route-metric`.
-    pub auto_route_metric: Option<u32>,
+    pub auto_route_metric: Option<i64>,
     /// IETF draft(expired) Tokenised IPv6 Identifiers. Should be only
     /// containing the tailing 64 bites for IPv6 address.
     pub token: Option<String>,
@@ -684,9 +760,11 @@ impl InterfaceIpv6 {
             self.auto_gateway = None;
             self.auto_routes = None;
             self.auto_table_id = None;
-            self.auto_route_metric = None;
             self.dhcp_send_hostname = None;
             self.dhcp_custom_hostname = None;
+        }
+        if self.autoconf == Some(false) {
+            self.auto_route_metric = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs.iter_mut() {
@@ -794,6 +872,11 @@ impl<'de> Deserialize<'de> for InterfaceIpv6 {
         let v = serde_json::Value::deserialize(deserializer)?;
 
         if let Some(v_map) = v.as_object() {
+            if v_map.contains_key("prefix-route-metric") {
+                return Err(serde::de::Error::custom(
+                    "prefix-route-metric is not allowed for IPv6",
+                ));
+            }
             if v_map.contains_key("dhcp_client_id") {
                 return Err(serde::de::Error::custom(
                     "dhcp-client-id is not allowed for IPv6",

@@ -65,9 +65,16 @@ fn gen_nm_ipv4_setting(
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
     nm_setting.forwarding = iface_ip.forwarding.map(i32::from);
+
+    if iface_ip.prefix_route_metric.is_some() {
+        nm_setting.route_metric = iface_ip.prefix_route_metric;
+    }
+
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
-        nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());
+        if iface_ip.auto_route_metric.is_some() {
+            nm_setting.route_metric = iface_ip.auto_route_metric;
+        }
         nm_setting.dhcp_client_id = Some(nmstate_dhcp_client_id_to_nm(
             iface_ip
                 .dhcp_client_id
@@ -189,6 +196,7 @@ fn gen_nm_ipv6_setting(
     nm_setting.addresses = addresses;
     nm_setting.addr_gen_mode =
         Some(nmstate_addr_gen_mode_to_nm(iface_ip.addr_gen_mode.as_ref()));
+
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
@@ -207,7 +215,9 @@ fn gen_nm_ipv6_setting(
                 nm_setting.token = Some(token.to_string());
             }
         }
-        nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());
+        if iface_ip.auto_route_metric.is_some() {
+            nm_setting.route_metric = iface_ip.auto_route_metric;
+        }
         apply_dhcp_opts(
             &mut nm_setting,
             iface_ip.auto_dns,

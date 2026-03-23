@@ -173,6 +173,7 @@ class InterfaceIP:
     ALLOW_EXTRA_ADDRESS = "allow-extra-address"
     DHCP_SEND_HOSTNAME = "dhcp-send-hostname"
     DHCP_CUSTOM_HOSTNAME = "dhcp-custom-hostname"
+    PREFIX_ROUTE_METRIC = "prefix-route-metric"
 
 
 class InterfaceIPv4(InterfaceIP):
