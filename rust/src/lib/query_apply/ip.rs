@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Interface, InterfaceIpv4, InterfaceIpv6};
+use crate::{Interface, InterfaceIpv4, InterfaceIpv6, RouteEntry};
 
 impl InterfaceIpv4 {
     // Sort addresses and dedup
@@ -35,6 +35,14 @@ impl InterfaceIpv4 {
                 addrs.sort_unstable();
                 addrs.dedup();
             }
+        }
+        // We do not verify prefix_route_metric or auto_route_metric if set to
+        // RouteEntry::USE_DEFAULT_METRIC
+        if self.prefix_route_metric == Some(RouteEntry::USE_DEFAULT_METRIC) {
+            self.prefix_route_metric = None;
+        }
+        if self.auto_route_metric == Some(RouteEntry::USE_DEFAULT_METRIC) {
+            self.auto_route_metric = None;
         }
     }
     pub(crate) fn update(&mut self, other: &Self) {
@@ -84,6 +92,9 @@ impl InterfaceIpv4 {
         }
         if other.forwarding.is_some() {
             self.forwarding = other.forwarding;
+        }
+        if other.prefix_route_metric.is_some() {
+            self.prefix_route_metric = other.prefix_route_metric;
         }
     }
 }

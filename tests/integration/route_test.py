@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
+import json
 
 import pytest
 
@@ -2620,3 +2621,115 @@ def test_kernel_mode_fail_on_same_dst_metric_routes(
     desired_state[Route.KEY] = {Route.CONFIG: load_yaml(routes)}
     with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state, kernel_only=True)
+
+
+@pytest.fixture
+def eth1_up_with_prefix_route_metric(eth1_up):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: true
+            dhcp: false
+            prefix-route-metric: 102
+            address:
+            - ip: 192.0.2.252
+              prefix-length: 24
+        """
+    )
+    libnmstate.apply(desired_state)
+    yield
+
+
+def assert_prefix_routes(expected_routes):
+    cur_routes = json.loads(
+        cmdlib.exec_cmd("ip -j route show scope link dev eth1".split())[1]
+    )
+    assert len(cur_routes) == len(expected_routes)
+    for expected_route in expected_routes:
+        assert any(
+            cur_rt["metric"] == expected_route[Route.METRIC]
+            and cur_rt["dst"] == expected_route[Route.DESTINATION]
+            for cur_rt in cur_routes
+        )
+
+
+def test_prefix_route_metric_on_static_ip(eth1_up_with_prefix_route_metric):
+    expected_routes = load_yaml(
+        """---
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          metric: 102
+        """
+    )
+    assert_prefix_routes(expected_routes)
+
+
+def preserve_prefix_route_metric_if_not_desired(
+    eth1_up_with_prefix_route_metric,
+):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: true
+            dhcp: false
+            address:
+            - ip: 192.0.2.252
+              prefix-length: 24
+        """
+    )
+    libnmstate.apply(desired_state)
+
+    expected_routes = load_yaml(
+        """---
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          metric: 102
+        """
+    )
+
+    assert_prefix_routes(expected_routes)
+
+
+@pytest.mark.parametrize(
+    "values",
+    [(Route.USE_DEFAULT_METRIC, 101), (101, Route.USE_DEFAULT_METRIC)],
+    ids=["default-prefix-route", "default-auto-route"],
+)
+def test_not_conflict_on_default_prefix_route_metric(eth1_up, values):
+    prefix_metric = values[0]
+    auto_metric = values[1]
+    desired_state = load_yaml(
+        f"""---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: true
+            dhcp: true
+            prefix-route-metric: {prefix_metric}
+            auto-route-metric: {auto_metric}
+            address:
+            - ip: 192.0.2.252
+              prefix-length: 24
+        """
+    )
+    libnmstate.apply(desired_state)
+
+    expected_routes = load_yaml(
+        """---
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          metric: 101
+        """
+    )
+
+    assert_prefix_routes(expected_routes)
