@@ -26,7 +26,8 @@ RUN echo net.ipv6.conf.all.disable_ipv6=0 > \
     echo kernel.core_pattern=/exported-artifacts/core.%h.%e.%t > \
     /etc/sysctl.d/01-export-kernel-cores.conf
 
-RUN systemctl enable systemd-udevd NetworkManager openvswitch ipsec
+RUN systemctl enable systemd-udevd NetworkManager openvswitch ipsec && \
+    systemctl disable dnf-makecache.timer
 
 # Fedora has `tsflags=nodocs` which will not install document files in a rpm,
 # this will causing rust rpm build failure.
