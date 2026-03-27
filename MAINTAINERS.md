@@ -15,3 +15,4 @@ Emeritus Maintainers
 | Name                                    |
 |-----------------------------------------|
 | [Edward Haas](https://github.com/EdDev) |
+| [Till Maas](https://github.com/tyll)    |
