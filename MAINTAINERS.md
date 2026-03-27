@@ -12,7 +12,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for general contribution guidelines.
 
 Emeritus Maintainers
 
-| Name                                    |
-|-----------------------------------------|
-| [Edward Haas](https://github.com/EdDev) |
-| [Till Maas](https://github.com/tyll)    |
+| Name                                              |
+|---------------------------------------------------|
+| [Edward Haas](https://github.com/EdDev)           |
+| [Till Maas](https://github.com/tyll)              |
+| [Liang Wen](https://github.com/liangwen12year)    |
