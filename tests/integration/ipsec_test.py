@@ -4,6 +4,7 @@ import pytest
 import yaml
 
 import libnmstate
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -1176,3 +1177,105 @@ def test_ipsec_leftprotoport_rightprotoport(ipsec_srv_cert_gw_icmp):
         IpsecTestEnv.SRV_POOL_PREFIX_V4,
         IpsecTestEnv.CLI_NIC,
     )
+
+
+# https://issues.redhat.com/browse/RHEL-32947
+@pytest.mark.tier1
+@pytest.mark.xfail(
+    raises=NmstateVerificationError,
+    reason="leftsubnets need patched NetworkManager-libreswan",
+)
+@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
+def test_ipsec_ipv4_libreswan_leftsubnets(ipsec_srv_site_to_site):
+    leftsubnets = (
+        f"{IpsecTestEnv.CLI_SUBNET_V4},{IpsecTestEnv.CLI_SUBNET_V4_2}"
+    )
+    rightsubnets = (
+        f"{IpsecTestEnv.SRV_SUBNET_V4},{IpsecTestEnv.SRV_SUBNET_V4_2}"
+    )
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: {IPSEC_CONN_NAME}
+          type: ipsec
+          ipv4:
+            enabled: true
+            dhcp: true
+          libreswan:
+            nm-auto-defaults: false
+            left: {IpsecTestEnv.CLI_ADDR_V4}
+            leftid: '@{IpsecTestEnv.CLI_KEY_ID}'
+            leftcert: {IpsecTestEnv.CLI_KEY_ID}
+            leftsubnets: "{leftsubnets}"
+            right: {IpsecTestEnv.SRV_ADDR_V4}
+            rightid: '@{IpsecTestEnv.SRV_KEY_ID}'
+            rightsubnets: "{rightsubnets}"
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        IpsecTestEnv.CLI_ADDR_V4,
+        IpsecTestEnv.SRV_ADDR_V4,
+    )
+    cli_subnets = [IpsecTestEnv.CLI_SUBNET_V4, IpsecTestEnv.CLI_SUBNET_V4_2]
+    srv_subnets = [IpsecTestEnv.SRV_SUBNET_V4, IpsecTestEnv.SRV_SUBNET_V4_2]
+    for cli_subnet, srv_subnet in zip(cli_subnets, srv_subnets):
+        assert retry_till_true_or_timeout(
+            RETRY_COUNT,
+            _check_ipsec_policy,
+            cli_subnet,
+            srv_subnet,
+        )
+
+
+@pytest.mark.xfail(
+    raises=NmstateVerificationError,
+    reason="leftsubnets need patched NetworkManager-libreswan",
+)
+@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
+def test_ipsec_ipv6_libreswan_leftsubnets(ipsec_srv_site_to_site):
+    leftsubnets = (
+        f"{IpsecTestEnv.CLI_SUBNET_V6},{IpsecTestEnv.CLI_SUBNET_V6_2}"
+    )
+    rightsubnets = (
+        f"{IpsecTestEnv.SRV_SUBNET_V6},{IpsecTestEnv.SRV_SUBNET_V6_2}"
+    )
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: {IPSEC_CONN_NAME}
+          type: ipsec
+          ipv6:
+            enabled: true
+            dhcp: true
+          libreswan:
+            nm-auto-defaults: false
+            left: {IpsecTestEnv.CLI_ADDR_V6}
+            leftid: '%fromcert'
+            leftcert: {IpsecTestEnv.CLI_KEY_ID}
+            leftsubnets: "{leftsubnets}"
+            right: {IpsecTestEnv.SRV_ADDR_V6}
+            rightid: '%fromcert'
+            rightsubnets: "{rightsubnets}"
+            ikev2: insist""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assert retry_till_true_or_timeout(
+        RETRY_COUNT,
+        _check_ipsec,
+        IpsecTestEnv.CLI_ADDR_V6,
+        IpsecTestEnv.SRV_ADDR_V6,
+    )
+    cli_subnets = [IpsecTestEnv.CLI_SUBNET_V6, IpsecTestEnv.CLI_SUBNET_V6_2]
+    srv_subnets = [IpsecTestEnv.SRV_SUBNET_V6, IpsecTestEnv.SRV_SUBNET_V6_2]
+    for cli_subnet, srv_subnet in zip(cli_subnets, srv_subnets):
+        assert retry_till_true_or_timeout(
+            RETRY_COUNT,
+            _check_ipsec_policy,
+            cli_subnet,
+            srv_subnet,
+        )

@@ -56,12 +56,18 @@ class IpsecTestEnv:
     SRV_POOL_PREFIX_V4 = "10.0.1"
     SRV_POOL_PREFIX_V6 = "2001:db8:c::"
     SRV_SUBNET_V4 = "10.0.0.0/24"
+    SRV_SUBNET_V4_2 = "10.1.0.0/24"
     SRV_SUBNET_V6 = "fd00:a::/64"
+    SRV_SUBNET_V6_2 = "fd00:b::/64"
     CLI_SUBNET_V4 = "10.0.9.0/24"
+    CLI_SUBNET_V4_2 = "10.0.10.0/24"
     CLI_SUBNET_V6 = "fd00:9::/64"
+    CLI_SUBNET_V6_2 = "fd00:10::/64"
     CLI_SUBNET_NIC_NAME = "cli-sub0"
     CLI_SUBADDR_V4 = "10.0.9.2"
+    CLI_SUBADDR_V4_2 = "10.0.10.2"
     CLI_SUBADDR_V6 = "fd00:9::2"
+    CLI_SUBADDR_V6_2 = "fd00:10::2"
     CLI_KEY_ID = "cli-a.example.org"
     SRV_KEY_ID = "ipsec-srv.example.org"
     CLI_NIC = "ipsec_cli0"
@@ -243,7 +249,11 @@ def setup_cli_ip():
                         {
                             IPv4.ADDRESS_IP: IpsecTestEnv.CLI_SUBADDR_V4,
                             IPv4.ADDRESS_PREFIX_LENGTH: 24,
-                        }
+                        },
+                        {
+                            IPv4.ADDRESS_IP: IpsecTestEnv.CLI_SUBADDR_V4_2,
+                            IPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        },
                     ],
                 },
                 Interface.IPV6: {
@@ -254,7 +264,11 @@ def setup_cli_ip():
                         {
                             IPv6.ADDRESS_IP: IpsecTestEnv.CLI_SUBADDR_V6,
                             IPv6.ADDRESS_PREFIX_LENGTH: 64,
-                        }
+                        },
+                        {
+                            IPv6.ADDRESS_IP: IpsecTestEnv.CLI_SUBADDR_V6_2,
+                            IPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        },
                     ],
                 },
             },
