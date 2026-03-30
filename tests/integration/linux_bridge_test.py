@@ -44,6 +44,7 @@ TEST_BRIDGE0 = "linux-br0"
 TEST_TAP0 = "test-tap0"
 TEST_BOND0 = "test-bond0"
 ETH1 = "eth1"
+ETH2 = "eth2"
 # RFC 7042 reserved EUI-48 MAC range for document
 TEST_MAC_ADDRESS = "00:00:5E:00:53:01"
 VERIFY_RETRY_TMO = 5
@@ -253,6 +254,52 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     )
 
     assertlib.assert_state(desired_state)
+
+
+@pytest.mark.tier1
+def test_allow_extra_linux_bridge_ports(eth1_up, eth2_up):
+    bridge_state = _create_bridge_subtree_config((ETH1, ETH2))
+    with (
+        dummy_interface("dummy1"),
+        linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state,
+    ):
+        desired_state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.ALLOW_EXTRA_PORTS
+        ] = True
+        exec_cmd(
+            ("ip", "link", "set", "dummy1", "master", TEST_BRIDGE0),
+            check=True,
+        )
+        libnmstate.apply(desired_state)
+
+        dummy1_state = show_only(("dummy1",))
+        assert (
+            dummy1_state[Interface.KEY][0][Interface.CONTROLLER]
+            == TEST_BRIDGE0
+        )
+
+
+@pytest.mark.tier1
+def test_create_linux_bridge_with_allow_extra_ports(eth1_up, eth2_up):
+    bridge_state = _create_bridge_subtree_config((ETH1, ETH2))
+
+    # create the bridge with ALLOW_EXTRA_PORTS enabled
+    # which should not affect regular bridge creation
+    bridge_state[LinuxBridge.ALLOW_EXTRA_PORTS] = True
+    with (linux_bridge(TEST_BRIDGE0, bridge_state),):
+        state = show_only((TEST_BRIDGE0,))
+        assert (
+            state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+                LinuxBridge.PORT_SUBTREE
+            ][0][LinuxBridge.Port.NAME]
+            == ETH1
+        )
+        assert (
+            state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+                LinuxBridge.PORT_SUBTREE
+            ][1][LinuxBridge.Port.NAME]
+            == ETH2
+        )
 
 
 @pytest.mark.tier1

@@ -2144,6 +2144,74 @@ def test_allow_extra_ovs_patch_ports(ovs_bridge_with_patch_ports):
 
 
 @pytest.fixture
+def ovs_bridge_with_extra_ports(eth1_up, eth2_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(ETH1)
+    bridge.add_system_port(ETH2)
+    desired_state = bridge.state
+    desired_state[Interface.KEY].append(
+        {
+            Interface.NAME: "dummy1",
+            Interface.TYPE: InterfaceType.DUMMY,
+            Interface.STATE: InterfaceState.UP,
+        }
+    )
+    libnmstate.apply(desired_state)
+    cmdlib.exec_cmd(
+        f"ovs-vsctl --may-exist add-port {BRIDGE1} dummy1".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd(
+        f"ovs-vsctl --if-exists del-port {BRIDGE1} dummy1".split(),
+        check=True,
+    )
+    for iface in desired_state[Interface.KEY]:
+        iface[Interface.STATE] = InterfaceState.ABSENT
+    libnmstate.apply(desired_state)
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent("dummy1")
+
+
+@pytest.mark.tier1
+def test_allow_extra_ovs_bridge_ports(ovs_bridge_with_extra_ports):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(ETH1)
+    bridge.add_system_port(ETH2)
+    bridge.set_allow_extra_ports(True)
+    desired_state = bridge.state
+
+    libnmstate.apply(desired_state)
+
+    br1_state = statelib.show_only((BRIDGE1,))
+    br_ports = br1_state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE][
+        OVSBridge.PORT_SUBTREE
+    ]
+    assert len(br_ports) == 3
+    assert any(port[OVSBridge.Port.NAME] == "dummy1" for port in br_ports)
+
+
+@pytest.mark.tier1
+def test_create_ovs_bridge_with_allow_extra_ports(eth1_up, eth2_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(ETH1)
+    bridge.add_system_port(ETH2)
+
+    # create the bridge with ALLOW_EXTRA_PORTS enabled,
+    # which should not affect regular bridge creation
+    bridge.set_allow_extra_ports(True)
+
+    with bridge.create():
+        br1_state = statelib.show_only((BRIDGE1,))
+        br_ports = br1_state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE][
+            OVSBridge.PORT_SUBTREE
+        ]
+        assert len(br_ports) == 2
+        assert any(port[OVSBridge.Port.NAME] == ETH1 for port in br_ports)
+        assert any(port[OVSBridge.Port.NAME] == ETH2 for port in br_ports)
+
+
+@pytest.fixture
 def ovs_bridge_with_geneve(bridge_with_ports):
     cmdlib.exec_cmd(
         "ovs-vsctl add-port br1 gen0 -- set interface gen0 type=geneve "
