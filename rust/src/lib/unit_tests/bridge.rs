@@ -769,3 +769,146 @@ fn test_linux_bridge_is_default_pvid_changed() {
 
     assert!(!merged_iface.is_default_pvid_changed())
 }
+
+#[test]
+fn test_linux_bridge_ignore_extra_ports_for_verify() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        - name: eth2
+          type: ethernet
+          state: up
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            allow-extra-ports: true
+            port:
+            - name: eth1
+            - name: eth2
+        ",
+    )
+    .unwrap();
+    let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        - name: eth2
+          type: ethernet
+          state: up
+        - name: eth3
+          type: ethernet
+          state: up
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port:
+            - name: eth1
+            - name: eth2
+            - name: eth3
+        ",
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        - name: eth2
+          type: ethernet
+          state: up
+        - name: eth3
+          type: ethernet
+          state: up
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port:
+            - name: eth1
+            - name: eth2
+            - name: eth3
+        ",
+    )
+    .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+#[test]
+fn test_linux_bridge_ignore_extra_ports_for_apply() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        - name: eth2
+          type: ethernet
+          state: up
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            allow-extra-ports: true
+            port:
+            - name: eth1
+            - name: eth2
+        ",
+    )
+    .unwrap();
+    let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        - name: eth2
+          type: ethernet
+          state: up
+        - name: eth3
+          type: ethernet
+          state: up
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port:
+            - name: eth1
+            - name: eth2
+            - name: eth3
+        ",
+    )
+    .unwrap();
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let for_apply_bridge = merged_ifaces
+        .get_iface("br0", InterfaceType::LinuxBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    let for_apply_eth3 = merged_ifaces
+        .get_iface("eth3", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref();
+
+    assert_eq!(for_apply_bridge.ports(), Some(vec!["eth1", "eth2"]));
+    assert_eq!(for_apply_eth3, None);
+}

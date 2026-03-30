@@ -903,6 +903,7 @@ impl MergedInterfaces {
     // Contains all the smart modifications, validations among interfaces
     fn process(&mut self) -> Result<(), NmstateError> {
         self.process_allow_extra_ovs_patch_ports_for_apply();
+        self.process_allow_extra_bridge_ports_for_apply();
         self.apply_copy_mac_from()?;
         self.validate_hsr_mac()?;
         self.copy_hsr_mac()?;
@@ -946,6 +947,15 @@ impl MergedInterfaces {
              interfaces in desire state to place controller before its ports"
                 .to_string(),
         ))
+    }
+
+    fn process_allow_extra_bridge_ports_for_apply(&mut self) {
+        for merged_iface in self
+            .iter_mut()
+            .filter(|mi| mi.desired.as_ref().map(|i| i.is_up()) == Some(true))
+        {
+            merged_iface.process_allow_extra_bridge_ports();
+        }
     }
 
     fn apply_copy_mac_from(&mut self) -> Result<(), NmstateError> {

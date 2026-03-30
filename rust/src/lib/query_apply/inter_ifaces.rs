@@ -196,6 +196,7 @@ impl MergedInterfaces {
         current.remove_ignored_ifaces(self.ignored_ifaces.as_slice());
         current.remove_unknown_type_port();
         merged.process_allow_extra_ovs_patch_ports_for_verify(&mut current);
+        merged.process_allow_extra_bridge_ports_for_verify(&mut current);
 
         for iface in current
             .kernel_ifaces
@@ -254,5 +255,25 @@ impl MergedInterfaces {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn process_allow_extra_bridge_ports_for_verify(
+        &mut self,
+        post_apply_current: &mut Interfaces,
+    ) {
+        for merged_iface in self.iter().filter(|merged_iface| {
+            if let Some(i) = merged_iface.desired.as_ref() {
+                i.allow_extra_ports() == Some(true) && i.is_up()
+            } else {
+                false
+            }
+        }) {
+            if let Some(des_iface) = merged_iface.desired.as_ref()
+                && let Some(cur_iface) = post_apply_current
+                    .get_iface_mut(des_iface.name(), des_iface.iface_type())
+            {
+                des_iface.remove_extra_ports(cur_iface);
+            }
+        }
     }
 }

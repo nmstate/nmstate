@@ -266,6 +266,12 @@ pub struct OvsBridgeConfig {
     /// Deserialize from `allow-extra-patch-ports`.
     pub allow_extra_patch_ports: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Only validate for applying, when set to `true`, Ignore extra ports
+    /// attached to bridge. Default is false. This property will not be
+    /// persisted, every time you modify ports of specified bridge, you
+    /// need to explicitly define this property if not using default value.
+    pub allow_extra_ports: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<OvsBridgeOptions>,
     #[serde(
         skip_serializing_if = "Option::is_none",
