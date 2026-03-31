@@ -240,11 +240,7 @@ impl NmConnectionMatcher {
             }
         }
 
-        let mut nm_conns: Vec<&NmConnection> =
-            nm_conns.iter().map(|n| n.as_ref()).collect();
-        nm_conns.sort_unstable_by_key(|c| nm_conn_activation_sort_keys(c));
-
-        nm_conns.pop()
+        best_saved_conn(nm_conns)
     }
 
     /// Find the best saved NmConnection in the order of:
@@ -277,40 +273,19 @@ impl NmConnectionMatcher {
                     &nm_iface_type,
                 ),
             Some(InterfaceIdentifier::MacAddress) => {
-                if let Some(mac) = base_iface.mac_address.as_deref() {
-                    let mut nm_conns: Vec<&NmConnection> = self
-                        .saved_by_mac
-                        .get(&(mac.to_string(), nm_iface_type))
-                        .map(|nm_conns| {
-                            nm_conns.iter().map(Rc::as_ref).collect()
-                        })
-                        .unwrap_or_default();
-                    nm_conns.sort_unstable_by(|a, b| {
-                        nm_conn_activation_sort_keys(a)
-                            .cmp(&nm_conn_activation_sort_keys(b))
-                    });
-                    nm_conns.pop()
-                } else {
-                    None
-                }
+                base_iface.mac_address.as_deref().and_then(|mac| {
+                    best_saved_conn(
+                        self.saved_by_mac
+                            .get(&(mac.to_string(), nm_iface_type))?,
+                    )
+                })
             }
             Some(InterfaceIdentifier::PciAddress) => {
-                if let Some(pci) = base_iface.pci_address {
-                    let mut nm_conns: Vec<&NmConnection> = self
-                        .saved_by_pci
-                        .get(&(pci, nm_iface_type))
-                        .map(|nm_conns| {
-                            nm_conns.iter().map(Rc::as_ref).collect()
-                        })
-                        .unwrap_or_default();
-                    nm_conns.sort_unstable_by(|a, b| {
-                        nm_conn_activation_sort_keys(a)
-                            .cmp(&nm_conn_activation_sort_keys(b))
-                    });
-                    nm_conns.pop()
-                } else {
-                    None
-                }
+                base_iface.pci_address.and_then(|pci| {
+                    best_saved_conn(
+                        self.saved_by_pci.get(&(pci, nm_iface_type))?,
+                    )
+                })
             }
         }
     }
@@ -436,6 +411,17 @@ impl NmConnectionMatcher {
     ) -> Option<&NmActiveConnection> {
         self.acs_by_uuid.get(uuid).map(Rc::as_ref)
     }
+}
+
+/// Pick the best saved NmConnection from a list by activation sort keys:
+///  (connection.autoconnect-priority, connection.timestamp, connection.uuid)
+fn best_saved_conn(
+    nm_conns: &[Rc<NmConnection>],
+) -> Option<&NmConnection> {
+    let mut nm_conns: Vec<&NmConnection> =
+        nm_conns.iter().map(|n| n.as_ref()).collect();
+    nm_conns.sort_unstable_by_key(|c| nm_conn_activation_sort_keys(c));
+    nm_conns.pop()
 }
 
 const NM_IFACE_TYPES_USE_PARENT_MAC: [NmIfaceType; 3] =
