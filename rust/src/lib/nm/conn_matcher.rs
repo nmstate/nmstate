@@ -243,6 +243,17 @@ impl NmConnectionMatcher {
         best_saved_conn(nm_conns)
     }
 
+    fn get_prefered_saved_by_mac<'s>(
+        &'s self,
+        mac: &str,
+        nm_iface_type: &NmIfaceType,
+    ) -> Option<&'s NmConnection> {
+        best_saved_conn(
+            self.saved_by_mac
+                .get(&(mac.to_uppercase(), *nm_iface_type))?,
+        )
+    }
+
     /// Find the best saved NmConnection in the order of:
     /// * Currently activated
     /// * Biggest `connection.autoconnect-priority`
@@ -271,14 +282,21 @@ impl NmConnectionMatcher {
                 .get_prefered_saved_by_name_type(
                     base_iface.name.as_str(),
                     &nm_iface_type,
-                ),
-            Some(InterfaceIdentifier::MacAddress) => {
-                base_iface.mac_address.as_deref().and_then(|mac| {
-                    best_saved_conn(
-                        self.saved_by_mac
-                            .get(&(mac.to_string(), nm_iface_type))?,
+                )
+                .or_else(|| {
+                    // Fallback: for disconnected interfaces, the saved
+                    // connection might use MAC identifier without
+                    // connection.interface-name set. Try MAC-based lookup.
+                    self.get_prefered_saved_by_mac(
+                        base_iface.mac_address.as_deref()?,
+                        &nm_iface_type,
                     )
-                })
+                }),
+            Some(InterfaceIdentifier::MacAddress) => {
+                self.get_prefered_saved_by_mac(
+                    base_iface.mac_address.as_deref()?,
+                    &nm_iface_type,
+                )
             }
             Some(InterfaceIdentifier::PciAddress) => {
                 base_iface.pci_address.and_then(|pci| {
@@ -418,10 +436,10 @@ impl NmConnectionMatcher {
 fn best_saved_conn(
     nm_conns: &[Rc<NmConnection>],
 ) -> Option<&NmConnection> {
-    let mut nm_conns: Vec<&NmConnection> =
-        nm_conns.iter().map(|n| n.as_ref()).collect();
-    nm_conns.sort_unstable_by_key(|c| nm_conn_activation_sort_keys(c));
-    nm_conns.pop()
+    nm_conns
+        .iter()
+        .map(Rc::as_ref)
+        .max_by_key(|c| nm_conn_activation_sort_keys(c))
 }
 
 const NM_IFACE_TYPES_USE_PARENT_MAC: [NmIfaceType; 3] =
