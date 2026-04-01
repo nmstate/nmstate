@@ -9,6 +9,7 @@ A declarative network management API for hosts.
 [![docs.rs](https://img.shields.io/docsrs/nmstate)](https://docs.rs/nmstate)
 [![Fedora Rawhide version](https://img.shields.io/badge/dynamic/json.svg?label=Fedora%20Rawhide&url=https%3A%2F%2Fapps.fedoraproject.org%2Fmdapi%2Frawhide%2Fpkg%2Fnmstate&query=%24.version&colorB=blue)](https://src.fedoraproject.org/rpms/nmstate)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnmstate%2Fnmstate.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnmstate%2Fnmstate?ref=badge_shield)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12344/badge)](https://www.bestpractices.dev/projects/12344)
 
 Copr build status, all repos are built for Fedora Linux and RHEL/CentOS Stream/EPEL 8+:
 
