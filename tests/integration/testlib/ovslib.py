@@ -31,6 +31,11 @@ class Bridge:
     def set_ovs_db(self, ovs_db_config):
         self._bridge_iface[OVSBridge.OVS_DB_SUBTREE] = ovs_db_config
 
+    def set_allow_extra_ports(self, allow_extra_ports):
+        self._bridge_iface[OVSBridge.CONFIG_SUBTREE][
+            OVSBridge.ALLOW_EXTRA_PORTS
+        ] = allow_extra_ports
+
     def add_system_port(self, name):
         self._add_port(name)
 

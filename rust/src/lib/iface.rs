@@ -710,6 +710,54 @@ impl Interface {
         }
     }
 
+    pub fn allow_extra_ports(&self) -> Option<bool> {
+        match self {
+            Self::LinuxBridge(iface) => {
+                iface.bridge.as_ref().and_then(|b| b.allow_extra_ports)
+            }
+            Self::OvsBridge(iface) => {
+                iface.bridge.as_ref().and_then(|b| b.allow_extra_ports)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn set_allow_extra_ports(&mut self, value: Option<bool>) {
+        match self {
+            Self::LinuxBridge(iface) => {
+                if let Some(b) = iface.bridge.as_mut() {
+                    b.allow_extra_ports = value;
+                }
+            }
+            Self::OvsBridge(iface) => {
+                if let Some(b) = iface.bridge.as_mut() {
+                    b.allow_extra_ports = value;
+                }
+            }
+            _ => (),
+        }
+    }
+
+    pub(crate) fn remove_extra_ports(&self, current: &mut Self) {
+        let (Some(des_ports), Some(cur_ports)) =
+            (self.ports(), current.ports())
+        else {
+            return;
+        };
+
+        let to_delete: Vec<String> = cur_ports
+            .iter()
+            .filter(|p| !des_ports.contains(p))
+            .map(|p| p.to_string())
+            .collect();
+        if to_delete.is_empty() {
+            return;
+        }
+        for port in to_delete {
+            current.remove_port(&port);
+        }
+    }
+
     // This function is for pre-edit clean up and check on current, `for_apply`,
     // `for_verify` states.
     //
@@ -941,6 +989,21 @@ impl MergedInterface {
         {
             verify_iface.copy_mac_from = None;
             verify_iface.mac_address = Some(mac);
+        }
+    }
+
+    pub(crate) fn process_allow_extra_bridge_ports(&mut self) {
+        let (Some(des_iface), Some(for_verify)) =
+            (self.desired.as_mut(), self.for_verify.as_mut())
+        else {
+            return;
+        };
+        if des_iface.allow_extra_ports() != Some(true) {
+            return;
+        }
+        for_verify.set_allow_extra_ports(None);
+        if let Some(cur_iface) = self.current.as_mut() {
+            des_iface.remove_extra_ports(cur_iface);
         }
     }
 
