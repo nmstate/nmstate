@@ -237,8 +237,6 @@ pub(crate) async fn store_dns_config(
         || merged_state.dns.is_desired()
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
     {
-        purge_global_dns_config(nm_api).await?;
-
         if merged_state.dns.is_search_or_option_only() {
             log::info!(
                 "Using interface level DNS for special use case: only static \
@@ -247,25 +245,30 @@ pub(crate) async fn store_dns_config(
             // we cannot use global DNS in this case because global DNS suppress
             // DNS nameserver learn from DHCP/autoconf.
             store_dns_search_or_option_to_iface(merged_state, nm_acs, nm_devs)?;
+            purge_global_dns_config(nm_api).await?;
         } else if is_iface_dns_desired(merged_state) {
-            if let Err(e) =
-                store_dns_config_to_iface(merged_state, nm_acs, nm_devs)
-            {
-                log::info!(
-                    "Cannot store DNS to interface profile: {e}, will try to \
-                     set via global DNS"
-                );
-                store_dns_config_via_global_api(
-                    nm_api,
-                    merged_state.dns.servers.as_slice(),
-                    merged_state.dns.searches.as_slice(),
-                    merged_state.dns.options.as_slice(),
-                )
-                .await?;
+            match store_dns_config_to_iface(merged_state, nm_acs, nm_devs) {
+                Ok(_) => {
+                    purge_global_dns_config(nm_api).await?;
+                }
+                Err(e) => {
+                    log::info!(
+                        "Cannot store DNS to interface profile: {e}, will try \
+                         to set via global DNS"
+                    );
+                    store_dns_config_via_global_api(
+                        nm_api,
+                        merged_state.dns.servers.as_slice(),
+                        merged_state.dns.searches.as_slice(),
+                        merged_state.dns.options.as_slice(),
+                    )
+                    .await?;
+                }
             }
         } else if merged_state.dns.is_purge() {
             // Also need to purge interface level DNS
             store_dns_config_to_iface(merged_state, nm_acs, nm_devs).ok();
+            purge_global_dns_config(nm_api).await?;
         } else {
             store_dns_config_via_global_api(
                 nm_api,
