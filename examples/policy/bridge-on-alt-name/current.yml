@@ -1,0 +1,14 @@
+---
+interfaces:
+  - name: eth0
+    type: ethernet
+    state: up
+    mac-address: ff:ff:ff:ff:ff:ff
+    alt-names:
+      - name: primary
+    ipv4:
+      address:
+        - ip: 192.0.2.10
+          prefix-length: 24
+      dhcp: false
+      enabled: true

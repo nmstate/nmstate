@@ -262,3 +262,29 @@ fn test_policy_capture_route_rule() {
     assert_eq!(rules[0].ip_from, Some("2001:db8:b::/64".to_string()));
     assert_eq!(rules[0].table_id, Some(500));
 }
+
+#[test]
+fn test_policy_capture_by_alt_name() {
+    let cmd = NetworkCaptureCommand::parse(
+        r#"interfaces.alt-names.name == "primary""#,
+    )
+    .unwrap();
+
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth0
+            type: ethernet
+            state: up
+            alt-names:
+              - name: port1
+              - name: primary
+        ",
+    )
+    .unwrap();
+
+    let state = cmd.execute(&current, &HashMap::new()).unwrap();
+    let ifaces = state.interfaces.to_vec();
+    assert_eq!(ifaces.len(), 1);
+    assert_eq!(ifaces[0].name(), "eth0");
+}

@@ -290,3 +290,43 @@ fn test_policy_no_capture() {
     .unwrap();
     assert_eq!(state, expected_state);
 }
+
+#[test]
+fn test_policy_bridge_on_alt_name_capture() {
+    let mut policy: NetworkPolicy = serde_yaml::from_str(
+        r#"
+capture:
+  base-iface: interfaces.alt-names.name == "primary"
+desiredState:
+  interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+        port:
+        - name: "{{ capture.base-iface.interfaces.0.name }}"
+        "#,
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth0
+            type: ethernet
+            state: up
+            alt-names:
+              - name: port1
+              - name: primary
+        ",
+    )
+    .unwrap();
+
+    policy.current = Some(current);
+
+    let state = NetworkState::try_from(policy).unwrap();
+
+    let ifaces = state.interfaces.to_vec();
+    assert_eq!(ifaces.len(), 1);
+    assert_eq!(ifaces[0].name(), "br1");
+    assert_eq!(ifaces[0].ports(), Some(vec!["eth0"]));
+}

@@ -54,6 +54,14 @@ pub(crate) fn get_value_from_json(
                         line,
                         pos + prop_path[0].to_string().chars().count(),
                     )
+                } else if let Some(items) = v.as_array() {
+                    get_value_from_array(
+                        &prop_path[1..],
+                        items,
+                        line,
+                        // Advance past prop_path[0] + the "." separator.
+                        pos + prop_path[0].chars().count() + 1,
+                    )
                 } else {
                     Err(NmstateError::new_policy_error(
                         format!(
@@ -115,7 +123,7 @@ where
                 Ok(v) => v,
                 Err(_) => continue,
             };
-        if value_to_string(&cur_value).as_str() == value {
+        if is_value_match(&cur_value, value) {
             ret.push(item.clone());
         }
     }
@@ -168,6 +176,31 @@ fn get_leaf_array_value(
             line,
             pos,
         ))
+    }
+}
+
+fn get_value_from_array(
+    prop_path: &[String],
+    items: &[serde_json::Value],
+    line: &str,
+    pos: usize,
+) -> Result<serde_json::Value, NmstateError> {
+    Ok(serde_json::Value::Array(
+        items
+            .iter()
+            .filter_map(|element| element.as_object())
+            .filter_map(|obj| {
+                get_value_from_json(prop_path, obj, line, pos).ok()
+            })
+            .collect(),
+    ))
+}
+
+fn is_value_match(cur_value: &serde_json::Value, target: &str) -> bool {
+    if let Some(items) = cur_value.as_array() {
+        items.iter().any(|element| is_value_match(element, target))
+    } else {
+        value_to_string(cur_value).as_str() == target
     }
 }
 

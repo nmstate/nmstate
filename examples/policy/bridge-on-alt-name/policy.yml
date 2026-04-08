@@ -1,0 +1,13 @@
+---
+capture:
+  base-iface: interfaces.alt-names.name == "primary"
+desiredState:
+  interfaces:
+    - name: br1
+      type: linux-bridge
+      state: up
+      mac-address: "{{ capture.base-iface.interfaces.0.mac-address }}"
+      ipv4: "{{ capture.base-iface.interfaces.0.ipv4 }}"
+      bridge:
+        port:
+          - name: "{{ capture.base-iface.interfaces.0.name }}"
