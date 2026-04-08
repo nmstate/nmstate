@@ -493,3 +493,19 @@ interfaces:
         assert_eq!(e.position(), "{{ i".len() - 1)
     }
 }
+
+#[test]
+fn test_policy_capture_by_alt_name_not_found() {
+    let cmd = NetworkCaptureCommand::parse(
+        r#"interfaces.alt-names.name == "nonexistent""#,
+    )
+    .unwrap();
+    let current: NetworkState = NetworkState::new();
+    let result = cmd.execute(&current, &HashMap::new());
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::PolicyError);
+        assert_eq!(e.line(), "interfaces.alt-names.name == \"nonexistent\"");
+        assert!(e.to_string().contains("alt-names.name=nonexistent"));
+    }
+}

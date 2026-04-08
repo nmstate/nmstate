@@ -1,0 +1,15 @@
+---
+interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    mac-address: ff:ff:ff:ff:ff:ff
+    ipv4:
+      address:
+        - ip: 192.0.2.10
+          prefix-length: 24
+      dhcp: false
+      enabled: true
+    bridge:
+      port:
+        - name: eth0
