@@ -578,7 +578,7 @@ def test_macsec_parent_ref_by_mac(eth1_up, clean_up):
 
 # https://issues.redhat.com/browse/RHEL-86240
 @pytest.mark.tier1
-def test_description_on_down_interface_ref_by_mac(eth1_up):
+def test_description_on_down_interface_ref_by_mac(test_env_setup):
     port1_mac = get_mac_address("eth1")
 
     state = load_yaml(
