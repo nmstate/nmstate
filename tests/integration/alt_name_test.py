@@ -433,3 +433,85 @@ class TestAltNames:
             "eth1",
             [],
         )
+
+    # https://issues.redhat.com/browse/NMT-2202
+    @pytest.mark.tier1
+    def test_policy_capture_by_alt_name(self, eth1_with_alt_names):
+        libnmstate.apply(
+            load_yaml(
+                """---
+                interfaces:
+                - name: eth1
+                  type: ethernet
+                  state: up
+                  ipv4:
+                    address:
+                    - ip: 192.0.2.10
+                      prefix-length: 24
+                    dhcp: false
+                    enabled: true
+                """
+            )
+        )
+        eth1_state = show_only(("eth1",))[Interface.KEY][0]
+        eth1_mac = eth1_state["mac-address"]
+
+        policy = load_yaml(
+            """---
+        capture:
+          base-iface: interfaces.alt-names.name == "port1"
+        desired:
+          interfaces:
+            - name: br0
+              type: linux-bridge
+              state: up
+              mac-address: "{{ capture.base-iface.interfaces.0.mac-address }}"
+              ipv4: "{{ capture.base-iface.interfaces.0.ipv4 }}"
+              bridge:
+                port:
+                  - name: "{{ capture.base-iface.interfaces.0.name }}"
+            """
+        )
+        cur_state = libnmstate.show()
+        desired_state = libnmstate.gen_net_state_from_policy(policy, cur_state)
+
+        with linux_bridge(TEST_BRIDGE_NIC, {}, create=False):
+            libnmstate.apply(desired_state)
+
+            br_state = show_only((TEST_BRIDGE_NIC,))[Interface.KEY][0]
+            assert br_state["mac-address"] == eth1_mac
+            assert state_match(
+                [{"name": "eth1"}],
+                br_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE],
+            )
+
+    # https://issues.redhat.com/browse/NMT-2202
+    @pytest.mark.tier1
+    def test_policy_capture_by_alt_name_bridge_port(self, eth1_with_alt_names):
+        policy = load_yaml(
+            """---
+        capture:
+          base-iface: >-
+            interfaces.alt-names.name ==
+            "reallyreallylonglonglonginterfacenmae"
+        desired:
+          interfaces:
+            - name: br0
+              type: linux-bridge
+              state: up
+              bridge:
+                port:
+                  - name: "{{ capture.base-iface.interfaces.0.name }}"
+            """
+        )
+        cur_state = libnmstate.show()
+        desired_state = libnmstate.gen_net_state_from_policy(policy, cur_state)
+
+        with linux_bridge(TEST_BRIDGE_NIC, {}, create=False):
+            libnmstate.apply(desired_state)
+
+            br_state = show_only((TEST_BRIDGE_NIC,))[Interface.KEY][0]
+            assert state_match(
+                [{"name": "eth1"}],
+                br_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE],
+            )
