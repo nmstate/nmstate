@@ -609,3 +609,36 @@ def test_description_on_down_interface_ref_by_mac(eth1_up):
           """
     )
     assert_state_match(expected_state)
+
+
+@pytest.mark.tier2
+def test_mac_identifier_error_on_duplicate_mac(eth1_up, clean_up):
+    """Duplicate MACs with mac-identifier should raise an error."""
+    from .testlib.cmdlib import exec_cmd
+
+    eth1_mac = get_mac_address("eth1")
+
+    exec_cmd(
+        "ip link add ethX type veth peer name ethX.ep".split(), check=True
+    )
+    exec_cmd(["ip", "link", "set", "ethX", "address", eth1_mac], check=True)
+    exec_cmd("ip link set ethX up".split(), check=True)
+    exec_cmd("nmcli device set ethX managed yes".split(), check=True)
+
+    try:
+        with pytest.raises(libnmstate.error.NmstateValueError):
+            libnmstate.apply(
+                load_yaml(
+                    f"""---
+                    interfaces:
+                    - name: port1
+                      type: ethernet
+                      identifier: mac-address
+                      mac-address: {eth1_mac}
+                      state: down
+                    """
+                )
+            )
+    finally:
+        exec_cmd("ip link del ethX".split())
+        exec_cmd("ip link del ethX.ep".split())
