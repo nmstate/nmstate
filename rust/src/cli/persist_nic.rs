@@ -148,7 +148,7 @@ fn run_persist_immediately(
             .base_iface()
             .driver
             .as_deref()
-            .and_then(|d| if d.is_empty() { None } else { Some(d) });
+            .filter(|&d| !d.is_empty());
         log::info!(
             "Will persist the interface {iface_name} driver {} with MAC {mac}",
             driver.unwrap_or("unknown")
