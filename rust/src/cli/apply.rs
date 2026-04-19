@@ -160,6 +160,7 @@ pub(crate) fn state_edit(
     desire_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
+        .enable_time()
         .build()
         .map_err(|e| {
             CliError::from(format!("tokio::runtime::Builder failed with {e}"))
