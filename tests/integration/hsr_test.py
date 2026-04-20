@@ -9,15 +9,30 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Hsr
 
 from .testlib import assertlib
+from .testlib.cmdlib import exec_cmd
 from .testlib.env import kernel_newer_than
 from .testlib.env import nm_minor_version
 from .testlib.hsrlib import hsr_interface
 from .testlib.ifacelib import get_mac_address
+from .testlib.veth import create_veth_pair
 
 ETH1 = "eth1"
 ETH2 = "eth2"
 ETH3 = "eth3"
 HSR0 = "hsr0"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def regenerate_eth2_after_hsr(test_env_setup):
+    """Regenerate eth2 veth pair after HSR tests to get a fresh MAC.
+
+    nmstate copy_hsr_mac() sets cloned-mac-address on HSR PRP port
+    NM profiles but does not clean it up on removal, leaving eth1
+    and eth2 with identical MACs for the rest of the test session.
+    """
+    yield
+    exec_cmd(["ip", "link", "del", ETH2])
+    create_veth_pair(ETH2, f"{ETH2}.ep", "nmstate_test_ep")
 
 
 @pytest.fixture
