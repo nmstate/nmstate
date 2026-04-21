@@ -434,6 +434,21 @@ class TestAltNames:
             [],
         )
 
+    # https://redhat.atlassian.net/browse/RHEL-145074
+    @pytest.mark.tier1
+    def test_copy_mac_from_alt_name(self, eth1_with_alt_names):
+        eth1_state = show_only(("eth1",))[Interface.KEY][0]
+        eth1_mac = eth1_state[Interface.MAC]
+
+        with linux_bridge(
+            TEST_BRIDGE_NIC,
+            {},
+            ports=[TEST_ALT_NAMES[0]],
+            extra_iface_state={Interface.COPY_MAC_FROM: TEST_ALT_NAMES[0]},
+        ):
+            br_state = show_only((TEST_BRIDGE_NIC,))[Interface.KEY][0]
+            assert br_state[Interface.MAC] == eth1_mac
+
     # https://issues.redhat.com/browse/NMT-2202
     @pytest.mark.tier1
     def test_policy_capture_by_alt_name(self, eth1_with_alt_names):
