@@ -217,6 +217,10 @@ fn gen_systemd_network_link_match_rules(
     des_iface: &BaseInterface,
     cur_iface: Option<&BaseInterface>,
 ) -> String {
+    if des_iface.iface_type != InterfaceType::Ethernet {
+        return format!("OriginalName={}", des_iface.name);
+    }
+
     if let Some(cur_iface) = cur_iface {
         match (
             cur_iface.permanent_mac_address.as_ref(),
@@ -244,21 +248,16 @@ fn gen_systemd_network_link_match_rules(
             }
         }
     } else {
-        // User is creating software interface or gen_conf mode
-        if des_iface.iface_type == InterfaceType::Ethernet {
-            match (des_iface.mac_address.as_ref(), des_iface.driver.as_ref()) {
-                (Some(mac), Some(driver)) => {
-                    format!("MACAddress={mac}\nDriver={driver}")
-                }
-                (Some(mac), None) => {
-                    format!("MACAddress={mac}")
-                }
-                (None, _) => {
-                    format!("OriginalName={}", des_iface.name)
-                }
+        match (des_iface.mac_address.as_ref(), des_iface.driver.as_ref()) {
+            (Some(mac), Some(driver)) => {
+                format!("MACAddress={mac}\nDriver={driver}")
             }
-        } else {
-            format!("OriginalName={}", des_iface.name)
+            (Some(mac), None) => {
+                format!("MACAddress={mac}")
+            }
+            (None, _) => {
+                format!("OriginalName={}", des_iface.name)
+            }
         }
     }
 }

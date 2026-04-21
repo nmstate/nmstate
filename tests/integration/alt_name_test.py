@@ -434,6 +434,71 @@ class TestAltNames:
             [],
         )
 
+    # https://redhat.atlassian.net/browse/RHEL-167955
+    @pytest.mark.tier1
+    def test_vlan_alt_name_uses_original_name_on_reapply(self, eth1_up):
+        link_file = "/etc/systemd/network/98-nmstate-{}.link".format(
+            TEST_VLAN_NIC
+        )
+        vlan_with_alt_name = load_yaml(
+            """---
+            interfaces:
+            - name: {}
+              type: vlan
+              state: up
+              vlan:
+                base-iface: eth1
+                id: 101
+              alt-names:
+              - name: my-vlan
+            """.format(
+                TEST_VLAN_NIC
+            )
+        )
+        try:
+            libnmstate.apply(vlan_with_alt_name)
+            with open(link_file) as f:
+                content = f.read()
+            assert "OriginalName={}".format(TEST_VLAN_NIC) in content
+            assert "MACAddress" not in content
+
+            libnmstate.apply(vlan_with_alt_name)
+            with open(link_file) as f:
+                content = f.read()
+            assert "OriginalName={}".format(TEST_VLAN_NIC) in content
+            assert "MACAddress" not in content
+        finally:
+            libnmstate.apply(
+                load_yaml(
+                    """---
+                    interfaces:
+                    - name: {}
+                      type: vlan
+                      state: up
+                      vlan:
+                        base-iface: eth1
+                        id: 101
+                      alt-names:
+                      - name: my-vlan
+                        state: absent
+                    """.format(
+                        TEST_VLAN_NIC
+                    )
+                )
+            )
+            libnmstate.apply(
+                load_yaml(
+                    """---
+                    interfaces:
+                    - name: {}
+                      type: vlan
+                      state: absent
+                    """.format(
+                        TEST_VLAN_NIC
+                    )
+                )
+            )
+
     # https://issues.redhat.com/browse/NMT-2202
     @pytest.mark.tier1
     def test_policy_capture_by_alt_name(self, eth1_with_alt_names):
