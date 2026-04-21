@@ -1,4 +1,33 @@
 # Changelog
+## [2.2.60] - 2026-04-21
+### Breaking changes
+ - N/A
+
+### New features
+ - ipv4: Add new parameter prefix-route-metric. (a5f03516)
+
+### Bug fixes
+ - cli: add `enable_time` in nmstatectl edit. (01c37e3e)
+ - rust: fix clippy errors. (cc488078)
+ - Add OpenSSF badge. (18c56d45)
+ - policy: support array property capture. (59b93c9d)
+ - nm dns: Only purge global DNS when required. (29cba673)
+ - ipsec: support `leftsubnets` and `rightsubnets` options.. (325be14e)
+ - bridge: allow extra ports in verification stage. (e53ce491)
+ - governance: Add project governance document. (1a80ef30)
+ - Include Liang Wen in emeritus maintainer list. (55937e2a)
+ - Include Till Maas in emeritus maintainer list. (84a0580b)
+ - python: Format the code using black 25. (9435dd2d)
+ - Add license scan report and status. (0255ea1a)
+ - iface: Raise error when trying to merge ifaces with different type. (efa18c8f)
+ - cli/apply: log warning message when timeout is ignored. (2e998d31)
+ - ip: ipv4.forwarding deserialize from string also. (767a2ae0)
+ - rust: fix typo. (a7e7ebbe)
+ - build(deps): update nix requirement from 0.30 to 0.31 in /rust. (8b3148e6)
+ - build(deps): bump actions/download-artifact from 7 to 8. (d67adb8b)
+ - build(deps): bump actions/upload-artifact from 6 to 7. (27d79c56)
+ - github: change dependabot to run monthly. (f14f615a)
+
 ## [2.2.59] - 2026-02-28
 ### Breaking changes
  - N/A
