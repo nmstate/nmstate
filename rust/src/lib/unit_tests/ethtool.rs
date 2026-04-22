@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{EthernetInterface, EthtoolFeatureConfig, EthtoolFecConfig};
+use crate::ifaces::ETHTOOL_FEATURE_CLI_ALIAS;
+use crate::{
+    EthernetInterface, EthtoolConfig, EthtoolFeatureConfig, EthtoolFecConfig,
+};
 
 #[test]
 fn test_ethtool_stringlized_attributes() {
@@ -112,6 +115,23 @@ ethtool:
     assert_eq!(ring.rx_mini_max, Some(205));
     assert_eq!(ring.tx, Some(206));
     assert_eq!(ring.tx_max, Some(207));
+}
+
+#[test]
+fn test_ethtool_apply_feature_alias_normalizes_all_cli_aliases() {
+    for (alias, name) in ETHTOOL_FEATURE_CLI_ALIAS {
+        let mut ec: EthtoolConfig = serde_yaml::from_str(&format!(
+            r"---
+            feature:
+              {alias}: false",
+        ))
+        .unwrap();
+
+        ec.apply_feature_alias();
+        let f = ec.feature.as_ref().unwrap();
+        assert_eq!(f.get(name), Some(&false), "alias {alias} -> {name}");
+        assert_eq!(f.get(alias), None, "alias {alias}");
+    }
 }
 
 #[test]

@@ -12,10 +12,13 @@ use serde::{
 
 use crate::MergedInterface;
 
-const ETHTOOL_FEATURE_CLI_ALIAS: [(&str, &str); 17] = [
+// The pub(crate) is only for unit tests (see unit_tests/ethtool.rs).
+pub(crate) const ETHTOOL_FEATURE_CLI_ALIAS: [(&str, &str); 19] = [
     ("rx", "rx-checksum"),
     ("rx-checksumming", "rx-checksum"),
     ("ufo", "tx-udp-fragmentation"),
+    ("tso", "tx-tcp-segmentation"),
+    ("tcp-segmentation-offload", "tx-tcp-segmentation"),
     ("gso", "tx-generic-segmentation"),
     ("generic-segmentation-offload", "tx-generic-segmentation"),
     ("gro", "rx-gro"),
