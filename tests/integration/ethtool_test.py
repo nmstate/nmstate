@@ -121,6 +121,65 @@ def test_ethtool_feature_using_ethtool_cli_alias_rx_checksumming(eth1_up):
     assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
 
 
+def veth_support_tso():
+    """True if eth1 reports tx-tcp-segmentation in nmstate ethtool query."""
+    try:
+        ifaces = show_only(["eth1"]).get(Interface.KEY) or []
+        if not ifaces:
+            return False
+        features = (
+            ifaces[0]
+            .get(Ethtool.CONFIG_SUBTREE, {})
+            .get(Ethtool.Feature.CONFIG_SUBTREE, {})
+        )
+    except (IndexError, KeyError, TypeError):
+        return False
+    return "tx-tcp-segmentation" in features
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason=("CI does not have ethtool kernel option enabled"),
+)
+@pytest.mark.parametrize(
+    "feature_key",
+    ("tso", "tcp-segmentation-offload", "tx-tcp-segmentation"),
+)
+def test_ethtool_tx_tcp_segmentation_aliases_on_eth1(eth1_up, feature_key):
+    """
+    Apply TSO on eth1 (session veth) using CLI-style aliases and the kernel
+    name, then assert against canonical 'tx-tcp-segmentation' in show/verify.
+    """
+    # Use pytest.skip here, not @pytest.mark.skipif(...):
+    # skipif is evaluated at collection time, before fixtures like
+    # eth1_up create or bring up eth1, so show_only(["eth1"])
+    # would run too early and skip wrongly or
+    # flap depending on session/fixture order.
+    if not veth_support_tso():
+        pytest.skip(
+            "eth1 does not list tx-tcp-segmentation in"
+            " changeable ethtool features"
+        )
+
+    for enabled in (True, False):
+        apply_state = {
+            Interface.NAME: "eth1",
+            Ethtool.CONFIG_SUBTREE: {
+                Ethtool.Feature.CONFIG_SUBTREE: {feature_key: enabled}
+            },
+        }
+        libnmstate.apply({Interface.KEY: [apply_state]})
+        expect_match = {
+            Interface.NAME: "eth1",
+            Ethtool.CONFIG_SUBTREE: {
+                Ethtool.Feature.CONFIG_SUBTREE: {
+                    "tx-tcp-segmentation": enabled
+                }
+            },
+        }
+        assertlib.assert_state_match({Interface.KEY: [expect_match]})
+
+
 def test_ethtool_invalid_feature(eth1_up):
     desire_iface_state = {
         Interface.NAME: "eth1",
