@@ -282,7 +282,11 @@ async fn save_systemd_network_link_file(
     }
     let iface_name = des_base_iface.name.as_str();
 
-    let match_rules = match des_base_iface.identifier.as_ref() {
+    let identifier = &des_base_iface
+        .identifier
+        .or_else(|| cur_base_iface.and_then(|i| i.identifier));
+
+    let match_rules = match identifier {
         Some(InterfaceIdentifier::MacAddress) => {
             let mut match_rules = if let Some(mac) =
                 des_base_iface.permanent_mac_address.as_ref()
