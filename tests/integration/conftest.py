@@ -16,8 +16,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 from .testlib import ifacelib
-from .testlib.veth import create_veth_pair
-from .testlib.veth import remove_veth_pair
+from .testlib.veth import veth_pair_env
 from .testlib.ipsec import IpsecTestEnv
 
 REPORT_HEADER = """RPMs: {rpms}
@@ -99,26 +98,8 @@ def test_env_setup():
     old_state = libnmstate.show()
     old_state = _remove_interfaces_from_env(old_state)
     _remove_dns_route_route_rule()
-    for nic_name in ["eth1", "eth2"]:
-        remove_veth_pair(nic_name, ISOLATE_NAMESPACE)
-    for nic_name in ["eth1", "eth2"]:
-        create_veth_pair(nic_name, f"{nic_name}.ep", ISOLATE_NAMESPACE)
-    _ethx_init()
     yield
-    for nic_name in ["eth1", "eth2"]:
-        remove_veth_pair(nic_name, ISOLATE_NAMESPACE)
     restore_old_state(old_state)
-
-
-# eth3 is only needed for some specific tests (HSR).
-# If it's not necessary, do not set it up to save time.
-@pytest.fixture(scope="session")
-def test_env_setup_eth3(test_env_setup):
-    remove_veth_pair("eth3", ISOLATE_NAMESPACE_ETH3)
-    create_veth_pair("eth3", "eth3.ep", ISOLATE_NAMESPACE_ETH3)
-    ifacelib.ifaces_init("eth3")
-    yield
-    remove_veth_pair("eth3", ISOLATE_NAMESPACE_ETH3)
 
 
 def _remove_dns_route_route_rule():
@@ -144,11 +125,6 @@ def _logging_setup():
     )
 
 
-def _ethx_init():
-    """Remove any existing definitions on the ethX interfaces."""
-    ifacelib.ifaces_init("eth1", "eth2")
-
-
 def _remove_interfaces_from_env(state):
     """
     Remove references from interfaces passed to environment variable
@@ -170,19 +146,37 @@ def _remove_interfaces_from_env(state):
 
 
 @pytest.fixture(scope="function")
-def eth1_up(test_env_setup):
+def eth1_env(test_env_setup):
+    with veth_pair_env("eth1", "eth1.ep", ISOLATE_NAMESPACE) as ifstate:
+        yield ifstate
+
+
+@pytest.fixture(scope="function")
+def eth1_up(eth1_env):
     with ifacelib.iface_up("eth1") as ifstate:
         yield ifstate
 
 
 @pytest.fixture(scope="function")
-def eth2_up(test_env_setup):
+def eth2_env(test_env_setup):
+    with veth_pair_env("eth2", "eth2.ep", ISOLATE_NAMESPACE) as ifstate:
+        yield ifstate
+
+
+@pytest.fixture(scope="function")
+def eth2_up(eth2_env):
     with ifacelib.iface_up("eth2") as ifstate:
         yield ifstate
 
 
 @pytest.fixture(scope="function")
-def eth3_up(test_env_setup_eth3):
+def eth3_env(test_env_setup):
+    with veth_pair_env("eth3", "eth3.ep", ISOLATE_NAMESPACE_ETH3) as ifstate:
+        yield ifstate
+
+
+@pytest.fixture(scope="function")
+def eth3_up(eth3_env):
     with ifacelib.iface_up("eth3") as ifstate:
         yield ifstate
 

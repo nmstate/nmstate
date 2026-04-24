@@ -9,6 +9,16 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Veth
 
 from .cmdlib import exec_cmd
+from . import statelib
+
+
+@contextmanager
+def veth_pair_env(nic, nic_peer, peer_ns):
+    try:
+        create_veth_pair(nic, nic_peer, peer_ns)
+        yield statelib.show_only((nic,))
+    finally:
+        remove_veth_pair(nic, peer_ns)
 
 
 def create_veth_pair(nic, nic_peer, peer_ns):
