@@ -21,7 +21,7 @@ def test_edit_cancel(eth1_up):
     assert_rc(rc, os.EX_DATAERR, ret)
 
 
-def test_edit_no_change_eth1():
+def test_edit_no_change_eth1(eth1_env):
     runenv = dict(os.environ)
     env = {"EDITOR": "touch"}
 

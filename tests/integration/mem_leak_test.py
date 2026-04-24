@@ -35,7 +35,7 @@ def test_libnmstate_show_fd_leak(disable_logging):
 
 
 @pytest.mark.tier1
-def test_libnmstate_apply_fd_leak(disable_logging):
+def test_libnmstate_apply_fd_leak(eth1_env, disable_logging):
     original_fd = get_current_open_fd()
     for x in range(0, 10):
         with ifacelib.iface_up("eth1"):

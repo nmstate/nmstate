@@ -28,8 +28,8 @@ def eth1_with_ipv6(eth1_up):
 
 
 @pytest.mark.tier1
-def test_increase_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_increase_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1900
 
@@ -39,8 +39,8 @@ def test_increase_iface_mtu():
 
 
 @pytest.mark.tier1
-def test_decrease_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_decrease_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1400
 
@@ -50,8 +50,8 @@ def test_decrease_iface_mtu():
 
 
 @pytest.mark.tier1
-def test_upper_limit_jambo_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_upper_limit_jambo_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 9000
 
@@ -60,8 +60,8 @@ def test_upper_limit_jambo_iface_mtu():
     assertlib.assert_state(desired_state)
 
 
-def test_increase_more_than_jambo_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_increase_more_than_jambo_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 10000
 

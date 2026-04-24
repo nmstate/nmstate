@@ -756,7 +756,7 @@ def _get_routes_from_iproute(family, table):
     return out
 
 
-def test_remove_default_ipv6_gateway_and_revert():
+def test_remove_default_ipv6_gateway_and_revert(eth1_up):
     gateway1 = {
         Route.DESTINATION: "::/0",
         Route.METRIC: -1,

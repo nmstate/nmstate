@@ -26,7 +26,7 @@ RETRY_TIMEOUT = 10
 
 
 @pytest.fixture
-def unmanaged_eth1_with_static_gw():
+def unmanaged_eth1_with_static_gw(eth1_env):
     try:
         cmdlib.exec_cmd(f"nmcli connection delete {ETH1}".split(), check=False)
         cmdlib.exec_cmd(f"nmcli dev set {ETH1} managed no".split(), check=True)

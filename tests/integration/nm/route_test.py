@@ -34,7 +34,7 @@ DUMMY1 = "dummy1"
 
 
 @pytest.fixture
-def eth1_with_old_gateway_format():
+def eth1_with_old_gateway_format(eth1_up):
     libnmstate.apply(
         yaml.load(
             """---

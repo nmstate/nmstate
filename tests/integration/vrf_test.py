@@ -33,7 +33,7 @@ TEST_BOND0_VLAN = "test-bond0.100"
 
 
 @pytest.fixture
-def vrf0_with_port0(port1_up):
+def vrf0_with_port0(port0_up):
     vrf_iface_info = {
         Interface.NAME: TEST_VRF0,
         Interface.TYPE: InterfaceType.VRF,

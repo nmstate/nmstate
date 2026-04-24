@@ -209,7 +209,7 @@ def test_add_ib_pkey_nic_and_remove():
     assertlib.assert_absent(f"{test_nic}.80ff")
 
 
-def test_add_mac_vlan_and_remove():
+def test_add_mac_vlan_and_remove(eth1_up):
     with example_state(
         "mac_vlan_create.yml", cleanup="mac_vlan_absent.yml"
     ) as desired_state:
@@ -218,7 +218,7 @@ def test_add_mac_vlan_and_remove():
     assertlib.assert_absent("macvlan0")
 
 
-def test_add_mac_vtap_and_remove():
+def test_add_mac_vtap_and_remove(eth1_up):
     with example_state(
         "mac_vtap_create.yml", cleanup="mac_vtap_absent.yml"
     ) as desired_state:
@@ -263,7 +263,7 @@ def test_add_macsec_and_remove_example(eth1_up):
 
 
 @pytest.mark.tier1
-def test_add_hsr_and_remove_example(eth1_up):
+def test_add_hsr_and_remove_example(eth1_up, eth2_up):
     with example_state(
         "hsr0_up.yml", cleanup="hsr0_absent.yml"
     ) as desired_state:
