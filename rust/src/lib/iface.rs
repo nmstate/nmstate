@@ -1013,10 +1013,9 @@ impl MergedInterface {
         let desired_iface = self.desired.as_ref()?;
 
         if desired_iface.is_absent() {
-            if let Some(ports) = self.current.as_ref().and_then(|c| c.ports()) {
+            {
+                let ports = self.current.as_ref().and_then(|c| c.ports())?;
                 return Some((Vec::new(), ports));
-            } else {
-                return None;
             }
         }
 
@@ -1026,7 +1025,8 @@ impl MergedInterface {
                 // If current interface is in ignore state, even user did not
                 // defining ports in desire, we should preserving existing port
                 // lists
-                if let Some(cur_iface) = self.current.as_ref() {
+                {
+                    let cur_iface = self.current.as_ref()?;
                     if cur_iface.is_ignore() {
                         cur_iface.ports().map(|ports| {
                             HashSet::<&str>::from_iter(ports.iter().cloned())
@@ -1034,8 +1034,6 @@ impl MergedInterface {
                     } else {
                         return None;
                     }
-                } else {
-                    return None;
                 }
             }
         };

@@ -970,8 +970,22 @@ impl MergedInterfaces {
             if let Some(src_iface_name) =
                 &merged_iface.merged.base_iface().copy_mac_from
             {
-                if let Some(src_iface) =
-                    self.kernel_ifaces.get(src_iface_name).map(|i| &i.merged)
+                let kernel_names = self.iface_name_search.get(src_iface_name);
+                if kernel_names.len() > 1 {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "copy-mac-from {src_iface_name} of iface \
+                             {iface_name} matches multiple interfaces"
+                        ),
+                    );
+                    log::error!("{e}");
+                    return Err(e);
+                }
+                if let Some(src_iface) = kernel_names
+                    .first()
+                    .and_then(|n| self.kernel_ifaces.get(*n))
+                    .map(|i| &i.merged)
                 {
                     if !is_opt_str_empty(
                         &src_iface.base_iface().permanent_mac_address,
