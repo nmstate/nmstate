@@ -678,6 +678,7 @@ def test_static_route_with_empty_ip(eth1_up):
     }
     eth1_state[Interface.IPV6] = {
         InterfaceIPv6.DHCP: False,
+        InterfaceIPv6.AUTOCONF: False,
         InterfaceIPv6.ENABLED: True,
         InterfaceIPv4.ADDRESS: [],
     }

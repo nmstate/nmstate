@@ -7,6 +7,8 @@ import pytest
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.error import NmstateValueError
 
 from .testlib.apply import apply_with_description
@@ -95,11 +97,23 @@ def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
 
 
 def test_mtu_without_ipv6(eth1_up):
-    eth1_up[Interface.KEY][0][Interface.MTU] = 576
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.MTU: 576,
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: False,
+                },
+            }
+        ]
+    }
     apply_with_description(
-        "Setting MTU of eth1 to 576 with IPv6 disabled", eth1_up
+        "Setting MTU of eth1 to 576 with IPv6 disabled", desired_state
     )
-    assertlib.assert_state(eth1_up)
+    assertlib.assert_state(desired_state)
 
 
 @pytest.mark.tier1
