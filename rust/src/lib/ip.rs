@@ -470,6 +470,38 @@ impl InterfaceIpv4 {
         }
         Ok(())
     }
+
+    pub fn is_ipv4_primary_first(&self) -> bool {
+        let addrs = self.addresses.as_deref().unwrap_or(&[]);
+        let mut seen_nets: Vec<(Ipv4Addr, u8)> = Vec::new();
+        let mut seen_secondary = false;
+        for addr in addrs {
+            if let IpAddr::V4(ip) = addr.ip {
+                let mask = if addr.prefix_length >= 32 {
+                    u32::MAX
+                } else {
+                    u32::MAX << (32 - addr.prefix_length)
+                };
+
+                let network = Ipv4Addr::from(u32::from(ip) & mask);
+                let is_secondary = seen_nets.iter().any(|(net, plen)| {
+                    *plen == addr.prefix_length && *net == network
+                });
+
+                if is_secondary {
+                    seen_secondary = true;
+                } else {
+                    // primary has been seen after a secondary
+                    if seen_secondary {
+                        return false;
+                    }
+                    seen_nets.push((network, addr.prefix_length));
+                }
+            }
+        }
+
+        true
+    }
 }
 
 impl<'de> Deserialize<'de> for InterfaceIpv4 {

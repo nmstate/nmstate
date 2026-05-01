@@ -727,3 +727,116 @@ fn test_error_on_route_metric_out_of_range() {
         }
     }
 }
+
+#[test]
+fn test_single_ipv4_primary_first() {
+    let iface: Interface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          address:
+          - ip: "192.168.122.14"
+            prefix-length: 24"#,
+    )
+    .unwrap();
+
+    let ipv4 = iface.base_iface().ipv4.as_ref().unwrap();
+    assert!(ipv4.is_ipv4_primary_first());
+}
+
+#[test]
+fn test_all_primary_ipv4_primary_first() {
+    let iface: Interface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: "192.168.122.16"
+            prefix-length: 24
+          - ip: "10.0.0.16"
+            prefix-length: 24
+          - ip: "10.1.0.16"
+            prefix-length: 24"#,
+    )
+    .unwrap();
+
+    let ipv4 = iface.base_iface().ipv4.as_ref().unwrap();
+    assert!(ipv4.is_ipv4_primary_first());
+}
+
+#[test]
+fn test_one_network_ipv4_primary_first() {
+    let iface: Interface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: "10.0.0.14"
+            prefix-length: 24
+          - ip: "10.0.0.16"
+            prefix-length: 24"#,
+    )
+    .unwrap();
+
+    let ipv4 = iface.base_iface().ipv4.as_ref().unwrap();
+    assert!(ipv4.is_ipv4_primary_first());
+}
+
+#[test]
+fn test_two_networks_ipv4_primary_first() {
+    let iface: Interface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: "10.0.0.14"
+            prefix-length: 24
+          - ip: "10.1.0.16"
+            prefix-length: 24
+          - ip: "10.0.0.16"
+            prefix-length: 24"#,
+    )
+    .unwrap();
+
+    let ipv4 = iface.base_iface().ipv4.as_ref().unwrap();
+    assert!(ipv4.is_ipv4_primary_first());
+}
+
+#[test]
+fn test_two_networks_ipv4_primary_first_out_of_order() {
+    let iface: Interface = serde_yaml::from_str(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: "10.0.0.14"
+            prefix-length: 24
+          - ip: "10.0.0.16"
+            prefix-length: 24
+          - ip: "10.1.0.16"
+            prefix-length: 24"#,
+    )
+    .unwrap();
+
+    let ipv4 = iface.base_iface().ipv4.as_ref().unwrap();
+    assert!(!ipv4.is_ipv4_primary_first());
+}
