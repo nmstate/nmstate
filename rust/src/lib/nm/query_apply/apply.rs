@@ -209,8 +209,8 @@ async fn delete_ifaces(
             {
                 log::info!(
                     "Deleting NM connection for absent interface {}/{}: {}",
-                    &iface.name(),
-                    &iface.iface_type(),
+                    iface.name(),
+                    iface.iface_type(),
                     uuid
                 );
                 uuids_to_delete.insert(uuid);
@@ -226,7 +226,7 @@ async fn delete_ifaces(
                             "Deleting NM OVS port connection {} for absent \
                              OVS interface {}",
                             ctrl,
-                            &iface.name(),
+                            iface.name(),
                         );
                         uuids_to_delete.insert(ctrl);
                     }
@@ -241,7 +241,7 @@ async fn delete_ifaces(
                                 "Deleting NM OVS port connection {} for \
                                  absent OVS interface {}",
                                 uuid,
-                                &iface.name(),
+                                iface.name(),
                             );
                             uuids_to_delete.insert(uuid);
                         }
@@ -288,9 +288,9 @@ async fn delete_remain_virtual_interface_as_desired(
         {
             log::info!(
                 "Deleting interface {}/{}: {}",
-                &iface.name(),
-                &iface.iface_type(),
-                &nm_dev.obj_path
+                iface.name(),
+                iface.iface_type(),
+                nm_dev.obj_path
             );
             // There might be an race with on-going profile/connection
             // deletion, verification will raise error for it later.

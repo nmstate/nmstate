@@ -109,8 +109,8 @@ pub(crate) fn np_iface_to_base_iface(
     if !InterfaceType::SUPPORTED_LIST.contains(&base_iface.iface_type) {
         log::debug!(
             "Got unsupported interface type {}: {}, ignoring",
-            &base_iface.iface_type,
-            &base_iface.name
+            base_iface.iface_type,
+            base_iface.name
         );
         base_iface.state = InterfaceState::Ignore;
     }

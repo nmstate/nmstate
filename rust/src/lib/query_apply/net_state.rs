@@ -259,7 +259,7 @@ impl NetworkState {
             }
         };
 
-        log::info!("Created checkpoint {}", &checkpoint);
+        log::info!("Created checkpoint {}", checkpoint);
 
         with_nm_checkpoint(&checkpoint, self.no_commit, || async {
             if let Some(pf_state) = pf_state {

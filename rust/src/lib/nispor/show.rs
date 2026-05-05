@@ -45,7 +45,7 @@ pub(crate) async fn nispor_retrieve(
         .await
         .map_err(np_error_to_nmstate)?;
 
-    for (_, np_iface) in np_state.ifaces.iter() {
+    for np_iface in np_state.ifaces.values() {
         // The `ovs-system` is reserved for OVS kernel datapath
         if np_iface.name == "ovs-system" {
             continue;

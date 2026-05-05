@@ -183,12 +183,12 @@ fn get_capture_value(
     }
     let capture = match captures.get(&prop_path[1].to_string()) {
         Some(c) => {
-            log::debug!("Found capture {} {:?}", &prop_path[1], c);
+            log::debug!("Found capture {} {:?}", prop_path[1], c);
             c
         }
         None => {
             return Err(NmstateError::new_policy_error(
-                format!("Failed to find capture {}", &prop_path[1],),
+                format!("Failed to find capture {}", prop_path[1],),
                 line,
                 pos + "capture.".len(),
             ));
@@ -197,7 +197,7 @@ fn get_capture_value(
     get_value(
         &NetworkCaptureToken::Path(
             prop_path[2..].to_vec(),
-            pos + format!("capture.{}.", &prop_path[1]).chars().count(),
+            pos + format!("capture.{}.", prop_path[1]).chars().count(),
         ),
         capture,
         line,

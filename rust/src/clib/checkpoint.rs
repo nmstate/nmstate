@@ -73,7 +73,7 @@ pub extern "C" fn nmstate_checkpoint_commit(
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =
-                CString::new(format!("{}", &e.kind())).unwrap().into_raw();
+                CString::new(format!("{}", e.kind())).unwrap().into_raw();
         }
         NMSTATE_FAIL
     } else {
@@ -146,7 +146,7 @@ pub extern "C" fn nmstate_checkpoint_rollback(
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =
-                CString::new(format!("{}", &e.kind())).unwrap().into_raw();
+                CString::new(format!("{}", e.kind())).unwrap().into_raw();
         }
         NMSTATE_FAIL
     } else {

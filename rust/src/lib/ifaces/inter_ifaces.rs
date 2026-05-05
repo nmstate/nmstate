@@ -336,7 +336,7 @@ impl Interfaces {
                             format!(
                                 "Found 2+ interface matching desired unknown \
                                  type interface {}: {:?}",
-                                iface_name, &founds
+                                iface_name, founds
                             ),
                         );
                         log::error!("{e}");

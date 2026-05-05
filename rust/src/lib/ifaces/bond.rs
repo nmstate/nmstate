@@ -242,7 +242,7 @@ impl BondInterface {
                 ErrorKind::InvalidArgument,
                 format!(
                     "Bond mode is mandatory for new bond interface: {}",
-                    &self.base.name
+                    self.base.name
                 ),
             );
             log::error!("{e}");
@@ -320,7 +320,7 @@ impl BondInterface {
                         "The port names specified in `port` conflict with the \
                          port names specified in `ports-config` for bond \
                          interface: {}. {}",
-                        &self.base.name, error_msg_detail
+                        self.base.name, error_msg_detail
                     ),
                 );
                 log::error!("{e}");

@@ -220,7 +220,7 @@ pub(crate) fn update_json_value(
             if let Some(old_value) = data.get(&prop_path[0]) {
                 log::debug!(
                     "Changing {} property of {} from {} to {}",
-                    &prop_path[0],
+                    prop_path[0],
                     item_name,
                     old_value,
                     value.unwrap_or("null")
@@ -237,7 +237,7 @@ pub(crate) fn update_json_value(
             } else {
                 log::debug!(
                     "Inserting new property {}:{} to {}",
-                    &prop_path[0],
+                    prop_path[0],
                     value.unwrap_or("null"),
                     item_name
                 );
