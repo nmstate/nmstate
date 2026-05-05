@@ -82,7 +82,7 @@ impl NmApi<'_> {
     ) -> Result<String, NmError> {
         debug!("checkpoint_create");
         let cp = self.dbus.checkpoint_create(timeout).await?;
-        debug!("checkpoint created: {}", &cp);
+        debug!("checkpoint created: {}", cp);
         self.checkpoint = Some(cp.clone());
         self.cp_refresh_time = Some(std::time::Instant::now());
         self.cp_timeout = timeout;

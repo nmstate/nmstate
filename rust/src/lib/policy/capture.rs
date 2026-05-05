@@ -232,7 +232,7 @@ impl NetworkCaptureCommand {
                     ErrorKind::Bug,
                     format!(
                         "The NetworkCaptureCommand.key is not Path but {:?}",
-                        &self.key
+                        self.key
                     ),
                 ));
             };

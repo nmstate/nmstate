@@ -81,7 +81,7 @@ impl VlanInterface {
                         ErrorKind::InvalidArgument,
                         format!(
                             "Missing 'vlan.base-iface' for interface '{}'",
-                            &self.base.name
+                            self.base.name
                         ),
                     ));
                 }

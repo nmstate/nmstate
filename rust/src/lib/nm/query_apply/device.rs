@@ -48,7 +48,7 @@ pub(crate) async fn deactivate_nm_devices(
     nm_devs: &[NmDevice],
 ) -> Result<(), NmstateError> {
     for nm_dev in nm_devs {
-        log::info!("Deactivating device {}", &nm_dev.name);
+        log::info!("Deactivating device {}", nm_dev.name);
         if let Err(e) = nm_api.device_disconnect(&nm_dev.obj_path).await
             && e.kind != ErrorKind::Device(NmDeviceError::NotActive)
         {

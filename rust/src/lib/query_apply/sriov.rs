@@ -103,7 +103,7 @@ impl SrIovConfig {
                     format!(
                         "Find VF {} interface name {} of PF {pf_name} is not \
                          exist yet",
-                        vf.id, &vf.iface_name
+                        vf.id, vf.iface_name
                     ),
                 ));
             }

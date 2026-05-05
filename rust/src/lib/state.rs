@@ -42,7 +42,7 @@ fn _get_json_value_difference<'a, 'b>(
                     // The [] is safe as we already checked the length
                     let cur_element = &cur[index];
                     if let Some(difference) = get_json_value_difference(
-                        format!("{}[{index}]", &reference),
+                        format!("{}[{index}]", reference),
                         des_element,
                         cur_element,
                     ) {

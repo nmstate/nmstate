@@ -124,7 +124,7 @@ impl OvsDbJsonRpc {
             // converting &[u8] to &str, we have to clone the data here.
             match String::from_utf8(response.clone()) {
                 Ok(reply_str) => {
-                    log::debug!("OVSDB: recv string {:?}", &reply_str);
+                    log::debug!("OVSDB: recv string {:?}", reply_str);
                     // Check whether received data is a valid JSON data which
                     // is indicator of end-of-message.
                     match serde_json::from_str::<OvsDbRpcReply>(&reply_str) {

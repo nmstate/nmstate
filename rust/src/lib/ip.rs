@@ -735,7 +735,7 @@ impl InterfaceIpv6 {
                         if is_desired {
                             log::warn!(
                                 "Ignoring IPv6 link local address {}/{}",
-                                &addr.ip,
+                                addr.ip,
                                 addr.prefix_length
                             );
                         }
@@ -1232,7 +1232,7 @@ fn validate_wait_ip(base_iface: &BaseInterface) -> Result<(), NmstateError> {
                 format!(
                     "Cannot set 'wait-ip: {}' with IPv4 disabled. Interface: \
                      {}({})",
-                    wait_ip, &base_iface.name, &base_iface.iface_type
+                    wait_ip, base_iface.name, base_iface.iface_type
                 ),
             );
             log::error!("{e}");
@@ -1250,7 +1250,7 @@ fn validate_wait_ip(base_iface: &BaseInterface) -> Result<(), NmstateError> {
                 format!(
                     "Cannot set 'wait-ip: {}' with IPv6 disabled. Interface: \
                      {}({})",
-                    wait_ip, &base_iface.name, &base_iface.iface_type
+                    wait_ip, base_iface.name, base_iface.iface_type
                 ),
             );
             log::error!("{e}");
