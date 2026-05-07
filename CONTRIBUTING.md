@@ -17,10 +17,10 @@ Please report unacceptable behavior to the nmstate team.
 
 The repository is structured as follows:
 
-- `./automation/` - Contains the [automation enviroment](./automation/README.md), 
+- `./automation/` - Contains the [automation environment](./automation/README.md),
 serving the tests of Nmstate.
 
-- `./doc/` - Contains the documentation. 
+- `./doc/` - Contains the documentation.
 
 - `./examples/` - Contains YAML examples for different configurations.
 
@@ -40,11 +40,13 @@ serving the tests of Nmstate.
 
 - `./rust/src/lib/ovsdb/` Contains the code related to ovsdb communication and structures. 
 
+- `./rust/src/lib/unit_tests/` Contains the unit tests.
+
 - `./rust/src/cli/` - Contains command lines tools.
 
 - `./packaging/` - Contains packaging utilities.
 
-- `./tests/` - Contains tests for unit and integration tests.
+- `./tests/integration` - Contains integration tests.
 
 ## Configuring Git
 
@@ -55,7 +57,7 @@ change it later for every repo:
 
 ```
 git config --global user.name "Jane Doe"
-git config --global user.email janedoe@example.com`
+git config --global user.email janedoe@example.com
 ```
 
 The git editor is your system's default. If you feel more comfortable with a 
@@ -142,14 +144,23 @@ posts on how to write a good commit message). This content is licensed under
 
 ## Coding and Style Guidelines
 
-- Nmstate is written primarily in Python, and its coding style should follow
-  the best practices of Python coding unless otherwise declared.
-- Nmstate uses the [black](https://github.com/python/black) code formatter
-- PEP8 is holy.
-- Tests are holy.
-  Production code must be covered by unit tests and/or basic integration tests.
-  When too many mocks are required, it is often a smell that the tested code
-  is not well structured or in some cases a candidate for integration tests.
+### Rust
+- Nmstate is written primarily in Rust, and its coding style should follow
+  the best practices of Rust coding unless otherwise declared.
+- You can use the [rustfmt](https://github.com/rust-lang/rustfmt) tool to format your code,
+  which handles our styling automatically. See the reference below for more
+  details.
+- Source code must be covered by unit tests found in the `./rust/src/lib/unit_tests` and/or
+  integration tests in `tests/integration`.
+- Source code must also pass the [Clippy](https://doc.rust-lang.org/stable/clippy/usage.html) lint check,
+  which checks for common mistakes and improves your code.
+
+Ref:
+https://doc.rust-lang.org/style-guide/items.html
+
+### Python
+- Nmstate uses the [black](https://github.com/python/black) code formatter for its
+  integration tests, written in Python.
 - Packages, modules, functions, methods and variables should use
   underscore_separated_names.
 - Class names are in CamelCase.
@@ -178,8 +189,6 @@ Do your best to follow the clean code guidelines.
 - Methods/functions should be organized per level of abstraction,
   where callee sits below their caller.
 - Avoid output-arguments (arguments to output data out of a function/method).
-- Don’t use boolean arguments, use 2 functions/methods instead.
-- Don’t return an error code, throw an exception instead.
 
 Ref: Book: Clean Code by Robert C. Martin (Uncle Bob)
 
@@ -192,28 +201,29 @@ A Linux operating system is required. For Windows or macOS users, you can set up
 ### Install Cargo Tool
 Cargo is Rust's build system and package manager, necessary for working with Rust programs, such as Nmstate.
 ```
-- sudo apt update && sudo apt install cargo git # Debian/Ubuntu
-- sudo dnf install cargo git # Fedora
-- sudo yum install cargo git # RHEL
+sudo apt update && sudo apt install cargo git # Debian/Ubuntu
+```
+```
+sudo dnf install cargo git # Fedora, RHEL
 ```
 
 ### Get the Source Code
 Clone the Nmstate repository: 
 ```
-- git clone https://github.com/nmstate/nmstate.git
-- cd nmstate
+git clone https://github.com/nmstate/nmstate.git
+cd nmstate
 ```
 
 ### Compilation
 Run the following command at the top level of the code to compile the project:
 ```
-- make
+make
 ```
 
 ### Running the Compiled Program
 After successful compilation, you can run the nmstatectl tool to display the current network state:
 ```
-- target/debug/nmstatectl show # To dump the state in json format, use the ‘--json’ flag.
+target/debug/nmstatectl show # To dump the state in json format, use the ‘--json’ flag.
 ``` 
 
 For the complete developer’s guide, head over to our full documentation: https://nmstate.io/devel/dev_guide.html 
