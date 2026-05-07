@@ -61,7 +61,7 @@ do
     if [[ "${container_name}" == "all" ]]
     then
         for container_name in \
-            fedora-nmstate-dev \
+            fed-nmstate-dev \
             c8s-nmstate-dev
         do
             rebuild_container "${extra_args}" "${container_name}"
