@@ -8,7 +8,7 @@ It may be used both locally and through CI.
   https://quay.io/organization/nmstate
 
 - run-tests.sh: Execute the tests in a container using
-  'nmstate/fedora-nmstate-dev' container image.
+  'nmstate/fed-nmstate-dev' container image.
 
   The following steps are executed:
   - Run the container (defined in the Dockerfile) as a daemon.
@@ -24,7 +24,7 @@ Assuming *podman* is installed on the host, just run:
 `./automation/run-tests.sh`
 
 By default, `./automation/run-tests.sh` will run all tests in the container
-using 'nmstate/fedora-nmstate-dev' container image.
+using 'nmstate/fed-nmstate-dev' container image.
 You may change the test type by specifying the `--test-type` flag, for example:
 
  * `./automation/run-tests.sh --test-type integ --el8`:
@@ -33,18 +33,18 @@ You may change the test type by specifying the `--test-type` flag, for example:
 
  * `./automation/run-tests.sh --test-type integ`:
    Integration tests (without slow test cases) using
-   'nmstate/fedora-nmstate-dev' container image.
+   'nmstate/fed-nmstate-dev' container image.
 
  * `./automation/run-tests.sh --test-type integ_tier1`:
-   Integration tier1 test cases using `nmstate/fedora-nmstate-dev` container
+   Integration tier1 test cases using `nmstate/fed-nmstate-dev` container
    image.
 
  * `./automation/run-tests.sh --test-type integ_tier2`:
-   Integration tier2 test cases using `nmstate/fedora-nmstate-dev` container
+   Integration tier2 test cases using `nmstate/fed-nmstate-dev` container
    image.
 
  * `./automation/run-tests.sh --test-type integ_slow`:
-   Integration slow test cases using `nmstate/fedora-nmstate-dev` container
+   Integration slow test cases using `nmstate/fed-nmstate-dev` container
    image.
 
 For a full list of command-line flags, run `./automation/run-tests.sh --help`.
@@ -81,22 +81,23 @@ or:
 
 ```
 ../packaging/build-container.sh local/c8s-nmstate-dev
-../packaging/build-container.sh local/fedora-nmstate-dev
+../packaging/build-container.sh local/fed-nmstate-dev
 ```
 
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
 podman tag local/c8s-nmstate-dev quay.io/nmstate/c8s-nmstate-dev:latest
-podman tag local/fedora-nmstate-dev quay.io/nmstate/fedora-nmstate-dev:latest
+podman tag local/fed-nmstate-dev quay.io/nmstate/fed-nmstate-dev:latest
 ```
 
-### Push local image to the docker hub
+### Push local image to Quay
+
 The container images are automatically rebuilt for new commits to the base
 branch or new tags. Therefore updates to the quay images should always
 happen with a pull request that is merged to ensure that the change is
 persistent. If this is not feasible, a new build could be pushed as follow to
-the Docker Hub:
+quay.io:
 
 ```shell
 podman login quay.io
@@ -104,9 +105,9 @@ podman tag local/c8s-nmstate-dev nmstate/c8s-nmstate-dev:latest
 podman push nmstate/c8s-nmstate-dev:latest \
     quay.io/nmstate/c8s-nmstate-dev:latest
 
-podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
-podman push nmstate/fedora-nmstate-dev:latest \
-    quay.io/nmstate/fedora-nmstate-dev:latest
+podman tag local/fed-nmstate-dev nmstate/fed-nmstate-dev:latest
+podman push nmstate/fed-nmstate-dev:latest \
+    quay.io/nmstate/fed-nmstate-dev:latest
 ```
 
 It will be overwritten after the next commit to base, though.
