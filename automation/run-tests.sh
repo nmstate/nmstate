@@ -1,4 +1,8 @@
-#!/bin/bash -ex
+#!/bin/bash -e
+
+if [ "$1" != "--help" ]; then
+    set -x
+fi
 
 EXEC_PATH=$(dirname "$(realpath "$0")")
 PROJECT_PATH="$(dirname $EXEC_PATH)"
@@ -39,6 +43,30 @@ test -t 1 && USE_TTY="-t"
 source automation/tests-container-utils.sh
 source automation/tests-machine-utils.sh
 source automation/tests-k8s-utils.sh
+
+function print_help() {
+    echo "Usage: $0 [OPTIONS]"
+    echo "Target environment:"
+    echo "  --el8, --el9, --el10, --fed, --rawhide"
+    echo "                           Choose the container image"
+    echo "  --machine, --k8s         Run in baremetal or kubernetes instead"
+    echo "Test options:"
+    echo "  --test-type=TYPE         all (default), integ, integ_tier1, integ_tier2, integ_slow, rust_go"
+    echo "  --debug-shell            On failure open a debug shell, don't exit"
+    echo "  --pytest-args=ARGS"
+    echo "  --test-vdsm"
+    echo "Installation options:"
+    echo "  --use-installed-nmstate  Don't install nmstate, use the system's one"
+    echo "  --compiled-rpms-dir=DIR  Install nmstate from rpm"
+    echo "  --nm-rpm-dir=DIR         Install NetworkManager from rpm"
+    echo "  --copr=REPO              Install NetworkManager from COPR"
+    echo "Advanced:"
+    echo "  --customize=CMD          Command to customize the container image"
+    echo "  --artifacts-dir=DIR"
+    echo "  --nolog"
+    echo "  --pretest-exec=CMD"
+    echo "  --help"
+}
 
 function pyclean {
     exec_cmd '
@@ -309,19 +337,7 @@ while true; do
         PRETEST_EXEC="$1"
         ;;
     --help)
-        set +x
-        echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el8] "
-        echo -n "[--help] [--pytest-args=...] [--machine] "
-        echo "[--use-installed-nmstate] [--test-type=<TEST_TYPE>] [--test-vdsm]"
-        echo "    Valid TEST_TYPE are:"
-        echo "     * $TEST_TYPE_ALL (default)"
-        echo "     * $TEST_TYPE_INTEG"
-        echo "     * $TEST_TYPE_INTEG_TIER1"
-        echo "     * $TEST_TYPE_INTEG_TIER2"
-        echo "     * $TEST_TYPE_INTEG_SLOW"
-        echo "     * $TEST_TYPE_RUST_GO"
-        echo -n "--customize allows to specify a command to customize the "
-        echo "container before running the tests"
+        print_help
         exit
         ;;
     --)
