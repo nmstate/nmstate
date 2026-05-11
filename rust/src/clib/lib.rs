@@ -18,11 +18,10 @@ mod state;
 #[cfg(feature = "query_apply")]
 mod validate;
 
-use std::ffi::CString;
+use std::{ffi::CString, sync::OnceLock};
 
 use libc::{c_char, c_int};
 use nmstate::NmstateError;
-use once_cell::sync::OnceCell;
 
 #[cfg(feature = "query_apply")]
 pub use crate::apply::nmstate_net_state_apply;
@@ -45,7 +44,7 @@ pub(crate) const NMSTATE_FAIL: c_int = 1;
 
 pub use crate::format::nmstate_net_state_format;
 
-static INSTANCE: OnceCell<MemoryLogger> = OnceCell::new();
+static INSTANCE: OnceLock<MemoryLogger> = OnceLock::new();
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
@@ -64,28 +63,16 @@ pub(crate) fn init_logger() -> Result<&'static MemoryLogger, NmstateError> {
             Ok(l)
         }
         None => {
-            if INSTANCE.set(MemoryLogger::new()).is_err() {
-                return Err(NmstateError::new(
-                    nmstate::ErrorKind::Bug,
-                    "Failed to set once_sync for logger".to_string(),
-                ));
-            }
-            if let Some(l) = INSTANCE.get() {
-                if let Err(e) = log::set_logger(l) {
-                    Err(NmstateError::new(
-                        nmstate::ErrorKind::Bug,
-                        format!("Failed to log::set_logger: {e}"),
-                    ))
-                } else {
-                    l.add_consumer();
-                    log::set_max_level(log::LevelFilter::Debug);
-                    Ok(l)
-                }
-            } else {
+            let l = INSTANCE.get_or_init(MemoryLogger::new);
+            if let Err(e) = log::set_logger(l) {
                 Err(NmstateError::new(
                     nmstate::ErrorKind::Bug,
-                    "Failed to get logger from once_sync".to_string(),
+                    format!("Failed to log::set_logger: {e}"),
                 ))
+            } else {
+                l.add_consumer();
+                log::set_max_level(log::LevelFilter::Debug);
+                Ok(l)
             }
         }
     }
