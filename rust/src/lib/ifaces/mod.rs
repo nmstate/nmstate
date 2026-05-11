@@ -27,9 +27,6 @@ mod ovs;
 mod sriov;
 mod vlan;
 
-#[cfg(test)]
-// The pub(crate) re-export is only for unit tests (see unit_tests/ethtool.rs).
-pub(crate) use self::ethtool::ETHTOOL_FEATURE_CLI_ALIAS;
 pub use base::*;
 pub use bond::{
     BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
@@ -82,6 +79,10 @@ pub use vlan::{
 pub use vrf::{VrfConfig, VrfInterface};
 pub use vxlan::{VxlanConfig, VxlanInterface};
 
+#[cfg(test)]
+// The pub(crate) re-export is only for unit tests (see
+// unit_tests/ethtool.rs).
+pub(crate) use self::ethtool::ETHTOOL_FEATURE_CLI_ALIAS;
 pub(crate) use self::inter_ifaces::MergedInterfaces;
 pub use self::{
     alt_name::{AltNameEntry, AltNameState},

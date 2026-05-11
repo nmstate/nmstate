@@ -26,8 +26,8 @@ fn test_debug_trait() {
     let mut net_state = NetworkState::new();
     net_state.interfaces.push(ethernet.clone());
 
-    let debug_tr_eth = format!("{:?}", &des_eth);
-    let debug_tr_net_state = format!("{:?}", &net_state);
+    let debug_tr_eth = format!("{:?}", des_eth);
+    let debug_tr_net_state = format!("{:?}", net_state);
 
     let password_hid_by_nmstate = "private_key_password: \
                                    Some(\"<_password_hid_by_nmstate>\")"

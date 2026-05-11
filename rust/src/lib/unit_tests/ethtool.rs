@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ifaces::ETHTOOL_FEATURE_CLI_ALIAS;
 use crate::{
     EthernetInterface, EthtoolConfig, EthtoolFeatureConfig, EthtoolFecConfig,
+    ifaces::ETHTOOL_FEATURE_CLI_ALIAS,
 };
 
 #[test]
