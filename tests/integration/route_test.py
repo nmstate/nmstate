@@ -2733,3 +2733,31 @@ def test_not_conflict_on_default_prefix_route_metric(eth1_up, values):
     )
 
     assert_prefix_routes(expected_routes)
+
+
+def test_auto_route_metric_on_static_ip(eth1_up):  # RHEL-170647
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: true
+            dhcp: false
+            auto-route-metric: 151
+            address:
+            - ip: 192.0.2.252
+              prefix-length: 24
+        """
+    )
+    libnmstate.apply(desired_state)
+
+    expected_routes = load_yaml(
+        """---
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          metric: 151
+        """
+    )
+    assert_prefix_routes(expected_routes)
