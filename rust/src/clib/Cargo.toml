@@ -21,7 +21,6 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
-once_cell = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf"]
