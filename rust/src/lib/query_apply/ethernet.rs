@@ -191,6 +191,26 @@ impl NetworkState {
     }
 }
 
+async fn query_sriov_vf_count(iface_name: &str) -> u32 {
+    let mut iface_filter = nispor::NetStateIfaceFilter::minimum();
+    iface_filter.iface_name = Some(iface_name.to_string());
+    iface_filter.include_sriov_vf_info = true;
+    let mut filter = nispor::NetStateFilter::minimum();
+    filter.iface = Some(iface_filter);
+    if let Ok(np_state) =
+        nispor::NetState::retrieve_with_filter_async(&filter).await
+    {
+        np_state
+            .ifaces
+            .get(iface_name)
+            .and_then(|i| i.sriov.as_ref())
+            .map(|s| s.vfs.len() as u32)
+            .unwrap_or(0)
+    } else {
+        0
+    }
+}
+
 impl MergedInterfaces {
     pub(crate) fn get_sriov_vf_count(&self) -> u32 {
         let mut ret = 0u32;
@@ -208,5 +228,40 @@ impl MergedInterfaces {
             }
         }
         ret
+    }
+
+    pub(crate) async fn verify_sriov_vf_count(
+        &self,
+    ) -> Result<(), NmstateError> {
+        for iface in self.kernel_ifaces.values().filter(|i| {
+            (i.is_desired() || i.is_changed())
+                && i.merged.iface_type() == InterfaceType::Ethernet
+        }) {
+            if let Interface::Ethernet(eth_iface) = &iface.merged {
+                if let Some(desired_vfs) = eth_iface
+                    .ethernet
+                    .as_ref()
+                    .and_then(|e| e.sr_iov.as_ref())
+                    .and_then(|s| s.total_vfs)
+                {
+                    let current =
+                        query_sriov_vf_count(iface.merged.name()).await;
+                    if current != desired_vfs {
+                        return Err(NmstateError::new(
+                            ErrorKind::VerificationError,
+                            format!(
+                                "Verification failure: {}.interface.\
+                                 ethernet.sr-iov.total-vfs \
+                                 desire '{}', current '{}'",
+                                iface.merged.name(),
+                                desired_vfs,
+                                current,
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }

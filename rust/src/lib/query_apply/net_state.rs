@@ -235,9 +235,13 @@ impl NetworkState {
             )?);
         }
 
+        let has_sriov = merged_state
+            .as_ref()
+            .map(|s| s.interfaces.get_sriov_vf_count() > 0)
+            .unwrap_or(false);
         let timeout = if let Some(t) = self.timeout {
             t
-        } else if pf_state.is_some() {
+        } else if pf_state.is_some() || has_sriov {
             VERIFY_RETRY_COUNT_SRIOV_MAX as u32
         } else {
             DEFAULT_ROLLBACK_TIMEOUT
@@ -353,6 +357,10 @@ impl NetworkState {
                         retry_count,
                         |_| async {
                             nm_checkpoint_timeout_extend(checkpoint, timeout)
+                                .await?;
+                            merged_state
+                                .interfaces
+                                .verify_sriov_vf_count()
                                 .await?;
                             let mut new_cur_net_state = cur_net_state.clone();
                             new_cur_net_state.set_include_secrets(true);
