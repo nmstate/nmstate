@@ -2068,9 +2068,9 @@ def test_switch_auto_to_static_with_dynamic_ips(dhcpcli_up):
     )
 
     libnmstate.apply(desired_state)
-    assertlib.assert_state(desired_state)
     assert _poll(_has_dhcpv4_addr)
     assert _poll(_has_dhcpv6_addr)
+    assertlib.assert_state(desired_state)
 
     # User might just copy current state and disable DHCP/autoconf
     current_state = statelib.show_only((DHCP_CLI_NIC,))
