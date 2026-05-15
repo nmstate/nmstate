@@ -51,6 +51,8 @@ def command_log_line(args, cwd=None):
 
 
 def format_exec_cmd_result(result):
+    if isinstance(result, tuple):
+        return "rc={}, out={}, err={}".format(*result)
     return "rc={}, out={}, err={}".format(
         result.returncode, result.stdout, result.stderr
     )
