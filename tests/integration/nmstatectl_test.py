@@ -130,11 +130,7 @@ def test_missing_operation():
     rc, out, err = ret
 
     assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert (
-        # Python CLI
-        "nmstatectl: error: invalid choice: 'no-such-oper'" in err
-        or "'no-such-oper' which wasn't expected" in err
-    )
+    assert "unrecognized subcommand 'no-such-oper'" in err
 
 
 def test_show_command_with_json():

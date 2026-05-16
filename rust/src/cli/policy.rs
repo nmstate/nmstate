@@ -31,33 +31,36 @@ pub(crate) fn policy(matches: &clap::ArgMatches) -> Result<String, CliError> {
     let net_policy = deserilize_from_file::<NetworkPolicy>(
         // clap already confirmed POLICY_FILE is always defined,
         // so unwrap() here is safe.
-        matches.value_of("POLICY_FILE").unwrap(),
+        matches.get_one::<String>("POLICY_FILE").unwrap(),
     )?;
     if net_policy.is_empty() {
         return Ok(String::new());
     }
-    let current_state =
-        if let Some(current_state_file) = matches.value_of("CURRENT_STATE") {
-            deserilize_from_file::<NetworkState>(current_state_file)?
-        } else {
-            let mut state = NetworkState::new();
-            state.retrieve()?;
-            state
-        };
+    let current_state = if let Some(current_state_file) =
+        matches.get_one::<String>("CURRENT_STATE")
+    {
+        deserilize_from_file::<NetworkState>(current_state_file)?
+    } else {
+        let mut state = NetworkState::new();
+        state.retrieve()?;
+        state
+    };
 
     let captured_states = if let Some(captured_state_file) =
-        matches.value_of("CAPTURED_STATES")
+        matches.get_one::<String>("CAPTURED_STATES")
     {
         load_capture_states_from_file(captured_state_file)?
     } else {
         net_policy.capture.execute(&current_state)?
     };
 
-    if let Some(output_capture_file) = matches.value_of("OUTPUT_CAPTURED") {
+    if let Some(output_capture_file) =
+        matches.get_one::<String>("OUTPUT_CAPTURED")
+    {
         store_capture_states_from_file(
             output_capture_file,
             &captured_states,
-            matches.is_present("JSON"),
+            matches.get_flag("JSON"),
         )?;
     }
 
@@ -69,7 +72,7 @@ pub(crate) fn policy(matches: &clap::ArgMatches) -> Result<String, CliError> {
         return Ok("".to_string());
     }
 
-    Ok(if matches.is_present("JSON") {
+    Ok(if matches.get_flag("JSON") {
         serde_json::to_string_pretty(&new_net_state)?
     } else {
         serde_yaml::to_string(&new_net_state)?

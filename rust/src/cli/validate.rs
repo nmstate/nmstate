@@ -7,13 +7,13 @@ use crate::{
 
 pub(crate) fn validate(matches: &clap::ArgMatches) -> Result<String, CliError> {
     let state_or_policy =
-        if let Some(file_path) = matches.value_of("STATE_FILE") {
+        if let Some(file_path) = matches.get_one::<String>("STATE_FILE") {
             state_or_policy_from_file(file_path)?
         } else {
             state_or_policy_from_file("-")?
         };
 
-    let cur_state = match matches.value_of("CURRENT_STATE") {
+    let cur_state = match matches.get_one::<String>("CURRENT_STATE") {
         Some(file_path) => match state_or_policy_from_file(file_path)? {
             NetworkStateOrPolicy::State(state) => Some(state),
             _ => {

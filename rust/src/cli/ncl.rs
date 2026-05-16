@@ -88,13 +88,14 @@ fn main() {
         .arg(
             clap::Arg::new("verbose")
                 .short('v')
-                .multiple_occurrences(true)
+                .action(clap::ArgAction::Count)
                 .help("Set verbose level")
                 .global(true),
         )
         .arg(
             clap::Arg::new("quiet")
                 .short('q')
+                .action(clap::ArgAction::SetTrue)
                 .help("Disable logging")
                 .global(true),
         )
@@ -115,27 +116,27 @@ fn main() {
                     clap::Arg::new("KERNEL")
                         .short('k')
                         .long("kernel")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show kernel network state only"),
                 )
                 .arg(
                     clap::Arg::new("JSON")
                         .long("json")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show state in json format"),
                 )
                 .arg(
                     clap::Arg::new("RUNNING_CONFIG_ONLY")
                         .short('r')
                         .long("running-config")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show running configuration only"),
                 )
                 .arg(
                     clap::Arg::new("SHOW_SECRETS")
                         .short('s')
                         .long("show-secrets")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show secrets(hide by default)"),
                 ),
         )
@@ -147,14 +148,14 @@ fn main() {
                 .arg(
                     clap::Arg::new("STATE_FILE")
                         .required(false)
-                        .multiple_occurrences(true)
+                        .num_args(1..)
                         .index(1)
                         .help("Network state file"),
                 )
                 .arg(
                     clap::Arg::new("NO_VERIFY")
                         .long("no-verify")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help(
                             "Do not verify that the state was completely set \
                              and disable rollback to previous state.",
@@ -164,41 +165,38 @@ fn main() {
                     clap::Arg::new("KERNEL")
                         .short('k')
                         .long("kernel")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Apply network state to kernel only"),
                 )
                 .arg(
                     clap::Arg::new("NO_COMMIT")
                         .long("no-commit")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Do not commit new state after verification"),
                 )
                 .arg(
-                    clap::Arg::new("TIMEOUT")
-                        .long("timeout")
-                        .takes_value(true)
-                        .help(
-                            "Timeout in seconds before reverting uncommited \
-                             changes.",
-                        ),
+                    clap::Arg::new("TIMEOUT").long("timeout").num_args(1).help(
+                        "Timeout in seconds before reverting uncommited \
+                         changes.",
+                    ),
                 )
                 .arg(
                     clap::Arg::new("SHOW_SECRETS")
                         .short('s')
                         .long("show-secrets")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show secrets(hide by default)"),
                 )
                 .arg(
                     clap::Arg::new("MEMORY_ONLY")
                         .long("memory-only")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Do not make the state persistent"),
                 )
                 .arg(
                     clap::Arg::new("OVERRIDE_IFACE")
                         .long("override-iface")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help(
                             "Override interface settings without merge \
                              current network state",
@@ -247,7 +245,7 @@ fn main() {
                 .arg(
                     clap::Arg::new("NO_VERIFY")
                         .long("no-verify")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help(
                             "Do not verify that the state was completely set \
                              and disable rollback to previous state.",
@@ -257,19 +255,19 @@ fn main() {
                     clap::Arg::new("KERNEL")
                         .short('k')
                         .long("kernel")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Apply network state to kernel only"),
                 )
                 .arg(
                     clap::Arg::new("NO_COMMIT")
                         .long("no-commit")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Do not commit new state after verification"),
                 )
                 .arg(
                     clap::Arg::new("MEMORY_ONLY")
                         .long("memory-only")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Do not make the state persistent"),
                 ),
         )
@@ -281,7 +279,7 @@ fn main() {
                         .long("config")
                         .short('c')
                         .required(false)
-                        .takes_value(true)
+                        .num_args(1)
                         .default_value(DEFAULT_SERVICE_FOLDER)
                         .help("Folder hold network state files"),
                 ),
@@ -300,14 +298,14 @@ fn main() {
                     clap::Arg::new("CURRENT_STATE")
                         .short('c')
                         .long("current")
-                        .takes_value(true)
+                        .num_args(1)
                         .help("Read current network state from file"),
                 )
                 .arg(
                     clap::Arg::new("CAPTURED_STATES")
                         .short('a')
                         .long("captured")
-                        .takes_value(true)
+                        .num_args(1)
                         .help(
                             "Bypass the capture action by reading captured \
                              network state from specified file",
@@ -317,7 +315,7 @@ fn main() {
                     clap::Arg::new("OUTPUT_CAPTURED")
                         .short('o')
                         .long("output-captured")
-                        .takes_value(true)
+                        .num_args(1)
                         .help(
                             "Store the captured network states to specified \
                              file",
@@ -326,7 +324,7 @@ fn main() {
                 .arg(
                     clap::Arg::new("JSON")
                         .long("json")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show state in json format"),
                 ),
         )
@@ -344,7 +342,6 @@ fn main() {
         )
         .subcommand(
             clap::Command::new(SUB_CMD_GEN_REVERT)
-                .alias("gr")
                 .about("Generate network state to revert the desire state")
                 .arg(
                     clap::Arg::new("STATE_FILE")
@@ -356,13 +353,13 @@ fn main() {
                     clap::Arg::new("CURRENT_STATE")
                         .short('c')
                         .long("current")
-                        .takes_value(true)
+                        .num_args(1)
                         .help("Read current network state from file"),
                 )
                 .arg(
                     clap::Arg::new("JSON")
                         .long("json")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show state in json format"),
                 ),
         )
@@ -373,7 +370,7 @@ fn main() {
                 .arg(
                     clap::Arg::new("STATE_FILE")
                         .required(true)
-                        .multiple_occurrences(true)
+                        .num_args(1..)
                         .index(1)
                         .help("Network state file (repeatable)"),
                 )
@@ -381,13 +378,13 @@ fn main() {
                     clap::Arg::new("CURRENT_STATE")
                         .short('c')
                         .long("current")
-                        .takes_value(true)
+                        .num_args(1)
                         .help("Read current network state from file"),
                 )
                 .arg(
                     clap::Arg::new("JSON")
                         .long("json")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Show statistic in json format"),
                 ),
         )
@@ -398,7 +395,6 @@ fn main() {
                 .arg(
                     clap::Arg::new("STATE_FILE")
                         .required(false)
-                        .multiple_occurrences(false)
                         .index(1)
                         .help("Network state file"),
                 )
@@ -406,7 +402,7 @@ fn main() {
                     clap::Arg::new("CURRENT_STATE")
                         .short('c')
                         .long("current")
-                        .takes_value(true)
+                        .num_args(1)
                         .help("Read current network state from file"),
                 ),
         )
@@ -421,19 +417,19 @@ fn main() {
                 .arg(
                     clap::Arg::new("DRY_RUN")
                         .long("dry-run")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Only output changes that would be made"),
                 )
                 .arg(
                     clap::Arg::new("INSPECT")
                         .long("inspect")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help("Output information about prior state, if any"),
                 )
                 .arg(
                     clap::Arg::new("CLEAN_UP")
                         .long("cleanup")
-                        .takes_value(false)
+                        .action(clap::ArgAction::SetTrue)
                         .help(
                             "Remove previously created .link files which has \
                              no effect",
@@ -442,7 +438,7 @@ fn main() {
                 .arg(
                     clap::Arg::new("KARGSFILE")
                         .long("kargs-out")
-                        .takes_value(true)
+                        .num_args(1)
                         .help(
                             "When pinning, write kargs to append; when \
                              cleaning up, write kargs to delete \
@@ -454,7 +450,7 @@ fn main() {
                         .long("root")
                         .short('r')
                         .required(false)
-                        .takes_value(true)
+                        .num_args(1)
                         .default_value("/")
                         .help("Target root filesystem for writing state"),
                 )
@@ -462,15 +458,14 @@ fn main() {
                 .hide(true),
         );
     };
-    let matches = app.get_matches();
-    let (log_module_filters, log_level) =
-        match matches.occurrences_of("verbose") {
-            0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
-            1 => (vec!["nmstate", "nm_dbus"], LevelFilter::Debug),
-            _ => (vec![""], LevelFilter::Debug),
-        };
+    let matches = app.get_matches_mut();
+    let (log_module_filters, log_level) = match matches.get_count("verbose") {
+        0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
+        1 => (vec!["nmstate", "nm_dbus"], LevelFilter::Debug),
+        _ => (vec![""], LevelFilter::Debug),
+    };
 
-    if !matches.is_present("quiet") {
+    if !matches.get_flag("quiet") {
         let mut log_builder = Builder::new();
         for log_module_filter in log_module_filters {
             if !log_module_filter.is_empty() {
@@ -485,7 +480,7 @@ fn main() {
     log::info!("Nmstate version: {}", clap::crate_version!());
 
     if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_CONF) {
-        if let Some(file_path) = matches.value_of("STATE_FILE") {
+        if let Some(file_path) = matches.get_one::<String>("STATE_FILE") {
             print_result_and_exit(gen_conf(file_path));
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
@@ -495,8 +490,9 @@ fn main() {
             eprintln!("Using 'set' is deprecated, use 'apply' instead.");
         }
 
-        if let Some(file_paths) = matches.values_of("STATE_FILE") {
-            let file_paths: Vec<&str> = file_paths.collect();
+        if let Some(file_paths) = matches.get_many::<String>("STATE_FILE") {
+            let file_paths: Vec<&str> =
+                file_paths.map(String::as_str).collect();
             if file_paths.first() == Some(&"-") {
                 print_result_and_exit(apply_from_stdin(matches));
             } else {
@@ -506,13 +502,13 @@ fn main() {
             print_result_and_exit(apply_from_stdin(matches));
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_COMMIT) {
-        if let Some(checkpoint) = matches.value_of("CHECKPOINT") {
+        if let Some(checkpoint) = matches.get_one::<String>("CHECKPOINT") {
             print_result_and_exit(commit(checkpoint));
         } else {
             print_result_and_exit(commit(""))
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_ROLLBACK) {
-        if let Some(checkpoint) = matches.value_of("CHECKPOINT") {
+        if let Some(checkpoint) = matches.get_one::<String>("CHECKPOINT") {
             print_result_and_exit(rollback(checkpoint));
         } else {
             print_result_and_exit(rollback(""))
@@ -526,7 +522,7 @@ fn main() {
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_FORMAT) {
         // The default_value() has ensured the unwrap() will never fail
         print_result_and_exit(format::format(
-            matches.value_of("STATE_FILE").unwrap(),
+            matches.get_one::<String>("STATE_FILE").unwrap(),
         ));
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_STATISTIC)
     {
@@ -550,16 +546,16 @@ fn main() {
         {
             // --inspect is now equivalent to --cleanup --dry-run and kept for
             // backwards compatibility with the logic that originally landed in https://github.com/openshift/machine-config-operator/
-            let have_inspect = matches.contains_id("INSPECT");
-            let dry_run = matches.contains_id("DRY_RUN") || have_inspect;
-            let action = if matches.contains_id("CLEAN_UP") || have_inspect {
+            let have_inspect = matches.get_flag("INSPECT");
+            let dry_run = matches.get_flag("DRY_RUN") || have_inspect;
+            let action = if matches.get_flag("CLEAN_UP") || have_inspect {
                 persist_nic::PersistAction::CleanUp
             } else {
                 persist_nic::PersistAction::Save
             };
             print_result_and_exit(crate::persist_nic::entrypoint(
-                matches.value_of("ROOT").unwrap(),
-                matches.value_of("KARGSFILE"),
+                matches.get_one::<String>("ROOT").unwrap(),
+                matches.get_one::<String>("KARGSFILE").map(String::as_str),
                 action,
                 dry_run,
             ));
