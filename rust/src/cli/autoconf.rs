@@ -22,7 +22,7 @@ pub(crate) fn autoconf(argv: &[String]) -> Result<String, CliError> {
             clap::Arg::new("DRY_RUN")
                 .long("dry-run")
                 .short('d')
-                .takes_value(false)
+                .action(clap::ArgAction::SetTrue)
                 .help(
                     "Generate the network state that is going to be applied \
                      and print it out without applying any change.",
@@ -43,13 +43,16 @@ pub(crate) fn autoconf(argv: &[String]) -> Result<String, CliError> {
 
     let mut cur_state = NetworkState::new();
     cur_state.retrieve()?;
-    filter_net_state(&mut cur_state, matches.value_of("ONLY"))?;
+    filter_net_state(
+        &mut cur_state,
+        matches.get_one::<String>("ONLY").map(String::as_str),
+    )?;
 
     let vlan_to_iface = get_lldp_vlans(&cur_state);
 
     let desire_state = gen_desire_state(&vlan_to_iface);
 
-    if !matches.is_present("DRY_RUN") {
+    if !matches.get_flag("DRY_RUN") {
         eprintln!("This is a experimental function!");
         desire_state.apply()?;
     }

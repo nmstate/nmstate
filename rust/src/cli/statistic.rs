@@ -10,27 +10,28 @@ pub(crate) fn statistic(
     matches: &clap::ArgMatches,
 ) -> Result<String, crate::error::CliError> {
     let mut desired_state = NetworkState::default();
-    if let Some(file_paths) = matches.values_of("STATE_FILE") {
-        let file_paths: Vec<&str> = file_paths.collect();
+    if let Some(file_paths) = matches.get_many::<String>("STATE_FILE") {
+        let file_paths: Vec<&str> = file_paths.map(String::as_str).collect();
         for file_path in file_paths {
             desired_state.merge_desire(&state_from_file(file_path)?)
         }
     } else {
         desired_state = state_from_file("-")?;
     }
-    let current_state =
-        if let Some(cur_state_file) = matches.value_of("CURRENT_STATE") {
-            state_from_file(cur_state_file)?
-        } else {
-            let mut net_state = NetworkState::new();
-            net_state.set_running_config_only(true);
-            net_state.retrieve()?;
-            net_state
-        };
+    let current_state = if let Some(cur_state_file) =
+        matches.get_one::<String>("CURRENT_STATE")
+    {
+        state_from_file(cur_state_file)?
+    } else {
+        let mut net_state = NetworkState::new();
+        net_state.set_running_config_only(true);
+        net_state.retrieve()?;
+        net_state
+    };
 
     let statistic = desired_state.statistic(&current_state)?;
 
-    Ok(if matches.is_present("JSON") {
+    Ok(if matches.get_flag("JSON") {
         serde_json::to_string_pretty(&statistic)?
     } else {
         serde_yaml::to_string(&statistic)?

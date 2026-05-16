@@ -47,7 +47,8 @@ pub(crate) fn ncl_service(
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
     let folder = matches
-        .value_of(crate::CONFIG_FOLDER_KEY)
+        .get_one::<String>(crate::CONFIG_FOLDER_KEY)
+        .map(String::as_str)
         .unwrap_or(crate::DEFAULT_SERVICE_FOLDER);
 
     let config = load_config(folder)?;

@@ -37,32 +37,21 @@ pub(crate) fn apply<R>(
 where
     R: Read,
 {
-    let kernel_only = matches.try_contains_id("KERNEL").unwrap_or_default();
-    let no_verify = matches.try_contains_id("NO_VERIFY").unwrap_or_default();
-    let no_commit = matches.try_contains_id("NO_COMMIT").unwrap_or_default();
-    let override_iface = matches
-        .try_contains_id("OVERRIDE_IFACE")
-        .unwrap_or_default();
-    let timeout = if matches.try_contains_id("TIMEOUT").unwrap_or_default() {
-        match matches.try_get_one::<String>("TIMEOUT") {
-            Ok(Some(t)) => match u32::from_str(t) {
-                Ok(i) => {
-                    if !no_commit {
-                        log::warn!(
-                            "--timeout is only effective when used with \
-                             --no-commit. The timeout value will be ignored."
-                        );
-                    }
-                    i
+    let kernel_only = matches.get_flag("KERNEL");
+    let no_verify = matches.get_flag("NO_VERIFY");
+    let no_commit = matches.get_flag("NO_COMMIT");
+    let override_iface = matches.get_flag("OVERRIDE_IFACE");
+    let timeout = if let Some(t) = matches.get_one::<String>("TIMEOUT") {
+        match u32::from_str(t) {
+            Ok(i) => {
+                if !no_commit {
+                    log::warn!(
+                        "--timeout is only effective when used with \
+                         --no-commit. The timeout value will be ignored."
+                    );
                 }
-                Err(e) => {
-                    return Err(CliError {
-                        code: crate::error::EX_DATAERR,
-                        error_msg: e.to_string(),
-                    });
-                }
-            },
-            Ok(None) => DEFAULT_TIMEOUT,
+                i
+            }
             Err(e) => {
                 return Err(CliError {
                     code: crate::error::EX_DATAERR,
@@ -79,13 +68,8 @@ where
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
     net_state.set_override_iface(override_iface);
-    net_state.set_memory_only(
-        matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
-    );
-    apply_state(
-        &net_state,
-        matches.try_contains_id("SHOW_SECRETS").unwrap_or_default(),
-    )
+    net_state.set_memory_only(matches.get_flag("MEMORY_ONLY"));
+    apply_state(&net_state, matches.get_flag("SHOW_SECRETS"))
 }
 
 pub(crate) fn apply_state(
@@ -125,12 +109,12 @@ pub(crate) fn state_edit(
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
     let mut cur_state = NetworkState::new();
-    if matches.is_present("KERNEL") {
+    if matches.get_flag("KERNEL") {
         cur_state.set_kernel_only(true);
     }
     cur_state.set_running_config_only(true);
     cur_state.retrieve()?;
-    let net_state = if let Some(ifname) = matches.value_of("IFNAME") {
+    let net_state = if let Some(ifname) = matches.get_one::<String>("IFNAME") {
         let mut net_state = NetworkState::new();
         for iface in cur_state
             .interfaces
@@ -154,10 +138,10 @@ pub(crate) fn state_edit(
     write_state_to_file(&tmp_file_path, &net_state)?;
     let mut desire_state = run_editor(&tmp_file_path)?;
     del_file(&tmp_file_path);
-    desire_state.set_kernel_only(matches.is_present("KERNEL"));
-    desire_state.set_verify_change(!matches.is_present("NO_VERIFY"));
-    desire_state.set_commit(!matches.is_present("NO_COMMIT"));
-    desire_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
+    desire_state.set_kernel_only(matches.get_flag("KERNEL"));
+    desire_state.set_verify_change(!matches.get_flag("NO_VERIFY"));
+    desire_state.set_commit(!matches.get_flag("NO_COMMIT"));
+    desire_state.set_memory_only(matches.get_flag("MEMORY_ONLY"));
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .enable_time()
@@ -166,6 +150,9 @@ pub(crate) fn state_edit(
             CliError::from(format!("tokio::runtime::Builder failed with {e}"))
         })?;
     let mut diff_state = rt.block_on(apply_state_async(&desire_state))?;
+    // Use try instead of get_flag() because the `edit` sub-command
+    // does not have the `SHOW_SECRETS` flag, and try_contains_id() will return
+    // an error in this case instead of panic when using `get_flag()`.
     if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
         diff_state.hide_secrets();
     }

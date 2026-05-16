@@ -32,23 +32,23 @@ const IFACE_TOP_PRIORTIES: [&str; 2] = ["name", "type"];
 // Ordering the outputs
 pub(crate) fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
     let mut net_state = NetworkState::new();
-    if matches.is_present("KERNEL") {
+    if matches.get_flag("KERNEL") {
         net_state.set_kernel_only(true);
     }
-    if matches.is_present("RUNNING_CONFIG_ONLY") {
+    if matches.get_flag("RUNNING_CONFIG_ONLY") {
         net_state.set_running_config_only(true);
     }
-    net_state.set_include_secrets(matches.is_present("SHOW_SECRETS"));
+    net_state.set_include_secrets(matches.get_flag("SHOW_SECRETS"));
     net_state.retrieve()?;
-    Ok(if let Some(ifname) = matches.value_of("IFNAME") {
+    Ok(if let Some(ifname) = matches.get_one::<String>("IFNAME") {
         let mut new_net_state = filter_net_state_with_iface(&net_state, ifname);
-        new_net_state.set_kernel_only(matches.is_present("KERNEL"));
-        if matches.is_present("JSON") {
+        new_net_state.set_kernel_only(matches.get_flag("KERNEL"));
+        if matches.get_flag("JSON") {
             serde_json::to_string_pretty(&new_net_state)?
         } else {
             serde_yaml::to_string(&new_net_state)?
         }
-    } else if matches.is_present("JSON") {
+    } else if matches.get_flag("JSON") {
         serde_json::to_string_pretty(&sort_netstate(net_state)?)?
     } else {
         serde_yaml::to_string(&sort_netstate(net_state)?)?
