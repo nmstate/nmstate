@@ -60,6 +60,16 @@ def clean_up():
           """
         )
     )
+    libnmstate.apply(
+        load_yaml(
+            """---
+            interfaces:
+            - name: mtap0
+              type: mac-vlan
+              state: absent
+          """
+        )
+    )
 
 
 def test_bond_port_ref_by_mac(eth1_up, eth2_up, clean_up):
