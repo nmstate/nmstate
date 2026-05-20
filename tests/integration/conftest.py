@@ -191,6 +191,31 @@ port0_up = eth1_up
 port1_up = eth2_up
 
 
+NM_INTERN_CONF = "/var/lib/NetworkManager/NetworkManager-intern.conf"
+
+
+@pytest.fixture(autouse=True)
+def clean_dns():
+    yield
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}}, verify_change=False)
+    _remove_global_dns()
+
+
+def _remove_global_dns():
+    try:
+        with open(NM_INTERN_CONF) as f:
+            content = f.read()
+        if "[.intern.global-dns" in content:
+            import re
+
+            content = re.sub(r"\[\.intern\.global-dns[^\[]*", "", content)
+            with open(NM_INTERN_CONF, "w") as f:
+                f.write(content)
+            subprocess.run(["nmcli", "general", "reload"], check=False)
+    except FileNotFoundError:
+        pass
+
+
 def pytest_report_header(config):
     nm_ver = _get_package_nvr("NetworkManager")
     try:
