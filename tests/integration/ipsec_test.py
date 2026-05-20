@@ -113,8 +113,8 @@ def _check_ipsec_ip(ip_net_prefix, nic):
     return False
 
 
-@pytest.fixture
-def ipsec_cli_cleanup(scope="function", autouse=True):
+@pytest.fixture(scope="function", autouse=True)
+def ipsec_cli_cleanup():
     yield
     desired_state = yaml.load(
         f"""---
