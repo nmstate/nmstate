@@ -426,14 +426,14 @@ def _get_ipv4_test_routes(nic="eth1"):
     return [
         {
             Route.DESTINATION: "198.51.100.0/24",
-            Route.METRIC: 103,
+            Route.METRIC: 503,
             Route.NEXT_HOP_ADDRESS: "192.0.2.1",
             Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV4_ROUTE_TABLE_ID1,
         },
         {
             Route.DESTINATION: "203.0.113.0/24",
-            Route.METRIC: 103,
+            Route.METRIC: 503,
             Route.NEXT_HOP_ADDRESS: "192.0.2.1",
             Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV4_ROUTE_TABLE_ID2,
@@ -445,14 +445,14 @@ def _get_ipv4_gateways():
     return [
         {
             Route.DESTINATION: "0.0.0.0/0",
-            Route.METRIC: 103,
+            Route.METRIC: 503,
             Route.NEXT_HOP_ADDRESS: "192.0.2.1",
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
         {
             Route.DESTINATION: "0.0.0.0/0",
-            Route.METRIC: 101,
+            Route.METRIC: 501,
             Route.NEXT_HOP_ADDRESS: "192.0.2.2",
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
@@ -464,14 +464,14 @@ def _get_ipv6_test_routes(nic="eth1"):
     return [
         {
             Route.DESTINATION: "2001:db8:a::/64",
-            Route.METRIC: 103,
+            Route.METRIC: 503,
             Route.NEXT_HOP_ADDRESS: "2001:db8:1::a",
             Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV6_ROUTE_TABLE_ID1,
         },
         {
             Route.DESTINATION: "2001:db8:b::/64",
-            Route.METRIC: 103,
+            Route.METRIC: 503,
             Route.NEXT_HOP_ADDRESS: "2001:db8:1::b",
             Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV6_ROUTE_TABLE_ID2,
@@ -483,14 +483,14 @@ def _get_ipv6_gateways():
     return [
         {
             Route.DESTINATION: "::/0",
-            Route.METRIC: 103,
+            Route.METRIC: 503,
             Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
         {
             Route.DESTINATION: "::/0",
-            Route.METRIC: 101,
+            Route.METRIC: 501,
             Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY2,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
@@ -2134,11 +2134,11 @@ def test_kernel_mode_static_route_and_remove(cleanup_veth1_kernel_mode):
            - destination: 0.0.0.0/0
              next-hop-address: 192.0.2.1
              next-hop-interface: veth1
-             metric: 109
+             metric: 502
            - destination: ::/0
              next-hop-address: 2001:db8:1::2
              next-hop-interface: veth1
-             metric: 102
+             metric: 500
         """
     )
     libnmstate.apply(desired_state, kernel_only=True)
@@ -2554,11 +2554,11 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
             - destination: 203.0.113.0/24
               next-hop-address: 192.0.2.1
               next-hop-interface: veth1
-              metric: 109
+              metric: 502
             - destination: 203.0.113.0/24
               next-hop-address: 192.0.2.2
               next-hop-interface: veth1
-              metric: 109
+              metric: 502
             """
         ),
         (
@@ -2576,11 +2576,11 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
             - destination: 2001:db8:2::/64
               next-hop-address: 2001:db8:1::2
               next-hop-interface: veth1
-              metric: 102
+              metric: 500
             - destination: 2001:db8:2::/64
               next-hop-address: 2001:db8:1::3
               next-hop-interface: veth1
-              metric: 102
+              metric: 500
             """
         ),
     ],
