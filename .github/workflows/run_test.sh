@@ -38,7 +38,7 @@ else
 fi
 
 if [ $NM_TYPE == "nm_main" ];then
-    TEST_ARG="$TEST_ARG --copr networkmanager/NetworkManager-main"
+    TEST_ARG="$TEST_ARG --copr networkmanager/NetworkManager-main-debug"
 fi
 
 if [ $NM_TYPE == "nm_min" ];then
