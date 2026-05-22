@@ -9,6 +9,17 @@ def is_fedora():
     return os.path.exists("/etc/fedora-release")
 
 
+def is_el10():
+    try:
+        with open("/etc/os-release") as f:
+            for line in f:
+                if line.strip() == 'PLATFORM_ID="platform:el10"':
+                    return True
+    except FileNotFoundError:
+        pass
+    return False
+
+
 def nm_minor_version():
     version_str = exec_cmd(
         "rpm -q NetworkManager --qf %{VERSION}".split(),

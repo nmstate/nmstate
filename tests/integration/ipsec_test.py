@@ -11,6 +11,7 @@ from libnmstate.schema import InterfaceIPv6
 
 
 from .testlib import cmdlib
+from .testlib.env import is_el10
 from .testlib.env import is_k8s
 from .testlib.env import nm_libreswan_version_int
 from .testlib.env import version_str_to_int
@@ -684,6 +685,11 @@ def test_ipsec_ipv6_host_to_subnet(ipsec_srv_host_to_site):
     )
 
 
+# https://redhat.atlassian.net/browse/RHEL-176474
+@pytest.mark.skipif(
+    is_el10(),
+    reason="Waive: currently failing on EL10 due to known bug",
+)
 @pytest.mark.xfail(
     nm_libreswan_version_int() < version_str_to_int("1.2.22"),
     reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
@@ -855,6 +861,11 @@ def test_ipsec_ipv4_libreswan_change_ipsec_iface(ipsec_psk_with_ipsec_iface):
 
 
 # DHCPv4 off with empty IP address means IP disabled for IPSec interface
+# https://redhat.atlassian.net/browse/RHEL-176474
+@pytest.mark.skipif(
+    is_el10(),
+    reason="Waive: currently failing on EL10 due to known bug",
+)
 def test_ipsec_dhcpv4_off_and_empty_ip_addr(
     ipsec_srv_rsa_gw,
 ):
