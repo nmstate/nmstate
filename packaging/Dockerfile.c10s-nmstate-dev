@@ -14,6 +14,7 @@ RUN grep -q "^skip_if_unavailable=" /etc/dnf/dnf.conf && \
 
 RUN dnf update -y && \
     dnf -y install centos-release-nfv-openvswitch && \
+    dnf install -y 'dnf-command(config-manager)' && \
     dnf config-manager --set-enabled crb && \
     dnf -y install --setopt=install_weak_deps=False \
         systemd make go rust-toolset NetworkManager NetworkManager-ovs \
@@ -21,6 +22,10 @@ RUN dnf update -y && \
         git iproute rpm-build python3-pytest wpa_supplicant hostapd libndp \
         python3-pip procps-ng dpdk libreswan NetworkManager-libreswan podman \
         openvswitch3.4 && \
+    dnf clean all
+
+RUN dnf install -y epel-release && \
+    dnf install -y tcpreplay && \
     dnf clean all
 
 RUN go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
