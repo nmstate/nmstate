@@ -27,7 +27,7 @@ mod route;
 mod route_rule;
 mod sriov;
 mod vlan;
-pub(crate) mod vnicc;
+mod vnicc;
 mod vrf;
 mod vxlan;
 
