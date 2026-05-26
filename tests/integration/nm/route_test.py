@@ -63,7 +63,8 @@ def eth1_with_old_gateway_format():
     )
     exec_cmd(
         f"nmcli c modify eth1 ipv4.gateway {TEST_GATEAY4} "
-        f"ipv6.gateway {TEST_GATEAY6}".split(),
+        f"ipv6.gateway {TEST_GATEAY6} "
+        f"ipv6.route-metric 500".split(),
         check=True,
     )
     exec_cmd("nmcli c up eth1".split(), check=True)
