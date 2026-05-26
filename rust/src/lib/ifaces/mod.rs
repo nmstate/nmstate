@@ -26,6 +26,7 @@ mod macsec;
 mod ovs;
 mod sriov;
 mod vlan;
+mod vnicc;
 
 pub use base::*;
 pub use bond::{
@@ -76,6 +77,7 @@ pub use vlan::{
     VlanConfig, VlanInterface, VlanProtocol, VlanQosMapping,
     VlanRegistrationProtocol,
 };
+pub use vnicc::VniccConfig;
 pub use vrf::{VrfConfig, VrfInterface};
 pub use vxlan::{VxlanConfig, VxlanInterface};
 

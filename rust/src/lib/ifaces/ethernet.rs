@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceType, Interfaces,
-    MergedInterfaces, NetworkStateMode, NmstateError, SrIovConfig,
+    MergedInterfaces, NetworkStateMode, NmstateError, SrIovConfig, VniccConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,6 +150,10 @@ pub struct EthernetConfig {
     pub speed: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duplex: Option<EthernetDuplex>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Virtual NIC Characteristics (VNICC) configuration for s390x qeth
+    /// devices.
+    pub vnicc: Option<VniccConfig>,
 }
 
 impl EthernetConfig {

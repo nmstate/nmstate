@@ -17,6 +17,7 @@ use crate::{
         DEFAULT_OVS_DB_SOCKET_PATH, ovsdb_apply_global_conf, ovsdb_is_running,
         ovsdb_retrieve,
     },
+    query_apply::vnicc::apply_vnicc_conf,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
@@ -346,6 +347,7 @@ impl NetworkState {
 
                 apply_ifaces_alt_names(&merged_state.interfaces).await?;
                 persist_alt_name_config(&merged_state.interfaces).await?;
+                apply_vnicc_conf(&merged_state.interfaces)?;
 
                 if !self.no_verify {
                     with_retry(
@@ -384,6 +386,7 @@ impl NetworkState {
         )?;
 
         nispor_apply(&merged_state).await?;
+        apply_vnicc_conf(&merged_state.interfaces)?;
         if let Some(running_hostname) =
             self.hostname.as_ref().and_then(|c| c.running.as_ref())
         {

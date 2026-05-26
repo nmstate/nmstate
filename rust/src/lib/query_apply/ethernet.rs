@@ -68,6 +68,9 @@ impl EthernetConfig {
             } else {
                 self.sr_iov.clone_from(&other.sr_iov)
             }
+            if self.vnicc.is_none() {
+                self.vnicc.clone_from(&other.vnicc)
+            }
         }
     }
 }

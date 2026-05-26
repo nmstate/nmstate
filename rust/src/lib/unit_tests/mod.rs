@@ -69,6 +69,8 @@ mod testlib;
 #[cfg(test)]
 mod vlan;
 #[cfg(test)]
+mod vnicc;
+#[cfg(test)]
 mod vrf;
 #[cfg(test)]
 mod vxlan;

@@ -320,6 +320,12 @@ class Ethernet:
             QOS = "qos"
             VLAN_PROTO = "vlan-proto"
 
+    VNICC_SUBTREE = "vnicc"
+
+    class VNICC:
+        BRIDGE_INVISIBLE = "bridge-invisible"
+        LEARNING = "learning"
+
 
 class Veth:
     TYPE = InterfaceType.VETH

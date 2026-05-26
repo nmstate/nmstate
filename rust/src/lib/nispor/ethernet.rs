@@ -4,7 +4,7 @@ use std::{fs, path};
 
 use crate::{
     BaseInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
-    SrIovConfig, SrIovVfConfig, VlanProtocol,
+    SrIovConfig, SrIovVfConfig, VlanProtocol, VniccConfig,
 };
 
 pub(crate) fn np_ethernet_to_nmstate(
@@ -61,6 +61,8 @@ fn gen_eth_conf(np_iface: &nispor::Iface) -> EthernetConfig {
         }
     }
 
+    eth_conf.vnicc = gen_vnicc_conf(np_iface);
+
     eth_conf
 }
 
@@ -96,4 +98,38 @@ fn gen_sriov_conf(sriov_info: &nispor::SriovInfo) -> SrIovConfig {
     ret.max_vfs = sriov_info.max_num_vfs;
     ret.vfs = Some(vfs);
     ret
+}
+
+fn read_sysfs_bool(iface_name: &str, subpath: &str) -> Option<bool> {
+    let p: path::PathBuf =
+        ["/sys/class/net", iface_name, subpath].iter().collect();
+    match fs::read_to_string(&p) {
+        Ok(contents) => match contents.trim().parse::<u8>() {
+            Ok(v) => Some(v == 1),
+            Err(err) => {
+                log::warn!(
+                    "failed to parse {}: {:?}",
+                    p.to_string_lossy(),
+                    err
+                );
+                None
+            }
+        },
+        Err(_) => None,
+    }
+}
+
+fn gen_vnicc_conf(np_iface: &nispor::Iface) -> Option<VniccConfig> {
+    let bridge_invisible =
+        read_sysfs_bool(&np_iface.name, "vnicc/bridge_invisible");
+    let learning = read_sysfs_bool(&np_iface.name, "vnicc/learning");
+
+    if bridge_invisible.is_some() || learning.is_some() {
+        Some(VniccConfig {
+            bridge_invisible,
+            learning,
+        })
+    } else {
+        None
+    }
 }
