@@ -100,36 +100,52 @@ fn gen_sriov_conf(sriov_info: &nispor::SriovInfo) -> SrIovConfig {
     ret
 }
 
-fn read_sysfs_bool(iface_name: &str, subpath: &str) -> Option<bool> {
-    let p: path::PathBuf =
-        ["/sys/class/net", iface_name, subpath].iter().collect();
-    match fs::read_to_string(&p) {
-        Ok(contents) => match contents.trim().parse::<u8>() {
-            Ok(v) => Some(v == 1),
+fn gen_vnicc_conf(np_iface: &nispor::Iface) -> Option<VniccConfig> {
+    let mut vnicc = VniccConfig::new();
+    let mut found = false;
+
+    let p: path::PathBuf = [
+        "/sys/class/net",
+        &np_iface.name,
+        "vnicc/bridge_invisible",
+    ]
+    .iter()
+    .collect();
+    if let Ok(contents) = fs::read_to_string(&p) {
+        match contents.as_str().trim().parse::<u8>() {
+            Ok(i) => {
+                vnicc.bridge_invisible = Some(i == 1);
+                found = true;
+            }
             Err(err) => {
                 log::warn!(
                     "failed to parse {}: {:?}",
                     p.to_string_lossy(),
                     err
                 );
-                None
             }
-        },
-        Err(_) => None,
+        }
     }
-}
 
-fn gen_vnicc_conf(np_iface: &nispor::Iface) -> Option<VniccConfig> {
-    let bridge_invisible =
-        read_sysfs_bool(&np_iface.name, "vnicc/bridge_invisible");
-    let learning = read_sysfs_bool(&np_iface.name, "vnicc/learning");
-
-    if bridge_invisible.is_some() || learning.is_some() {
-        Some(VniccConfig {
-            bridge_invisible,
-            learning,
-        })
-    } else {
-        None
+    let p: path::PathBuf =
+        ["/sys/class/net", &np_iface.name, "vnicc/learning"]
+            .iter()
+            .collect();
+    if let Ok(contents) = fs::read_to_string(&p) {
+        match contents.as_str().trim().parse::<u8>() {
+            Ok(i) => {
+                vnicc.learning = Some(i == 1);
+                found = true;
+            }
+            Err(err) => {
+                log::warn!(
+                    "failed to parse {}: {:?}",
+                    p.to_string_lossy(),
+                    err
+                );
+            }
+        }
     }
+
+    if found { Some(vnicc) } else { None }
 }
