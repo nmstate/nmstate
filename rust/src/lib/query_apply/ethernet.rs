@@ -1,10 +1,27 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::fs;
+
 use crate::{
     ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
     Interfaces, MergedInterfaces, NetworkState, NmstateError, SrIovConfig,
     VethConfig,
 };
+
+pub(super) fn write_sysfs_bool(
+    iface_name: &str,
+    subpath: &str,
+    value: bool,
+) -> Result<(), NmstateError> {
+    let path = format!("/sys/class/net/{iface_name}/{subpath}");
+    let val_str = if value { "1" } else { "0" };
+    fs::write(&path, val_str).map_err(|e| {
+        NmstateError::new(
+            ErrorKind::PluginFailure,
+            format!("Failed to write {val_str} to {path}: {e}"),
+        )
+    })
+}
 
 impl EthernetInterface {
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
