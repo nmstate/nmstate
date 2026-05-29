@@ -162,8 +162,8 @@ pub use crate::{
         OvsBridgeOptions, OvsBridgePortConfig, OvsBridgeStpOptions,
         OvsDpdkConfig, OvsInterface, OvsPatchConfig, SrIovConfig,
         SrIovVfConfig, VethConfig, VlanConfig, VlanInterface, VlanProtocol,
-        VlanQosMapping, VlanRegistrationProtocol, VniccConfig, VrfConfig, VrfInterface,
-        VxlanConfig, VxlanInterface, XfrmInterface,
+        VlanQosMapping, VlanRegistrationProtocol, VniccConfig, VrfConfig,
+        VrfInterface, VxlanConfig, VxlanInterface, XfrmInterface,
     },
     ip::{
         AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr,

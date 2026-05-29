@@ -104,13 +104,10 @@ fn gen_vnicc_conf(np_iface: &nispor::Iface) -> Option<VniccConfig> {
     let mut vnicc = VniccConfig::new();
     let mut found = false;
 
-    let p: path::PathBuf = [
-        "/sys/class/net",
-        &np_iface.name,
-        "vnicc/bridge_invisible",
-    ]
-    .iter()
-    .collect();
+    let p: path::PathBuf =
+        ["/sys/class/net", &np_iface.name, "vnicc/bridge_invisible"]
+            .iter()
+            .collect();
     if let Ok(contents) = fs::read_to_string(&p) {
         match contents.as_str().trim().parse::<u8>() {
             Ok(i) => {
@@ -127,10 +124,9 @@ fn gen_vnicc_conf(np_iface: &nispor::Iface) -> Option<VniccConfig> {
         }
     }
 
-    let p: path::PathBuf =
-        ["/sys/class/net", &np_iface.name, "vnicc/learning"]
-            .iter()
-            .collect();
+    let p: path::PathBuf = ["/sys/class/net", &np_iface.name, "vnicc/learning"]
+        .iter()
+        .collect();
     if let Ok(contents) = fs::read_to_string(&p) {
         match contents.as_str().trim().parse::<u8>() {
             Ok(i) => {
