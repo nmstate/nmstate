@@ -2668,6 +2668,40 @@ def test_prefix_route_metric_on_static_ip(eth1_up_with_prefix_route_metric):
     assert_prefix_routes(expected_routes)
 
 
+@pytest.fixture
+def eth1_up_with_ipv6_prefix_route_metric(eth1_up):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv6:
+            enabled: true
+            dhcp: false
+            autoconf: false
+            prefix-route-metric: 102
+            address:
+            - ip: 2001:db8::1
+              prefix-length: 64
+        """
+    )
+    libnmstate.apply(desired_state)
+    yield
+
+
+def test_prefix_route_metric_on_static_ipv6(
+    eth1_up_with_ipv6_prefix_route_metric,
+):
+    cur_routes = json.loads(
+        cmdlib.exec_cmd("ip -6 -j route show dev eth1".split(), check=True)[1]
+    )
+    assert any(
+        cur_rt.get("metric", 0) == 102 and cur_rt.get("dst") == "2001:db8::/64"
+        for cur_rt in cur_routes
+    )
+
+
 def preserve_prefix_route_metric_if_not_desired(
     eth1_up_with_prefix_route_metric,
 ):
