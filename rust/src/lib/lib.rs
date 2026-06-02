@@ -160,10 +160,10 @@ pub use crate::{
         MacVtapInterface, MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
         OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
         OvsBridgeOptions, OvsBridgePortConfig, OvsBridgeStpOptions,
-        OvsDpdkConfig, OvsInterface, OvsPatchConfig, SrIovConfig,
+        OvsDpdkConfig, OvsInterface, OvsPatchConfig, QethConfig, SrIovConfig,
         SrIovVfConfig, VethConfig, VlanConfig, VlanInterface, VlanProtocol,
-        VlanQosMapping, VlanRegistrationProtocol, VrfConfig, VrfInterface,
-        VxlanConfig, VxlanInterface, XfrmInterface,
+        VlanQosMapping, VlanRegistrationProtocol, VniccConfig, VrfConfig,
+        VrfInterface, VxlanConfig, VxlanInterface, XfrmInterface,
     },
     ip::{
         AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr,

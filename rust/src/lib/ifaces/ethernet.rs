@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::ifaces::qeth_vnicc::QethConfig;
+use crate::nispor::qeth::{apply_vnicc, query_vnicc, verify_vnicc};
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceType, Interfaces,
     MergedInterfaces, NetworkStateMode, NmstateError, SrIovConfig,
@@ -101,6 +103,51 @@ impl EthernetInterface {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Populate `qeth` from sysfs during the kernel/NM query phase.
+    /// Called after base interface properties have been filled.
+    /// Returns `Ok(())` silently on non-s390x or non-qeth interfaces.
+    pub(crate) fn fill_qeth_from_kernel(&mut self) -> Result<(), NmstateError> {
+        match query_vnicc(self.base.name.as_str()) {
+            Ok(Some(vnicc)) => {
+                if let Some(ref mut eth) = self.ethernet {
+                    eth.qeth = Some(QethConfig { vnicc: Some(vnicc) });
+                }
+            }
+            // Not a qeth device — leave qeth as None.
+            Ok(None) => {}
+            // Non-s390x host — silently skip.
+            Err(ref e) if e.kind() == ErrorKind::NotImplementedError => {}
+            Err(e) => return Err(e),
+        }
+        Ok(())
+    }
+
+    /// Apply qeth vnicc settings to sysfs.
+    /// Called at the end of the normal apply path; no-op when `qeth` is None.
+    pub(crate) fn apply_qeth(&self) -> Result<(), NmstateError> {
+        if let Some(eth) = &self.ethernet {
+            if let Some(qeth) = &eth.qeth {
+                if let Some(vnicc) = &qeth.vnicc {
+                    apply_vnicc(self.base.name.as_str(), vnicc)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Verify post-apply qeth vnicc state matches desired.
+    /// Called at the end of the normal verify path; no-op when `qeth` is None.
+    pub(crate) fn verify_qeth(&self) -> Result<(), NmstateError> {
+        if let Some(eth) = &self.ethernet {
+            if let Some(qeth) = &eth.qeth {
+                if let Some(vnicc) = &qeth.vnicc {
+                    verify_vnicc(self.base.name.as_str(), vnicc)?;
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -130,6 +177,11 @@ impl std::fmt::Display for EthernetDuplex {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct EthernetConfig {
+    /// IBM Z (s390x) qeth-specific settings including VNIC characteristics
+    /// (vnicc). Only populated for OSA Express and HiperSockets interfaces
+    /// managed by the qeth kernel driver. `None` on all other hardware.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub qeth: Option<QethConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Single Root I/O Virtualization(SRIOV) configuration.
     /// Deserialize and serialize from/to `sr-iov`.

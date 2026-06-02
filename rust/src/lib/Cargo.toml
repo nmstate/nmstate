@@ -59,3 +59,7 @@ default = ["query_apply", "gen_conf", "gen_revert"]
 query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio"]
 gen_conf = []
 gen_revert = []
+ 
+[[test]]
+name = "test_qeth_vnicc"
+path = "../../../tests/integration/test_qeth_vnicc.rs"

@@ -335,6 +335,24 @@ impl NetworkState {
             |is_retry| async move {
                 nm_checkpoint_timeout_extend(checkpoint, timeout).await?;
                 nm_apply(merged_state, checkpoint, timeout, is_retry).await?;
+
+                // Apply qeth vnicc sysfs settings (s390x, NM backend path)
+                for merged_iface in
+                    merged_state.interfaces.iter().filter(|i| i.is_changed())
+                {
+                    if let Some(crate::Interface::Ethernet(eth)) =
+                        merged_iface.for_apply.as_ref()
+                    {
+                        if eth
+                            .ethernet
+                            .as_ref()
+                            .map_or(false, |e| e.qeth.is_some())
+                        {
+                            eth.apply_qeth()?;
+                        }
+                    }
+                }
+
                 if ovsdb_is_running().await {
                     ovsdb_apply_global_conf(merged_state).await?;
                 }

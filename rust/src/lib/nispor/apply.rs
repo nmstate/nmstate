@@ -66,6 +66,24 @@ pub(crate) async fn nispor_apply(
         ));
     }
 
+    // Apply qeth vnicc sysfs settings for s390x qeth interfaces.
+    // Must run after nispor applies kernel config, uses desired (for_apply) state.
+    for merged_iface in
+        merged_state.interfaces.iter().filter(|i| i.is_changed())
+    {
+        if let Some(Interface::Ethernet(eth_iface)) =
+            merged_iface.for_apply.as_ref()
+        {
+            if eth_iface
+                .ethernet
+                .as_ref()
+                .map_or(false, |e| e.qeth.is_some())
+            {
+                eth_iface.apply_qeth()?;
+            }
+        }
+    }
+
     if let Some(running_hostname) = merged_state
         .hostname
         .desired

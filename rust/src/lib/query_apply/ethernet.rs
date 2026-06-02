@@ -47,6 +47,18 @@ impl EthernetInterface {
         }
     }
 
+    pub(crate) fn update_qeth(&mut self, other: &EthernetInterface) {
+        // qeth comes from sysfs (fill_qeth_from_kernel), not from NM.
+        // qeth is nested under ethernet config section.
+        if let Some(other_eth) = &other.ethernet {
+            if other_eth.qeth.is_some() {
+                if let Some(ref mut self_eth) = self.ethernet {
+                    self_eth.qeth.clone_from(&other_eth.qeth);
+                }
+            }
+        }
+    }
+
     pub(crate) fn verify_sriov(
         &self,
         cur_ifaces: &Interfaces,
