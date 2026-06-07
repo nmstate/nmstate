@@ -11,11 +11,34 @@ from libnmstate.schema import Veth
 from .cmdlib import exec_cmd
 
 
+def _free_iface_name(nic):
+    """
+    Make the interface name {nic} available for a test veth.
+
+    Some kubevirtci node images (e.g. k8s-1.35, which boots with
+    net.ifnames=0) ship a physical secondary NIC already named eth1/eth2.
+    Such a kernel device cannot be removed with `ip link del`, so it
+    collides with the veth pair the tests want to create. Detach it from
+    NetworkManager and rename it out of the way so the name is free.
+    """
+    rc, _, _ = exec_cmd(f"ip link show {nic}".split())
+    if rc != 0:
+        # No interface with this name exists, nothing to do.
+        return
+    parked = f"{nic}.phys"
+    exec_cmd(f"nmcli device set {nic} managed no".split())
+    exec_cmd(f"ip link set {nic} down".split())
+    # Remove a stale parked link from a previous run, if any.
+    exec_cmd(f"ip link del {parked}".split())
+    exec_cmd(f"ip link set {nic} name {parked}".split(), check=True)
+
+
 def create_veth_pair(nic, nic_peer, peer_ns):
     """
     Create a veth pair and place the {peer} into {peer_ns} namespace.
     The {nic} will be marked as managed by NetworkManager
     """
+    _free_iface_name(nic)
     exec_cmd(
         f"ip link add {nic} type veth peer name {nic_peer}".split(),
         check=True,
