@@ -39,6 +39,8 @@ mod ipsec;
 #[cfg(test)]
 mod lldp;
 #[cfg(test)]
+mod loopback;
+#[cfg(test)]
 mod mac_vlan;
 #[cfg(test)]
 mod mac_vtap;

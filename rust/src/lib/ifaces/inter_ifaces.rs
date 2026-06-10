@@ -956,13 +956,14 @@ impl MergedInterfaces {
         self.process_veth_peer_changes()?;
         self.validate_dispatch_script_has_no_checkpoint()?;
         self.validate_alt_names()?;
+        let gen_conf_mode = self.mode == NetworkStateMode::GenerateConfig;
         for iface in self
             .kernel_ifaces
             .values_mut()
             .chain(self.user_ifaces.values_mut())
             .filter(|i| i.is_changed())
         {
-            iface.post_inter_ifaces_process()?;
+            iface.post_inter_ifaces_process(gen_conf_mode)?;
         }
         Ok(())
     }

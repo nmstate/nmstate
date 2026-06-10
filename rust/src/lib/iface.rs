@@ -933,6 +933,7 @@ impl MergedInterface {
     // This function will be invoked __after__ inter-ifaces process done.
     pub(crate) fn post_inter_ifaces_process(
         &mut self,
+        gen_conf_mode: bool,
     ) -> Result<(), NmstateError> {
         self.preserve_current_controller_info();
         self.post_inter_ifaces_process_base_iface()?;
@@ -941,6 +942,11 @@ impl MergedInterface {
         self.post_inter_ifaces_process_bond()?;
         self.post_inter_ifaces_process_vlan();
         self.post_inter_ifaces_process_hsr();
+        // gen_conf has no kernel state to consult, so honor the desired
+        // IPv6-disabled request instead of rejecting it.
+        if !gen_conf_mode {
+            self.post_inter_ifaces_process_loopback()?;
+        }
 
         if let Some(apply_iface) = self.for_apply.as_mut() {
             apply_iface.sanitize(true)?;

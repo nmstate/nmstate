@@ -242,7 +242,7 @@ fn test_vlan_base_iface_optional() {
 
     let mut merged_iface =
         MergedInterface::new(Some(desired), Some(current)).unwrap();
-    merged_iface.post_inter_ifaces_process().unwrap();
+    merged_iface.post_inter_ifaces_process(false).unwrap();
 }
 
 #[test]
