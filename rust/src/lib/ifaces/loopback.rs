@@ -5,8 +5,9 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, ErrorKind, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
-    InterfaceState, InterfaceType, NmstateError,
+    BaseInterface, ErrorKind, Interface, InterfaceIpAddr, InterfaceIpv4,
+    InterfaceIpv6, InterfaceState, InterfaceType, MergedInterface,
+    NmstateError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -16,9 +17,11 @@ use crate::{
 ///  * Cannot enable DHCP or autoconf.
 ///  * The [InterfaceState::Absent] can only restore the loopback configure back
 ///    to default.
-///  * Ignore the request of disable IPv4 or IPv6.
-///  * Even not desired, the `127.0.0.1/8` and `::1` are always appended to
-///    static IP address list.
+///  * Cannot disable IPv4.
+///  * Cannot disable IPv6 unless the kernel IPv6 stack is already off (e.g.
+///    booted with `ipv6.disable=1`).
+///  * Even when not desired, `127.0.0.1/8` and `::1` (the latter only when
+///    IPv6 is enabled) are always appended to the static IP address list.
 ///  * Require NetworkManager 1.41+ unless in kernel only mode.
 ///
 /// Example yaml outpuf of `[crate::NetworkState]` with loopback interface:
@@ -89,32 +92,53 @@ impl LoopbackInterface {
             if self.base.ipv4.as_ref().map(|i| i.enabled) == Some(false) {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "Loopback interface cannot be have IPv4 disabled"
-                        .to_string(),
-                ));
-            }
-            if self.base.ipv6.as_ref().map(|i| i.enabled) == Some(false) {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    "Loopback interface cannot be have IPv6 disabled"
-                        .to_string(),
+                    "Loopback interface cannot have IPv4 disabled".to_string(),
                 ));
             }
             if self.base.ipv4.as_ref().map(|i| i.is_auto()) == Some(true) {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "Loopback interface cannot be have IPv4 DHCP enabled"
+                    "Loopback interface cannot have IPv4 DHCP enabled"
                         .to_string(),
                 ));
             }
             if self.base.ipv6.as_ref().map(|i| i.is_auto()) == Some(true) {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    "Loopback interface cannot be have IPv6 autoconf/DHCPv6 \
+                    "Loopback interface cannot have IPv6 autoconf/DHCPv6 \
                      enabled"
                         .to_string(),
                 ));
             }
+        }
+        Ok(())
+    }
+}
+
+impl MergedInterface {
+    // Allow disabling IPv6 on loopback only when the kernel IPv6 stack is
+    // already off (e.g. `ipv6.disable=1`), so `nmstatectl show` output can be
+    // reapplied on such a host.
+    pub(crate) fn post_inter_ifaces_process_loopback(
+        &self,
+    ) -> Result<(), NmstateError> {
+        let apply_iface = match self.for_apply.as_ref() {
+            Some(Interface::Loopback(i)) => i,
+            _ => return Ok(()),
+        };
+        let cur_ipv6_enabled = match self.current.as_ref() {
+            Some(Interface::Loopback(i)) => {
+                i.base.ipv6.as_ref().map(|ip| ip.enabled)
+            }
+            _ => None,
+        };
+        if apply_iface.base.ipv6.as_ref().map(|ip| ip.enabled) == Some(false)
+            && cur_ipv6_enabled != Some(false)
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Loopback interface cannot have IPv6 disabled".to_string(),
+            ));
         }
         Ok(())
     }

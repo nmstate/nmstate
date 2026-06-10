@@ -8,7 +8,8 @@ use super::{
 };
 use crate::{
     AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpv4, InterfaceIpv6,
-    Ipv6AddrGenMode, RouteEntry, RouteRuleAction, RouteRuleEntry, WaitIp,
+    InterfaceType, Ipv6AddrGenMode, RouteEntry, RouteRuleAction,
+    RouteRuleEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -85,6 +86,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
 
 pub(crate) fn nm_ip_setting_to_nmstate6(
     iface_name: &str,
+    iface_type: &InterfaceType,
     nm_ip_setting: &NmSettingIp,
 ) -> InterfaceIpv6 {
     if let Some(nm_ip_method) = &nm_ip_setting.method {
@@ -93,6 +95,12 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             NmSettingIpMethod::LinkLocal
             | NmSettingIpMethod::Manual
             | NmSettingIpMethod::Shared => (true, Some(false), Some(false)),
+            // NM sets loopback to `auto` but never runs autoconf/DHCPv6 on it.
+            NmSettingIpMethod::Auto
+                if iface_type == &InterfaceType::Loopback =>
+            {
+                (true, Some(false), Some(false))
+            }
             NmSettingIpMethod::Auto => (true, Some(true), Some(true)),
             NmSettingIpMethod::Dhcp => (true, Some(true), Some(false)),
             NmSettingIpMethod::Ignore => {
@@ -110,7 +118,9 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             parse_dhcp_opts(nm_ip_setting);
         let mut ret = InterfaceIpv6 {
             enabled,
-            enabled_defined: true,
+            // The kernel owns loopback IPv6 (e.g. `ipv6.disable=1`); let
+            // nispor's state win the merge.
+            enabled_defined: iface_type != &InterfaceType::Loopback,
             dhcp,
             autoconf,
             auto_dns,
@@ -313,4 +323,43 @@ fn nm_rules_to_nmstate(
         ret.insert(rule);
     }
     Some(ret)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn gen_auto_ipv6_setting() -> NmSettingIp {
+        let mut nm_setting = NmSettingIp::default();
+        nm_setting.method = Some(NmSettingIpMethod::Auto);
+        nm_setting
+    }
+
+    #[test]
+    fn test_nm_ipv6_auto_on_loopback_enabled_not_defined() {
+        let ip = nm_ip_setting_to_nmstate6(
+            "lo",
+            &InterfaceType::Loopback,
+            &gen_auto_ipv6_setting(),
+        );
+
+        assert!(ip.enabled);
+        assert!(!ip.enabled_defined);
+        assert_eq!(ip.dhcp, Some(false));
+        assert_eq!(ip.autoconf, Some(false));
+    }
+
+    #[test]
+    fn test_nm_ipv6_auto_on_ethernet_dhcp_autoconf_defined() {
+        let ip = nm_ip_setting_to_nmstate6(
+            "eth1",
+            &InterfaceType::Ethernet,
+            &gen_auto_ipv6_setting(),
+        );
+
+        assert!(ip.enabled);
+        assert!(ip.enabled_defined);
+        assert_eq!(ip.dhcp, Some(true));
+        assert_eq!(ip.autoconf, Some(true));
+    }
 }

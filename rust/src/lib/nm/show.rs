@@ -197,7 +197,11 @@ pub(crate) async fn nm_retrieve(
 fn fill_ip_settings(base_iface: &mut BaseInterface, nm_conn: &NmConnection) {
     base_iface.ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
     base_iface.ipv6 = nm_conn.ipv6.as_ref().map(|nm_ip_set| {
-        nm_ip_setting_to_nmstate6(base_iface.name.as_str(), nm_ip_set)
+        nm_ip_setting_to_nmstate6(
+            base_iface.name.as_str(),
+            &base_iface.iface_type,
+            nm_ip_set,
+        )
     });
     base_iface.wait_ip =
         query_nmstate_wait_ip(nm_conn.ipv4.as_ref(), nm_conn.ipv6.as_ref());

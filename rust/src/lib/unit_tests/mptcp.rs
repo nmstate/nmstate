@@ -19,7 +19,7 @@ mptcp:
 
     let mut merged_iface = MergedInterface::new(Some(des_iface), None).unwrap();
 
-    let result = merged_iface.post_inter_ifaces_process();
+    let result = merged_iface.post_inter_ifaces_process(false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);

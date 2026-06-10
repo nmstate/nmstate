@@ -136,6 +136,7 @@ fn gen_nm_ipv4_setting(
 
 fn gen_nm_ipv6_setting(
     iface_ip: Option<&InterfaceIpv6>,
+    iface_type: &InterfaceType,
     routes: Option<&[RouteEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
@@ -186,6 +187,11 @@ fn gen_nm_ipv6_setting(
                 }
             }
         }
+    } else if iface_type == &InterfaceType::Loopback {
+        // Reached only when the kernel IPv6 stack is off (checked during
+        // merge). NM's loopback profile uses `auto`, not `disabled`, so we
+        // match it here; no address binds while the stack is off.
+        NmSettingIpMethod::Auto
     } else {
         NmSettingIpMethod::Disabled
     };
@@ -274,7 +280,12 @@ pub(crate) fn gen_nm_ip_setting(
         || base_iface.controller_type == Some(InterfaceType::Hsr)
     {
         gen_nm_ipv4_setting(base_iface.ipv4.as_ref(), routes, nm_conn)?;
-        gen_nm_ipv6_setting(base_iface.ipv6.as_ref(), routes, nm_conn)?;
+        gen_nm_ipv6_setting(
+            base_iface.ipv6.as_ref(),
+            &base_iface.iface_type,
+            routes,
+            nm_conn,
+        )?;
         apply_nmstate_wait_ip(base_iface, nm_conn);
     } else {
         nm_conn.ipv4 = None;
@@ -378,5 +389,49 @@ pub(crate) fn fix_ip_dhcp_timeout(nm_conns: &mut [NmConnection]) {
         if let Some(nm_ip_set) = nm_conn.ipv6.as_mut() {
             nm_ip_set.dhcp_timeout = Some(i32::MAX);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn gen_ipv6_disabled_iface(name: &str, iface_type: &str) -> Interface {
+        serde_yaml::from_str(&format!(
+            r#"---
+name: {name}
+type: {iface_type}
+state: up
+ipv6:
+  enabled: false
+"#
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn test_gen_nm_ipv6_disabled_on_loopback_use_auto_method() {
+        let iface = gen_ipv6_disabled_iface("lo", "loopback");
+        let mut nm_conn = NmConnection::default();
+
+        gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
+
+        assert_eq!(
+            nm_conn.ipv6.as_ref().and_then(|s| s.method.as_ref()),
+            Some(&NmSettingIpMethod::Auto)
+        );
+    }
+
+    #[test]
+    fn test_gen_nm_ipv6_disabled_on_ethernet_use_disabled_method() {
+        let iface = gen_ipv6_disabled_iface("eth1", "ethernet");
+        let mut nm_conn = NmConnection::default();
+
+        gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
+
+        assert_eq!(
+            nm_conn.ipv6.as_ref().and_then(|s| s.method.as_ref()),
+            Some(&NmSettingIpMethod::Disabled)
+        );
     }
 }

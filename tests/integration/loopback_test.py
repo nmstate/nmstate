@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+
 import pytest
 
+import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -126,3 +130,44 @@ class TestLoopback:
             }
         )
         assertlib.assert_state_match(desired_state)
+
+    def test_disable_loopback_ipv4_is_rejected(self, loopback_cleanup):
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "lo",
+                    Interface.TYPE: InterfaceType.LOOPBACK,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: False,
+                    },
+                }
+            ]
+        }
+        with pytest.raises(
+            NmstateValueError, match="cannot have IPv4 disabled"
+        ):
+            libnmstate.apply(desired_state)
+
+    def test_disable_loopback_ipv6_is_rejected(self, loopback_cleanup):
+        # Disabling IPv6 on loopback is only allowed when the kernel IPv6
+        # stack is disabled (e.g. booted with `ipv6.disable=1`).
+        if not os.path.exists("/proc/sys/net/ipv6"):
+            pytest.skip("Kernel IPv6 stack is disabled")
+
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "lo",
+                    Interface.TYPE: InterfaceType.LOOPBACK,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: False,
+                    },
+                }
+            ]
+        }
+        with pytest.raises(
+            NmstateValueError, match="cannot have IPv6 disabled"
+        ):
+            libnmstate.apply(desired_state)
