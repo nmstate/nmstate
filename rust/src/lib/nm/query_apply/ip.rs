@@ -76,6 +76,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             prefix_route_metric: nm_ip_setting
                 .route_metric
                 .or(Some(RouteEntry::USE_DEFAULT_METRIC)),
+            dad_timeout: nm_ip_setting.dad_timeout,
             ..Default::default()
         }
     } else {
@@ -139,6 +140,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             } else {
                 None
             },
+            dad_timeout: nm_ip_setting.dad_timeout,
             ..Default::default()
         };
         // NetworkManager only set IPv6 token to kernel when IPv6 autoconf

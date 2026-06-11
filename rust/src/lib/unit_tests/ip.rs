@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    BaseInterface, ErrorKind, Interface, InterfaceState, Interfaces,
-    MergedInterfaces, RouteEntry, ip::sanitize_ip_network,
-    unit_tests::testlib::new_eth_iface,
+    BaseInterface, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, Interfaces, MergedInterfaces, RouteEntry,
+    ip::sanitize_ip_network, unit_tests::testlib::new_eth_iface,
 };
 
 fn gen_test_eth_ifaces() -> Interfaces {
@@ -726,4 +726,212 @@ fn test_error_on_route_metric_out_of_range() {
             assert!(error.msg().contains(&format!("ipv4.{prop_name}")));
         }
     }
+}
+
+#[test]
+fn test_ipv4_dad_timeout_deserialize() {
+    let iface: BaseInterface = serde_yaml::from_str(
+        r#"---
+name: eth1
+type: ethernet
+state: up
+ipv4:
+  enabled: true
+  dhcp: true
+  dad-timeout: 3000
+"#,
+    )
+    .unwrap();
+    let ipv4_conf = iface.ipv4.unwrap();
+    assert_eq!(ipv4_conf.dad_timeout, Some(3000));
+}
+
+#[test]
+fn test_ipv6_dad_timeout_deserialize() {
+    let iface: BaseInterface = serde_yaml::from_str(
+        r#"---
+name: eth1
+type: ethernet
+state: up
+ipv6:
+  enabled: true
+  dhcp: true
+  autoconf: true
+  dad-timeout: 0
+"#,
+    )
+    .unwrap();
+    let ipv6_conf = iface.ipv6.unwrap();
+    assert_eq!(ipv6_conf.dad_timeout, Some(0));
+}
+
+#[test]
+fn test_ipv4_dad_timeout_system_default() {
+    let iface: BaseInterface = serde_yaml::from_str(
+        r#"---
+name: eth1
+type: ethernet
+state: up
+ipv4:
+  enabled: true
+  dhcp: true
+  dad-timeout: -1
+"#,
+    )
+    .unwrap();
+    let ipv4_conf = iface.ipv4.unwrap();
+    assert_eq!(ipv4_conf.dad_timeout, Some(-1));
+}
+
+#[test]
+fn test_ipv6_dad_timeout_positive_value() {
+    let iface: BaseInterface = serde_yaml::from_str(
+        r#"---
+name: eth1
+type: ethernet
+state: up
+ipv6:
+  enabled: true
+  dhcp: true
+  autoconf: true
+  dad-timeout: 5000
+"#,
+    )
+    .unwrap();
+    let ipv6_conf = iface.ipv6.unwrap();
+    assert_eq!(ipv6_conf.dad_timeout, Some(5000));
+}
+
+#[test]
+fn test_dad_timeout_not_set_by_default() {
+    let iface: BaseInterface = serde_yaml::from_str(
+        r#"---
+name: eth1
+type: ethernet
+state: up
+ipv4:
+  enabled: true
+  dhcp: true
+ipv6:
+  enabled: true
+  dhcp: true
+  autoconf: true
+"#,
+    )
+    .unwrap();
+    assert_eq!(iface.ipv4.as_ref().unwrap().dad_timeout, None);
+    assert_eq!(iface.ipv6.as_ref().unwrap().dad_timeout, None);
+}
+
+#[test]
+fn test_dad_timeout_serialize_roundtrip() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    dad-timeout: 3000
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    dad-timeout: 5000
+"#,
+    )
+    .unwrap();
+
+    let serialized = serde_yaml::to_string(&desired).unwrap();
+    let roundtripped: Interfaces = serde_yaml::from_str(&serialized).unwrap();
+
+    assert_eq!(desired, roundtripped);
+}
+
+#[test]
+fn test_ipv4_dad_timeout_merge_update() {
+    let mut base = InterfaceIpv4 {
+        enabled: true,
+        dhcp: Some(true),
+        dad_timeout: Some(1000),
+        ..Default::default()
+    };
+    let other = InterfaceIpv4 {
+        dad_timeout: Some(3000),
+        ..Default::default()
+    };
+    base.update(&other);
+    assert_eq!(base.dad_timeout, Some(3000));
+}
+
+#[test]
+fn test_ipv4_dad_timeout_merge_no_overwrite_when_none() {
+    let mut base = InterfaceIpv4 {
+        enabled: true,
+        dhcp: Some(true),
+        dad_timeout: Some(1000),
+        ..Default::default()
+    };
+    let other = InterfaceIpv4 {
+        dad_timeout: None,
+        ..Default::default()
+    };
+    base.update(&other);
+    assert_eq!(base.dad_timeout, Some(1000));
+}
+
+#[test]
+fn test_ipv6_dad_timeout_merge_update() {
+    let mut base = InterfaceIpv6 {
+        enabled: true,
+        dhcp: Some(true),
+        dad_timeout: Some(1000),
+        ..Default::default()
+    };
+    let other = InterfaceIpv6 {
+        dad_timeout: Some(0),
+        ..Default::default()
+    };
+    base.update(&other);
+    assert_eq!(base.dad_timeout, Some(0));
+}
+
+#[test]
+fn test_ipv6_dad_timeout_merge_no_overwrite_when_none() {
+    let mut base = InterfaceIpv6 {
+        enabled: true,
+        dhcp: Some(true),
+        dad_timeout: Some(5000),
+        ..Default::default()
+    };
+    let other = InterfaceIpv6 {
+        dad_timeout: None,
+        ..Default::default()
+    };
+    base.update(&other);
+    assert_eq!(base.dad_timeout, Some(5000));
+}
+
+#[test]
+fn test_dad_timeout_stringified_deserialize() {
+    let iface: BaseInterface = serde_yaml::from_str(
+        r#"---
+name: eth1
+type: ethernet
+state: up
+ipv4:
+  enabled: true
+  dhcp: true
+  dad-timeout: "3000"
+ipv6:
+  enabled: true
+  dhcp: true
+  autoconf: true
+  dad-timeout: "0"
+"#,
+    )
+    .unwrap();
+    assert_eq!(iface.ipv4.as_ref().unwrap().dad_timeout, Some(3000));
+    assert_eq!(iface.ipv6.as_ref().unwrap().dad_timeout, Some(0));
 }

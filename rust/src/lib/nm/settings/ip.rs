@@ -65,6 +65,9 @@ fn gen_nm_ipv4_setting(
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
     nm_setting.forwarding = iface_ip.forwarding.map(i32::from);
+    if iface_ip.dad_timeout.is_some() {
+        nm_setting.dad_timeout = iface_ip.dad_timeout;
+    }
 
     if iface_ip.prefix_route_metric.is_some() {
         nm_setting.route_metric = iface_ip.prefix_route_metric;
@@ -196,6 +199,9 @@ fn gen_nm_ipv6_setting(
     nm_setting.addresses = addresses;
     nm_setting.addr_gen_mode =
         Some(nmstate_addr_gen_mode_to_nm(iface_ip.addr_gen_mode.as_ref()));
+    if iface_ip.dad_timeout.is_some() {
+        nm_setting.dad_timeout = iface_ip.dad_timeout;
+    }
 
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);

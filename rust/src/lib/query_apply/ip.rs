@@ -96,6 +96,9 @@ impl InterfaceIpv4 {
         if other.prefix_route_metric.is_some() {
             self.prefix_route_metric = other.prefix_route_metric;
         }
+        if other.dad_timeout.is_some() {
+            self.dad_timeout = other.dad_timeout;
+        }
     }
 }
 
@@ -190,6 +193,9 @@ impl InterfaceIpv6 {
         if other.dhcp_custom_hostname.is_some() {
             self.dhcp_custom_hostname
                 .clone_from(&other.dhcp_custom_hostname);
+        }
+        if other.dad_timeout.is_some() {
+            self.dad_timeout = other.dad_timeout;
         }
     }
 }

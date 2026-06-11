@@ -114,6 +114,13 @@ struct InterfaceIp {
         deserialize_with = "crate::deserializer::option_i64_or_string"
     )]
     pub prefix_route_metric: Option<i64>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "dad-timeout",
+        default,
+        deserialize_with = "crate::deserializer::option_i32_or_string"
+    )]
+    pub dad_timeout: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
@@ -209,6 +216,12 @@ pub struct InterfaceIpv4 {
     /// Metric for routes of prefixes directly connected to the interface.
     /// Deserialize from `prefix-route-metric`
     pub prefix_route_metric: Option<i64>,
+    /// Timeout in milliseconds used to check for the presence of duplicate
+    /// IP addresses on the network (Address Conflict Detection per RFC 5227).
+    /// When set to 0, DAD is disabled. When set to -1, the default value is
+    /// used. Positive values specify the timeout in milliseconds.
+    /// Deserialize from `dad-timeout`
+    pub dad_timeout: Option<i32>,
 }
 
 impl InterfaceIpv4 {
@@ -521,6 +534,7 @@ impl From<InterfaceIp> for InterfaceIpv4 {
             dhcp_custom_hostname: ip.dhcp_custom_hostname,
             forwarding: ip.forwarding,
             prefix_route_metric: ip.prefix_route_metric,
+            dad_timeout: ip.dad_timeout,
             ..Default::default()
         }
     }
@@ -548,6 +562,7 @@ impl From<InterfaceIpv4> for InterfaceIp {
             dhcp_custom_hostname: ip.dhcp_custom_hostname,
             forwarding: ip.forwarding,
             prefix_route_metric: ip.prefix_route_metric,
+            dad_timeout: ip.dad_timeout,
             ..Default::default()
         }
     }
@@ -645,6 +660,12 @@ pub struct InterfaceIpv6 {
 
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<HashSet<RouteRuleEntry>>,
+    /// Timeout in milliseconds used to detect duplicate IPv6 addresses on the
+    /// network (Duplicate Address Detection per RFC 4862).
+    /// When set to 0, DAD is disabled. When set to -1, the default value is
+    /// used. Positive values specify the timeout in milliseconds.
+    /// Deserialize from `dad-timeout`
+    pub dad_timeout: Option<i32>,
 }
 
 impl InterfaceIpv6 {
@@ -919,6 +940,7 @@ impl From<InterfaceIp> for InterfaceIpv6 {
             token: ip.token,
             dhcp_send_hostname: ip.dhcp_send_hostname,
             dhcp_custom_hostname: ip.dhcp_custom_hostname,
+            dad_timeout: ip.dad_timeout,
             ..Default::default()
         }
     }
@@ -947,6 +969,7 @@ impl From<InterfaceIpv6> for InterfaceIp {
             token: ip.token,
             dhcp_send_hostname: ip.dhcp_send_hostname,
             dhcp_custom_hostname: ip.dhcp_custom_hostname,
+            dad_timeout: ip.dad_timeout,
             ..Default::default()
         }
     }
