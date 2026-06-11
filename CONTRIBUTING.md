@@ -188,7 +188,6 @@ Other auxiliary folders:
 - `./doc`: the man pages.
 - `./examples`: YAML examples for different configurations.
 - `./logo`: logos used for publication.
-- `./k8s`: scripts for kubernetes-nmstate CI.
 - `./packaging`: utilities for packaging and containers creation.
 
 ### Setting up a development environment

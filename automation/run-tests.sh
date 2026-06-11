@@ -37,19 +37,17 @@ PYTEST_OPTIONS="--verbose --verbose \
 NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
 
 : ${CONTAINER_CMD:=podman}
-: ${KUBECTL_CMD:=k8s/kubectl.sh}
 
 test -t 1 && USE_TTY="-t"
 source automation/tests-container-utils.sh
 source automation/tests-machine-utils.sh
-source automation/tests-k8s-utils.sh
 
 function print_help() {
     echo "Usage: $0 [OPTIONS]"
     echo "Target environment:"
     echo "  --el8, --el9, --el10, --fed, --rawhide"
     echo "                           Choose the container image"
-    echo "  --machine, --k8s         Run in baremetal or kubernetes instead"
+    echo "  --machine                Run in baremetal instead"
     echo "Test options:"
     echo "  --test-type=TYPE         all (default), integ, integ_tier1, integ_tier2, integ_slow, rust_go"
     echo "  --debug-shell            On failure open a debug shell, don't exit"
@@ -78,8 +76,6 @@ function pyclean {
 function exec_cmd {
     if [ ! -z ${RUN_BAREMETAL} ];then
         bash -c "$1"
-    elif [ ! -z ${RUN_K8S} ]; then
-        k8s::kubectl_exec "$1"
     else
         container_exec "$1"
     fi
@@ -89,8 +85,6 @@ function exec_cmd {
 function exec_cmd_with_retry {
     if [ ! -z ${RUN_BAREMETAL} ];then
         bash -c "$1"
-    elif [ ! -z ${RUN_K8S} ]; then
-        k8s::kubectl_exec "$1"
     else
         container_exec_with_retry "$1"
     fi
@@ -191,23 +185,15 @@ function write_separator {
 
 function run_exit {
     write_separator "TEARDOWN"
-    if [ -n "${RUN_K8S}" ]; then
-        k8s::collect_artifacts
-        k8s::cleanup
-    else
-        if [ $COLLECT_LOGS == "true" ];then
-            collect_artifacts
-        fi
-        remove_container
-        remove_tempdir
+    if [ $COLLECT_LOGS == "true" ];then
+        collect_artifacts
     fi
+    remove_container
+    remove_tempdir
 }
 
 function modprobe_ovs {
-    if [ -z "${RUN_K8S}" ]; then
-        lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
-    fi
-    #TODO: Install ovs on k8s cluster
+    lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
 }
 
 function check_services {
@@ -261,7 +247,7 @@ function run_customize_command {
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
     el8,el9,el10,centos-stream,fed,rawhide,copr:,artifacts-dir:,test-vdsm,\
-    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:,nolog,\
+    machine,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:,nolog,\
     pretest-exec:" \
     -- "${@}")
 eval set -- "$options"
@@ -319,9 +305,6 @@ while true; do
     --machine)
         RUN_BAREMETAL="true"
         ;;
-    --k8s)
-        RUN_K8S="true"
-        ;;
     --nolog)
         COLLECT_LOGS="false"
         ;;
@@ -360,11 +343,6 @@ if [ -n "${RUN_BAREMETAL}" ];then
     CONTAINER_WORKSPACE="."
     run_customize_command
     start_machine_services
-elif [ -n "${RUN_K8S}" ]; then
-    export CONTAINER_CMD=docker
-    k8s::start_cluster
-    k8s::pre_test_setup
-    run_customize_command
 else
     container_pre_test_setup
     run_customize_command
@@ -378,9 +356,7 @@ if [[ -v nm_rpm_dir ]];then
     upgrade_nm_from_rpm_dir "${nm_rpm_dir}"
 fi
 
-if [ -z "${RUN_K8S}" ]; then
-    check_services
-fi
+check_services
 
 if [ -n "$RUN_BAREMETAL" ];then
     trap run_exit ERR EXIT
@@ -389,7 +365,7 @@ fi
 exec_cmd '(source /etc/os-release; echo $PRETTY_NAME); rpm -q NetworkManager'
 
 pyclean
-if [ -z "${RUN_BAREMETAL}" ] && [ -z "${RUN_K8S}" ];then
+if [ -z "${RUN_BAREMETAL}" ];then
     copy_workspace_container
 fi
 
