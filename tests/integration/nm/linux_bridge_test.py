@@ -19,7 +19,6 @@ from ..testlib.bondlib import bond_interface
 from ..testlib.bridgelib import linux_bridge
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
-from ..testlib.env import is_k8s
 from ..testlib.env import nm_minor_version
 from ..testlib.statelib import show_only
 from ..testlib.yaml import load_yaml
@@ -348,11 +347,6 @@ def test_partially_consume_linux_bridge_port(
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(
-    is_k8s(),
-    reason="K8S CI is using ifcfg which does not support this use case. "
-    "Meanwhile k8s does not have this requirement",
-)
 def test_linux_bridge_store_stp_setting_even_disabled(
     eth1_up,
 ):

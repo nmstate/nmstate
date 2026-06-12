@@ -12,7 +12,6 @@ from libnmstate.schema import InterfaceState
 
 from ..testlib import cmdlib
 from ..testlib import assertlib
-from ..testlib.env import is_k8s
 from ..testlib.veth import create_veth_pair
 from ..testlib.veth import remove_veth_pair
 from ..testlib.statelib import show_only
@@ -96,15 +95,6 @@ def _stop_802_1x_authenticator():
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=NmstateVerificationError,
-    strict=False,
-)
 def test_eth_with_802_1x(ieee_802_1x_env):
     desire_state = {
         Interface.KEY: [
@@ -163,15 +153,6 @@ def test_eth_with_802_1x(ieee_802_1x_env):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=NmstateVerificationError,
-    strict=False,
-)
 def test_eth_with_802_1x_peap(ieee_802_1x_env):
     desire_state = {
         Interface.KEY: [
@@ -264,15 +245,6 @@ def ieee_1x_cli_peap_up(ieee_802_1x_env):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=NmstateVerificationError,
-    strict=False,
-)
 def test_apply_ieee_802_1x_with_reserved_private_key_password(ieee_1x_cli_up):
     desire_state = show_only((TEST_1X_CLI_NIC,), include_secrets=False)
 
@@ -291,15 +263,6 @@ def test_apply_ieee_802_1x_with_reserved_private_key_password(ieee_1x_cli_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=NmstateVerificationError,
-    strict=False,
-)
 def test_apply_ieee_802_1x_with_reserved_password(ieee_1x_cli_peap_up):
     desire_state = show_only((TEST_1X_CLI_NIC,), include_secrets=False)
 

@@ -36,7 +36,6 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.dummy import dummy_interface
-from .testlib.env import is_k8s
 from .testlib.env import nm_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.retry import retry_till_false_or_timeout
@@ -327,15 +326,6 @@ def test_static_ip_with_auto_ip_enabled(dhcpcli_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=AssertionError,
-    strict=False,
-)
 def test_ipv4_dhcp_on_bond(dhcpcli_up):
     ipv4_state = {Interface.IPV4: _create_ipv4_state(enabled=True, dhcp=True)}
     with bondlib.bond_interface(

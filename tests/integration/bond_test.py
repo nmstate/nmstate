@@ -30,7 +30,6 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.dummy import dummy_interface
-from .testlib.env import is_k8s
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
@@ -280,15 +279,6 @@ def test_add_bond_with_port_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=AssertionError,
-    strict=False,
-)
 def test_rollback_for_bond(eth1_up, eth2_up):
     current_state = libnmstate.show()
     desired_state = {
