@@ -2583,12 +2583,24 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
               metric: 500
             """
         ),
+        (
+            """
+            - destination: 2001:db8:2::/64
+              next-hop-address: 2001:db8:1::2
+              next-hop-interface: veth1
+              metric: 1024
+            - destination: 2001:db8:2::/64
+              next-hop-address: 2001:db8:1::3
+              next-hop-interface: veth1
+            """
+        ),
     ],
     ids=[
         "v4_without_metric",
         "v4_with_metric",
         "v6_without_metric",
         "v6_with_metric",
+        "v6_metricless_vs_kernel_default",
     ],
 )
 def test_kernel_mode_fail_on_same_dst_metric_routes(

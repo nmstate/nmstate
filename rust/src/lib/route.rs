@@ -16,6 +16,9 @@ use crate::{
 
 const DEFAULT_TABLE_ID: u32 = 254; // main route table ID
 const LOOPBACK_IFACE_NAME: &str = "lo";
+// Kernel metric for user/static IPv6 routes with unset/0 metric.
+#[cfg(feature = "query_apply")]
+const IP6_RT_PRIO_USER: u32 = 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -558,6 +561,27 @@ impl RouteEntry {
     pub(crate) fn is_ipv6(&self) -> bool {
         self.destination.as_ref().map(|d| is_ipv6_addr(d.as_str()))
             == Some(true)
+    }
+
+    // Metric the kernel will assign, for conflict detection. Unset/0 IPv6
+    // metric is coerced to 1024, IPv4 to 0.
+    #[cfg(feature = "query_apply")]
+    pub(crate) fn effective_metric(&self) -> u32 {
+        match self.metric.and_then(|m| u32::try_from(m).ok()) {
+            Some(m) if m > 0 => m,
+            _ if self.is_ipv6() => IP6_RT_PRIO_USER,
+            _ => 0,
+        }
+    }
+
+    // Table the kernel will assign, for conflict detection. Unset table is
+    // the main table.
+    #[cfg(feature = "query_apply")]
+    pub(crate) fn effective_table_id(&self) -> u32 {
+        match self.table_id {
+            None | Some(Self::USE_DEFAULT_ROUTE_TABLE) => DEFAULT_TABLE_ID,
+            Some(t) => t,
+        }
     }
 
     pub(crate) fn is_unicast(&self) -> bool {

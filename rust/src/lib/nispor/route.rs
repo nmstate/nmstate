@@ -362,7 +362,7 @@ fn validate_routes(merged_routes: &MergedRoutes) -> Result<(), NmstateError> {
         } else {
             continue;
         };
-        let mut hashed_rts: HashMap<(&str, Option<u32>), &RouteEntry> =
+        let mut hashed_rts: HashMap<(&str, u32, u32), &RouteEntry> =
             HashMap::new();
         for rt in iface_routes {
             if rt.weight.is_some() {
@@ -381,9 +381,13 @@ fn validate_routes(merged_routes: &MergedRoutes) -> Result<(), NmstateError> {
                 continue;
             };
 
+            // Key on the metric and table the kernel will actually use, so a
+            // metric-less desired route conflicts with an existing route that
+            // the kernel reports with the coerced default metric (e.g. IPv6
+            // default route metric 1024).
             if hashed_rts
                 .insert(
-                    (dst, rt.metric.and_then(|m| u32::try_from(m).ok())),
+                    (dst, rt.effective_table_id(), rt.effective_metric()),
                     rt,
                 )
                 .is_some()
@@ -392,11 +396,123 @@ fn validate_routes(merged_routes: &MergedRoutes) -> Result<(), NmstateError> {
                     ErrorKind::InvalidArgument,
                     format!(
                         "Multiple routes to {dst} are sharing the same \
-                         metric, please use `state: absent` to remove others."
+                         metric and table, please use `state: absent` to \
+                         remove others."
                     ),
                 ));
             }
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn route(
+        dst: &str,
+        via: &str,
+        metric: Option<i64>,
+        table: u32,
+    ) -> RouteEntry {
+        RouteEntry {
+            destination: Some(dst.to_string()),
+            next_hop_iface: Some("eth1".to_string()),
+            next_hop_addr: Some(via.to_string()),
+            metric,
+            table_id: Some(table),
+            ..Default::default()
+        }
+    }
+
+    fn merged_for(routes: Vec<RouteEntry>) -> MergedRoutes {
+        let mut merged = HashMap::new();
+        merged.insert("eth1".to_string(), routes);
+        MergedRoutes {
+            merged,
+            route_changed_ifaces: vec!["eth1".to_string()],
+            ..Default::default()
+        }
+    }
+
+    // Kernel reports the existing IPv6 default route with metric 1024 while the
+    // desired route omits the metric. Both must be treated as conflicting.
+    #[test]
+    fn test_metricless_ipv6_conflicts_with_kernel_default() {
+        let merged = merged_for(vec![
+            route("::/0", "2001:db8:1::3", Some(1024), 200),
+            route("::/0", "2001:db8:1::2", None, 200),
+        ]);
+        let err = validate_routes(&merged).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    }
+
+    // IPv4 default metric is 0, so a metric-less route and an explicit metric 0
+    // route to the same destination conflict.
+    #[test]
+    fn test_ipv4_metricless_conflicts_with_metric_zero() {
+        let merged = merged_for(vec![
+            route("0.0.0.0/0", "192.0.2.1", Some(0), 200),
+            route("0.0.0.0/0", "192.0.2.2", None, 200),
+        ]);
+        let err = validate_routes(&merged).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    }
+
+    // An unset table resolves to the main table, so it conflicts with an
+    // explicit table 254.
+    #[test]
+    fn test_default_table_conflicts_with_explicit_main() {
+        let merged = merged_for(vec![
+            route("::/0", "2001:db8:1::3", Some(1024), 0),
+            route("::/0", "2001:db8:1::2", None, 254),
+        ]);
+        let err = validate_routes(&merged).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    }
+
+    // Same destination and (defaulted) metric but different tables must not be
+    // flagged as a conflict.
+    #[test]
+    fn test_same_dst_different_table_no_conflict() {
+        let merged = merged_for(vec![
+            route("::/0", "2001:db8:1::3", None, 200),
+            route("::/0", "2001:db8:1::2", None, 254),
+        ]);
+        validate_routes(&merged).unwrap();
+    }
+
+    // Same destination and table but distinct explicit metrics are valid.
+    #[test]
+    fn test_same_dst_different_metric_no_conflict() {
+        let merged = merged_for(vec![
+            route("::/0", "2001:db8:1::3", Some(100), 200),
+            route("::/0", "2001:db8:1::2", Some(200), 200),
+        ]);
+        validate_routes(&merged).unwrap();
+    }
+
+    // IPv4 unset metric maps to 0, not 1024, so it must not collide with an
+    // explicit metric 1024 route to the same destination.
+    #[test]
+    fn test_ipv4_metricless_differs_from_metric_1024() {
+        let merged = merged_for(vec![
+            route("0.0.0.0/0", "192.0.2.1", Some(1024), 200),
+            route("0.0.0.0/0", "192.0.2.2", None, 200),
+        ]);
+        validate_routes(&merged).unwrap();
+    }
+
+    // The kernel coerces an explicit IPv6 metric 0 to 1024, so it conflicts
+    // with a metric-less route to the same destination.
+    #[test]
+    fn test_ipv6_metric_zero_conflicts_with_metricless() {
+        let merged = merged_for(vec![
+            route("::/0", "2001:db8:1::3", Some(0), 200),
+            route("::/0", "2001:db8:1::2", None, 200),
+        ]);
+        let err = validate_routes(&merged).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    }
 }
