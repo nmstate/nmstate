@@ -18,10 +18,10 @@ use crate::{
 ///  * The [InterfaceState::Absent] can only restore the loopback configure back
 ///    to default.
 ///  * Cannot disable IPv4.
-///  * Cannot disable IPv6 unless the kernel IPv6 stack is already off (e.g.
-///    booted with `ipv6.disable=1`).
-///  * Even when not desired, `127.0.0.1/8` and `::1` (the latter only when
-///    IPv6 is enabled) are always appended to the static IP address list.
+///  * Cannot disable IPv6 unless it is already reported disabled, so `show`
+///    output round-trips (e.g. on a host booted with `ipv6.disable=1`).
+///  * Even when not desired, `127.0.0.1/8` and `::1` (the latter only when IPv6
+///    is enabled) are always appended to the static IP address list.
 ///  * Require NetworkManager 1.41+ unless in kernel only mode.
 ///
 /// Example yaml outpuf of `[crate::NetworkState]` with loopback interface:
@@ -116,9 +116,8 @@ impl LoopbackInterface {
 }
 
 impl MergedInterface {
-    // Allow disabling IPv6 on loopback only when the kernel IPv6 stack is
-    // already off (e.g. `ipv6.disable=1`), so `nmstatectl show` output can be
-    // reapplied on such a host.
+    // Allow disabling IPv6 on loopback only when it is already reported
+    // disabled, so `nmstatectl show` output can be reapplied.
     pub(crate) fn post_inter_ifaces_process_loopback(
         &self,
     ) -> Result<(), NmstateError> {

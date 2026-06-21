@@ -97,7 +97,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             | NmSettingIpMethod::Shared => (true, Some(false), Some(false)),
             // NM sets loopback to `auto` but never runs autoconf/DHCPv6 on it.
             NmSettingIpMethod::Auto
-                if iface_type == &InterfaceType::Loopback =>
+                if *iface_type == InterfaceType::Loopback =>
             {
                 (true, Some(false), Some(false))
             }
@@ -120,7 +120,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             enabled,
             // The kernel owns loopback IPv6 (e.g. `ipv6.disable=1`); let
             // nispor's state win the merge.
-            enabled_defined: iface_type != &InterfaceType::Loopback,
+            enabled_defined: *iface_type != InterfaceType::Loopback,
             dhcp,
             autoconf,
             auto_dns,

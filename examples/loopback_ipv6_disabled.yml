@@ -1,0 +1,7 @@
+---
+interfaces:
+  - name: lo
+    type: loopback
+    state: up
+    ipv6:
+      enabled: false
