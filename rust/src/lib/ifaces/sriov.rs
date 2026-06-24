@@ -337,7 +337,7 @@ impl Interfaces {
     }
 }
 
-fn parse_sriov_vf_naming(
+pub(crate) fn parse_sriov_vf_naming(
     iface_name: &str,
 ) -> Result<Option<(&str, u32)>, NmstateError> {
     if iface_name.starts_with(SrIovConfig::VF_NAMING_PREFIX) {
