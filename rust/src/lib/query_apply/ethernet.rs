@@ -52,9 +52,11 @@ impl EthernetInterface {
         // qeth is nested under ethernet config section.
         if let Some(other_eth) = &other.ethernet {
             if other_eth.qeth.is_some() {
-                if let Some(ref mut self_eth) = self.ethernet {
-                    self_eth.qeth.clone_from(&other_eth.qeth);
-                }
+                // Initialise self.ethernet if not already present so
+                // qeth data is never silently dropped during merge.
+                let self_eth =
+                    self.ethernet.get_or_insert_with(EthernetConfig::default);
+                self_eth.qeth.clone_from(&other_eth.qeth);
             }
         }
     }

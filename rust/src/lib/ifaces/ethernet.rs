@@ -129,7 +129,23 @@ impl EthernetInterface {
         if let Some(eth) = &self.ethernet {
             if let Some(qeth) = &eth.qeth {
                 if let Some(vnicc) = &qeth.vnicc {
+                    vnicc.validate()?;
                     apply_vnicc(self.base.name.as_str(), vnicc)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Validate qeth vnicc desired state at the schema layer.
+    /// MUST be called before any NM/sysfs interaction so invalid
+    /// values (e.g. out-of-range learning-timeout) are rejected
+    /// during the pre-apply validation pass, not mid-apply.
+    pub(crate) fn validate_qeth(&self) -> Result<(), NmstateError> {
+        if let Some(eth) = &self.ethernet {
+            if let Some(qeth) = &eth.qeth {
+                if let Some(vnicc) = &qeth.vnicc {
+                    vnicc.validate()?;
                 }
             }
         }

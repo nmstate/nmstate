@@ -336,7 +336,11 @@ impl NetworkState {
                 nm_checkpoint_timeout_extend(checkpoint, timeout).await?;
                 nm_apply(merged_state, checkpoint, timeout, is_retry).await?;
 
-                // Apply qeth vnicc sysfs settings (s390x, NM backend path)
+                // Apply qeth vnicc sysfs settings (s390x, NM backend path).
+                // MUST run here, inside the retry/verify loop, so sysfs is
+                // written before nmstate compares current vs desired state on
+                // every verification attempt. Re-writing identical sysfs
+                // values on retry is a harmless no-op at the kernel level.
                 for merged_iface in
                     merged_state.interfaces.iter().filter(|i| i.is_changed())
                 {

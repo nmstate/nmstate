@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// sysfs_qeth_vnicc.rs — Low-level sysfs read/write for qeth vnicc attributes.
+// qeth.rs — Low-level sysfs read/write for qeth vnicc attributes.
 //
 // All public functions in this module guard against non-s390x at runtime so
 // that the same binary can be cross-compiled or run under an emulator for
@@ -38,28 +38,33 @@ const ATTR_BRIDGE_INVISIBLE: &str = "bridge_invisible";
 ///
 /// We detect this via `/proc/version` rather than a compile-time cfg so that
 /// integration tests compiled for x86_64 can at least exercise the error path.
-fn require_s390x() -> Result<(), NmstateError> {
-    #[cfg(target_arch = "s390x")]
-    {
-        return Ok(());
-    }
-
-    // Fallback for non-s390x: check /proc/version (useful in cross-tests).
-    #[cfg(not(target_arch = "s390x"))]
-    {
-        let version = fs::read_to_string("/proc/version").unwrap_or_default();
-        if version.contains("s390x") || version.contains("s390") {
-            return Ok(());
+fn is_s390x_cached() -> bool {
+    static IS_S390X: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *IS_S390X.get_or_init(|| {
+        #[cfg(target_arch = "s390x")]
+        {
+            true
         }
-        return Err(NmstateError::new(
+        #[cfg(not(target_arch = "s390x"))]
+        {
+            // Checked once per process, not once per call/interface.
+            let version =
+                fs::read_to_string("/proc/version").unwrap_or_default();
+            version.contains("s390x") || version.contains("s390")
+        }
+    })
+}
+
+fn require_s390x() -> Result<(), NmstateError> {
+    if is_s390x_cached() {
+        Ok(())
+    } else {
+        Err(NmstateError::new(
             ErrorKind::NotImplementedError,
             "qeth vnicc configuration is only supported on s390x architecture"
                 .to_string(),
-        ));
+        ))
     }
-
-    #[allow(unreachable_code)]
-    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -369,7 +374,13 @@ pub(crate) fn verify_vnicc(
 
     verify_bool!(flooding, "flooding");
     verify_bool!(mcast_flooding, "mcast-flooding");
-    // rx_bcast is read-only on OSA; skip verification if we could not set it.
+    // rx_bcast is intentionally NOT verified here. It is writable on
+    // HiperSockets but read-only on OSA (returns EPERM). apply_vnicc()
+    // warns-and-skips on EPERM without recording whether the write was
+    // attempted or succeeded, so this code has no reliable way to know
+    // whether the value *should* match here. rx_bcast is therefore
+    // documented as best-effort: nmstate will try to set it, but will
+    // never fail verification on it. See VniccConfig doc comment.
     verify_bool!(learning, "learning");
     verify_bool!(takeover_learning, "takeover-learning");
     verify_bool!(takeover_setvmac, "takeover-setvmac");
