@@ -34,25 +34,11 @@ const ATTR_BRIDGE_INVISIBLE: &str = "bridge_invisible";
 // Architecture guard
 // ---------------------------------------------------------------------------
 
-/// Returns an error if the running kernel is not s390x.
-///
-/// We detect this via `/proc/version` rather than a compile-time cfg so that
-/// integration tests compiled for x86_64 can at least exercise the error path.
+/// Returns `true` if this binary was built for the s390x architecture.
+/// Result is cached after the first call.
 fn is_s390x_cached() -> bool {
     static IS_S390X: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *IS_S390X.get_or_init(|| {
-        #[cfg(target_arch = "s390x")]
-        {
-            true
-        }
-        #[cfg(not(target_arch = "s390x"))]
-        {
-            // Checked once per process, not once per call/interface.
-            let version =
-                fs::read_to_string("/proc/version").unwrap_or_default();
-            version.contains("s390x") || version.contains("s390")
-        }
-    })
+    *IS_S390X.get_or_init(|| std::env::consts::ARCH == "s390x")
 }
 
 fn require_s390x() -> Result<(), NmstateError> {
