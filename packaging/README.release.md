@@ -4,7 +4,8 @@ In order to make it work:
 
  * Your github account has enough right to do release in nmstate.
  * Your git setup is OK for force pushing to your github fork.
- * Your GPG public key has been listed in `nmstate.gpg` file.
+ * Include your GPG public key in https://nmstate.io/nmstate.gpg by adding it
+   to https://github.com/nmstate/nmstate.github.io/blob/main/nmstate.gpg
  * The script assumes that `origin` is your own personal fork, and `upstream`
    points to `nmstate/nmstate` (the main repo). If you use ssh keys to push to
    GitHub, make sure to add the upstream repo as SSH *before* you run the release
