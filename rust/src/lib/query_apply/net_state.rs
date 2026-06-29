@@ -6,8 +6,8 @@ use crate::{
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
     NetworkStateMode, NmstateError,
     nispor::{
-        apply_ifaces_alt_names, nispor_apply, nispor_retrieve,
-        persist_alt_name_config, set_running_hostname,
+        apply_ifaces_alt_names, enforce_ovs_internal_link_state, nispor_apply,
+        nispor_retrieve, persist_alt_name_config, set_running_hostname,
     },
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
@@ -346,6 +346,13 @@ impl NetworkState {
 
                 apply_ifaces_alt_names(&merged_state.interfaces).await?;
                 persist_alt_name_config(&merged_state.interfaces).await?;
+
+                // NetworkManager always activates OVS internal interfaces with
+                // the link up. Enforce the desired link state (down/up) via
+                // nispor so state:down internal ports stay attached to the
+                // bridge with the link DOWN, like `ovs-vsctl add-br`. NMT-2268.
+                enforce_ovs_internal_link_state(&merged_state.interfaces)
+                    .await?;
 
                 if !self.no_verify {
                     with_retry(

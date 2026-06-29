@@ -2276,6 +2276,64 @@ def test_ovs_internal_iface_link_stable(
     libnmstate.apply(desired_state)
 
 
+def _ovs_bridge_with_internal_port(port_state):
+    return {
+        Interface.KEY: [
+            {
+                Interface.NAME: PORT1,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                Interface.STATE: port_state,
+            },
+            {
+                Interface.NAME: BRIDGE1,
+                Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                Interface.STATE: InterfaceState.UP,
+                OVSBridge.CONFIG_SUBTREE: {
+                    OVSBridge.PORT_SUBTREE: [
+                        {OVSBridge.Port.NAME: PORT1},
+                    ]
+                },
+            },
+        ]
+    }
+
+
+# https://issues.redhat.com/browse/NMT-2268
+@pytest.mark.tier1
+def test_create_ovs_bridge_with_internal_port_down():
+    libnmstate.apply(_ovs_bridge_with_internal_port(InterfaceState.DOWN))
+    try:
+        # Internal port stays attached to the bridge like `ovs-vsctl add-br`
+        rc, out, _ = cmdlib.exec_cmd(f"ovs-vsctl list-ports {BRIDGE1}".split())
+        assert PORT1 in out
+        # but its kernel link is administratively DOWN (no kernel traffic)
+        rc, out, _ = cmdlib.exec_cmd(f"ip -o link show {PORT1}".split())
+        assert "state DOWN" in out
+        assert "UP" not in out.split(f"{PORT1}:")[1].split("<")[1].split(">")[0]
+
+        # toggling back to up brings the link up
+        libnmstate.apply(_ovs_bridge_with_internal_port(InterfaceState.UP))
+        rc, out, _ = cmdlib.exec_cmd(f"ip -o link show {PORT1}".split())
+        assert "state DOWN" not in out
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BRIDGE1,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                ]
+            }
+        )
+
+
 @pytest.fixture
 def ovs_bridge1_with_bond_as_system_iface(eth1_up, eth2_up):
     with bond_interface(BOND1, ["eth1"]):

@@ -223,7 +223,16 @@ impl MergedInterfaces {
             } else {
                 continue;
             };
-            if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
+            // OVS internal interface with state:down stays attached to its
+            // bridge with the link administratively down (like `ovs-vsctl
+            // add-br`), so it is expected to still be present rather than
+            // deleted. Do not treat it as absent. See NMT-2268.
+            let down_ovs_internal = iface.is_virtual()
+                && iface.is_down()
+                && iface.iface_type() == InterfaceType::OvsInterface;
+            if (iface.is_absent() || (iface.is_virtual() && iface.is_down()))
+                && !down_ovs_internal
+            {
                 if let Some(cur_iface) =
                     current.get_iface(iface.name(), iface.iface_type())
                 {

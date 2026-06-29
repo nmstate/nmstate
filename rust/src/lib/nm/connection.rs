@@ -54,6 +54,12 @@ pub(crate) fn prepare_nm_conns(
         .iter()
         .filter(|iface| {
             iface.for_apply.as_ref().map(|i| i.is_down()) == Some(true)
+                // Deactivating an OVS internal interface detaches it from the
+                // bridge, destroying the local port. For state:down we keep it
+                // attached with the link administratively down, matching the
+                // behaviour of `ovs-vsctl add-br` (local port DOWN, no kernel
+                // traffic). See NMT-2268.
+                && iface.merged.iface_type() != InterfaceType::OvsInterface
         })
         .filter_map(|iface| {
             nm_devs_indexed
