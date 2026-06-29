@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    BaseInterface, ErrorKind, Interface, InterfaceState, Interfaces,
-    MergedInterfaces, RouteEntry, ip::sanitize_ip_network,
+    BaseInterface, ErrorKind, Interface, InterfaceIpv6, InterfaceState,
+    Interfaces, MergedInterfaces, RouteEntry, ip::sanitize_ip_network,
     unit_tests::testlib::new_eth_iface,
 };
 
@@ -726,4 +726,45 @@ fn test_error_on_route_metric_out_of_range() {
             assert!(error.msg().contains(&format!("ipv4.{prop_name}")));
         }
     }
+}
+
+#[test]
+fn test_disable_ipv6_where_all() {
+    let mut ifaces = Interfaces::new();
+
+    let mut eth1 = new_eth_iface("eth1");
+    eth1.base_iface_mut().ipv6 = Some(InterfaceIpv6 {
+        enabled: true,
+        enabled_defined: false,
+        dhcp: Some(true),
+        autoconf: Some(true),
+        ..Default::default()
+    });
+    ifaces.push(eth1);
+
+    // no IPv6 section: must stay None, not be synthesised
+    ifaces.push(new_eth_iface("eth2"));
+
+    ifaces.disable_ipv6_where(|_| true);
+
+    let eth1_ipv6 = ifaces
+        .get_iface("eth1", crate::InterfaceType::Ethernet)
+        .unwrap()
+        .base_iface()
+        .ipv6
+        .as_ref()
+        .unwrap();
+    assert!(!eth1_ipv6.enabled);
+    assert!(eth1_ipv6.enabled_defined);
+    assert_eq!(eth1_ipv6.dhcp, None);
+    assert_eq!(eth1_ipv6.autoconf, None);
+
+    assert!(
+        ifaces
+            .get_iface("eth2", crate::InterfaceType::Ethernet)
+            .unwrap()
+            .base_iface()
+            .ipv6
+            .is_none()
+    );
 }

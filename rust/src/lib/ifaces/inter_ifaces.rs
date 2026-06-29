@@ -183,6 +183,18 @@ impl Interfaces {
             .chain(self.kernel_ifaces.values_mut())
     }
 
+    // Reset every present IPv6 section to a disabled state on interfaces where
+    // `is_disabled` returns true.
+    #[cfg(feature = "query_apply")]
+    pub(crate) fn disable_ipv6_where(&mut self, is_disabled: fn(&str) -> bool) {
+        for iface in self.iter_mut() {
+            let base = iface.base_iface_mut();
+            if is_disabled(base.name.as_str()) {
+                reset_disabled_ipv6(base);
+            }
+        }
+    }
+
     // Not allowing changing veth peer away from ignored peer unless previous
     // peer changed from ignore to managed
     // Not allowing creating veth without peer config
@@ -715,6 +727,17 @@ impl Interfaces {
                     Some(iface.name().to_string());
             }
         }
+    }
+}
+
+#[cfg(feature = "query_apply")]
+fn reset_disabled_ipv6(base: &mut crate::BaseInterface) {
+    if let Some(ipv6_conf) = base.ipv6.as_mut() {
+        *ipv6_conf = crate::InterfaceIpv6 {
+            enabled: false,
+            enabled_defined: true,
+            ..Default::default()
+        };
     }
 }
 

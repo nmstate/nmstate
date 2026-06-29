@@ -138,6 +138,13 @@ impl NetworkState {
         // Mark routes next hop to ignored interface as ignored
         self.routes.apply_ignored_ifaces(&self.interfaces);
 
+        // A kernel booted with `ipv6.disable=1` has no IPv6 stack, but NM
+        // profiles using `method=auto` would still report `ipv6.enabled: true`.
+        // Force IPv6 off everywhere in that case.
+        if ipv6_disabled_in_kernel() {
+            self.interfaces.disable_ipv6_where(|_| true);
+        }
+
         Ok(self)
     }
 
@@ -459,6 +466,17 @@ impl NetworkState {
         }
         Ok(ret)
     }
+}
+
+// `/proc/sys/net/ipv6` is absent only when the kernel has no IPv6 stack at all.
+// The runtime `disable_ipv6` sysctl keeps the directory present and is
+// overridable per interface, so it is deliberately not forced off here.
+// Only a confirmed absence counts; a probe error must not wipe IPv6 state.
+fn ipv6_disabled_in_kernel() -> bool {
+    matches!(
+        std::path::Path::new("/proc/sys/net/ipv6").try_exists(),
+        Ok(false)
+    )
 }
 
 async fn with_nm_checkpoint<T, Fut>(
