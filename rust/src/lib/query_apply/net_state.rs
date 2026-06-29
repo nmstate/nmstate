@@ -140,10 +140,12 @@ impl NetworkState {
 
         // A kernel booted with `ipv6.disable=1` has no IPv6 stack, but NM
         // profiles using `method=auto` would still report `ipv6.enabled: true`.
-        // Force IPv6 off everywhere in that case.
-        if ipv6_disabled_in_kernel() {
-            self.interfaces.disable_ipv6_where(|_| true);
-        }
+        // Force IPv6 off everywhere in that case. IPv6 can also be disabled per
+        // interface while the stack is present; handle those individually.
+        let kernel_disabled = ipv6_disabled_in_kernel();
+        self.interfaces.disable_ipv6_where(|name| {
+            kernel_disabled || ipv6_disabled_in_kernel_for_iface(name)
+        });
 
         Ok(self)
     }
@@ -477,6 +479,15 @@ fn ipv6_disabled_in_kernel() -> bool {
         std::path::Path::new("/proc/sys/net/ipv6").try_exists(),
         Ok(false)
     )
+}
+
+// Unlike `conf/all/disable_ipv6`, the per-interface value is a reliable signal.
+// A missing file (stack absent or interface gone) means not disabled.
+fn ipv6_disabled_in_kernel_for_iface(iface_name: &str) -> bool {
+    std::fs::read_to_string(format!(
+        "/proc/sys/net/ipv6/conf/{iface_name}/disable_ipv6"
+    ))
+    .is_ok_and(|v| v.trim() == "1")
 }
 
 async fn with_nm_checkpoint<T, Fut>(
