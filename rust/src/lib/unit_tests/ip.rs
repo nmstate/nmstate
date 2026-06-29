@@ -768,3 +768,51 @@ fn test_disable_ipv6_where_all() {
             .is_none()
     );
 }
+
+#[test]
+fn test_disable_ipv6_where_selective() {
+    let mut ifaces = Interfaces::new();
+
+    let ipv6_on = || {
+        Some(InterfaceIpv6 {
+            enabled: true,
+            enabled_defined: true,
+            dhcp: Some(true),
+            autoconf: Some(true),
+            ..Default::default()
+        })
+    };
+
+    let mut eth1 = new_eth_iface("eth1");
+    eth1.base_iface_mut().ipv6 = ipv6_on();
+    ifaces.push(eth1);
+
+    let mut eth2 = new_eth_iface("eth2");
+    eth2.base_iface_mut().ipv6 = ipv6_on();
+    ifaces.push(eth2);
+
+    ifaces.disable_ipv6_where(|name| name == "eth1");
+
+    let eth1_ipv6 = ifaces
+        .get_iface("eth1", crate::InterfaceType::Ethernet)
+        .unwrap()
+        .base_iface()
+        .ipv6
+        .as_ref()
+        .unwrap();
+    assert!(!eth1_ipv6.enabled);
+    assert_eq!(eth1_ipv6.dhcp, None);
+    assert_eq!(eth1_ipv6.autoconf, None);
+
+    let eth2_ipv6 = ifaces
+        .get_iface("eth2", crate::InterfaceType::Ethernet)
+        .unwrap()
+        .base_iface()
+        .ipv6
+        .as_ref()
+        .unwrap();
+    assert!(eth2_ipv6.enabled);
+    assert!(eth2_ipv6.enabled_defined);
+    assert_eq!(eth2_ipv6.dhcp, Some(true));
+    assert_eq!(eth2_ipv6.autoconf, Some(true));
+}
