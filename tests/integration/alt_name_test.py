@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
+import os
 
 import pytest
 
@@ -71,6 +72,13 @@ def eth1_with_alt_names(eth1_up):
         )
     )
     assert get_ip_link_alt_names("eth1") == []
+
+
+def read_systemd_link_file(iface_name):
+    path = f"/etc/systemd/network/98-nmstate-{iface_name}.link"
+    assert os.path.exists(path), f"link file {path} not found"
+    with open(path) as f:
+        return f.read()
 
 
 def udev_trigger_check_alt_names(iface_name, expected_alt_names):
@@ -234,6 +242,39 @@ class TestAltNames:
             iface = show_only((TEST_VLAN_NIC,))[Interface.KEY][0]
             assert iface[VLAN.CONFIG_SUBTREE][VLAN.BASE_IFACE] == "eth1"
             assert iface[VLAN.CONFIG_SUBTREE][VLAN.ID] == 101
+
+    # https://issues.redhat.com/browse/RHEL-167955
+    @pytest.mark.tier1
+    def test_vlan_on_bond_alt_name_uses_original_name_on_reapply(
+        self, eth1_up, eth2_up
+    ):
+        vlan_name = f"{TEST_BOND_NIC}.101"
+        alt_name = "altone"
+        with bond_interface(TEST_BOND_NIC, ["eth1", "eth2"]), vlan_interface(
+            vlan_name, 101, TEST_BOND_NIC
+        ) as vlan_state:
+            desired_state = copy.deepcopy(vlan_state)
+            iface = desired_state[Interface.KEY][0]
+            iface[InterfaceAltName.KEY] = [{InterfaceAltName.NAME: alt_name}]
+            # The VLAN already exists, so persisting alt-names takes the
+            # current-state path. Apply twice: the reapply, not the first
+            # write, is what must keep OriginalName.
+            for _ in range(2):
+                libnmstate.apply(desired_state)
+                content = read_systemd_link_file(vlan_name)
+                lines = content.splitlines()
+                assert f"OriginalName={vlan_name}" in lines
+                assert f"Name={vlan_name}" in lines
+                # Any hardware key shifts the match off the kernel name;
+                # "MACAddress=" also catches "PermanentMACAddress=".
+                for key in ("MACAddress=", "Path=", "Driver="):
+                    assert key not in content
+            assert retry_till_true_or_timeout(
+                RETRY_TIMEOUT,
+                udev_trigger_check_alt_names,
+                vlan_name,
+                [alt_name],
+            )
 
     # https://issues.redhat.com/browse/RHEL-126508
     @pytest.mark.tier1

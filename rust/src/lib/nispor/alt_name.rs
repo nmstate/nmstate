@@ -6,7 +6,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{
     BaseInterface, ErrorKind, InterfaceIdentifier, InterfaceState,
-    MergedInterfaces, NmstateError,
+    InterfaceType, MergedInterfaces, NmstateError,
 };
 
 /// Comment added into our generated link files
@@ -247,8 +247,13 @@ fn gen_systemd_match_rules(
 }
 
 // Resolve the identifier to match on and the interface that supplies its
-// MAC/PCI value. Desired state's explicit identifier is honoured as-is; when it
-// is absent the current interface's identifier is inherited.
+// MAC/PCI value. Desired state's explicit identifier is honoured as-is. When it
+// is absent, a current `mac-address`/`pci-address` identifier is inherited only
+// if the live interface owns that attribute (a permanent MAC or a PCI address),
+// so a stacked interface never inherits a borrowed, unstable MAC; it falls
+// through to the name match instead. A persisted `.link` file outlives the
+// current port set, so it must never pin to a borrowed MAC even though NM
+// profile matching may.
 fn effective_identifier<'a>(
     des_iface: &'a BaseInterface,
     cur_iface: Option<&'a BaseInterface>,
@@ -258,10 +263,14 @@ fn effective_identifier<'a>(
     }
     if let Some(cur) = cur_iface {
         match cur.identifier {
-            Some(InterfaceIdentifier::MacAddress) => {
+            Some(InterfaceIdentifier::MacAddress)
+                if cur.permanent_mac_address.is_some() =>
+            {
                 return (InterfaceIdentifier::MacAddress, cur);
             }
-            Some(InterfaceIdentifier::PciAddress) => {
+            Some(InterfaceIdentifier::PciAddress)
+                if cur.pci_address.is_some() =>
+            {
                 return (InterfaceIdentifier::PciAddress, cur);
             }
             _ => {}
@@ -272,14 +281,20 @@ fn effective_identifier<'a>(
 
 // Fallback used when the resolved identifier is `name` (the default).
 //
-// The kernel name is unpredictable, so match on the most stable attribute
-// available: permanent MAC, then PCI path, then current MAC, each with driver
-// when known to disambiguate NICs sharing a MAC (e.g. Azure's Microsoft Azure
-// Network Adapter).
+// For ethernet the kernel name is unpredictable, so match on the most stable
+// attribute available: permanent MAC, then PCI path, then current MAC, each
+// with driver when known to disambiguate NICs sharing a MAC (e.g. Azure's
+// Microsoft Azure Network Adapter). For non-ethernet the kernel name is
+// user-assigned and the MAC is borrowed from a lower device (a VLAN takes its
+// bond's MAC, itself from the first enslaved port), so use `OriginalName`.
 fn gen_systemd_name_match_rules(
     des_iface: &BaseInterface,
     cur_iface: Option<&BaseInterface>,
 ) -> String {
+    if des_iface.iface_type != InterfaceType::Ethernet {
+        return format!("OriginalName={}", des_iface.name);
+    }
+
     if let Some(cur_iface) = cur_iface {
         if let Some(rules) = mac_match_rules(
             cur_iface.permanent_mac_address.as_ref(),
@@ -390,4 +405,240 @@ async fn save_systemd_network_link_file(
         )
     })?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Desired VLAN has no MAC; the live one carries the inherited bond MAC.
+    #[test]
+    fn vlan_reapply_uses_original_name() {
+        let mut des = BaseInterface::new();
+        des.name = "external0".to_string();
+        des.iface_type = InterfaceType::Vlan;
+
+        let mut cur = des.clone();
+        cur.mac_address = Some("52:54:00:80:77:C9".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "OriginalName=external0");
+    }
+
+    // Create path (no current iface), non-VLAN software type, MAC ignored.
+    #[test]
+    fn software_iface_create_uses_original_name() {
+        let mut des = BaseInterface::new();
+        des.name = "bond0".to_string();
+        des.iface_type = InterfaceType::Bond;
+        des.mac_address = Some("52:54:00:80:77:C9".to_string());
+
+        let rules = gen_systemd_match_rules(&des, None).unwrap();
+        assert_eq!(rules, "OriginalName=bond0");
+    }
+
+    #[test]
+    fn ethernet_reapply_uses_permanent_mac() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+
+        let mut cur = des.clone();
+        cur.permanent_mac_address = Some("52:54:00:11:22:33".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "PermanentMACAddress=52:54:00:11:22:33");
+    }
+
+    // A live mac-address identifier without a permanent MAC (borrowed from a
+    // lower device) is not inherited.
+    #[test]
+    fn inherited_mac_ignored_for_virtual_iface() {
+        let mut des = BaseInterface::new();
+        des.name = "vlan0".to_string();
+        des.iface_type = InterfaceType::Vlan;
+
+        let mut cur = des.clone();
+        cur.identifier = Some(InterfaceIdentifier::MacAddress);
+        cur.mac_address = Some("52:54:00:80:77:C9".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "OriginalName=vlan0");
+    }
+
+    // A physical NIC with a live mac-address identifier owns a permanent MAC,
+    // so an alt-names-only reapply inherits it and matches by permanent MAC.
+    #[test]
+    fn inherited_mac_uses_permanent_for_physical() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+
+        let mut cur = des.clone();
+        cur.identifier = Some(InterfaceIdentifier::MacAddress);
+        cur.permanent_mac_address = Some("52:54:00:11:22:33".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "PermanentMACAddress=52:54:00:11:22:33");
+    }
+
+    // A live pci-address identifier is inherited over the name fallback's
+    // default order, pinning the PCI path the user originally chose.
+    #[test]
+    fn inherited_pci_identifier_preserved() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+
+        let mut cur = des.clone();
+        cur.identifier = Some(InterfaceIdentifier::PciAddress);
+        cur.permanent_mac_address = Some("52:54:00:11:22:33".to_string());
+        cur.pci_address =
+            Some(crate::PciAddress::try_from("0000:00:1f.6").unwrap());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "Path=pci-0000:00:1f.6");
+    }
+
+    // Explicit `identifier: name` wins over the live mac-address identifier.
+    #[test]
+    fn explicit_name_identifier_keeps_original_name() {
+        let mut des = BaseInterface::new();
+        des.name = "vlan0".to_string();
+        des.iface_type = InterfaceType::Vlan;
+        des.identifier = Some(InterfaceIdentifier::Name);
+
+        let mut cur = des.clone();
+        cur.identifier = Some(InterfaceIdentifier::MacAddress);
+        cur.mac_address = Some("52:54:00:80:77:C9".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "OriginalName=vlan0");
+    }
+
+    // mac-address identifier appends the live driver to disambiguate two NICs
+    // sharing one MAC.
+    #[test]
+    fn mac_identifier_appends_current_driver() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+        des.identifier = Some(InterfaceIdentifier::MacAddress);
+        des.mac_address = Some("52:54:00:11:22:33".to_string());
+
+        let mut cur = des.clone();
+        cur.driver = Some("e1000e".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "MACAddress=52:54:00:11:22:33\nDriver=e1000e");
+    }
+
+    #[test]
+    fn pci_identifier_uses_path() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+        des.identifier = Some(InterfaceIdentifier::PciAddress);
+        des.pci_address =
+            Some(crate::PciAddress::try_from("0000:00:1f.6").unwrap());
+
+        let rules = gen_systemd_match_rules(&des, None).unwrap();
+        assert_eq!(rules, "Path=pci-0000:00:1f.6");
+    }
+
+    #[test]
+    fn mac_identifier_without_mac_is_bug() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+        des.identifier = Some(InterfaceIdentifier::MacAddress);
+
+        let e = gen_systemd_match_rules(&des, None).unwrap_err();
+        assert_eq!(e.kind(), ErrorKind::Bug);
+    }
+
+    #[test]
+    fn pci_identifier_without_pci_is_bug() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+        des.identifier = Some(InterfaceIdentifier::PciAddress);
+
+        let e = gen_systemd_match_rules(&des, None).unwrap_err();
+        assert_eq!(e.kind(), ErrorKind::Bug);
+    }
+
+    #[test]
+    fn name_fallback_uses_permanent_mac_and_driver() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+
+        let mut cur = des.clone();
+        cur.permanent_mac_address = Some("52:54:00:11:22:33".to_string());
+        cur.driver = Some("e1000e".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(
+            rules,
+            "PermanentMACAddress=52:54:00:11:22:33\nDriver=e1000e"
+        );
+    }
+
+    #[test]
+    fn name_fallback_uses_current_mac_and_driver() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+
+        let mut cur = des.clone();
+        cur.mac_address = Some("52:54:00:11:22:33".to_string());
+        cur.driver = Some("e1000e".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "MACAddress=52:54:00:11:22:33\nDriver=e1000e");
+    }
+
+    // Explicit desired mac-address identifier is honoured on a non-ethernet
+    // iface too, matching by MAC rather than falling back to OriginalName.
+    #[test]
+    fn non_eth_explicit_mac_identifier_uses_mac() {
+        let mut des = BaseInterface::new();
+        des.name = "vlan0".to_string();
+        des.iface_type = InterfaceType::Vlan;
+        des.identifier = Some(InterfaceIdentifier::MacAddress);
+        des.mac_address = Some("52:54:00:11:22:33".to_string());
+
+        let rules = gen_systemd_match_rules(&des, None).unwrap();
+        assert_eq!(rules, "MACAddress=52:54:00:11:22:33");
+    }
+
+    // Permanent MAC wins when both a permanent and a current MAC are present.
+    #[test]
+    fn permanent_mac_preferred_over_current() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+
+        let mut cur = des.clone();
+        cur.permanent_mac_address = Some("52:54:00:11:22:33".to_string());
+        cur.mac_address = Some("52:54:00:AA:BB:CC".to_string());
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "PermanentMACAddress=52:54:00:11:22:33");
+    }
+
+    // Ethernet reapply with no MAC, PCI, or permanent MAC on the live iface
+    // falls back to its current kernel name.
+    #[test]
+    fn eth_name_fallback_with_no_attributes() {
+        let mut des = BaseInterface::new();
+        des.name = "eth0".to_string();
+        des.iface_type = InterfaceType::Ethernet;
+
+        let cur = des.clone();
+
+        let rules = gen_systemd_match_rules(&des, Some(&cur)).unwrap();
+        assert_eq!(rules, "OriginalName=eth0");
+    }
 }
