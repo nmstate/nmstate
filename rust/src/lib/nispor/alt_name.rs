@@ -6,7 +6,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{
     BaseInterface, ErrorKind, InterfaceIdentifier, InterfaceState,
-    InterfaceType, MergedInterfaces, NmstateError,
+    MergedInterfaces, NmstateError,
 };
 
 /// Comment added into our generated link files
@@ -199,68 +199,131 @@ async fn remove_systemd_network_link_file(
     }
 }
 
-// The `OriginalName` match rule is unstable because kernel interface
-// name can not be predicted.
-// For ethernet interface, using `OriginalName` match rule is unstable because
-// kernel interface name cannot be predicted. Hence use try in these order:
-//  * permanent MAC address + driver name[1]
-//  * permanent MAC address
-//  * PCI address
-//  * MAC address + driver defined in current
-//  * MAC address defined in desired
-//  * Interface name defined in desired
-// For non-ethernet interface, we use `OriginalName` match rule.
-// [1]: Azure VM with `Microsoft Azure Network Adapter` has two
-//      NICs holding the same MAC address. We need to make sure we matched
-//      the correct by including driver information also.
-fn gen_systemd_network_link_match_rules(
+fn gen_systemd_match_rules(
+    des_iface: &BaseInterface,
+    cur_iface: Option<&BaseInterface>,
+) -> Result<String, NmstateError> {
+    let (identifier, src_iface) = effective_identifier(des_iface, cur_iface);
+
+    match identifier {
+        InterfaceIdentifier::MacAddress => {
+            // Include driver in case two NICs hold the same MAC.
+            // (e.g. Microsoft Azure Network Adapter)
+            let driver = cur_iface.and_then(|i| i.driver.as_ref());
+            mac_match_rules(
+                src_iface.permanent_mac_address.as_ref(),
+                src_iface.mac_address.as_ref(),
+                driver,
+            )
+            .ok_or_else(|| {
+                NmstateError::new(
+                    ErrorKind::Bug,
+                    format!(
+                        "Got no MAC address for `identifier:mac-address` on \
+                         interface {}, should be failed by previous checker",
+                        des_iface.name
+                    ),
+                )
+            })
+        }
+        InterfaceIdentifier::PciAddress => {
+            if let Some(pci_addr) = src_iface.pci_address.as_ref() {
+                Ok(format!("Path=pci-{pci_addr}"))
+            } else {
+                Err(NmstateError::new(
+                    ErrorKind::Bug,
+                    format!(
+                        "Got no PCI address for `identifier:pci-address` on \
+                         interface {}, should be failed by previous checker",
+                        des_iface.name
+                    ),
+                ))
+            }
+        }
+        InterfaceIdentifier::Name => {
+            Ok(gen_systemd_name_match_rules(des_iface, cur_iface))
+        }
+    }
+}
+
+// Resolve the identifier to match on and the interface that supplies its
+// MAC/PCI value. Desired state's explicit identifier is honoured as-is; when it
+// is absent the current interface's identifier is inherited.
+fn effective_identifier<'a>(
+    des_iface: &'a BaseInterface,
+    cur_iface: Option<&'a BaseInterface>,
+) -> (InterfaceIdentifier, &'a BaseInterface) {
+    if let Some(id) = des_iface.identifier {
+        return (id, des_iface);
+    }
+    if let Some(cur) = cur_iface {
+        match cur.identifier {
+            Some(InterfaceIdentifier::MacAddress) => {
+                return (InterfaceIdentifier::MacAddress, cur);
+            }
+            Some(InterfaceIdentifier::PciAddress) => {
+                return (InterfaceIdentifier::PciAddress, cur);
+            }
+            _ => {}
+        }
+    }
+    (InterfaceIdentifier::Name, des_iface)
+}
+
+// Fallback used when the resolved identifier is `name` (the default).
+//
+// The kernel name is unpredictable, so match on the most stable attribute
+// available: permanent MAC, then PCI path, then current MAC, each with driver
+// when known to disambiguate NICs sharing a MAC (e.g. Azure's Microsoft Azure
+// Network Adapter).
+fn gen_systemd_name_match_rules(
     des_iface: &BaseInterface,
     cur_iface: Option<&BaseInterface>,
 ) -> String {
     if let Some(cur_iface) = cur_iface {
-        match (
+        if let Some(rules) = mac_match_rules(
             cur_iface.permanent_mac_address.as_ref(),
+            None,
             cur_iface.driver.as_ref(),
-            cur_iface.pci_address.as_ref(),
-            cur_iface.mac_address.as_ref(),
         ) {
-            (Some(perm_mac), Some(driver), _pci_addr, _mac) => {
-                format!("PermanentMACAddress={perm_mac}\nDriver={driver}")
-            }
-            (Some(perm_mac), None, _pci_addr, _mac) => {
-                format!("PermanentMACAddress={perm_mac}")
-            }
-            (None, _driver, Some(pci_addr), _mac) => {
-                format!("Path=pci-{pci_addr}")
-            }
-            (None, Some(driver), None, Some(mac)) => {
-                format!("MACAddress={mac}\nDriver={driver}")
-            }
-            (None, None, None, Some(mac)) => {
-                format!("MACAddress={mac}")
-            }
-            _ => {
-                format!("OriginalName={}", cur_iface.name)
-            }
+            rules
+        } else if let Some(pci_addr) = cur_iface.pci_address.as_ref() {
+            format!("Path=pci-{pci_addr}")
+        } else if let Some(rules) = mac_match_rules(
+            None,
+            cur_iface.mac_address.as_ref(),
+            cur_iface.driver.as_ref(),
+        ) {
+            rules
+        } else {
+            format!("OriginalName={}", cur_iface.name)
         }
     } else {
-        // User is creating software interface or gen_conf mode
-        if des_iface.iface_type == InterfaceType::Ethernet {
-            match (des_iface.mac_address.as_ref(), des_iface.driver.as_ref()) {
-                (Some(mac), Some(driver)) => {
-                    format!("MACAddress={mac}\nDriver={driver}")
-                }
-                (Some(mac), None) => {
-                    format!("MACAddress={mac}")
-                }
-                (None, _) => {
-                    format!("OriginalName={}", des_iface.name)
-                }
-            }
-        } else {
-            format!("OriginalName={}", des_iface.name)
-        }
+        // User is creating the ethernet interface or gen_conf mode
+        mac_match_rules(
+            None,
+            des_iface.mac_address.as_ref(),
+            des_iface.driver.as_ref(),
+        )
+        .unwrap_or_else(|| format!("OriginalName={}", des_iface.name))
     }
+}
+
+fn mac_match_rules(
+    permanent_mac: Option<&String>,
+    mac: Option<&String>,
+    driver: Option<&String>,
+) -> Option<String> {
+    let mut rules = if let Some(mac) = permanent_mac {
+        format!("PermanentMACAddress={mac}")
+    } else {
+        let mac = mac?;
+        format!("MACAddress={mac}")
+    };
+    if let Some(driver) = driver {
+        write!(rules, "\nDriver={driver}").ok();
+    }
+    Some(rules)
 }
 
 async fn save_systemd_network_link_file(
@@ -283,51 +346,7 @@ async fn save_systemd_network_link_file(
     }
     let iface_name = des_base_iface.name.as_str();
 
-    let match_rules = match des_base_iface.identifier.as_ref() {
-        Some(InterfaceIdentifier::MacAddress) => {
-            let mut match_rules = if let Some(mac) =
-                des_base_iface.permanent_mac_address.as_ref()
-            {
-                format!("PermanentMACAddress={mac}")
-            } else if let Some(mac) = des_base_iface.mac_address.as_ref() {
-                format!("MACAddress={mac}")
-            } else {
-                return Err(NmstateError::new(
-                    ErrorKind::Bug,
-                    format!(
-                        "Got no MAC address for `identifier:mac-address` on \
-                         interface {}, should be failed by previous checker",
-                        des_base_iface.name
-                    ),
-                ));
-            };
-            // Include driver in match rule in case we have two NIC holding the
-            // same MAC. (e.g. M$ Azure - Microsoft Azure Network Adapter)
-            if let Some(cur_base_iface) = cur_base_iface.as_ref()
-                && let Some(driver) = cur_base_iface.driver.as_ref()
-            {
-                write!(match_rules, "\nDriver={driver}").ok();
-            }
-            match_rules
-        }
-        Some(InterfaceIdentifier::PciAddress) => {
-            if let Some(pci_addr) = des_base_iface.pci_address.as_ref() {
-                format!("Path=pci-{pci_addr}")
-            } else {
-                return Err(NmstateError::new(
-                    ErrorKind::Bug,
-                    format!(
-                        "Got no PCI address for `identifier:pci-address` on \
-                         interface {}, should be failed by previous checker",
-                        des_base_iface.name
-                    ),
-                ));
-            }
-        }
-        _ => {
-            gen_systemd_network_link_match_rules(des_base_iface, cur_base_iface)
-        }
-    };
+    let match_rules = gen_systemd_match_rules(des_base_iface, cur_base_iface)?;
 
     let file_path = gen_systemd_link_file_path(iface_name);
     let mut content = {
