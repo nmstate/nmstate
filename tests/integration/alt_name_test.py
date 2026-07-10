@@ -276,6 +276,42 @@ class TestAltNames:
                 [alt_name],
             )
 
+    # https://issues.redhat.com/browse/RHEL-167955
+    @pytest.mark.tier1
+    def test_delete_vlan_on_bond_with_alt_name(self, eth1_up, eth2_up):
+        vlan_name = f"{TEST_BOND_NIC}.102"
+        link_file = f"/etc/systemd/network/98-nmstate-{vlan_name}.link"
+        with bond_interface(TEST_BOND_NIC, ["eth1", "eth2"]):
+            libnmstate.apply(
+                load_yaml(
+                    f"""---
+                    interfaces:
+                    - name: {vlan_name}
+                      type: vlan
+                      state: up
+                      vlan:
+                        base-iface: {TEST_BOND_NIC}
+                        id: 102
+                      alt-names:
+                      - name: altdel
+                    """
+                )
+            )
+            assert os.path.exists(link_file)
+            # Deleting the VLAN must not fail trying to remove an alt-name
+            # from an interface it just deleted; the link file goes with it.
+            libnmstate.apply(
+                load_yaml(
+                    f"""---
+                    interfaces:
+                    - name: {vlan_name}
+                      type: vlan
+                      state: absent
+                    """
+                )
+            )
+            assert not os.path.exists(link_file)
+
     # https://issues.redhat.com/browse/RHEL-126508
     @pytest.mark.tier1
     def test_ref_alt_name_in_route(self, eth1_with_alt_names):
