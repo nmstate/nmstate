@@ -595,6 +595,49 @@ fn get_proper_verify_retry_count(merged_ifaces: &MergedInterfaces) -> usize {
         }
         v if v >= 64 => VERIFY_RETRY_COUNT_SRIOV_MAX,
         v if v <= 16 => VERIFY_RETRY_COUNT_SRIOV_MIN,
-        v => v as usize / 64 * VERIFY_RETRY_COUNT_SRIOV_MAX,
+        v => v as usize * VERIFY_RETRY_COUNT_SRIOV_MAX / 64,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Interfaces, unit_tests::testlib::new_eth_iface};
+
+    fn merged_ifaces_with_vf_count(vfs: u32) -> MergedInterfaces {
+        let desired = serde_yaml::from_str::<Interfaces>(&format!(
+            r"---
+- name: eth1
+  type: ethernet
+  state: up
+  ethernet:
+    sr-iov:
+      total-vfs: {vfs}
+"
+        ))
+        .unwrap();
+        let mut current = Interfaces::new();
+        current.push(new_eth_iface("eth1"));
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap()
+    }
+
+    #[test]
+    fn test_verify_retry_count_scales_with_vf_count() {
+        for (vfs, expected) in [
+            (0, VERIFY_RETRY_COUNT_DEFAULT),
+            (1, VERIFY_RETRY_COUNT_SRIOV_MIN),
+            (16, VERIFY_RETRY_COUNT_SRIOV_MIN),
+            (17, 79),
+            (32, 150),
+            (63, 295),
+            (64, VERIFY_RETRY_COUNT_SRIOV_MAX),
+            (128, VERIFY_RETRY_COUNT_SRIOV_MAX),
+        ] {
+            let count = get_proper_verify_retry_count(
+                &merged_ifaces_with_vf_count(vfs),
+            );
+            assert_eq!(count, expected, "vf count {vfs}");
+        }
     }
 }
