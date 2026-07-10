@@ -67,7 +67,7 @@ mod sriov;
 #[cfg(test)]
 mod statistic;
 #[cfg(test)]
-mod testlib;
+pub(crate) mod testlib;
 #[cfg(test)]
 mod vlan;
 #[cfg(test)]
