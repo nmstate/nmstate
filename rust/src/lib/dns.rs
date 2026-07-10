@@ -219,6 +219,32 @@ pub(crate) struct MergedDnsState {
 }
 
 impl MergedDnsState {
+    #[cfg(any(feature = "query_apply", feature = "gen_revert"))]
+    pub(crate) fn is_changed(&self) -> bool {
+        let cur_servers = self
+            .current
+            .config
+            .as_ref()
+            .and_then(|c| c.server.clone())
+            .unwrap_or_default();
+        let cur_searches = self
+            .current
+            .config
+            .as_ref()
+            .and_then(|c| c.search.clone())
+            .unwrap_or_default();
+        let cur_options = self
+            .current
+            .config
+            .as_ref()
+            .and_then(|c| c.options.clone())
+            .unwrap_or_default();
+
+        self.servers != cur_servers
+            || self.searches != cur_searches
+            || self.options != cur_options
+    }
+
     pub(crate) fn new(
         desired: Option<DnsState>,
         mut current: DnsState,

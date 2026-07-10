@@ -86,6 +86,11 @@ impl SrIovConfig {
         Self::default()
     }
 
+    #[cfg(any(feature = "query_apply", feature = "gen_revert"))]
+    pub(crate) fn sriov_is_enabled(&self) -> bool {
+        matches!(self.total_vfs, Some(i) if i > 0)
+    }
+
     // * Convert VF MAC address to upper case
     // * Sort by VF ID
     // * Remove max_vfs as it is query only

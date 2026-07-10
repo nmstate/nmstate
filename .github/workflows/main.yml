@@ -29,6 +29,11 @@ jobs:
     - name: Check clippy
       run: make clippy_check
 
+    - name: Check build gen_revert
+      run: |
+        cd rust && cargo check -p nmstate \
+          --no-default-features --features gen_revert
+
   rust_unit:
     strategy:
       fail-fast: true

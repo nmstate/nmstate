@@ -101,6 +101,16 @@ impl EthernetInterface {
     pub fn new() -> Self {
         Self::default()
     }
+
+    #[cfg(any(feature = "query_apply", feature = "gen_revert"))]
+    pub(crate) fn sriov_is_enabled(&self) -> bool {
+        self.ethernet
+            .as_ref()
+            .and_then(|eth_conf| {
+                eth_conf.sr_iov.as_ref().map(SrIovConfig::sriov_is_enabled)
+            })
+            .unwrap_or_default()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
