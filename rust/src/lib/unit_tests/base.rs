@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::BaseInterface;
+use crate::{
+    BaseInterface, ErrorKind, InterfaceType, Interfaces, MergedInterfaces,
+};
 
 #[test]
 fn test_base_iface_stringlized_attributes() {
@@ -46,4 +48,50 @@ fn test_base_iface_serialize_copy_mac_from() {
             .unwrap();
 
     assert_eq!(desired, new);
+}
+
+#[test]
+fn test_reject_mtu_exceeding_u32_max() {
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: dummy1
+          type: dummy
+          state: up
+          mtu: 4294967296
+        ",
+    )
+    .unwrap();
+
+    let err = MergedInterfaces::new(
+        desired,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    )
+    .unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    assert!(err.msg().contains("maximum supported MTU"));
+}
+
+#[test]
+fn test_accept_mtu_of_u32_max() {
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: dummy1
+          type: dummy
+          state: up
+          mtu: 4294967295
+        ",
+    )
+    .unwrap();
+
+    let merged = MergedInterfaces::new(
+        desired,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+    let iface = merged.get_iface("dummy1", InterfaceType::Dummy).unwrap();
+    assert_eq!(iface.merged.base_iface().mtu, Some(u32::MAX as u64));
 }
