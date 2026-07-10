@@ -226,6 +226,36 @@ fn test_untyped_iface_of_userspace_name_is_not_duplicate() {
 }
 
 #[test]
+fn test_absent_iface_warns_on_ignored_props() {
+    log_capture::start();
+    let ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: eth1
+  type: ethernet
+  state: absent
+  mtu: 1500
+",
+    )
+    .unwrap();
+
+    let iface = ifaces.get_iface("eth1", InterfaceType::Ethernet).unwrap();
+    assert_eq!(iface.base_iface().mtu, None);
+    assert_eq!(log_capture::warn_count(), 1);
+
+    log_capture::start();
+    serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: eth1
+  type: ethernet
+  state: absent
+",
+    )
+    .unwrap();
+
+    assert_eq!(log_capture::warn_count(), 0);
+}
+
+#[test]
 fn test_ifaces_resolve_unknown_bond_iface() {
     let current = serde_yaml::from_str::<Interfaces>(
         r"---
