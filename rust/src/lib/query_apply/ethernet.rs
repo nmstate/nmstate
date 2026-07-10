@@ -2,8 +2,7 @@
 
 use crate::{
     ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
-    Interfaces, MergedInterfaces, NetworkState, NmstateError, SrIovConfig,
-    VethConfig,
+    Interfaces, MergedInterfaces, NetworkState, NmstateError, VethConfig,
 };
 
 impl EthernetInterface {
@@ -20,15 +19,6 @@ impl EthernetInterface {
             eth_conf.speed = None;
             eth_conf.duplex = None;
         }
-    }
-
-    pub(crate) fn sriov_is_enabled(&self) -> bool {
-        self.ethernet
-            .as_ref()
-            .and_then(|eth_conf| {
-                eth_conf.sr_iov.as_ref().map(SrIovConfig::sriov_is_enabled)
-            })
-            .unwrap_or_default()
     }
 
     pub(crate) fn update_ethernet(&mut self, other: &EthernetInterface) {
@@ -77,12 +67,6 @@ impl VethConfig {
         if let Some(other) = other {
             self.peer.clone_from(&other.peer);
         }
-    }
-}
-
-impl SrIovConfig {
-    pub(crate) fn sriov_is_enabled(&self) -> bool {
-        matches!(self.total_vfs, Some(i) if i > 0)
     }
 }
 
