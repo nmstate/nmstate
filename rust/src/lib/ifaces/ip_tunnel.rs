@@ -100,7 +100,7 @@ pub enum Ip6TunnelFlag {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 #[derive(Default)]
 pub struct IpTunnelConfig {

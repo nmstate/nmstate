@@ -163,3 +163,21 @@ fn test_prp_interlink_is_forbidden() {
     assert_eq!(err.kind(), ErrorKind::InvalidArgument);
     assert!(err.msg().contains("interlink property is not supported"));
 }
+
+#[test]
+fn test_hsr_deny_unknown_config_field() {
+    let result = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: hsr0
+          type: hsr
+          state: up
+          hsr:
+            port1: eth1
+            port2: eth2
+            multicast-specc: 40
+        ",
+    );
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("unknown field"));
+    assert!(err.contains("multicast-specc"));
+}
