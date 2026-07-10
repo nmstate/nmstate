@@ -301,26 +301,34 @@ impl<'de> Deserialize<'de> for Interface {
                 .map_err(serde::de::Error::custom)?,
             Some(InterfaceState::Absent)
         ) {
-            let mut new_value = serde_json::map::Map::new();
-            if let Some(n) = v.get("name") {
-                new_value.insert("name".to_string(), n.clone());
+            const ABSENT_KEPT_PROPS: &[&str] = &[
+                "name",
+                "type",
+                "state",
+                "identifier",
+                "mac-address",
+                "pci-address",
+            ];
+            if let Some(obj) = v.as_object_mut() {
+                let mut discarded: Vec<String> = Vec::new();
+                obj.retain(|k, _| {
+                    let keep = ABSENT_KEPT_PROPS.contains(&k.as_str());
+                    if !keep {
+                        discarded.push(k.clone());
+                    }
+                    keep
+                });
+                if !discarded.is_empty() {
+                    let iface_name = obj
+                        .get("name")
+                        .and_then(|n| n.as_str())
+                        .unwrap_or("unknown");
+                    log::warn!(
+                        "Ignoring properties {discarded:?} of absent \
+                         interface {iface_name:?}"
+                    );
+                }
             }
-            if let Some(t) = v.get("type") {
-                new_value.insert("type".to_string(), t.clone());
-            }
-            if let Some(s) = v.get("state") {
-                new_value.insert("state".to_string(), s.clone());
-            }
-            if let Some(s) = v.get("identifier") {
-                new_value.insert("identifier".to_string(), s.clone());
-            }
-            if let Some(s) = v.get("mac-address") {
-                new_value.insert("mac-address".to_string(), s.clone());
-            }
-            if let Some(s) = v.get("pci-address") {
-                new_value.insert("pci-address".to_string(), s.clone());
-            }
-            v = serde_json::value::Value::Object(new_value);
         }
 
         match Option::deserialize(&v["type"])
