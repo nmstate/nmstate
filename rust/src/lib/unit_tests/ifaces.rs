@@ -4,7 +4,7 @@ use crate::{
     BondMode, ErrorKind, HsrProtocol, Interface, InterfaceState, InterfaceType,
     Interfaces, MergedInterface, MergedInterfaces,
     unit_tests::testlib::{
-        get_mac, new_eth_iface, new_ovs_br_iface, new_ovs_iface,
+        get_mac, log_capture, new_eth_iface, new_ovs_br_iface, new_ovs_iface,
         new_unknown_iface, new_vlan_iface,
     },
 };
@@ -155,6 +155,53 @@ fn test_ifaces_deny_unknonw_attribute() {
         assert!(e.to_string().contains("unknown field"));
         assert!(e.to_string().contains("foo"));
     }
+}
+
+#[test]
+fn test_duplicate_iface_entry_last_wins() {
+    log_capture::start();
+    let ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: eth1
+  type: ethernet
+  state: up
+  mtu: 1400
+- name: eth1
+  type: ethernet
+  state: up
+  mtu: 1500
+- name: br0
+  type: ovs-bridge
+  state: up
+- name: br0
+  type: ovs-bridge
+  state: up
+",
+    )
+    .unwrap();
+
+    assert_eq!(ifaces.to_vec().len(), 2);
+    let iface = ifaces.get_iface("eth1", InterfaceType::Ethernet).unwrap();
+    assert_eq!(iface.base_iface().mtu, Some(1500));
+    assert_eq!(log_capture::warn_count(), 2);
+}
+
+#[test]
+fn test_untyped_iface_of_userspace_name_is_not_duplicate() {
+    log_capture::start();
+    let ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: br0
+  type: ovs-bridge
+  state: up
+- name: br0
+  state: up
+",
+    )
+    .unwrap();
+
+    assert_eq!(ifaces.to_vec().len(), 2);
+    assert_eq!(log_capture::warn_count(), 0);
 }
 
 #[test]

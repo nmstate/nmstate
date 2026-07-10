@@ -48,6 +48,12 @@ impl<'de> Deserialize<'de> for Interfaces {
         let mut ret = Self::new();
         for iface in <Vec<Interface> as Deserialize>::deserialize(deserializer)?
         {
+            if ret.is_push_key_taken(&iface) {
+                log::warn!(
+                    "Duplicate interface entry {:?}: last entry wins",
+                    iface.name()
+                );
+            }
             ret.push(iface);
         }
         Ok(ret)
@@ -140,6 +146,16 @@ impl Interfaces {
                 .remove(&(iface_name.to_string(), iface_type))
         } else {
             self.kernel_ifaces.remove(iface_name)
+        }
+    }
+
+    /// Must mirror the keying of [Interfaces::push].
+    pub(crate) fn is_push_key_taken(&self, iface: &Interface) -> bool {
+        if iface.is_userspace() {
+            self.user_ifaces
+                .contains_key(&(iface.name().to_string(), iface.iface_type()))
+        } else {
+            self.kernel_ifaces.contains_key(iface.name())
         }
     }
 

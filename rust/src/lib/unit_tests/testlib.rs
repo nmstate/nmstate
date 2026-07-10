@@ -304,3 +304,41 @@ pub(crate) fn gen_merged_ifaces_for_route_test()
 
     (merged, current)
 }
+
+/// Exposes no message text: log wording is not a tested interface.
+pub(crate) mod log_capture {
+    use std::{cell::Cell, sync::Once};
+
+    static INIT: Once = Once::new();
+    // The log crate permits one global logger shared by every test, so the
+    // count has to be per thread.
+    thread_local! {
+        static COUNT: Cell<usize> = const { Cell::new(0) };
+    }
+
+    struct CaptureLogger;
+
+    impl log::Log for CaptureLogger {
+        fn enabled(&self, _metadata: &log::Metadata) -> bool {
+            true
+        }
+
+        fn log(&self, _record: &log::Record) {
+            COUNT.set(COUNT.get() + 1);
+        }
+
+        fn flush(&self) {}
+    }
+
+    pub(crate) fn start() {
+        INIT.call_once(|| {
+            log::set_logger(&CaptureLogger).unwrap();
+            log::set_max_level(log::LevelFilter::Warn);
+        });
+        COUNT.set(0);
+    }
+
+    pub(crate) fn warn_count() -> usize {
+        COUNT.get()
+    }
+}
