@@ -158,6 +158,27 @@ fn test_ifaces_deny_unknonw_attribute() {
 }
 
 #[test]
+fn test_macsec_deny_unknown_config_field() {
+    let result = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: macsec0
+  type: macsec
+  state: up
+  macsec:
+    encrypt: true
+    base-iface: eth1
+    mka-cakk: '50b71a8ef0bd5751ea76de6d6c98c03a'
+    port: 0
+    validation: strict
+    send-sci: true
+",
+    );
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("unknown field"));
+    assert!(err.contains("mka-cakk"));
+}
+
+#[test]
 fn test_duplicate_iface_entry_last_wins() {
     log_capture::start();
     let ifaces = serde_yaml::from_str::<Interfaces>(

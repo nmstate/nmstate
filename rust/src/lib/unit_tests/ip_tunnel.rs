@@ -130,3 +130,21 @@ fn test_reject_invalid_flow_label() {
     assert_eq!(err.kind(), ErrorKind::InvalidArgument);
     assert!(err.msg().contains("Flow label"));
 }
+
+#[test]
+fn test_ip_tunnel_deny_unknown_config_field() {
+    let result = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: ipip0
+          type: ip-tunnel
+          state: up
+          ip-tunnel:
+            mode: ipip
+            local: 192.0.2.1
+            remotee: 192.0.2.2
+        ",
+    );
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("unknown field"));
+    assert!(err.contains("remotee"));
+}
