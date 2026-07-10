@@ -80,14 +80,22 @@ pub(crate) async fn apply_ifaces_alt_names(
 
     for merged_iface in merged_ifaces.kernel_ifaces.values() {
         let apply_iface = if let Some(i) = merged_iface.for_apply.as_ref() {
-            i.base_iface()
+            i
         } else {
             continue;
         };
-        let cur_iface = merged_iface.current.as_ref().map(|i| i.base_iface());
-        if let Some(np_iface) =
-            gen_nispor_iface_conf_for_alt_name(apply_iface, cur_iface)?
+        // A virtual interface being deleted takes its alt-names with it, so
+        // skip the nispor removal, which would otherwise race the deletion.
+        if apply_iface.base_iface().state == InterfaceState::Absent
+            && apply_iface.is_virtual()
         {
+            continue;
+        }
+        let cur_iface = merged_iface.current.as_ref().map(|i| i.base_iface());
+        if let Some(np_iface) = gen_nispor_iface_conf_for_alt_name(
+            apply_iface.base_iface(),
+            cur_iface,
+        )? {
             np_ifaces.push(np_iface);
         }
     }
