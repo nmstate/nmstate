@@ -319,6 +319,22 @@ impl MergedInterface {
     }
 
     fn validate_mtu(&self) -> Result<(), NmstateError> {
+        // NM and the kernel store MTU as u32
+        if let Some(desired) = self.desired.as_ref().map(|i| i.base_iface())
+            && let Some(desire_mtu) = desired.mtu
+            && desire_mtu > u32::MAX as u64
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Desired MTU {} for interface {} is bigger than maximum \
+                     supported MTU {}",
+                    desire_mtu,
+                    desired.name,
+                    u32::MAX
+                ),
+            ));
+        }
         if let (Some(desired), Some(current)) = (
             self.desired.as_ref().map(|i| i.base_iface()),
             self.current.as_ref().map(|i| i.base_iface()),
