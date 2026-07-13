@@ -48,7 +48,8 @@ fi
 CARGO_REGISTRY_TOKEN=$(grep -oP 'token = "\K[^"]+' ~/.cargo/credentials.toml || :)
 if [ -z "$CARGO_REGISTRY_TOKEN" ] || \
    ! curl -s "https://crates.io/api/v1/crates?following=1" \
-          -H "Authorization: Bearer $CARGO_REGISTRY_TOKEN" | grep -q "perform this action"; then
+          -H "Authorization: Bearer $CARGO_REGISTRY_TOKEN" \
+          -H "User-Agent: nmstate-upstream-release (https://github.com/nmstate/nmstate)" | grep -q "perform this action"; then
     # crates.io does not provide access to any normal API to query user status,
     # so we (ab)use the crate search API to check if the token is valid.
     echo "Cargo registry token is missing or invalid (may be expired). Please log in using:" >&2
