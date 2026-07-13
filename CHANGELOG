@@ -1,4 +1,39 @@
 # Changelog
+## [2.2.61] - 2026-07-13
+### Breaking changes
+ - N/A
+
+### New features
+ - iface: support matching against alt-name in copy-mac-from. (aaf11db3)
+ - ethtool: alias tso and tcp-segmentation-offload to tx-tcp-segmentation. (36492119)
+
+### Bug fixes
+ - tests: recover NetworkManager after kernel-mode disable_service. (05a39f98)
+ - route: catch metric-less route conflicts in kernel mode. (132bd80f)
+ - ci: accept nmstatectl fmt output. (e2cf3b59)
+ - ci: install tcpreplay in c10s container. (daf95b50)
+ - tests: skip ipsec 4in6/6in4 on EL10. (7b41189e)
+ - ci: switch NM-main COPR to NetworkManager-main-debug. (d99387d2)
+ - ci: add c10s integration test jobs for nm_main and tier2. (39fca731)
+ - ci: rebuild Fedora container with updated build_time. (5a1710c3)
+ - tests: bump route test metrics to avoid RA collision. (5049ab3c)
+ - tests: fix format_exec_cmd_result to handle tuple from exec_cmd. (e2580264)
+ - tests: fix mptcp assert in test_switch_auto_to_static_with_dynamic_ips. (9abe6984)
+ - tests: add autouse clean_dns fixture to remove global-dns. (80b6dd1d)
+ - tests: split mtap0 cleanup into two apply calls. (0036083f)
+ - tests: fix ipsec_cli_cleanup fixture autouse declaration. (b40a6b99)
+ - Upgrade clap from 3 to 4.6. (fd120748)
+ - doc: improve CONTRIBUTING.md. (ce74d0a7)
+ - contributing: make docs more relevant. (447400b9)
+ - automation: improve --help of run-test.sh. (db45489a)
+ - automation: replace occurences of fedora-nmstate-dev and "Docker hub". (98de914b)
+ - packaging: add more details about packaging prerequisites. (af98933a)
+ - release: refactor and add checks to verify prerequisites. (edc48d43)
+ - rust: run clippy. (ab6e3aa3)
+ - Drop the need of `once_cell` crate. (c242d790)
+ - tests: regenerate eth2 veth after HSR tests. (029a610c)
+ - dep: upgrade nispor to 2.0.2. (44bf4b51)
+
 ## [2.2.60] - 2026-04-21
 ### Breaking changes
  - N/A
