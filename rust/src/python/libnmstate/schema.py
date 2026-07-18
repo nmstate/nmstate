@@ -225,9 +225,9 @@ class Bridge:
 
     class STP:
         ENABLED = "enabled"
-        FORWARD_DELAY = "forward-delay"
-        HELLO_TIME = "hello-time"
-        MAX_AGE = "max-age"
+        FORWARD_DELAY = "forward-delay"  # seconds (valid range: 2-30)
+        HELLO_TIME = "hello-time"  # seconds (valid range: 1-10)
+        MAX_AGE = "max-age"  # seconds (valid range: 6-40)
         PRIORITY = "priority"
 
     class Port:
@@ -259,7 +259,7 @@ class LinuxBridge(Bridge):
 
     class Options:
         GROUP_FORWARD_MASK = "group-forward-mask"
-        MAC_AGEING_TIME = "mac-ageing-time"
+        MAC_AGEING_TIME = "mac-ageing-time"  # seconds
         MULTICAST_SNOOPING = "multicast-snooping"
         GROUP_ADDR = "group-addr"
         GROUP_FWD_MASK = "group-fwd-mask"
@@ -267,15 +267,25 @@ class LinuxBridge(Bridge):
         HASH_MAX = "hash-max"
         MULTICAST_ROUTER = "multicast-router"
         MULTICAST_LAST_MEMBER_COUNT = "multicast-last-member-count"
-        MULTICAST_LAST_MEMBER_INTERVAL = "multicast-last-member-interval"
-        MULTICAST_MEMBERSHIP_INTERVAL = "multicast-membership-interval"
+        MULTICAST_LAST_MEMBER_INTERVAL = (
+            "multicast-last-member-interval"  # centiseconds (1/100s)
+        )
+        MULTICAST_MEMBERSHIP_INTERVAL = (
+            "multicast-membership-interval"  # centiseconds (1/100s)
+        )
         MULTICAST_QUERIER = "multicast-querier"
-        MULTICAST_QUERIER_INTERVAL = "multicast-querier-interval"
+        MULTICAST_QUERIER_INTERVAL = (
+            "multicast-querier-interval"  # centiseconds (1/100s)
+        )
         MULTICAST_QUERY_USE_IFADDR = "multicast-query-use-ifaddr"
         MULTICAST_QUERY_INTERVAL = "multicast-query-interval"
-        MULTICAST_QUERY_RESPONSE_INTERVAL = "multicast-query-response-interval"
+        MULTICAST_QUERY_RESPONSE_INTERVAL = (
+            "multicast-query-response-interval"  # centiseconds (1/100s)
+        )
         MULTICAST_STARTUP_QUERY_COUNT = "multicast-startup-query-count"
-        MULTICAST_STARTUP_QUERY_INTERVAL = "multicast-startup-query-interval"
+        MULTICAST_STARTUP_QUERY_INTERVAL = (
+            "multicast-startup-query-interval"  # centiseconds (1/100s)
+        )
         VLAN_PROTOCOL = "vlan-protocol"
         VLAN_DEFAULT_PVID = "vlan-default-pvid"
 

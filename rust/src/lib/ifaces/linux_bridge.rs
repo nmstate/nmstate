@@ -460,6 +460,7 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// MAC address ageing time is in seconds.
     pub mac_ageing_time: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -472,12 +473,14 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
+    /// Multicast last member interval is in centiseconds (1/100s).
     pub multicast_last_member_interval: Option<u64>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
+    /// Multicast membership interval is in centiseconds (1/100s).
     pub multicast_membership_interval: Option<u64>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -490,6 +493,7 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
+    /// Multicast querier interval is in centiseconds (1/100s).
     pub multicast_querier_interval: Option<u64>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -502,6 +506,7 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
+    /// Multicast query response interval is in centiseconds (1/100s).
     pub multicast_query_response_interval: Option<u64>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -532,6 +537,7 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
+    /// Multicast startup query interval is in centiseconds (1/100s).
     pub multicast_startup_query_interval: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stp: Option<LinuxBridgeStpOptions>,
@@ -619,18 +625,21 @@ pub struct LinuxBridgeStpOptions {
         default,
         deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
+    /// Spanning tree forward delay is in seconds. Valid range: 2-30.
     pub forward_delay: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
+    /// Spanning tree hello time is in seconds. Valid range: 1-10.
     pub hello_time: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
+    /// Spanning tree max age is in seconds. Valid range: 6-40.
     pub max_age: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
