@@ -32,25 +32,11 @@ jobs:
 
     - name: Check fmt
       if: matrix.rust_version == 'stable'
-      run: cd rust && cargo fmt -- --check
+      run: make fmt_check
 
     - name: Check clippy
       if: matrix.rust_version == 'nightly'
-      run: cd rust && cargo clippy -- -D warnings
-
-    - name: Check clippy gen_conf
-      if: matrix.rust_version == 'nightly'
-      run: |
-        cd rust && cargo clippy \
-          --no-default-features --features gen_conf \
-          -- -D warnings
-
-    - name: Check clippy query_apply
-      if: matrix.rust_version == 'nightly'
-      run: |
-        cd rust && cargo clippy \
-          --no-default-features --features query_apply \
-          -- -D warnings
+      run: make clippy_check
 
   rust_unit:
     strategy:

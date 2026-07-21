@@ -240,6 +240,23 @@ go_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 		go test $(WHAT)
 	rm -rf $(TMPDIR)
 
+.PHONY: fmt_check
+fmt_check:
+	cd rust && \
+	if cargo +nightly fmt --version >/dev/null 2>&1; then \
+		cargo +nightly fmt -- --check; \
+	else \
+		cargo fmt -- --check; \
+	fi
+
+.PHONY: clippy_check
+clippy_check:
+	cd rust && cargo clippy -- -D warnings
+	cd rust && cargo clippy --no-default-features --features gen_conf \
+		-- -D warnings
+	cd rust && cargo clippy --no-default-features --features query_apply \
+		-- -D warnings
+
 rust_check:
 	cd rust; cargo test -- --test-threads=1 --show-output;
 	if [ "CHK$(CI)" != "CHKtrue" ]; then \
