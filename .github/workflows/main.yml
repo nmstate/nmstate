@@ -12,30 +12,21 @@ on:
 
 jobs:
   rust_lint:
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - rust_version: "stable"
-          - rust_version: "nightly"
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v6
 
-    - name: Install Rust ${{ matrix.rust_version }}
+    - name: Install Rust nightly
       run: |
-        rustup override set ${{ matrix.rust_version }}
-        rustup update ${{ matrix.rust_version }}
+        rustup override set nightly
+        rustup update nightly
         rustup component add rustfmt clippy
 
     - name: Check fmt
-      if: matrix.rust_version == 'stable'
       run: make fmt_check
 
     - name: Check clippy
-      if: matrix.rust_version == 'nightly'
       run: make clippy_check
 
   rust_unit:

@@ -242,19 +242,14 @@ go_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 
 .PHONY: fmt_check
 fmt_check:
-	cd rust && \
-	if cargo +nightly fmt --version >/dev/null 2>&1; then \
-		cargo +nightly fmt -- --check; \
-	else \
-		cargo fmt -- --check; \
-	fi
+	cd rust && cargo +nightly fmt -- --check
 
 .PHONY: clippy_check
 clippy_check:
-	cd rust && cargo clippy -- -D warnings
-	cd rust && cargo clippy --no-default-features --features gen_conf \
+	cd rust && cargo +nightly clippy -- -D warnings
+	cd rust && cargo +nightly clippy --no-default-features --features gen_conf \
 		-- -D warnings
-	cd rust && cargo clippy --no-default-features --features query_apply \
+	cd rust && cargo +nightly clippy --no-default-features --features query_apply \
 		-- -D warnings
 
 rust_check:
