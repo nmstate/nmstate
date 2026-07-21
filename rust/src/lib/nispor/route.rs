@@ -395,9 +395,9 @@ fn validate_routes(merged_routes: &MergedRoutes) -> Result<(), NmstateError> {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Multiple routes to {dst} are sharing the same \
-                         metric and table, please use `state: absent` to \
-                         remove others."
+                        "Multiple routes to {dst} are sharing the same metric \
+                         and table, please use `state: absent` to remove \
+                         others."
                     ),
                 ));
             }
