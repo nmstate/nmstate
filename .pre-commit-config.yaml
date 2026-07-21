@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: make fmt_check
+        language: system
+        files: ^rust/.*\.rs$
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: make clippy_check
+        language: system
+        files: ^rust/.*\.rs$
+        pass_filenames: false
