@@ -233,7 +233,7 @@ function upgrade_nm_from_copr {
     exec_cmd "systemctl stop NetworkManager"
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd_with_retry "dnf install --assumeyes NetworkManager \
-        NetworkManager-ovs --disablerepo '*' --enablerepo '${copr_repo_id}'"
+        NetworkManager-ovs --setopt='${copr_repo_id}.priority=1'"
     exec_cmd_with_retry "dnf install --assumeyes NetworkManager-libreswan"
 }
 
