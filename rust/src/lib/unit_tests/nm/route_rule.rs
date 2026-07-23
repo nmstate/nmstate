@@ -402,3 +402,51 @@ fn test_route_rule_add_twice() {
 
     assert_eq!(ipv4_rules, expected_rules);
 }
+
+#[test]
+fn test_route_rule_iif_on_disconnected_iface() {
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: down
+            ipv4:
+              enabled: true
+              address:
+              - ip: 192.0.2.251
+                prefix-length: 24
+        ",
+    )
+    .unwrap();
+
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        route-rules:
+          config:
+            - family: ipv4
+              ip-to: 192.0.2.0/24
+              priority: 1000
+              route-table: 50
+              iif: eth1
+        ",
+    )
+    .unwrap();
+
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    store_route_rule_config(&mut merged_state).unwrap();
+
+    let merged_iface =
+        merged_state.interfaces.kernel_ifaces.get("eth1").unwrap();
+    assert!(merged_iface.merged.is_up());
+    assert!(merged_iface.is_changed());
+
+    let iface = get_iface(&merged_state, "eth1", InterfaceType::Ethernet);
+    let ipv4_rules = get_routing_rules(iface, false);
+    assert_eq!(ipv4_rules.len(), 1);
+    assert_eq!(ipv4_rules[0].iif.as_deref(), Some("eth1"));
+    assert_eq!(ipv4_rules[0].table_id, Some(50));
+}

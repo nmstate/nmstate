@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
+    collections::HashSet,
     net::{Ipv4Addr, Ipv6Addr},
     str::FromStr,
 };
@@ -294,22 +295,40 @@ impl MergedDnsState {
         self.servers.is_empty()
             && (!self.searches.is_empty() || !self.options.is_empty())
     }
+
+    /// Servers explicitly set in desired `dns-resolver.config.server`.
+    ///
+    /// Returns `None` when desired DNS omits `server` (including when DNS is
+    /// omitted entirely). Inherited current servers are not included.
+    pub(crate) fn desired_servers(&self) -> Option<&[String]> {
+        self.desired
+            .as_ref()
+            .and_then(|d| d.config.as_ref())
+            .and_then(|c| c.server.as_deref())
+    }
 }
 
 impl MergedNetworkState {
     // * Specified interface is valid for hold IPv6 DNS config.
     // * Cannot have more than one IPv6 link-local DNS interface.
+    // * Disconnected/down interfaces referenced by *desired* link-local DNS are
+    //   auto-activated so validation and apply can succeed without an explicit
+    //   `interfaces: [{name, state: up}]` entry.
+    // * Inherited current link-local DNS must not trigger auto-activation.
     pub(crate) fn validate_ipv6_link_local_address_dns_srv(
-        &self,
+        &mut self,
     ) -> Result<(), NmstateError> {
-        let mut iface_names = Vec::new();
-        for srv in self.dns.servers.as_slice() {
+        let Some(desired_servers) = self.dns.desired_servers() else {
+            return Ok(());
+        };
+
+        // Immutable checks while borrowing desired DNS; collect link-local
+        // targets so we can mutably update interfaces afterwards.
+        let mut pending = Vec::new();
+        for srv in desired_servers {
             if let Some((_, iface_name)) = parse_dns_ipv6_link_local_srv(srv)? {
-                let iface = if let Some(iface) =
-                    self.interfaces.kernel_ifaces.get(iface_name)
-                {
-                    iface
-                } else {
+                let Some(iface) = self.interfaces.kernel_ifaces.get(iface_name)
+                else {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
@@ -319,18 +338,50 @@ impl MergedNetworkState {
                         ),
                     ));
                 };
-                if iface.is_iface_valid_for_dns(true) {
-                    iface_names.push(iface.merged.name());
-                } else {
+                if iface.merged.is_ignore() {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Interface {iface_name} has IPv6 disabled, hence \
-                             cannot hold desired IPv6 link local DNS server \
-                             {srv}"
+                            "Desired IPv6 link local DNS server {srv} is \
+                             pointing to ignored interface {iface_name}. \
+                             Please include it in desired interfaces with \
+                             state:up."
                         ),
                     ));
                 }
+                pending.push((srv.clone(), iface_name.to_string()));
+            }
+        }
+
+        let mut iface_names = HashSet::new();
+        for (srv, iface_name) in pending {
+            let Some(iface) =
+                self.interfaces.kernel_ifaces.get_mut(iface_name.as_str())
+            else {
+                return Err(NmstateError::new(
+                    ErrorKind::Bug,
+                    format!(
+                        "BUG: Interface {iface_name} for IPv6 link local DNS \
+                         server {srv} was lost after existence check"
+                    ),
+                ));
+            };
+            // Referring by desired link-local DNS auto-activates a
+            // disconnected interface, matching historical nmstate
+            // behavior.
+            if !iface.merged.is_up() {
+                iface.mark_as_up_for_apply();
+            }
+            if iface.is_iface_valid_for_dns(true) {
+                iface_names.insert(iface.merged.name().to_string());
+            } else {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Interface {iface_name} has IPv6 disabled, hence \
+                         cannot hold desired IPv6 link local DNS server {srv}"
+                    ),
+                ));
             }
         }
         if iface_names.len() >= 2 {
@@ -338,8 +389,7 @@ impl MergedNetworkState {
                 ErrorKind::NotImplementedError,
                 format!(
                     "Only support IPv6 link local DNS name server(s) pointing \
-                     to a single interface, but got '{}'",
-                    iface_names.join(" ")
+                     to a single interface, but got {iface_names:?}"
                 ),
             ));
         }
