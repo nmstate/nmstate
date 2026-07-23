@@ -2,6 +2,12 @@
 //
 // qeth.rs — Low-level sysfs read/write for qeth vnicc attributes.
 //
+// This kernel I/O intentionally lives under nispor/ rather than the
+// schema layer in ifaces/. TODO: migrate this sysfs backend to the
+// upstream nispor crate (https://github.com/nispor/nispor) once it
+// grows qeth vnicc support, then consume it via the nispor NetState
+// like other kernel attributes.
+//
 // All public functions in this module guard against non-s390x at runtime so
 // that the same binary can be cross-compiled or run under an emulator for
 // testing purposes.  The compile-time cfg(target_arch = "s390x") gates are
@@ -64,8 +70,25 @@ fn require_s390x() -> Result<(), NmstateError> {
 /// iterating `/sys/bus/ccwgroup/devices/` until a match is found.
 ///
 /// On a real IBM Z node `lsqeth` uses the same traversal.
+fn no_qeth_device_error(iface_name: &str) -> NmstateError {
+    NmstateError::new(
+        ErrorKind::InvalidArgument,
+        format!(
+            "No qeth device found for interface {iface_name}; \
+             vnicc is only supported on qeth (OSA/HiperSockets) devices"
+        ),
+    )
+}
+
 fn vnicc_dir_for_iface(iface_name: &str) -> Result<PathBuf, NmstateError> {
     let base = Path::new(QETH_SYSFS_BASE);
+
+    // No ccwgroup bus at all (qeth kernel module not loaded): this host
+    // has no qeth devices. Treat as "not a qeth device" so the query
+    // path skips silently instead of raising an internal error.
+    if !base.is_dir() {
+        return Err(no_qeth_device_error(iface_name));
+    }
 
     // Walk every ccwgroup device and check its net/<iface_name> child.
     let entries = fs::read_dir(base).map_err(|e| {
@@ -96,13 +119,7 @@ fn vnicc_dir_for_iface(iface_name: &str) -> Result<PathBuf, NmstateError> {
         }
     }
 
-    Err(NmstateError::new(
-        ErrorKind::InvalidArgument,
-        format!(
-            "No qeth device found for interface {iface_name}; \
-             vnicc is only supported on qeth (OSA/HiperSockets) devices"
-        ),
-    ))
+    Err(no_qeth_device_error(iface_name))
 }
 
 /// Build the full path to one vnicc attribute file.
@@ -265,11 +282,29 @@ pub(crate) fn apply_vnicc(
     let dir = vnicc_dir_for_iface(iface_name)?;
 
     // --- learning_timeout MUST be set before learning ---
+    // The qeth driver only permits changing learning_timeout while
+    // learning is disabled. If learning is currently enabled in the
+    // kernel, disable it, write the timeout, then restore learning
+    // unless the desired state sets it explicitly in the loop below.
     if let Some(t) = desired.learning_timeout {
         let p = attr_path(&dir, ATTR_LEARNING_TIMEOUT);
         if p.exists() {
+            let learning_path = attr_path(&dir, ATTR_LEARNING);
+            let learning_was_on = learning_path.exists()
+                && read_bool_attr(&learning_path).unwrap_or(false);
+            if learning_was_on {
+                write_bool_attr(&learning_path, false)?;
+                log::debug!(
+                    "qeth vnicc: temporarily disabled learning on \
+                     {iface_name} to update learning-timeout"
+                );
+            }
             write_u32_attr(&p, t)?;
             log::debug!("qeth vnicc: set {iface_name} learning-timeout={t}");
+            if learning_was_on && desired.learning.is_none() {
+                write_bool_attr(&learning_path, true)?;
+                log::debug!("qeth vnicc: restored learning on {iface_name}");
+            }
         } else {
             log::warn!(
                 "qeth vnicc: kernel does not expose learning_timeout for \
@@ -340,19 +375,29 @@ pub(crate) fn verify_vnicc(
 
     let current = query_vnicc(iface_name)?.unwrap_or_default();
 
+    // Attributes the kernel does not expose are skipped with a warning,
+    // matching the warn-and-skip behaviour of `apply_vnicc()` so a
+    // successful apply can never fail verification on a missing knob.
     macro_rules! verify_bool {
         ($field:ident, $label:expr) => {
             if let Some(want) = desired.$field {
-                let got = current.$field.unwrap_or(false);
-                if got != want {
-                    return Err(NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "qeth vnicc {iface_name} {}: desired={want} \
-                             current={got}",
-                            $label
-                        ),
-                    ));
+                match current.$field {
+                    Some(got) if got != want => {
+                        return Err(NmstateError::new(
+                            ErrorKind::VerificationError,
+                            format!(
+                                "qeth vnicc {iface_name} {}: \
+                                 desired={want} current={got}",
+                                $label
+                            ),
+                        ));
+                    }
+                    None => log::warn!(
+                        "qeth vnicc: kernel does not expose {} for \
+                         {iface_name}, skipping verification",
+                        $label
+                    ),
+                    _ => {}
                 }
             }
         };
@@ -365,23 +410,35 @@ pub(crate) fn verify_vnicc(
     // warns-and-skips on EPERM without recording whether the write was
     // attempted or succeeded, so this code has no reliable way to know
     // whether the value *should* match here. rx_bcast is therefore
-    // documented as best-effort: nmstate will try to set it, but will
-    // never fail verification on it. See VniccConfig doc comment.
+    // best-effort: nmstate tries to set it but never fails verification
+    // on it. Emit a debug log so operators can observe the skip.
+    if desired.rx_bcast.is_some() {
+        log::debug!(
+            "qeth vnicc: {iface_name} rx_bcast is best-effort \
+             (read-only on OSA); skipping verification"
+        );
+    }
     verify_bool!(learning, "learning");
     verify_bool!(takeover_learning, "takeover-learning");
     verify_bool!(takeover_setvmac, "takeover-setvmac");
     verify_bool!(bridge_invisible, "bridge-invisible");
 
     if let Some(want) = desired.learning_timeout {
-        let got = current.learning_timeout.unwrap_or(600);
-        if got != want {
-            return Err(NmstateError::new(
-                ErrorKind::VerificationError,
-                format!(
-                    "qeth vnicc {iface_name} learning-timeout: \
-                     desired={want} current={got}"
-                ),
-            ));
+        match current.learning_timeout {
+            Some(got) if got != want => {
+                return Err(NmstateError::new(
+                    ErrorKind::VerificationError,
+                    format!(
+                        "qeth vnicc {iface_name} learning-timeout: \
+                         desired={want} current={got}"
+                    ),
+                ));
+            }
+            None => log::warn!(
+                "qeth vnicc: kernel does not expose learning_timeout \
+                 for {iface_name}, skipping verification"
+            ),
+            _ => {}
         }
     }
 

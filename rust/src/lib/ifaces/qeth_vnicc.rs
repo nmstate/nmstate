@@ -52,7 +52,8 @@ pub struct QethConfig {
 ///
 /// Attributes that may be read-only on some devices (e.g. `rx_bcast` on OSA)
 /// are exposed for query; when present in the desired state, nmstate will
-/// attempt to apply them and will warn-and-skip if the kernel rejects the write.
+/// attempt to apply them and will warn-and-skip if the kernel rejects
+/// the write.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
@@ -76,7 +77,9 @@ pub struct VniccConfig {
     ///
     /// Sysfs: `vnicc/rx_bcast`  
     /// Default: `true`.  
-    /// **Read-only on OSA** — nmstate will refuse to write this on OSA devices.
+    /// **Read-only on OSA.** nmstate attempts the write and warn-and-skips
+    /// if the kernel rejects it (EPERM); the value is best-effort and is
+    /// not checked during verification.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rx_bcast: Option<bool>,
 
@@ -138,16 +141,16 @@ impl VniccConfig {
 
     /// Validate the `learning_timeout` range (60–86400 seconds).
     pub fn validate(&self) -> Result<(), crate::NmstateError> {
-        if let Some(t) = self.learning_timeout {
-            if !(60..=86400).contains(&t) {
-                return Err(crate::NmstateError::new(
-                    crate::ErrorKind::InvalidArgument,
-                    format!(
-                        "qeth vnicc learning-timeout {t} is out of range \
-                         60–86400 seconds"
-                    ),
-                ));
-            }
+        if let Some(t) = self.learning_timeout
+            && !(60..=86400).contains(&t)
+        {
+            return Err(crate::NmstateError::new(
+                crate::ErrorKind::InvalidArgument,
+                format!(
+                    "qeth vnicc learning-timeout {t} is out of range \
+                     60–86400 seconds"
+                ),
+            ));
         }
         Ok(())
     }
@@ -180,77 +183,5 @@ impl VniccConfig {
         if desired.bridge_invisible.is_some() {
             self.bridge_invisible = desired.bridge_invisible;
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_round_trip_yaml() {
-        let yaml = r#"
-flooding: true
-mcast-flooding: true
-learning: true
-learning-timeout: 600
-"#;
-        let cfg: VniccConfig = serde_yaml::from_str(yaml).unwrap();
-        assert_eq!(cfg.flooding, Some(true));
-        assert_eq!(cfg.learning_timeout, Some(600));
-        let back = serde_yaml::to_string(&cfg).unwrap();
-        let cfg2: VniccConfig = serde_yaml::from_str(&back).unwrap();
-        assert_eq!(cfg, cfg2);
-    }
-
-    #[test]
-    fn test_learning_timeout_validation() {
-        let cfg = VniccConfig {
-            learning_timeout: Some(30),
-            ..Default::default()
-        };
-        assert!(cfg.validate().is_err());
-
-        let cfg = VniccConfig {
-            learning_timeout: Some(600),
-            ..Default::default()
-        };
-        assert!(cfg.validate().is_ok());
-
-        let cfg = VniccConfig {
-            learning_timeout: Some(86401),
-            ..Default::default()
-        };
-        assert!(cfg.validate().is_err());
-    }
-
-    #[test]
-    fn test_merge_desired_partial() {
-        let mut current = VniccConfig {
-            flooding: Some(false),
-            learning: Some(false),
-            learning_timeout: Some(600),
-            ..Default::default()
-        };
-        let desired = VniccConfig {
-            flooding: Some(true),
-            learning: Some(true),
-            ..Default::default() // learning_timeout not specified
-        };
-        current.merge_desired(&desired);
-        assert_eq!(current.flooding, Some(true));
-        assert_eq!(current.learning, Some(true));
-        // unchanged:
-        assert_eq!(current.learning_timeout, Some(600));
-    }
-
-    #[test]
-    fn test_is_empty() {
-        assert!(VniccConfig::default().is_empty());
-        let cfg = VniccConfig {
-            flooding: Some(true),
-            ..Default::default()
-        };
-        assert!(!cfg.is_empty());
     }
 }

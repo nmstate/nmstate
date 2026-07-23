@@ -347,13 +347,7 @@ impl NetworkState {
                     if let Some(crate::Interface::Ethernet(eth)) =
                         merged_iface.for_apply.as_ref()
                     {
-                        if eth
-                            .ethernet
-                            .as_ref()
-                            .map_or(false, |e| e.qeth.is_some())
-                        {
-                            eth.apply_qeth()?;
-                        }
+                        eth.apply_qeth()?;
                     }
                 }
 

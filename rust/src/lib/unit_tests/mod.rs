@@ -57,6 +57,8 @@ mod ovsdb;
 #[cfg(test)]
 mod policy;
 #[cfg(test)]
+mod qeth_vnicc;
+#[cfg(test)]
 mod route;
 #[cfg(test)]
 mod route_rule;

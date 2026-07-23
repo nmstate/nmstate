@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::ifaces::qeth_vnicc::QethConfig;
+use crate::nispor::qeth::{apply_vnicc, query_vnicc, verify_vnicc};
 use crate::{
     ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
     Interfaces, MergedInterfaces, NetworkState, NmstateError, SrIovConfig,
@@ -7,6 +9,56 @@ use crate::{
 };
 
 impl EthernetInterface {
+    /// Populate `qeth` from sysfs during the kernel/NM query phase.
+    /// Called after base interface properties have been filled.
+    /// Returns `Ok(())` silently on non-s390x or non-qeth interfaces.
+    pub(crate) fn fill_qeth_from_kernel(&mut self) -> Result<(), NmstateError> {
+        match query_vnicc(self.base.name.as_str()) {
+            Ok(Some(vnicc)) => {
+                if let Some(ref mut eth) = self.ethernet {
+                    eth.qeth = Some(QethConfig { vnicc: Some(vnicc) });
+                }
+            }
+            // Not a qeth device -- leave qeth as None.
+            Ok(None) => {}
+            // Non-s390x host -- silently skip.
+            Err(ref e) if e.kind() == ErrorKind::NotImplementedError => {}
+            Err(e) => return Err(e),
+        }
+        Ok(())
+    }
+
+    /// Apply qeth vnicc settings to sysfs.
+    /// Called at the end of the normal apply path; no-op when `qeth` is
+    /// None.
+    pub(crate) fn apply_qeth(&self) -> Result<(), NmstateError> {
+        if let Some(vnicc) = self
+            .ethernet
+            .as_ref()
+            .and_then(|eth_conf| eth_conf.qeth.as_ref())
+            .and_then(|qeth_conf| qeth_conf.vnicc.as_ref())
+        {
+            vnicc.validate()?;
+            apply_vnicc(self.base.name.as_str(), vnicc)?;
+        }
+        Ok(())
+    }
+
+    /// Verify post-apply qeth vnicc state matches desired.
+    /// Called at the end of the normal verify path; no-op when `qeth` is
+    /// None.
+    pub(crate) fn verify_qeth(&self) -> Result<(), NmstateError> {
+        if let Some(vnicc) = self
+            .ethernet
+            .as_ref()
+            .and_then(|eth_conf| eth_conf.qeth.as_ref())
+            .and_then(|qeth_conf| qeth_conf.vnicc.as_ref())
+        {
+            verify_vnicc(self.base.name.as_str(), vnicc)?;
+        }
+        Ok(())
+    }
+
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
         if let Some(sriov_conf) =
             self.ethernet.as_mut().and_then(|e| e.sr_iov.as_mut())
@@ -50,14 +102,14 @@ impl EthernetInterface {
     pub(crate) fn update_qeth(&mut self, other: &EthernetInterface) {
         // qeth comes from sysfs (fill_qeth_from_kernel), not from NM.
         // qeth is nested under ethernet config section.
-        if let Some(other_eth) = &other.ethernet {
-            if other_eth.qeth.is_some() {
-                // Initialise self.ethernet if not already present so
-                // qeth data is never silently dropped during merge.
-                let self_eth =
-                    self.ethernet.get_or_insert_with(EthernetConfig::default);
-                self_eth.qeth.clone_from(&other_eth.qeth);
-            }
+        if let Some(other_eth) = &other.ethernet
+            && other_eth.qeth.is_some()
+        {
+            // Initialise self.ethernet if not already present so
+            // qeth data is never silently dropped during merge.
+            let self_eth =
+                self.ethernet.get_or_insert_with(EthernetConfig::default);
+            self_eth.qeth.clone_from(&other_eth.qeth);
         }
     }
 

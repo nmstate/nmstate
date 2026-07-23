@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ifaces::qeth_vnicc::QethConfig;
-use crate::nispor::qeth::{apply_vnicc, query_vnicc, verify_vnicc};
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceType, Interfaces,
     MergedInterfaces, NetworkStateMode, NmstateError, SrIovConfig,
@@ -97,72 +96,23 @@ impl EthernetInterface {
             sriov_conf.sanitize()?
         }
 
+        // Validate qeth vnicc at the schema layer so invalid values
+        // (e.g. out-of-range learning-timeout) are rejected during the
+        // pre-apply validation pass, not mid-apply.
+        if let Some(vnicc) = self
+            .ethernet
+            .as_ref()
+            .and_then(|eth_conf| eth_conf.qeth.as_ref())
+            .and_then(|qeth_conf| qeth_conf.vnicc.as_ref())
+        {
+            vnicc.validate()?;
+        }
+
         Ok(())
     }
 
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Populate `qeth` from sysfs during the kernel/NM query phase.
-    /// Called after base interface properties have been filled.
-    /// Returns `Ok(())` silently on non-s390x or non-qeth interfaces.
-    pub(crate) fn fill_qeth_from_kernel(&mut self) -> Result<(), NmstateError> {
-        match query_vnicc(self.base.name.as_str()) {
-            Ok(Some(vnicc)) => {
-                if let Some(ref mut eth) = self.ethernet {
-                    eth.qeth = Some(QethConfig { vnicc: Some(vnicc) });
-                }
-            }
-            // Not a qeth device — leave qeth as None.
-            Ok(None) => {}
-            // Non-s390x host — silently skip.
-            Err(ref e) if e.kind() == ErrorKind::NotImplementedError => {}
-            Err(e) => return Err(e),
-        }
-        Ok(())
-    }
-
-    /// Apply qeth vnicc settings to sysfs.
-    /// Called at the end of the normal apply path; no-op when `qeth` is None.
-    pub(crate) fn apply_qeth(&self) -> Result<(), NmstateError> {
-        if let Some(eth) = &self.ethernet {
-            if let Some(qeth) = &eth.qeth {
-                if let Some(vnicc) = &qeth.vnicc {
-                    vnicc.validate()?;
-                    apply_vnicc(self.base.name.as_str(), vnicc)?;
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Validate qeth vnicc desired state at the schema layer.
-    /// MUST be called before any NM/sysfs interaction so invalid
-    /// values (e.g. out-of-range learning-timeout) are rejected
-    /// during the pre-apply validation pass, not mid-apply.
-    pub(crate) fn validate_qeth(&self) -> Result<(), NmstateError> {
-        if let Some(eth) = &self.ethernet {
-            if let Some(qeth) = &eth.qeth {
-                if let Some(vnicc) = &qeth.vnicc {
-                    vnicc.validate()?;
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Verify post-apply qeth vnicc state matches desired.
-    /// Called at the end of the normal verify path; no-op when `qeth` is None.
-    pub(crate) fn verify_qeth(&self) -> Result<(), NmstateError> {
-        if let Some(eth) = &self.ethernet {
-            if let Some(qeth) = &eth.qeth {
-                if let Some(vnicc) = &qeth.vnicc {
-                    verify_vnicc(self.base.name.as_str(), vnicc)?;
-                }
-            }
-        }
-        Ok(())
     }
 }
 
@@ -193,15 +143,15 @@ impl std::fmt::Display for EthernetDuplex {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct EthernetConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Single Root I/O Virtualization(SRIOV) configuration.
+    /// Deserialize and serialize from/to `sr-iov`.
+    pub sr_iov: Option<SrIovConfig>,
     /// IBM Z (s390x) qeth-specific settings including VNIC characteristics
     /// (vnicc). Only populated for OSA Express and HiperSockets interfaces
     /// managed by the qeth kernel driver. `None` on all other hardware.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub qeth: Option<QethConfig>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Single Root I/O Virtualization(SRIOV) configuration.
-    /// Deserialize and serialize from/to `sr-iov`.
-    pub sr_iov: Option<SrIovConfig>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "auto-negotiation",
