@@ -95,6 +95,149 @@ fn test_dns_ipv6_link_local_iface_has_ipv6_disabled() {
 }
 
 #[test]
+fn test_dns_ipv6_link_local_on_disconnected_iface() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        dns-resolver:
+          config:
+            server:
+            - fe80::deef:1%eth1
+        ",
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: down
+            ipv6:
+              enabled: true
+              address:
+              - ip: fe80::1
+                prefix-length: 64
+        ",
+    )
+    .unwrap();
+
+    let merged_state =
+        MergedNetworkState::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let iface = merged_state.interfaces.kernel_ifaces.get("eth1").unwrap();
+    assert!(iface.merged.is_up());
+    assert!(iface.is_changed());
+    assert!(iface.for_apply.as_ref().unwrap().is_up());
+}
+
+#[test]
+fn test_inherited_link_local_dns_does_not_activate_down_iface() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth2
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: true
+        ",
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        dns-resolver:
+          config:
+            server:
+            - fe80::deef:1%eth1
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: down
+            ipv6:
+              enabled: true
+              address:
+              - ip: fe80::1
+                prefix-length: 64
+          - name: eth2
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: true
+        ",
+    )
+    .unwrap();
+
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let eth1 = merged_state.interfaces.kernel_ifaces.get("eth1").unwrap();
+    assert!(eth1.merged.is_down());
+    assert!(!eth1.is_changed());
+
+    store_dns_config_to_iface(&mut merged_state, &[], &[]).unwrap();
+
+    let eth1 = merged_state.interfaces.kernel_ifaces.get("eth1").unwrap();
+    assert!(eth1.merged.is_down());
+    assert!(eth1.for_apply.as_ref().unwrap().is_down());
+}
+
+#[test]
+fn test_mark_as_up_for_apply_skips_orphan_absent_iface() {
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: bond0
+            type: bond
+            state: up
+            link-aggregation:
+              mode: balance-rr
+          - name: bond0.100
+            type: vlan
+            state: up
+            vlan:
+              base-iface: bond0
+              id: 100
+            ipv6:
+              enabled: true
+              address:
+              - ip: fe80::1
+                prefix-length: 64
+        ",
+    )
+    .unwrap();
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: bond0
+            type: bond
+            state: absent
+        ",
+    )
+    .unwrap();
+
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let vlan = merged_state
+        .interfaces
+        .kernel_ifaces
+        .get_mut("bond0.100")
+        .unwrap();
+    assert!(vlan.merged.is_absent());
+    assert!(vlan.is_changed());
+    assert!(vlan.desired.is_none());
+
+    vlan.mark_as_up_for_apply();
+
+    assert!(vlan.merged.is_absent());
+    assert!(vlan.for_apply.as_ref().unwrap().is_absent());
+}
+
+#[test]
 fn test_two_dns_ipv6_link_local_iface() {
     let desired: NetworkState = serde_yaml::from_str(
         r"---
@@ -134,6 +277,37 @@ fn test_two_dns_ipv6_link_local_iface() {
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::NotImplementedError);
     }
+}
+
+#[test]
+fn test_two_dns_ipv6_link_local_same_iface() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        dns-resolver:
+          config:
+            server:
+            - fe80::deef:1%eth1
+            - fe80::deef:2%eth1
+        ",
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            ipv6:
+              enabled: true
+              dhcp: true
+              autoconf: true
+              auto-dns: false
+        ",
+    )
+    .unwrap();
+
+    MergedNetworkState::new(desired, current, Default::default(), false)
+        .unwrap();
 }
 
 #[test]

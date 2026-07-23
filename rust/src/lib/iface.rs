@@ -1110,6 +1110,30 @@ impl MergedInterface {
         }
     }
 
+    /// Include this interface for apply with `state: up`.
+    ///
+    /// Used when a disconnected/down interface is referenced by other desired
+    /// config (IPv6 link-local DNS, route-rule `iif`, etc.) and should be
+    /// auto-activated without the user listing it under `interfaces`.
+    ///
+    /// Does nothing when the interface is already desired or already changed
+    /// (for example an orphan VLAN marked absent when its parent bond is
+    /// removed), so those states are not overridden.
+    pub(crate) fn mark_as_up_for_apply(&mut self) {
+        if self.desired.is_some() || self.is_changed() {
+            return;
+        }
+        self.mark_as_changed();
+        self.merged.base_iface_mut().state = InterfaceState::Up;
+        if let Some(apply_iface) = self.for_apply.as_mut() {
+            apply_iface.base_iface_mut().state = InterfaceState::Up;
+        }
+        log::info!(
+            "Include interface {} to edit as other desired config required so",
+            self.merged.name()
+        );
+    }
+
     pub(crate) fn mark_as_absent(&mut self) {
         self.mark_as_changed();
         self.merged.base_iface_mut().state = InterfaceState::Absent;

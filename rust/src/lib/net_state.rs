@@ -385,7 +385,7 @@ impl MergedNetworkState {
             current.ovsdb.unwrap_or_default(),
         )?;
 
-        let ret = Self {
+        let mut ret = Self {
             interfaces,
             routes,
             rules,

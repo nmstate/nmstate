@@ -168,7 +168,12 @@ fn append_route_rule(
     if let Some(iface) =
         merged_state.interfaces.kernel_ifaces.get_mut(&iface_name)
     {
-        if !iface.is_changed() {
+        // Referring by route-rule `iif` auto-activates a disconnected
+        // interface so the rule can be applied without an explicit
+        // `interfaces: [{name, state: up}]` entry.
+        if !iface.merged.is_up() && !iface.merged.is_ignore() {
+            iface.mark_as_up_for_apply();
+        } else if !iface.is_changed() {
             iface.mark_as_changed();
         }
         if let Some(apply_iface) = iface.for_apply.as_mut() {

@@ -362,6 +362,15 @@ fn _save_dns_to_iface(
     {
         if !iface.is_changed() {
             iface.mark_as_changed();
+            // `mark_as_changed()` defaults for_apply to Up. Keep the merged
+            // state so inherited current DNS (including scoped link-local) on
+            // a down iface does not activate it. Desired link-local DNS
+            // already set merged to Up in
+            // `validate_ipv6_link_local_address_dns_srv()`.
+            if let Some(apply_iface) = iface.for_apply.as_mut() {
+                apply_iface.base_iface_mut().state =
+                    iface.merged.base_iface().state;
+            }
         }
         if let Some(apply_iface) = iface.for_apply.as_mut() {
             if is_ipv6 {
