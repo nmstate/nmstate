@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import shutil
+import time
 
 import pytest
 
@@ -23,9 +25,10 @@ TEST_1X_NET_NAME_SPACE = "test_802_1x"
 
 MAX_RETRY_COUNT = 20
 
-CONF_DIR = (
+CONF_DIR_SRC = (
     f"{os.path.dirname(os.path.realpath(__file__))}/../test_802.1x_srv_files"
 )
+CONF_DIR = os.path.expanduser("~/.cert/nmstate")
 
 HOSTAPD_CONF_PATH = "/etc/hostapd/nmstate_test.conf"
 HOSTAPD_CONF_STR = f"""
@@ -60,23 +63,31 @@ def ieee_802_1x_env():
     Create a veth pair (CLI_NIC, SRV_NIC), and then run hostapd as 802.1x
     authenticator on SRV_NIC.
     """
+    if os.path.exists(CONF_DIR):
+        shutil.rmtree(CONF_DIR)
+    os.makedirs(os.path.dirname(CONF_DIR), exist_ok=True)
+    shutil.copytree(CONF_DIR_SRC, CONF_DIR)
     remove_veth_pair(TEST_1X_CLI_NIC, TEST_1X_NET_NAME_SPACE)
     create_veth_pair(TEST_1X_CLI_NIC, TEST_1X_SRV_NIC, TEST_1X_NET_NAME_SPACE)
     _start_802_1x_authenticator()
-    yield
-    libnmstate.apply(
-        {
-            Interface.KEY: [
-                {
-                    Interface.NAME: TEST_1X_CLI_NIC,
-                    Interface.STATE: InterfaceState.ABSENT,
-                }
-            ]
-        },
-        verify_change=False,
-    )
-    _stop_802_1x_authenticator()
-    remove_veth_pair(TEST_1X_CLI_NIC, TEST_1X_NET_NAME_SPACE)
+    try:
+        yield
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_1X_CLI_NIC,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            },
+            verify_change=False,
+        )
+        _stop_802_1x_authenticator()
+        remove_veth_pair(TEST_1X_CLI_NIC, TEST_1X_NET_NAME_SPACE)
+        if os.path.exists(CONF_DIR):
+            shutil.rmtree(CONF_DIR)
 
 
 def _start_802_1x_authenticator():
@@ -88,6 +99,7 @@ def _start_802_1x_authenticator():
         f"{HOSTAPD_CONF_PATH}".split(),
         check=True,
     )
+    time.sleep(1)
 
 
 def _stop_802_1x_authenticator():
