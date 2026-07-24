@@ -19,7 +19,6 @@ from libnmstate.schema import VLAN
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
-from .testlib.env import is_k8s
 from .testlib.iproutelib import get_ip_link_alt_names
 from .testlib.ovslib import Bridge as OVSBridgeEnv
 from .testlib.retry import retry_till_true_or_timeout
@@ -91,7 +90,6 @@ def udev_trigger_check_alt_names(iface_name, expected_alt_names):
     return get_ip_link_alt_names(iface_name) == sorted(expected_alt_names)
 
 
-@pytest.mark.skipif(is_k8s(), reason="K8S does not support alt-names yet")
 class TestAltNames:
     # https://issues.redhat.com/browse/RHEL-90096
     @pytest.mark.tier1

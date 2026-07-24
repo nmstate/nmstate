@@ -16,7 +16,6 @@ from libnmstate.schema import LLDP
 
 from ..testlib import assertlib
 from ..testlib import iprule
-from ..testlib.env import is_k8s
 from ..testlib.env import nm_minor_version
 from ..testlib.genconf import gen_conf_apply
 from ..testlib.ifacelib import get_mac_address
@@ -44,7 +43,6 @@ interfaces:
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(is_k8s(), reason="K8S does not support genconf")
 def test_gen_conf_ovs_same_name(eth1_up, cleanup_ovs_same_name):
     desired_state = load_yaml(
         """
@@ -70,7 +68,6 @@ interfaces:
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(is_k8s(), reason="K8S does not support genconf")
 def test_gen_conf_ovs_trunk_vlan():
     desired_state = load_yaml(
         """
@@ -273,7 +270,6 @@ def test_gen_conf_lldp():
 
 
 @pytest.mark.tier1
-@pytest.mark.skipif(is_k8s(), reason="K8S does not support genconf")
 def test_gen_conf_blackhole_routes():
     desired_state = load_yaml(
         """---

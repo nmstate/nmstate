@@ -28,10 +28,6 @@ def nm_minor_version():
     return int(version_str.split("~")[0].split(".")[1])
 
 
-def is_k8s():
-    return os.getenv("RUN_K8S") == "true"
-
-
 def nm_libreswan_version_int():
     ret_code, version_str, _ = exec_cmd(
         "rpm -q NetworkManager-libreswan --qf %{VERSION}".split()
