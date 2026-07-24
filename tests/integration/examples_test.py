@@ -13,12 +13,10 @@ from .testlib.examplelib import load_example
 import libnmstate
 from libnmstate import netinfo
 from libnmstate.error import NmstateNotSupportedError
-from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
 from libnmstate.schema import HostNameState
 from libnmstate.schema import RouteRule
 
-from .testlib.env import is_k8s
 from .testlib.env import nm_minor_version
 
 
@@ -40,15 +38,6 @@ def test_add_down_remove_vlan(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=NmstateVerificationError,
-    strict=False,
-)
 def test_add_remove_ovs_bridge(eth1_up):
     with example_state(
         "ovsbridge_create.yml", cleanup="ovsbridge_delete.yml"

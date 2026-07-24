@@ -20,7 +20,6 @@ from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
 from ..testlib.bondlib import bond_interface
-from ..testlib.env import is_k8s
 from ..testlib.ifacelib import get_mac_address
 from ..testlib.nmplugin import nm_service_restart
 from ..testlib.retry import retry_till_true_or_timeout
@@ -200,9 +199,6 @@ def vlan_is_up_with_ip():
     )
 
 
-@pytest.mark.skipif(
-    is_k8s(), reason="K8S cannot restart NetworkManager daemon"
-)
 @pytest.mark.tier1
 # Detailed context is https://bugzilla.redhat.com/show_bug.cgi?id=2207690
 def test_vlan_over_bond_reconnect_on_link_revive(

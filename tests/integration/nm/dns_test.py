@@ -12,7 +12,6 @@ from libnmstate.schema import InterfaceType
 
 from ..testlib import assertlib
 from ..testlib import cmdlib
-from ..testlib.env import is_k8s
 from ..testlib.env import nm_minor_version
 from ..testlib.retry import retry_till_true_or_timeout
 from ..testlib.yaml import load_yaml
@@ -114,7 +113,6 @@ def all_unmanaged_with_gw_on_eth1(unmanaged_eth1_with_static_gw):
         )
 
 
-@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_do_not_use_unmanaged_iface_for_dns(all_unmanaged_with_gw_on_eth1):
     libnmstate.apply({DNS.KEY: {DNS.CONFIG: {DNS.SERVER: TEST_DNS_SRVS}}})
 
@@ -130,7 +128,6 @@ def all_unmanaged_with_gw_on_eth1_as_ext_mgt(all_unmanaged_with_gw_on_eth1):
     yield
 
 
-@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_do_not_use_external_managed_iface_for_dns(
     all_unmanaged_with_gw_on_eth1_as_ext_mgt,
 ):
@@ -195,7 +192,6 @@ def test_static_dns_search_with_auto_dns(auto_eth1):
     assert "ipv6.dns-search:example.org,example.net" in output
 
 
-@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_global_dns_with_dns_options():
     try:
         libnmstate.apply(
@@ -236,7 +232,6 @@ def static_dns():
     nm_minor_version() <= 47,
     reason="NM 1.47- does not support checkpoint on global dns",
 )
-@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 # kubernetes-nmstate depends on checkpoint to rollback to original state when
 # check fails, hence tier1
 @pytest.mark.tier1
@@ -273,7 +268,6 @@ def clean_dns():
 
 # https://issues.redhat.com/browse/RHEL-56557
 @pytest.mark.tier1
-@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_reselect_iface_dns_if_desired(eth1_up):
     libnmstate.apply({DNS.KEY: {DNS.CONFIG: {DNS.SERVER: TEST_DNS_SRVS}}})
     assert_global_dns(TEST_DNS_SRVS)
@@ -306,7 +300,6 @@ def test_reselect_iface_dns_if_desired(eth1_up):
 
 # https://issues.redhat.com/browse/RHEL-91250
 @pytest.mark.tier1
-@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_write_both_global_dns_and_iface_dns(eth1_up):
 
     state = load_yaml(
@@ -380,7 +373,6 @@ def eth1_static_iface_dns(eth1_up):
 
 # https://issues.redhat.com/browse/RHEL-125548
 @pytest.mark.tier1
-@pytest.mark.skipif(is_k8s(), reason="K8S cannot check global DNS file")
 def test_use_global_dns_even_for_with_static_ip(
     eth1_static_iface_dns, eth2_up
 ):

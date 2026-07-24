@@ -12,7 +12,6 @@ from libnmstate.schema import InterfaceIPv6
 
 from .testlib import cmdlib
 from .testlib.env import is_el10
-from .testlib.env import is_k8s
 from .testlib.env import nm_libreswan_version_int
 from .testlib.env import version_str_to_int
 from .testlib.ipsec import IpsecTestEnv
@@ -1077,7 +1076,6 @@ def test_ipsec_leftsendcert(ipsec_srv_cert_gw, load_both_keys):
     nm_libreswan_version_int() < version_str_to_int("1.2.27"),
     reason="Need NetworkManager-libreswan 1.2.27+ to support rightca",
 )
-@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
 def test_ipsec_rightca(ipsec_srv_cert_gw):
     desired_state = yaml.load(
         f"""---
@@ -1151,7 +1149,6 @@ def test_ipsec_ipv4_libreswan_p2p_no_nm_auto_defaults(ipsec_srv_p2p):
     nm_libreswan_version_int() < version_str_to_int("1.2.28"),
     reason="Need NetworkManager-libreswan 1.2.29+ to support leftprotoport",
 )
-@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
 def test_ipsec_leftprotoport_rightprotoport(ipsec_srv_cert_gw_icmp):
     desired_state = yaml.load(
         f"""---
@@ -1196,7 +1193,6 @@ def test_ipsec_leftprotoport_rightprotoport(ipsec_srv_cert_gw_icmp):
     raises=NmstateVerificationError,
     reason="leftsubnets need patched NetworkManager-libreswan",
 )
-@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
 def test_ipsec_ipv4_libreswan_leftsubnets(ipsec_srv_site_to_site):
     leftsubnets = (
         f"{IpsecTestEnv.CLI_SUBNET_V4},{IpsecTestEnv.CLI_SUBNET_V4_2}"
@@ -1246,7 +1242,6 @@ def test_ipsec_ipv4_libreswan_leftsubnets(ipsec_srv_site_to_site):
     raises=NmstateVerificationError,
     reason="leftsubnets need patched NetworkManager-libreswan",
 )
-@pytest.mark.skipif(is_k8s(), reason="K8S CI does not support IPSec yet")
 def test_ipsec_ipv6_libreswan_leftsubnets(ipsec_srv_site_to_site):
     leftsubnets = (
         f"{IpsecTestEnv.CLI_SUBNET_V6},{IpsecTestEnv.CLI_SUBNET_V6_2}"
