@@ -1299,3 +1299,197 @@ def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
         kernel_only=True,
     )
     assertlib.assert_state_match(new_desired_state, kernel_only=True)
+
+
+# This test our understanding of kernel behaviour, and can let
+# us know if ip address ordering changes in the kernel
+def test_kernel_mode_apply_static_ipv4_out_of_order(cleanup_veth1_kernel_mode):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            - ip: 192.0.2.252
+              prefix-length: 24
+            - ip: 192.0.1.253
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+        """
+    )
+    apply_with_description(
+        "Configure the veth device veth1 with the peer veth1_peer and "
+        "address 192.0.2.251/24, 192.0.2.252/24, and 192.0.1.253/24."
+        "This is done with the expectation that the kernel"
+        "will re-order the addresses",
+        desired_state,
+        kernel_only=True,
+    )
+    actual_addrs = iproute_get_ip_addrs_with_order("veth1", is_ipv6=False)
+    assert actual_addrs == ["192.0.2.251", "192.0.1.253", "192.0.2.252"]
+
+
+# This test our understanding of kernel behaviour, and can let
+# us know if ip address ordering changes in the kernel
+def test_kernel_mode_apply_static_ipv4_in_order(cleanup_veth1_kernel_mode):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            - ip: 192.0.1.253
+              prefix-length: 24
+            - ip: 192.0.2.252
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+        """
+    )
+    apply_with_description(
+        "Configure the veth device veth1 with the peer veth1_peer and "
+        "address 192.0.2.251/24, 192.0.2.252/24, and 192.0.1.253/24."
+        "This is done with the expectation that the kernel"
+        "will not re-order the addresses",
+        desired_state,
+        kernel_only=True,
+    )
+    actual_addrs = iproute_get_ip_addrs_with_order("veth1", is_ipv6=False)
+    assert actual_addrs == ["192.0.2.251", "192.0.1.253", "192.0.2.252"]
+
+
+def test_kernel_mode_apply_static_ipv4_tail_append(cleanup_veth1_kernel_mode):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            - ip: 192.0.2.252
+              prefix-length: 24
+            - ip: 192.0.1.253
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+        """
+    )
+    apply_with_description(
+        "Configure the veth device veth1 with the peer veth1_peer and "
+        "address 192.0.2.251/24, 192.0.2.252/24, and 192.0.1.253/24."
+        "This is done with the expectation that the kernel"
+        "will re-order the addresses",
+        desired_state,
+        kernel_only=True,
+    )
+
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            - ip: 192.0.1.253
+              prefix-length: 24
+            - ip: 192.0.2.252
+              prefix-length: 24
+            - ip: 192.0.3.254
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+        """
+    )
+    libnmstate.apply(
+        desired_state,
+        kernel_only=True,
+    )
+
+    actual_addrs = iproute_get_ip_addrs_with_order("veth1", is_ipv6=False)
+    assert actual_addrs == [
+        "192.0.2.251",
+        "192.0.1.253",
+        "192.0.3.254",
+        "192.0.2.252",
+    ]
+
+
+def test_kernel_mode_apply_static_ipv4_tail_remove(cleanup_veth1_kernel_mode):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            - ip: 192.0.1.253
+              prefix-length: 24
+            - ip: 192.0.2.252
+              prefix-length: 24
+            - ip: 192.0.3.254
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+        """
+    )
+    apply_with_description(
+        "Configure the veth device veth1 with the peer veth1_peer and "
+        "address 192.0.2.251/24, 192.0.1.253/24, 192.0.2.252/24, and "
+        "192.0.3.254/24 with the expectation that the kernel"
+        "will re-order the addresses",
+        desired_state,
+        kernel_only=True,
+    )
+
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv4:
+            address:
+            - ip: 192.0.2.251
+              prefix-length: 24
+            - ip: 192.0.1.253
+              prefix-length: 24
+            - ip: 192.0.2.252
+              prefix-length: 24
+            dhcp: false
+            enabled: true
+        """
+    )
+    libnmstate.apply(desired_state, kernel_only=True)
+
+    actual_addrs = iproute_get_ip_addrs_with_order("veth1", is_ipv6=False)
+    assert actual_addrs == ["192.0.2.251", "192.0.1.253", "192.0.2.252"]

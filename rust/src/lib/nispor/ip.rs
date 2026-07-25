@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::net::IpAddr;
 use std::str::FromStr;
 
 use crate::{
     InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, MergedInterface,
-    nispor::mptcp::get_mptcp_flags,
+    ip::is_ipv6_unicast_link_local, nispor::mptcp::get_mptcp_flags,
 };
 
 pub(crate) fn np_ipv4_to_nmstate(
@@ -155,44 +156,78 @@ pub(crate) fn nmstate_ipv4_to_np(
 ) -> nispor::IpConf {
     let mut np_ip_conf = nispor::IpConf::default();
 
-    // delete ip addresses not in desired state
-    if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref()
-        && let (Some(nms_cur_ipv4), Some(nms_des_ipv4)) = (
-            &nms_cur_iface.base_iface().ipv4,
-            &nms_merged_iface.merged.base_iface().ipv4,
-        )
-    {
-        let des_ips: Vec<_> = nms_des_ipv4
-            .addresses
-            .as_deref()
-            .unwrap_or_default()
-            .iter()
-            .collect();
+    let mut to_add = Vec::new();
+    let mut to_remove = Vec::new();
 
-        for nms_addr in nms_cur_ipv4.addresses.as_deref().unwrap_or_default() {
-            if !des_ips.contains(&nms_addr) {
-                np_ip_conf.addresses.push({
-                    let mut ip_conf = nispor::IpAddrConf::default();
-                    ip_conf.address = nms_addr.ip.to_string();
-                    ip_conf.prefix_len = nms_addr.prefix_length;
-                    ip_conf.remove = true;
-                    ip_conf
-                });
-            }
-        }
+    if let Some(ipv4) = nms_merged_iface.merged.base_iface().ipv4.as_ref()
+        && !ipv4.is_ipv4_primary_first()
+    {
+        log::info!(
+            "Kernel will re-order ip addresses due to primary addresses being found after secondary addresses"
+        );
     }
 
-    // Add new ip address entries before deleting
-    if let Some(nms_des_ipv4) = &nms_merged_iface.merged.base_iface().ipv4 {
-        for nms_addr in nms_des_ipv4.addresses.as_deref().unwrap_or_default() {
+    let des_ips = if let Some(ipv4) =
+        nms_merged_iface.merged.base_iface().ipv4.as_ref()
+    {
+        ipv4.addresses.as_deref().unwrap_or(&[])
+    } else {
+        &[]
+    };
+    let cur_ips = if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref()
+        && let Some(nms_cur_ipv4) = nms_cur_iface.base_iface().ipv4.as_ref()
+    {
+        nms_cur_ipv4.addresses.as_deref().unwrap_or(&[])
+    } else {
+        &[]
+    };
+
+    let des_len = des_ips.len();
+    let cur_len = cur_ips.len();
+
+    if cur_len > des_len {
+        if cur_ips.starts_with(des_ips) {
+            to_remove.extend(cur_ips.iter().skip(des_len));
+        } else {
+            to_remove.extend(cur_ips.iter());
+            to_add.extend(des_ips.iter());
+        }
+    } else if des_ips.starts_with(cur_ips) {
+        to_add.extend(des_ips.iter().skip(cur_len));
+    } else {
+        to_remove.extend(cur_ips.iter());
+        to_add.extend(des_ips.iter());
+    }
+
+    // purge and add
+    to_remove
+        .iter()
+        .filter(|addr| {
+            if let IpAddr::V4(ip) = addr.ip
+                && addr.is_auto()
+            {
+                log::info!("Skipping purge of dynamic IPv4 address: {ip}");
+                return false;
+            }
+            true
+        })
+        .for_each(|addr| {
             np_ip_conf.addresses.push({
                 let mut ip_conf = nispor::IpAddrConf::default();
-                ip_conf.address = nms_addr.ip.to_string();
-                ip_conf.prefix_len = nms_addr.prefix_length;
+                ip_conf.address = addr.ip.to_string();
+                ip_conf.prefix_len = addr.prefix_length;
+                ip_conf.remove = true;
                 ip_conf
             });
-        }
-    }
+        });
+    to_add.iter().for_each(|addr| {
+        np_ip_conf.addresses.push({
+            let mut ip_conf = nispor::IpAddrConf::default();
+            ip_conf.address = addr.ip.to_string();
+            ip_conf.prefix_len = addr.prefix_length;
+            ip_conf
+        });
+    });
     np_ip_conf
 }
 
@@ -201,43 +236,78 @@ pub(crate) fn nmstate_ipv6_to_np(
 ) -> nispor::IpConf {
     let mut np_ip_conf = nispor::IpConf::default();
 
-    // delete ip addresses not in desired state
-    if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref()
-        && let (Some(nms_cur_ipv6), Some(nms_des_ipv6)) = (
-            &nms_cur_iface.base_iface().ipv6,
-            &nms_merged_iface.merged.base_iface().ipv6,
-        )
-    {
-        let des_ips: Vec<_> = nms_des_ipv6
-            .addresses
-            .as_deref()
-            .unwrap_or_default()
-            .iter()
-            .collect();
+    let mut to_add = Vec::new();
+    let mut to_remove = Vec::new();
 
-        for nms_addr in nms_cur_ipv6.addresses.as_deref().unwrap_or_default() {
-            if !des_ips.contains(&nms_addr) {
-                np_ip_conf.addresses.push({
-                    let mut ip_conf = nispor::IpAddrConf::default();
-                    ip_conf.address = nms_addr.ip.to_string();
-                    ip_conf.prefix_len = nms_addr.prefix_length;
-                    ip_conf.remove = true;
-                    ip_conf
-                });
-            }
+    let des_ips = if let Some(ipv6) =
+        nms_merged_iface.merged.base_iface().ipv6.as_ref()
+    {
+        ipv6.addresses.as_deref().unwrap_or(&[])
+    } else {
+        &[]
+    };
+    let cur_ips = if let Some(nms_cur_iface) = nms_merged_iface.current.as_ref()
+        && let Some(nms_cur_ipv6) = nms_cur_iface.base_iface().ipv6.as_ref()
+    {
+        nms_cur_ipv6.addresses.as_deref().unwrap_or(&[])
+    } else {
+        &[]
+    };
+
+    let des_len = des_ips.len();
+    let cur_len = cur_ips.len();
+
+    if cur_len > des_len {
+        if cur_ips.starts_with(des_ips) {
+            to_remove.extend(cur_ips.iter().skip(des_len));
+        } else {
+            to_remove.extend(cur_ips.iter());
+            to_add.extend(des_ips.iter());
         }
+    } else if des_ips.starts_with(cur_ips) {
+        to_add.extend(des_ips.iter().skip(cur_len));
+    } else {
+        to_remove.extend(cur_ips.iter());
+        to_add.extend(des_ips.iter());
     }
 
-    // Add new ip address entries after deleting
-    if let Some(nms_des_ipv6) = &nms_merged_iface.merged.base_iface().ipv6 {
-        for nms_addr in nms_des_ipv6.addresses.as_deref().unwrap_or_default() {
+    // purge and add
+    to_remove
+        .iter()
+        .filter(|addr| {
+            if let IpAddr::V6(ip) = addr.ip
+            {
+                if addr.is_auto() {
+                        log::info!(
+                            "Skipping purge of dynamic IPv6 address: {ip}"
+                        );
+                        return false;
+                }
+                if is_ipv6_unicast_link_local(&ip) {
+                    log::info!(
+                        "Skipping purge of unicast link local IPv6 address: {ip}"
+                    );
+                    return false;
+                }
+            };
+            true
+        })
+        .for_each(|addr| {
             np_ip_conf.addresses.push({
                 let mut ip_conf = nispor::IpAddrConf::default();
-                ip_conf.address = nms_addr.ip.to_string();
-                ip_conf.prefix_len = nms_addr.prefix_length;
+                ip_conf.address = addr.ip.to_string();
+                ip_conf.prefix_len = addr.prefix_length;
+                ip_conf.remove = true;
                 ip_conf
             });
-        }
-    }
+        });
+    to_add.iter().for_each(|addr| {
+        np_ip_conf.addresses.push({
+            let mut ip_conf = nispor::IpAddrConf::default();
+            ip_conf.address = addr.ip.to_string();
+            ip_conf.prefix_len = addr.prefix_length;
+            ip_conf
+        });
+    });
     np_ip_conf
 }
