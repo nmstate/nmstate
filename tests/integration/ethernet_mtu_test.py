@@ -7,6 +7,8 @@ import pytest
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.error import NmstateValueError
 
 from .testlib.apply import apply_with_description
@@ -28,8 +30,8 @@ def eth1_with_ipv6(eth1_up):
 
 
 @pytest.mark.tier1
-def test_increase_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_increase_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1900
 
@@ -39,8 +41,8 @@ def test_increase_iface_mtu():
 
 
 @pytest.mark.tier1
-def test_decrease_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_decrease_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1400
 
@@ -50,8 +52,8 @@ def test_decrease_iface_mtu():
 
 
 @pytest.mark.tier1
-def test_upper_limit_jambo_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_upper_limit_jambo_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 9000
 
@@ -60,8 +62,8 @@ def test_upper_limit_jambo_iface_mtu():
     assertlib.assert_state(desired_state)
 
 
-def test_increase_more_than_jambo_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
+def test_increase_more_than_jambo_iface_mtu(eth1_up):
+    desired_state = eth1_up
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 10000
 
@@ -95,11 +97,23 @@ def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
 
 
 def test_mtu_without_ipv6(eth1_up):
-    eth1_up[Interface.KEY][0][Interface.MTU] = 576
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.MTU: 576,
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: False,
+                },
+            }
+        ]
+    }
     apply_with_description(
-        "Setting MTU of eth1 to 576 with IPv6 disabled", eth1_up
+        "Setting MTU of eth1 to 576 with IPv6 disabled", desired_state
     )
-    assertlib.assert_state(eth1_up)
+    assertlib.assert_state(desired_state)
 
 
 @pytest.mark.tier1

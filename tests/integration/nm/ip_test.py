@@ -71,7 +71,7 @@ def test_get_applied_config_for_dhcp_state_with_dhcp_disabled_on_disk(
 
 
 @pytest.fixture
-def eth1_up_with_static_ip_and_route_by_iproute():
+def eth1_up_with_static_ip_and_route_by_iproute(eth1_env):
     cmdlib.exec_cmd("ip link set eth1 up".split(), check=True)
     cmdlib.exec_cmd(
         f"ip addr add {IPV4_ADDRESS1}/24 dev eth1 ".split(), check=True

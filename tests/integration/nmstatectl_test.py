@@ -209,14 +209,14 @@ def test_show_command_with_short_show_secrets():
     state_match(LOOPBACK_CONFIG, current_state)
 
 
-def test_apply_command_with_yaml_format():
+def test_apply_command_with_yaml_format(eth1_up):
     ret = cmdlib.exec_cmd(APPLY_CMD, stdin=ETH1_YAML_CONFIG)
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
 
 
-def test_set_command_with_yaml_deprecated():
+def test_set_command_with_yaml_deprecated(eth1_up):
     ret = cmdlib.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
     rc, out, err = ret
 
@@ -224,7 +224,7 @@ def test_set_command_with_yaml_deprecated():
     assert SET_WARNING in err.rstrip()
 
 
-def test_apply_command_with_two_states():
+def test_apply_command_with_two_states(eth1_up):
     examples = find_examples_dir()
     cmd = APPLY_CMD + [
         os.path.join(examples, "linuxbrige_eth1_up.yml"),

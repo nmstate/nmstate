@@ -1389,7 +1389,7 @@ def test_static_ip_with_routes_switch_back_to_dynamic(
 
 
 @pytest.fixture(scope="function")
-def eth1_with_dhcp6_no_dhcp_server():
+def eth1_with_dhcp6_no_dhcp_server(eth1_env):
     # Cannot depend on eth1_up fixture as the reproducer requires the
     # veth profile been created with DHCPv6 enabled.
     iface_state = {

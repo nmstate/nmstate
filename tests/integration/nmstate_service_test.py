@@ -221,7 +221,7 @@ def conf_override():
 
 
 @pytest.fixture
-def empty_eth1_yaml_conf():
+def empty_eth1_yaml_conf(eth1_env):
     file_path = f"{CONFIG_DIR}/eth1.yml"
     with open(file_path, "w") as fd:
         fd.write(

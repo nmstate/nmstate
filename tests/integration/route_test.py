@@ -678,6 +678,7 @@ def test_static_route_with_empty_ip(eth1_up):
     }
     eth1_state[Interface.IPV6] = {
         InterfaceIPv6.DHCP: False,
+        InterfaceIPv6.AUTOCONF: False,
         InterfaceIPv6.ENABLED: True,
         InterfaceIPv4.ADDRESS: [],
     }
@@ -756,7 +757,7 @@ def _get_routes_from_iproute(family, table):
     return out
 
 
-def test_remove_default_ipv6_gateway_and_revert():
+def test_remove_default_ipv6_gateway_and_revert(eth1_up):
     gateway1 = {
         Route.DESTINATION: "::/0",
         Route.METRIC: -1,

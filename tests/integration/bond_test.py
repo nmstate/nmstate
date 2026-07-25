@@ -815,7 +815,7 @@ def test_create_bond_with_both_miimon_and_arp_internal():
 
 
 @pytest.mark.tier1
-def test_change_2_port_bond_mode_from_1_to_5():
+def test_change_2_port_bond_mode_from_1_to_5(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
         port=[ETH1, ETH2],
@@ -841,12 +841,6 @@ def test_set_miimon_100_on_existing_bond(bond99_with_2_port):
     assertlib.assert_state_match(state)
 
 
-@pytest.fixture
-def eth1_eth2_with_no_profile():
-    yield
-    ifaces_init(ETH1, ETH2)
-
-
 def _nmcli_simulate_boot(ifname):
     """
     Use nmcli to reactivate the profile to simulate the server reboot.
@@ -859,11 +853,12 @@ def _nmcli_simulate_boot(ifname):
     time.sleep(1)
 
 
+# This test require eth1 and eth2 to have no stored profile
 # TODO: This test case has random failure in Github CI and NMCI environment,
 #       considering this is a ovirt use case which holds low priority,
 #       we remove it from tier1 temporary till issue been resolved.
 # @pytest.mark.tier1
-def test_new_bond_uses_mac_of_first_port_by_name(eth1_eth2_with_no_profile):
+def test_new_bond_uses_mac_of_first_port_by_name(eth1_env, eth2_env):
     """
     On system boot, NetworkManager will by default activate port in the
     order of their name. Nmstate should provide the consistent MAC address for
@@ -1584,7 +1579,7 @@ def test_bond_opt_lacp_active(lacp_bond99_with_2_ports):
 
 
 @pytest.fixture
-def bond99_with_ns_ip6_target(setup_remove_bond99):
+def bond99_with_ns_ip6_target(eth1_up, eth2_up, setup_remove_bond99):
     state = yaml.load(
         """---
         interfaces:
@@ -1717,7 +1712,7 @@ def empty_br0():
         yield
 
 
-def test_attach_new_bond_to_existing_bridge(empty_br0):
+def test_attach_new_bond_to_existing_bridge(eth1_up, eth2_up, empty_br0):
     with bond_interface(
         name=BOND99,
         port=[ETH1, ETH2],
@@ -1749,7 +1744,9 @@ def cleanup_vlan():
     )
 
 
-def test_attach_new_vlan_of_new_bond_to_exist_bridge(empty_br0, cleanup_vlan):
+def test_attach_new_vlan_of_new_bond_to_exist_bridge(
+    eth1_up, eth2_up, empty_br0, cleanup_vlan
+):
     with bond_interface(
         name=BOND99,
         port=[ETH1, ETH2],

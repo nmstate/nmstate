@@ -26,7 +26,7 @@ RETRY_TIMEOUT = 10
 
 
 @pytest.fixture
-def unmanaged_eth1_with_static_gw():
+def unmanaged_eth1_with_static_gw(eth1_env):
     try:
         cmdlib.exec_cmd(f"nmcli connection delete {ETH1}".split(), check=False)
         cmdlib.exec_cmd(f"nmcli dev set {ETH1} managed no".split(), check=True)
@@ -157,6 +157,40 @@ def auto_eth1(eth1_up):
             Interface.KEY: [
                 {
                     Interface.NAME: "eth1",
+                    Interface.PROFILE_NAME: "eth1",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.AUTO_DNS: True,
+                        InterfaceIPv4.AUTO_ROUTES: True,
+                        InterfaceIPv4.AUTO_GATEWAY: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTO_DNS: True,
+                        InterfaceIPv6.AUTO_ROUTES: True,
+                        InterfaceIPv6.AUTO_GATEWAY: True,
+                    },
+                }
+            ],
+        }
+    )
+    yield
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
+
+
+@pytest.fixture
+def auto_eth2(eth2_up):
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth2",
+                    Interface.PROFILE_NAME: "eth2",
                     Interface.TYPE: InterfaceType.ETHERNET,
                     Interface.STATE: InterfaceState.UP,
                     Interface.IPV4: {
@@ -285,6 +319,7 @@ def test_reselect_iface_dns_if_desired(eth1_up):
             server: {}
         interfaces:
         - name: eth1
+          profile-name: eth1
           type: ethernet
           state: up
           ipv4:
@@ -313,6 +348,7 @@ def test_write_both_global_dns_and_iface_dns(eth1_up):
         """---
         interfaces:
         - name: eth1
+          profile-name: eth1
           type: ethernet
           state: up
           ipv4:
@@ -331,10 +367,9 @@ def test_write_both_global_dns_and_iface_dns(eth1_up):
 
 
 # https://issues.redhat.com/browse/RHEL-102333
-def test_set_dns_search_only_in_down_iface(auto_eth1, eth2_up):
+def test_set_dns_search_only_in_down_iface(auto_eth1, auto_eth2):
     # Add a DNS search domain to a down interface
     cmdlib.exec_cmd("nmcli device down eth2".split(), check=True)
-    cmdlib.exec_cmd("nmcli c modify eth2 ipv4.method auto".split(), check=True)
     cmdlib.exec_cmd(
         "nmcli c modify eth2 ipv4.dns-search 'example.com'".split(),
         check=True,

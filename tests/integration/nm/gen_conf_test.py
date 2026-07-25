@@ -129,7 +129,7 @@ interfaces:
 
 
 @pytest.mark.tier1
-def test_gen_conf_routes_rules():
+def test_gen_conf_routes_rules(eth1_up):
     desired_state = load_yaml(
         """---
         routes:
@@ -213,7 +213,7 @@ def verify_ovs_ports(bridge_name, port_names):
     assert cur_ports == port_names
 
 
-def test_gen_conf_ecmp_routes():
+def test_gen_conf_ecmp_routes(eth1_up):
     desired_state = load_yaml(
         """---
         interfaces:
@@ -249,7 +249,7 @@ def test_gen_conf_ecmp_routes():
         assert_routes(desired_routes, cur_state)
 
 
-def test_gen_conf_lldp():
+def test_gen_conf_lldp(eth1_up):
     desired_state = load_yaml(
         """---
         interfaces:
@@ -479,7 +479,7 @@ def test_gen_conf_route_next_hop_iface_ref_by_mac(eth1_eth2_up_with_no_config):
         assert_routes(expected_routes, cur_state)
 
 
-def test_gen_conf_route_initcwnd_mtu_quickack_advmss_lock_mtu():
+def test_gen_conf_route_initcwnd_mtu_quickack_advmss_lock_mtu(eth1_up):
     desired_state = load_yaml(
         """---
         routes:
