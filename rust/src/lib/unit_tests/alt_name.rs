@@ -420,3 +420,85 @@ fn test_do_not_resolve_mac_identifer_iface_to_alt_name() {
     assert!(merged_iface.for_verify.is_none());
     assert!(merged_iface.desired.is_none());
 }
+
+#[test]
+fn test_copy_mac_from_existing_down_port() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: bond99
+            type: bond
+            state: up
+            copy-mac-from: eth1
+            link-aggregation:
+              mode: balance-rr
+              port:
+                - eth1
+                - eth2",
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: down
+            mac-address: AA:BB:CC:DD:EE:FF
+          - name: eth2
+            type: ethernet
+            state: up
+            mac-address: 11:22:33:44:55:66",
+    )
+    .unwrap();
+
+    let merged_state =
+        MergedNetworkState::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let bond_iface =
+        merged_state.interfaces.kernel_ifaces.get("bond99").unwrap();
+    let bond_mac = bond_iface
+        .for_apply
+        .as_ref()
+        .and_then(|i| i.base_iface().mac_address.as_ref());
+
+    assert_eq!(bond_mac, Some(&"AA:BB:CC:DD:EE:FF".to_string()));
+}
+
+#[test]
+fn test_copy_mac_from_new_down_interface_fails() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: down
+            mac-address: AA:BB:CC:DD:EE:FF
+          - name: bond99
+            type: bond
+            state: up
+            copy-mac-from: eth1
+            link-aggregation:
+              mode: balance-rr
+              port:
+                - eth2",
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r"---
+        interfaces:
+          - name: eth2
+            type: ethernet
+            state: up
+            mac-address: 11:22:33:44:55:66",
+    )
+    .unwrap();
+
+    let result =
+        MergedNetworkState::new(desired, current, Default::default(), false);
+
+    let e = result.unwrap_err();
+    assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    assert!(e.msg().contains("eth1"));
+    assert!(e.msg().contains("copy-mac-from"));
+}

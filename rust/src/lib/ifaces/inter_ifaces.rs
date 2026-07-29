@@ -1248,7 +1248,7 @@ impl InterfaceNameSearch {
     {
         let mut kernel_nics: HashSet<String> = HashSet::new();
 
-        for iface in merged_ifaces.clone().filter(|i| i.merged.is_up()) {
+        for iface in merged_ifaces.clone() {
             if let Some(cur_iface) = iface.current.as_ref() {
                 // Existing kernel interface
                 kernel_nics.insert(cur_iface.name().to_string());
@@ -1256,6 +1256,7 @@ impl InterfaceNameSearch {
                 // Creating new kernel interface
                 if des_iface.base_iface().identifier.as_ref()
                     != Some(&InterfaceIdentifier::MacAddress)
+                    && des_iface.is_up()
                 {
                     kernel_nics.insert(des_iface.name().to_string());
                 }
