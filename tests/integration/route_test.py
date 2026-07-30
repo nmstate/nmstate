@@ -2107,6 +2107,7 @@ def cleanup_veth1_kernel_mode():
         libnmstate.apply(desired_state, kernel_only=True)
 
 
+@pytest.mark.kernel
 def test_kernel_mode_static_route_and_remove(cleanup_veth1_kernel_mode):
     desired_state = load_yaml(
         """---
@@ -2603,6 +2604,7 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
         "v6_metricless_vs_kernel_default",
     ],
 )
+@pytest.mark.kernel
 def test_kernel_mode_fail_on_same_dst_metric_routes(
     routes,
     cleanup_veth1_kernel_mode,

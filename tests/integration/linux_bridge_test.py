@@ -1158,6 +1158,7 @@ def test_linux_bridge_set_vlan_protocol(bridge0_with_port0, vlan_protocol):
     )
 
 
+@pytest.mark.kernel
 def test_create_and_remove_linux_bridge_kernel_mode():
     bridge_name = TEST_BRIDGE0
     with linux_bridge(

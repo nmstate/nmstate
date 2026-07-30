@@ -17,6 +17,7 @@ TEST_TYPE_INTEG="integ"
 TEST_TYPE_INTEG_TIER1="integ_tier1"
 TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
+TEST_TYPE_INTEG_KERNEL="integ_kernel"
 
 FEDORA_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:latest"
 RAWHIDE_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:rawhide"
@@ -49,7 +50,7 @@ function print_help() {
     echo "                           Choose the container image"
     echo "  --machine                Run in baremetal instead"
     echo "Test options:"
-    echo "  --test-type=TYPE         all (default), integ, integ_tier1, integ_tier2, integ_slow, rust_go"
+    echo "  --test-type=TYPE         all (default), integ, integ_tier1, integ_tier2, integ_slow, integ_kernel, rust_go"
     echo "  --debug-shell            On failure open a debug shell, don't exit"
     echo "  --pytest-args=ARGS"
     echo "  --test-vdsm"
@@ -106,18 +107,13 @@ function install_nmstate {
 }
 
 function run_tests {
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_RUST_GO ];then
+    if [ $TEST_TYPE == $TEST_TYPE_ALL ];then
         if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
             echo "Running rust go binding test in $CONTAINER_IMAGE container is not " \
                  "support yet"
         else
             exec_cmd "make go_check"
         fi
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_INTEG ];then
         exec_cmd "cd $CONTAINER_WORKSPACE"
         exec_cmd "
             pytest \
@@ -126,34 +122,6 @@ function run_tests {
             --dump-states \
             tests/integration \
             ${nmstate_pytest_extra_args}"
-    fi
-
-    if  [ $TEST_TYPE == $TEST_TYPE_INTEG_TIER1 ];then
-        exec_cmd "cd $CONTAINER_WORKSPACE"
-        exec_cmd "
-          pytest \
-            $PYTEST_OPTIONS \
-            --junitxml=junit.integ_tier1.xml \
-            --dump-states \
-            -m tier1 \
-            tests/integration \
-            ${nmstate_pytest_extra_args}"
-    fi
-
-    if  [ $TEST_TYPE == $TEST_TYPE_INTEG_TIER2 ];then
-        exec_cmd "cd $CONTAINER_WORKSPACE"
-        exec_cmd "
-          pytest \
-            $PYTEST_OPTIONS \
-            --junitxml=junit.integ_tier2.xml \
-            --dump-states \
-            -m tier2 \
-            tests/integration \
-            ${nmstate_pytest_extra_args}"
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_INTEG_SLOW ];then
         exec_cmd "cd $CONTAINER_WORKSPACE"
         exec_cmd "
           pytest \
@@ -163,6 +131,66 @@ function run_tests {
             -m slow --runslow \
             tests/integration \
             ${nmstate_pytest_extra_args}"
+    elif [ $TEST_TYPE == $TEST_TYPE_RUST_GO ];then
+        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+            echo "Running rust go binding test in $CONTAINER_IMAGE container is not " \
+                 "support yet"
+        else
+            exec_cmd "make go_check"
+        fi
+    elif [ $TEST_TYPE == $TEST_TYPE_INTEG ];then
+        exec_cmd "cd $CONTAINER_WORKSPACE"
+        exec_cmd "
+            pytest \
+            $PYTEST_OPTIONS \
+            --junitxml=junit.integ.xml \
+            --dump-states \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    elif [ $TEST_TYPE == $TEST_TYPE_INTEG_TIER1 ];then
+        exec_cmd "cd $CONTAINER_WORKSPACE"
+        exec_cmd "
+          pytest \
+            $PYTEST_OPTIONS \
+            --junitxml=junit.integ_tier1.xml \
+            --dump-states \
+            -m tier1 \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    elif [ $TEST_TYPE == $TEST_TYPE_INTEG_TIER2 ];then
+        exec_cmd "cd $CONTAINER_WORKSPACE"
+        exec_cmd "
+          pytest \
+            $PYTEST_OPTIONS \
+            --junitxml=junit.integ_tier2.xml \
+            --dump-states \
+            -m tier2 \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    elif [ $TEST_TYPE == $TEST_TYPE_INTEG_KERNEL ];then
+        exec_cmd "cd $CONTAINER_WORKSPACE"
+        exec_cmd "
+          pytest \
+            $PYTEST_OPTIONS \
+            --junitxml=junit.integ_kernel.xml \
+            --dump-states \
+            -m kernel \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    elif [ $TEST_TYPE == $TEST_TYPE_INTEG_SLOW ];then
+        exec_cmd "cd $CONTAINER_WORKSPACE"
+        exec_cmd "
+          pytest \
+            $PYTEST_OPTIONS \
+            --junitxml=junit.integ_slow.xml \
+            --dump-states \
+            -m slow --runslow \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    else
+        echo "Invalid --test-type value: '$TEST_TYPE'" >&2
+        echo "Expected one of: all, integ, integ_tier1, integ_tier2, integ_slow, integ_kernel, rust_go" >&2
+        exit 1
     fi
 }
 
@@ -274,6 +302,11 @@ while true; do
         ;;
     --test-type)
         shift
+        if [[ -z "$1" || "$1" =~ [[:space:]] ]]; then
+            echo "Invalid --test-type value: '$1'" >&2
+            echo "Expected a single token without whitespace" >&2
+            exit 1
+        fi
         TEST_TYPE="$1"
         ;;
     --el8)

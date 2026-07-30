@@ -43,6 +43,10 @@ You may change the test type by specifying the `--test-type` flag, for example:
    Integration tier2 test cases using `nmstate/fed-nmstate-dev` container
    image.
 
+ * `./automation/run-tests.sh --test-type integ_kernel`:
+   Integration kernel test cases using `nmstate/fed-nmstate-dev` container
+   image.
+
  * `./automation/run-tests.sh --test-type integ_slow`:
    Integration slow test cases using `nmstate/fed-nmstate-dev` container
    image.

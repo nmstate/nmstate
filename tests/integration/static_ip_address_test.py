@@ -849,6 +849,7 @@ def test_preserve_ip_conf_if_not_mentioned(setup_eth1_static_ip):
     assertlib.assert_state_match(desired_state)
 
 
+@pytest.mark.kernel
 def test_static_ip_kernel_mode():
     desired_state = {
         Interface.KEY: [
@@ -1184,6 +1185,7 @@ def cleanup_veth1_kernel_mode():
 
 
 # TODO(Gris): kernel mode cannot remove IP address yet
+@pytest.mark.kernel
 def test_kernel_mode_static_ip(cleanup_veth1_kernel_mode):
     desired_state = load_yaml(
         """---
@@ -1217,6 +1219,7 @@ def test_kernel_mode_static_ip(cleanup_veth1_kernel_mode):
     assertlib.assert_state_match(desired_state, kernel_only=True)
 
 
+@pytest.mark.kernel
 def test_kernel_mode_change_static_ip(cleanup_veth1_kernel_mode):
     desired_state = load_yaml(
         """---
