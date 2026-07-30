@@ -41,6 +41,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark time consuming test")
     config.addinivalue_line("markers", "tier2")
     config.addinivalue_line("markers", "tier1")
+    config.addinivalue_line("markers", "kernel")
 
 
 def pytest_addoption(parser):
@@ -88,7 +89,7 @@ def _mark_skip_slow_tests(items):
 
 def _mark_tier2_tests(items):
     for item in items:
-        if "tier1" not in item.keywords:
+        if "tier1" not in item.keywords and "kernel" not in item.keywords:
             item.add_marker(pytest.mark.tier2)
 
 

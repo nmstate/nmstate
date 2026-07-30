@@ -630,6 +630,7 @@ def test_purge_dns_with_empty_server_and_search(static_dns):
     assert not current_state[DNS.KEY][DNS.CONFIG]
 
 
+@pytest.mark.kernel
 def test_kernel_mode_dns_and_purge():
     desired_state = load_yaml(
         """---

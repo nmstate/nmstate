@@ -89,6 +89,7 @@ class TestVeth:
         assertlib.assert_absent(VETH1PEER)
 
     @pytest.mark.tier1
+    @pytest.mark.kernel
     def test_add_and_remove_veth_kernel_mode(self):
         with veth_interface(
             VETH1, VETH1PEER, kernel_mode=True
