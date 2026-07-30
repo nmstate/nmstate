@@ -129,6 +129,14 @@ jobs:
       - name: Enable openvswitch kernel module
         run: sudo modprobe openvswitch
 
+      - name: Configure podman to use newer crun
+        run: |
+          # Workaround for ubuntu-24.04 runner image crun version mismatch
+          # See: https://github.com/actions/runner-images/issues/14473
+          sudo mkdir -p /etc/containers
+          ( echo '[engine.runtimes]';
+            echo 'crun = [ "/usr/local/bin/crun" ]' ) | sudo tee /etc/containers/containers.conf
+
       - name: Download compiled EL9 rpm
         uses: actions/download-artifact@v8
         with:
