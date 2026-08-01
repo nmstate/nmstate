@@ -99,6 +99,23 @@ jobs:
         shell: bash
         run: ./automation/run-lint-tests.sh
 
+  commit_lint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitlint
+        run: pip install gitlint==0.19.1
+      - name: Run gitlint
+        run: >-
+          gitlint --commits
+          ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+
   integ:
     timeout-minutes: 30
     runs-on: ubuntu-latest
