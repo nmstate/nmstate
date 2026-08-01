@@ -119,7 +119,17 @@ Here are a few rules to keep in mind while writing a commit message
  See also: #456, #789
 
 Do not forget to sign your commit! Use `git commit -s`
+```
 
+Rules 1, 2, 4 and 6 are enforced by
+[gitlint](https://jorisroovers.com/gitlint/) in CI (see `.gitlint`);
+besides a period, gitlint also rejects `!`, `,` and `;` at the end of
+the subject line.
+To check commit messages locally, and to run the Rust lint hooks,
+install the [pre-commit](https://pre-commit.com/) hooks:
+
+```console
+pre-commit install --hook-type pre-commit --hook-type commit-msg
 ```
 
 This is taken from [chris beams git commit](https://chris.beams.io/posts/git-commit/).
