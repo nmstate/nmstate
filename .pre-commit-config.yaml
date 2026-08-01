@@ -14,3 +14,8 @@ repos:
         language: system
         files: ^rust/.*\.rs$
         pass_filenames: false
+
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: v0.19.1
+    hooks:
+      - id: gitlint

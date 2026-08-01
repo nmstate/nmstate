@@ -1,0 +1,15 @@
+[general]
+regex-style-search=True
+# Signed-off-by is checked by the DCO job; subject-only commits are fine,
+# and release commit bodies shrink below min length once bullets are ignored
+ignore=body-is-missing,body-min-length
+
+# skip changelog bullets in release commits, URLs, and -by trailers
+[ignore-body-lines]
+regex=(^ - )|(https?://)|(^[A-Za-z]+(-[A-Za-z]+)*-by: )
+
+[title-max-length]
+line-length=50
+
+[body-max-line-length]
+line-length=72
