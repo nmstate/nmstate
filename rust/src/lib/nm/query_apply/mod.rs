@@ -40,7 +40,7 @@ pub(crate) use self::{
     lldp::{get_lldp, is_lldp_enabled},
     mptcp::is_mptcp_flags_changed,
     ovs::delete_orphan_ovs_ports,
-    route::is_route_removed,
+    route::{is_route_removed, is_route_table_changed},
     user::get_description,
     veth::is_veth_peer_changed,
     vlan::is_vlan_changed,

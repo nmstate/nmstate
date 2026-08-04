@@ -14,8 +14,8 @@ use super::super::{
         delete_orphan_ovs_ports, dispatch::apply_dispatch_script,
         dns::store_dns_config, is_hsr_changed, is_ip_tunnel_changed,
         is_ipvlan_changed, is_mptcp_flags_changed, is_route_removed,
-        is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
-        is_vxlan_changed, save_nm_connections,
+        is_route_table_changed, is_veth_peer_changed, is_vlan_changed,
+        is_vrf_table_id_changed, is_vxlan_changed, save_nm_connections,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -343,6 +343,8 @@ async fn delete_orphan_ports(
 //  https://bugzilla.redhat.com/1837254
 //  https://issues.redhat.com/browse/RHEL-66262
 //  https://issues.redhat.com/browse/RHEL-67324
+// * Changing ipv4/ipv6.route-table (auto-route-table-id) leaves IPv6 proto
+//   kernel routes in the old table on reapply, so deactivate first.
 // * NM cannot change VRF table ID, so we deactivate first
 // * VLAN config changed.
 // * IP tunnel config changed.
@@ -377,6 +379,7 @@ fn gen_nm_conn_need_to_deactivate_first(
                 conn_matcher.get_applied_by_uuid(uuid)
                 && ((remove_routes_need_deactivate
                     && is_route_removed(nm_conn, nm_applied_conn))
+                    || is_route_table_changed(nm_conn, nm_applied_conn)
                     || is_vrf_table_id_changed(nm_conn, nm_applied_conn)
                     || is_vlan_changed(nm_conn, nm_applied_conn)
                     || is_hsr_changed(nm_conn, nm_applied_conn)

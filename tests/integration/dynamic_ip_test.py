@@ -450,6 +450,76 @@ def test_ipv6_dhcp_set_table_id_with_autoconf(dhcpcli_up):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
+def test_change_auto_route_table_id_clears_old_kernel_routes(dhcpcli_up):
+    """
+    Changing auto-route-table-id must migrate IPv4/IPv6 routes, including
+    IPv6 proto kernel prefix routes, out of the old table. A single-family
+    change must clear only that family's previous table.
+    """
+    desired_state = dhcpcli_up
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state[Interface.IPV4] = _create_ipv4_state(
+        enabled=True, dhcp=True, table_id=1000
+    )
+    dhcp_cli_desired_state[Interface.IPV6] = _create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True, table_id=1000
+    )
+
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with DHCPv4, IPv4 auto dns, "
+        "IPv4 auto gateway, IPv4 auto routes, IPv4 auto route table ID 1000, "
+        "DHCPv6, autoconf, IPv6 auto dns, IPv6 auto gateway, IPv6 auto "
+        "routes, IPv6 auto route table ID 1000",
+        desired_state,
+    )
+    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv6_addr)
+    assert _poll(_has_iface_route_in_table, 4, 1000)
+    assert _poll(_has_kernel_route_in_table, 6, 1000)
+
+    # Change only IPv6 table ID; keep IPv4 on table 1000.
+    dhcp_cli_desired_state[Interface.IPV4] = _create_ipv4_state(
+        enabled=True, dhcp=True, table_id=1000
+    )
+    dhcp_cli_desired_state[Interface.IPV6] = _create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True, table_id=2000
+    )
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with IPv4 auto route table "
+        "ID 1000 and IPv6 auto route table ID 2000",
+        desired_state,
+    )
+
+    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv6_addr)
+    assert _poll(_has_iface_route_in_table, 4, 1000)
+    assert _poll(_has_kernel_route_in_table, 6, 2000)
+    assert _poll(_has_no_kernel_route_in_table, 6, 1000)
+    assert _poll(_has_no_iface_route_in_table, 6, 1000)
+
+    dhcp_cli_desired_state[Interface.IPV4] = _create_ipv4_state(
+        enabled=True, dhcp=True, table_id=2000
+    )
+    dhcp_cli_desired_state[Interface.IPV6] = _create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True, table_id=2000
+    )
+    apply_with_description(
+        "Configure the ethernet device dhcpcli with IPv4 auto route table "
+        "ID 2000 and IPv6 auto route table ID 2000",
+        desired_state,
+    )
+
+    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv6_addr)
+    assert _poll(_has_iface_route_in_table, 4, 2000)
+    assert _poll(_has_kernel_route_in_table, 6, 2000)
+    assert _poll(_has_no_iface_route_in_table, 4, 1000)
+    assert _poll(_has_no_kernel_route_in_table, 6, 1000)
+    assert _poll(_has_no_iface_route_in_table, 6, 1000)
+
+
 def test_ipv6_dhcp_and_autoconf_ignore_gateway(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
@@ -865,6 +935,37 @@ def _get_running_routes():
     )
     logging.debug("Current running routes: {}".format(running_routes))
     return running_routes
+
+
+def _get_routes_from_iproute(family, table):
+    """Return `ip route` output for the given address family and table."""
+    _, out, _ = cmdlib.exec_cmd(
+        f"ip -{family} route show table {table}".split(), check=True
+    )
+    return out
+
+
+def _has_iface_route_in_table(family, table, nic=DHCP_CLI_NIC):
+    """Return True if the interface appears in the given route table."""
+    return nic in _get_routes_from_iproute(family, table)
+
+
+def _has_no_iface_route_in_table(family, table, nic=DHCP_CLI_NIC):
+    """Return True if the interface has no routes in the given table."""
+    return not _has_iface_route_in_table(family, table, nic)
+
+
+def _has_kernel_route_in_table(family, table, nic=DHCP_CLI_NIC):
+    """Return True if a proto kernel route for the iface is in the table."""
+    for line in _get_routes_from_iproute(family, table).splitlines():
+        if nic in line and "proto kernel" in line:
+            return True
+    return False
+
+
+def _has_no_kernel_route_in_table(family, table, nic=DHCP_CLI_NIC):
+    """Return True if no proto kernel route for the iface is in the table."""
+    return not _has_kernel_route_in_table(family, table, nic)
 
 
 def _poll(func, *args, **kwargs):
