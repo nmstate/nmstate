@@ -286,9 +286,15 @@ def ovs_bridge_first_and_ovs_interface_with_same_name_ipv4():
         VERIFY_RETRY_TMO, _verify_ovs_activated, OVS_DUP_NAME
     )
     yield
-    cmdlib.exec_cmd(
-        "nmcli connection del ovs-port-br-ex br-ex ovs-if-br-ex".split(),
-        check=True,
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: OVS_DUP_NAME,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        },
     )
 
 
@@ -313,9 +319,15 @@ def ovs_interface_first_and_ovs_bridge_with_same_name_ipv4():
         VERIFY_RETRY_TMO, _verify_ovs_activated, OVS_DUP_NAME
     )
     yield
-    cmdlib.exec_cmd(
-        "nmcli connection del ovs-port-br-ex br-ex ovs-if-br-ex".split(),
-        check=True,
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: OVS_DUP_NAME,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        },
     )
 
 
