@@ -15,6 +15,7 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.apply import apply_with_description
+from .testlib.retry import retry_till_true_or_timeout
 from .testlib.dummy import nm_unmanaged_dummy
 from .testlib.env import nm_minor_version
 from .testlib.ifacelib import get_mac_address
@@ -456,10 +457,20 @@ def test_add_static_ipv6_with_no_address(eth1_up):
         desired_state,
     )
 
-    cur_state = statelib.show_only(("eth1",))
-    eth1_cur_state = cur_state[Interface.KEY][0]
-    # Should have at least 1 link-local address.
-    assert len(eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]) >= 1
+    def _has_link_local():
+        cur = statelib.show_only(("eth1",))
+        ipv6 = cur[Interface.KEY][0].get(Interface.IPV6, {})
+        return any(
+            is_ipv6_link_local_addr(
+                addr[InterfaceIPv6.ADDRESS_IP],
+                addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
+            )
+            for addr in ipv6.get(InterfaceIPv6.ADDRESS, [])
+        )
+
+    # Should have at least 1 link-local address. Retry to handle kernels
+    # that are slow to assign the link-local address after IPv6 is enabled.
+    assert retry_till_true_or_timeout(10, _has_link_local)
 
 
 def test_add_static_ipv6_with_min_state(eth2_up):
