@@ -572,6 +572,29 @@ def test_gc_on_ovs_dpdk():
     assert "devargs=0000:af:00.1" in ovs_iface_conf
 
 
+def test_gc_ovs_iface_always_includes_ovs_interface_setting():
+    """
+    Regression test for nm/settings/connection.rs: the guard that clears
+    nm_conn.ovs_iface must not fire for connections whose own iface_type is
+    ovs-interface, even when controller_type is absent (e.g. stale OVSDB
+    state where the parent port was already removed). Without the fix, the
+    generated NM connection lacks the required [ovs-interface] setting and
+    NM >= 1.54 rejects it with Connection(MissingSetting).
+    """
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: br-ex
+          type: ovs-interface
+          state: up
+        """
+    )
+    confs = libnmstate.generate_configurations(desired_state)["NetworkManager"]
+    ovs_iface_conns = [c for c in confs if c[0].startswith("br-ex-if")]
+    assert ovs_iface_conns, "No ovs-interface connection generated for br-ex"
+    assert "[ovs-interface]" in ovs_iface_conns[0][1]
+
+
 @pytest.fixture
 def unmaaged_dummy1():
     with nm_unmanaged_dummy(DUMMY1):
