@@ -250,7 +250,9 @@ pub(crate) fn iface_to_nm_connections(
         nm_conn.bridge_port = None;
     }
 
-    if nm_conn.controller_type() != Some(&NmIfaceType::OvsPort) {
+    if nm_conn.controller_type() != Some(&NmIfaceType::OvsPort)
+        && nm_conn.iface_type() != Some(&NmIfaceType::OvsIface)
+    {
         nm_conn.ovs_iface = None;
     }
 
