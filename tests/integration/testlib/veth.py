@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+import sys
 from contextlib import contextmanager
 
 import libnmstate
@@ -9,6 +11,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Veth
 
 from .cmdlib import exec_cmd
+from .retry import retry_till_false_or_timeout
 
 
 def create_veth_pair(nic, nic_peer, peer_ns):
@@ -74,3 +77,10 @@ def veth_interface(ifname, peer, kernel_mode=False):
             }
         )
         libnmstate.apply(d_state, kernel_only=kernel_mode)
+        if retry_till_false_or_timeout(
+            5, os.path.exists, f"/sys/class/net/{ifname}"
+        ):
+            msg = f"{ifname} still in /sys/class/net after absent apply"
+            if sys.exc_info()[1] is None:
+                raise RuntimeError(msg)
+            print(f"WARNING: {msg}")
