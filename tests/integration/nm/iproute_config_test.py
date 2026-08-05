@@ -19,6 +19,7 @@ from ..testlib import cmdlib
 from ..testlib.assertlib import assert_absent
 from ..testlib.assertlib import assert_state_match
 from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.retry import retry_till_true_or_timeout
 from ..testlib.iproutelib import iproute_get_ip_addrs_with_order
 from ..testlib.statelib import show_only
 
@@ -176,11 +177,11 @@ def external_managed_veth1_with_static_ip():
     )
     cmdlib.exec_cmd("ip link set veth1-ep up".split(), check=True)
     cmdlib.exec_cmd("ip link set veth1 up".split(), check=True)
-    cmdlib.exec_cmd("nmcli d set veth1 managed true".split(), check=True)
     cmdlib.exec_cmd("ip addr add 192.0.2.2/24 dev veth1".split(), check=True)
     cmdlib.exec_cmd(
         "ip addr add 2001:db8:f::1/64 dev veth1".split(), check=True
     )
+    cmdlib.exec_cmd("nmcli d set veth1 managed true".split(), check=True)
     yield
     cmdlib.exec_cmd("ip link del veth1".split())
     libnmstate.apply(
@@ -210,10 +211,19 @@ def test_external_managed_veth_with_static_ip(
         }
     ]
     assert ipv6_info[InterfaceIPv6.ENABLED]
-    assert {
-        InterfaceIPv6.ADDRESS_IP: "2001:db8:f::1",
-        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
-    } in ipv6_info[InterfaceIPv6.ADDRESS]
+
+    # Retry to handle kernels that are slow to complete DAD for the static
+    # IPv6 address after it is assigned with ip-addr(8).
+    def _has_static_ipv6():
+        cur_ipv6 = show_only(("veth1",))[Interface.KEY][0].get(
+            Interface.IPV6, {}
+        )
+        return {
+            InterfaceIPv6.ADDRESS_IP: "2001:db8:f::1",
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+        } in cur_ipv6.get(InterfaceIPv6.ADDRESS, [])
+
+    assert retry_till_true_or_timeout(10, _has_static_ipv6)
 
 
 def test_bring_unmanaged_iface_down(unmanged_dummy1_with_static_ip):
