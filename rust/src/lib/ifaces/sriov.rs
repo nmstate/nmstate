@@ -88,7 +88,9 @@ impl SrIovConfig {
 
     // * Convert VF MAC address to upper case
     // * Sort by VF ID
+    // * Remove max_vfs as it is query only
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        self.max_vfs = None;
         if let Some(vfs) = self.vfs.as_mut() {
             for vf in vfs.iter_mut() {
                 if let Some(address) = vf.mac_address.as_mut() {
