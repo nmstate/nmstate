@@ -12,7 +12,7 @@ edition = "2024"
 
 [workspace.dependencies]
 log = "0.4.17"
-serde_yaml = "0.9"
+rmsd_yaml = { git = "https://github.com/nispor/rmsd-yaml" }
 serde = {version = "1.0.137", default-features = false, features = ["derive"]}
 serde_json = { version = "1.0.75", default-features = false }
 nmstate = { path = "src/lib", version = "2.2", default-features = false }

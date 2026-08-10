@@ -4,7 +4,7 @@ use crate::{ErrorKind, Interface, Interfaces, MergedInterfaces};
 
 #[test]
 fn test_can_have_dup_profile_name_when_not_refered() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: port1
@@ -34,7 +34,7 @@ fn test_can_have_dup_profile_name_when_not_refered() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           type: dummy
@@ -58,7 +58,7 @@ fn test_can_have_dup_profile_name_when_not_refered() {
 
 #[test]
 fn test_port_refer_to_kernel_interface() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           type: dummy
@@ -105,7 +105,7 @@ fn test_port_refer_to_kernel_interface() {
 
 #[test]
 fn test_port_cannot_refer_to_interfaces_holding_profile_name() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: br0
           type: linux-bridge
@@ -117,7 +117,7 @@ fn test_port_cannot_refer_to_interfaces_holding_profile_name() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: port1
@@ -147,7 +147,7 @@ fn test_port_cannot_refer_to_interfaces_holding_profile_name() {
 
 #[test]
 fn test_port_ref_not_found() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: br0
           type: linux-bridge
@@ -159,7 +159,7 @@ fn test_port_ref_not_found() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: port2
@@ -183,7 +183,7 @@ fn test_port_ref_not_found() {
 
 #[test]
 fn test_vlan_parent_ref_by_profile_name() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: vlan0
           type: vlan
@@ -195,7 +195,7 @@ fn test_vlan_parent_ref_by_profile_name() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: wan0
@@ -248,7 +248,7 @@ fn test_vlan_parent_ref_by_profile_name() {
 
 #[test]
 fn test_vxlan_parent_ref_by_profile_name() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: vxlan0
           type: vxlan
@@ -262,7 +262,7 @@ fn test_vxlan_parent_ref_by_profile_name() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: wan0
@@ -294,7 +294,7 @@ fn test_vxlan_parent_ref_by_profile_name() {
 
 #[test]
 fn test_macsec_parent_ref_by_profile_name() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: macsec0
   type: macsec
@@ -311,7 +311,7 @@ fn test_macsec_parent_ref_by_profile_name() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: wan0
@@ -343,7 +343,7 @@ fn test_macsec_parent_ref_by_profile_name() {
 
 #[test]
 fn test_macvlan_parent_ref_by_profile_name() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: macvlan0
           type: mac-vlan
@@ -354,7 +354,7 @@ fn test_macvlan_parent_ref_by_profile_name() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: wan0
@@ -391,7 +391,7 @@ fn test_macvlan_parent_ref_by_profile_name() {
 
 #[test]
 fn test_macvtap_parent_ref_by_profile_name() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: macvtap0
           type: mac-vtap
@@ -402,7 +402,7 @@ fn test_macvtap_parent_ref_by_profile_name() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           profile-name: wan0

@@ -29,6 +29,6 @@ pub(crate) fn gen_revert(
     Ok(if matches.get_flag("JSON") {
         serde_json::to_string_pretty(&new_state)?
     } else {
-        serde_yaml::to_string(&new_state)?
+        rmsd_yaml::to_string(&new_state)?
     })
 }

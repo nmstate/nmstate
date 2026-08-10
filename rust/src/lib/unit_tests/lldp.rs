@@ -4,7 +4,7 @@ use crate::LldpConfig;
 
 #[test]
 fn test_lldp_stringlized_attributes() {
-    let confs: Vec<LldpConfig> = serde_yaml::from_str(
+    let confs: Vec<LldpConfig> = rmsd_yaml::from_str(
         r#"
 - enabled: "true"
 - enabled: true
@@ -18,7 +18,7 @@ fn test_lldp_stringlized_attributes() {
     for conf in &confs {
         assert!(conf.enabled);
     }
-    let confs: Vec<LldpConfig> = serde_yaml::from_str(
+    let confs: Vec<LldpConfig> = rmsd_yaml::from_str(
         r#"
 - enabled: "false"
 - enabled: false

@@ -6,7 +6,7 @@ use crate::{
 
 #[test]
 fn test_base_iface_stringlized_attributes() {
-    let iface: BaseInterface = serde_yaml::from_str(
+    let iface: BaseInterface = rmsd_yaml::from_str(
         r#"
 name: "eth1"
 mtu: "1500"
@@ -19,7 +19,7 @@ accept-all-mac-addresses: "true"
 
 #[test]
 fn test_base_iface_mac_address_uppercase_before_verification() {
-    let mut iface: BaseInterface = serde_yaml::from_str(
+    let mut iface: BaseInterface = rmsd_yaml::from_str(
         r#"
 name: "eth1"
 mtu: "1500"
@@ -33,7 +33,7 @@ mac-address: "d4:ee:07:25:42:5a"
 
 #[test]
 fn test_base_iface_serialize_copy_mac_from() {
-    let desired: BaseInterface = serde_yaml::from_str(
+    let desired: BaseInterface = rmsd_yaml::from_str(
         r#"---
           name: bond99
           type: bond
@@ -44,15 +44,14 @@ fn test_base_iface_serialize_copy_mac_from() {
     .unwrap();
 
     let new: BaseInterface =
-        serde_yaml::from_str(&serde_yaml::to_string(&desired).unwrap())
-            .unwrap();
+        rmsd_yaml::from_str(&rmsd_yaml::to_string(&desired).unwrap()).unwrap();
 
     assert_eq!(desired, new);
 }
 
 #[test]
 fn test_reject_mtu_exceeding_u32_max() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           type: dummy
@@ -75,7 +74,7 @@ fn test_reject_mtu_exceeding_u32_max() {
 
 #[test]
 fn test_accept_mtu_of_u32_max() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: dummy1
           type: dummy

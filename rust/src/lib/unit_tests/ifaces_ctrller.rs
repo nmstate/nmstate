@@ -489,7 +489,7 @@ fn test_overbook_swap_port_of_bond() {
 
 #[test]
 fn test_iface_controller_not_conflict_with_bond_ports() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond0
   type: bond
@@ -666,7 +666,7 @@ fn test_iface_detach_controller_been_list_in_other_port_list() {
 
 #[test]
 fn test_iface_controller_conflict_with_empty_br_ports() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: br0
   type: linux-bridge
@@ -699,7 +699,7 @@ fn test_iface_controller_conflict_with_empty_br_ports() {
 
 #[test]
 fn test_auto_manage_ports() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: br0
   type: linux-bridge
@@ -711,7 +711,7 @@ fn test_auto_manage_ports() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -760,7 +760,7 @@ fn test_auto_manage_ports() {
 
 #[test]
 fn test_auto_manage_ovs_bond_ports() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: br0
           type: ovs-bridge
@@ -775,7 +775,7 @@ fn test_auto_manage_ovs_bond_ports() {
                   - name: eth2",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -823,7 +823,7 @@ fn test_auto_manage_ovs_bond_ports() {
 
 #[test]
 fn test_do_not_auto_manage_ports_if_current_has_ignore() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: br0
   type: linux-bridge
@@ -835,7 +835,7 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -887,7 +887,7 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
 
 #[test]
 fn test_absent_iface_holding_controller_and_ip() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           state: absent",
@@ -897,7 +897,7 @@ fn test_absent_iface_holding_controller_and_ip() {
     // Kernel allows NIC hold IP even attached to bridge.
     // When user is removing this interface, we should not care about whether it
     // can hold IP or not.
-    let mut cur_ifaces: Interfaces = serde_yaml::from_str(
+    let mut cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: br0
           type: linux-bridge
@@ -935,7 +935,7 @@ fn test_absent_iface_holding_controller_and_ip() {
 
 #[test]
 fn test_gen_topoligies_bridge_over_vlan() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: br0
   type: linux-bridge
@@ -969,7 +969,7 @@ fn test_gen_topoligies_bridge_over_vlan() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -1005,7 +1005,7 @@ fn test_gen_topoligies_bridge_over_vlan() {
 
 #[test]
 fn test_gen_topoligies_ovs_bridge() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: br0
   type: ovs-interface
@@ -1033,7 +1033,7 @@ fn test_gen_topoligies_ovs_bridge() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -1069,7 +1069,7 @@ fn test_gen_topoligies_ovs_bridge() {
 
 #[test]
 fn test_attach_bond_to_exist_bridge() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0
           type: bond
@@ -1082,7 +1082,7 @@ fn test_attach_bond_to_exist_bridge() {
             - eth1",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -1135,7 +1135,7 @@ fn test_attach_bond_to_exist_bridge() {
 
 #[test]
 fn test_attach_ethernet_to_exist_bridge() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -1143,7 +1143,7 @@ fn test_attach_ethernet_to_exist_bridge() {
           controller: br0",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -1176,7 +1176,7 @@ fn test_attach_ethernet_to_exist_bridge() {
 
 #[test]
 fn test_attach_new_vlan_of_new_bond_to_exist_bridge() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0.100
           type: vlan
@@ -1195,7 +1195,7 @@ fn test_attach_new_vlan_of_new_bond_to_exist_bridge() {
             - eth1",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet

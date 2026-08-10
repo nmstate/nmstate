@@ -60,7 +60,7 @@ pub extern "C" fn nmstate_generate_differences(
                     )
                 })
             } else {
-                serde_yaml::to_string(&s).map_err(|e| {
+                rmsd_yaml::to_string(&s).map_err(|e| {
                     nmstate::NmstateError::new(
                         nmstate::ErrorKind::Bug,
                         format!("Failed to convert state {s:?} to YAML: {e}"),

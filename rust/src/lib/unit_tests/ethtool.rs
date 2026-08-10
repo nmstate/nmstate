@@ -7,7 +7,7 @@ use crate::{
 
 #[test]
 fn test_ethtool_stringlized_attributes() {
-    let iface: EthernetInterface = serde_yaml::from_str(
+    let iface: EthernetInterface = rmsd_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -120,7 +120,7 @@ ethtool:
 #[test]
 fn test_ethtool_apply_feature_alias_normalizes_all_cli_aliases() {
     for (alias, name) in ETHTOOL_FEATURE_CLI_ALIAS {
-        let mut ec: EthtoolConfig = serde_yaml::from_str(&format!(
+        let mut ec: EthtoolConfig = rmsd_yaml::from_str(&format!(
             r"---
             feature:
               {alias}: false",
@@ -136,7 +136,7 @@ fn test_ethtool_apply_feature_alias_normalizes_all_cli_aliases() {
 
 #[test]
 fn test_ethtool_sort_features_when_serialize() {
-    let features: EthtoolFeatureConfig = serde_yaml::from_str(
+    let features: EthtoolFeatureConfig = rmsd_yaml::from_str(
         r"---
         b: true
         a: true
@@ -144,13 +144,13 @@ fn test_ethtool_sort_features_when_serialize() {
     )
     .unwrap();
 
-    let yml_out = serde_yaml::to_string(&features).unwrap();
+    let yml_out = rmsd_yaml::to_string(&features).unwrap();
     assert_eq!(yml_out, "a: true\nb: true\nc: true\n");
 }
 
 #[test]
 fn test_fec_auto_bool_as_string() {
-    let fec: EthtoolFecConfig = serde_yaml::from_str(
+    let fec: EthtoolFecConfig = rmsd_yaml::from_str(
         r#"---
         auto: "true"
         "#,
@@ -162,7 +162,7 @@ fn test_fec_auto_bool_as_string() {
 
 #[test]
 fn test_fec_auto_true_discard_mode() {
-    let mut fec: EthtoolFecConfig = serde_yaml::from_str(
+    let mut fec: EthtoolFecConfig = rmsd_yaml::from_str(
         r#"---
         auto: true
         mode: off

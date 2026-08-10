@@ -157,7 +157,7 @@ fn test_absent_routes_with_iface_only() {
 
 #[test]
 fn test_route_ignore_absent_ifaces() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"
 interfaces:
 - name: br0
@@ -171,7 +171,7 @@ routes:
     )
     .unwrap();
 
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"
 interfaces:
 - name: eth1

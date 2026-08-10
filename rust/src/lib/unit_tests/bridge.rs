@@ -8,7 +8,7 @@ use crate::{
 
 #[test]
 fn test_linux_bridge_ignore_port() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -24,7 +24,7 @@ fn test_linux_bridge_ignore_port() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -76,7 +76,7 @@ fn test_linux_bridge_ignore_port() {
 
 #[test]
 fn test_linux_bridge_verify_ignore_port() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -92,7 +92,7 @@ fn test_linux_bridge_verify_ignore_port() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -123,7 +123,7 @@ fn test_linux_bridge_verify_ignore_port() {
 
 #[test]
 fn test_linux_bridge_stringlized_attributes() {
-    let iface: LinuxBridgeInterface = serde_yaml::from_str(
+    let iface: LinuxBridgeInterface = rmsd_yaml::from_str(
         r#"---
 name: br0
 type: linux-bridge
@@ -216,7 +216,7 @@ bridge:
 
 #[test]
 fn test_linux_bridge_partial_ignored() {
-    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+    let cur_ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -234,7 +234,7 @@ fn test_linux_bridge_partial_ignored() {
 ",
     )
     .unwrap();
-    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+    let des_ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: br0
   type: linux-bridge
@@ -275,7 +275,7 @@ fn test_linux_bridge_partial_ignored() {
 
 #[test]
 fn test_linux_bridge_interger_multicast_router() {
-    let iface: LinuxBridgeInterface = serde_yaml::from_str(
+    let iface: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"---
 name: br0
 type: linux-bridge
@@ -301,7 +301,7 @@ bridge:
 
 #[test]
 fn test_linux_bridge_ports() {
-    let ifaces = serde_yaml::from_str::<Interfaces>(
+    let ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: br0
   type: linux-bridge
@@ -318,7 +318,7 @@ fn test_linux_bridge_ports() {
 
 #[test]
 fn test_linux_bridge_partially_disable_vlan_filtering() {
-    let current = serde_yaml::from_str::<LinuxBridgeInterface>(
+    let current = rmsd_yaml::from_str::<LinuxBridgeInterface>(
         r"---
 name: br0
 type: linux-bridge
@@ -338,7 +338,7 @@ bridge:
 ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<LinuxBridgeInterface>(
+    let desired = rmsd_yaml::from_str::<LinuxBridgeInterface>(
         r"---
 name: br0
 type: linux-bridge
@@ -377,15 +377,14 @@ bridge:
       trunk-tags:
       - id: 500
 ";
-    let iface: LinuxBridgeInterface =
-        serde_yaml::from_str(yml_content).unwrap();
+    let iface: LinuxBridgeInterface = rmsd_yaml::from_str(yml_content).unwrap();
 
-    assert_eq!(serde_yaml::to_string(&iface).unwrap(), yml_content);
+    assert_eq!(rmsd_yaml::to_string(&iface).unwrap(), yml_content);
 }
 
 #[test]
 fn test_linux_bridge_merge_port_vlan() {
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r#"---
 name: br0
 type: linux-bridge
@@ -414,7 +413,7 @@ bridge:
     )
     .unwrap();
 
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: br0
 type: linux-bridge
@@ -439,7 +438,7 @@ bridge:
 
 #[test]
 fn test_bridge_vlan_filter_trunk_tag_without_enable_native() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -474,7 +473,7 @@ fn test_bridge_vlan_filter_trunk_tag_without_enable_native() {
 
 #[test]
 fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -506,7 +505,7 @@ fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
 
 #[test]
 fn test_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -540,7 +539,7 @@ fn test_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
 
 #[test]
 fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -570,7 +569,7 @@ fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
 
 #[test]
 fn test_bridge_vlan_filter_enable_native_with_access_mode() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -598,7 +597,7 @@ fn test_bridge_vlan_filter_enable_native_with_access_mode() {
 
 #[test]
 fn test_bridge_vlan_filter_trunk_tags_with_access_mode() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -627,7 +626,7 @@ fn test_bridge_vlan_filter_trunk_tags_with_access_mode() {
 
 #[test]
 fn test_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -654,7 +653,7 @@ fn test_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
 
 #[test]
 fn test_bridge_validate_diff_group_forward_mask_and_group_fwd_mask() {
-    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -680,7 +679,7 @@ fn test_bridge_validate_diff_group_forward_mask_and_group_fwd_mask() {
 
 #[test]
 fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
-    let mut desired_both: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired_both: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -694,7 +693,7 @@ fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
     .unwrap();
     desired_both.sanitize(true).unwrap();
 
-    let mut desired_old: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired_old: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -707,7 +706,7 @@ fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
     .unwrap();
     desired_old.sanitize(true).unwrap();
 
-    let mut desired_new: LinuxBridgeInterface = serde_yaml::from_str(
+    let mut desired_new: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -720,7 +719,7 @@ fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
     .unwrap();
     desired_new.sanitize(true).unwrap();
 
-    let expected: LinuxBridgeInterface = serde_yaml::from_str(
+    let expected: LinuxBridgeInterface = rmsd_yaml::from_str(
         r"
         name: br0
         type: linux-bridge
@@ -739,7 +738,7 @@ fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
 
 #[test]
 fn test_linux_bridge_is_default_pvid_changed() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
           name: br0
           type: linux-bridge
@@ -750,7 +749,7 @@ fn test_linux_bridge_is_default_pvid_changed() {
             - name: eth1",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
           name: br0
           type: linux-bridge
@@ -772,7 +771,7 @@ fn test_linux_bridge_is_default_pvid_changed() {
 
 #[test]
 fn test_linux_bridge_ignore_extra_ports_for_verify() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -791,7 +790,7 @@ fn test_linux_bridge_ignore_extra_ports_for_verify() {
         ",
     )
     .unwrap();
-    let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
+    let pre_apply_cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -813,7 +812,7 @@ fn test_linux_bridge_ignore_extra_ports_for_verify() {
         ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -848,7 +847,7 @@ fn test_linux_bridge_ignore_extra_ports_for_verify() {
 
 #[test]
 fn test_linux_bridge_ignore_extra_ports_for_apply() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -867,7 +866,7 @@ fn test_linux_bridge_ignore_extra_ports_for_apply() {
         ",
     )
     .unwrap();
-    let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
+    let pre_apply_cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet

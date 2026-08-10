@@ -9,7 +9,7 @@ use crate::{
 
 #[test]
 fn test_ipip_tunnel_config() {
-    let iface: IpTunnelInterface = serde_yaml::from_str(
+    let iface: IpTunnelInterface = rmsd_yaml::from_str(
         r"---
 name: ipip0
 type: ip-tunnel
@@ -32,7 +32,7 @@ ip-tunnel:
 
 #[test]
 fn test_ipip6_with_flags() {
-    let mut iface: IpTunnelInterface = serde_yaml::from_str(
+    let mut iface: IpTunnelInterface = rmsd_yaml::from_str(
         r"---
 name: ipip60
 type: ip-tunnel
@@ -80,7 +80,7 @@ ip-tunnel:
 
 #[test]
 fn test_sit_with_encap_and_ip6tun_flags() {
-    let mut iface: IpTunnelInterface = serde_yaml::from_str(
+    let mut iface: IpTunnelInterface = rmsd_yaml::from_str(
         r"---
 name: sit0
 type: ip-tunnel
@@ -105,7 +105,7 @@ ip-tunnel:
 
 #[test]
 fn test_reject_invalid_flow_label() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: ipip0
   type: ip-tunnel
@@ -133,7 +133,7 @@ fn test_reject_invalid_flow_label() {
 
 #[test]
 fn test_ip_tunnel_deny_unknown_config_field() {
-    let result = serde_yaml::from_str::<Interfaces>(
+    let result = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: ipip0
           type: ip-tunnel

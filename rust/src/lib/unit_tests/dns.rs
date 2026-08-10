@@ -4,7 +4,7 @@ use crate::{DnsState, ErrorKind, MergedDnsState};
 
 #[test]
 fn test_dns_verify_uncompressed_srvs() {
-    let current: DnsState = serde_yaml::from_str(
+    let current: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server:
@@ -25,7 +25,7 @@ fn test_dns_verify_uncompressed_srvs() {
     )
     .unwrap();
 
-    let desired: DnsState = serde_yaml::from_str(
+    let desired: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server:
@@ -53,7 +53,7 @@ fn test_dns_verify_uncompressed_srvs() {
 
 #[test]
 fn test_dns_option_with_value() {
-    let mut desired: DnsState = serde_yaml::from_str(
+    let mut desired: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           options:
@@ -67,7 +67,7 @@ fn test_dns_option_with_value() {
 
 #[test]
 fn test_invalid_dns_option_with_value() {
-    let mut desired: DnsState = serde_yaml::from_str(
+    let mut desired: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           options:
@@ -86,13 +86,13 @@ fn test_invalid_dns_option_with_value() {
 
 #[test]
 fn test_is_purge_dns_empty_dict() {
-    let desired: DnsState = serde_yaml::from_str(
+    let desired: DnsState = rmsd_yaml::from_str(
         r"---
         config: {}
         ",
     )
     .unwrap();
-    let current: DnsState = serde_yaml::from_str(
+    let current: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server:
@@ -110,7 +110,7 @@ fn test_is_purge_dns_empty_dict() {
 
 #[test]
 fn test_is_purge_dns_full_empty_dict() {
-    let desired: DnsState = serde_yaml::from_str(
+    let desired: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server: []
@@ -119,7 +119,7 @@ fn test_is_purge_dns_full_empty_dict() {
         ",
     )
     .unwrap();
-    let current: DnsState = serde_yaml::from_str(
+    let current: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server:
@@ -137,14 +137,14 @@ fn test_is_purge_dns_full_empty_dict() {
 
 #[test]
 fn test_not_purge() {
-    let desired: DnsState = serde_yaml::from_str(
+    let desired: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           search: []
         ",
     )
     .unwrap();
-    let current: DnsState = serde_yaml::from_str(
+    let current: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server:
@@ -160,7 +160,7 @@ fn test_not_purge() {
 
 #[test]
 fn test_purge_with_empty_server_and_search() {
-    let desired: DnsState = serde_yaml::from_str(
+    let desired: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server: []
@@ -168,7 +168,7 @@ fn test_purge_with_empty_server_and_search() {
         ",
     )
     .unwrap();
-    let current: DnsState = serde_yaml::from_str(
+    let current: DnsState = rmsd_yaml::from_str(
         r"---
         config:
           server:

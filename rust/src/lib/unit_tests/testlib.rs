@@ -228,7 +228,7 @@ fn gen_rule_entry(
 }
 
 pub(crate) fn new_test_nic_with_static_ip() -> Interface {
-    serde_yaml::from_str(
+    rmsd_yaml::from_str(
         r"
         name: eth1
         type: ethernet
@@ -257,7 +257,7 @@ pub(crate) fn new_test_nic_with_static_ip() -> Interface {
 }
 
 fn new_test_nic2_with_static_ip() -> Interface {
-    serde_yaml::from_str(
+    rmsd_yaml::from_str(
         r"
         name: eth2
         type: ethernet

@@ -89,7 +89,7 @@ fn test_add_rules_to_new_interface() {
 
 #[test]
 fn test_route_rule_ignore_absent_ifaces() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"
         interfaces:
         - name: br0
@@ -103,7 +103,7 @@ fn test_route_rule_ignore_absent_ifaces() {
     )
     .unwrap();
 
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"
         interfaces:
         - name: eth1
@@ -154,7 +154,7 @@ fn test_route_rule_ignore_absent_ifaces() {
 
 #[test]
 fn test_route_rule_use_auto_route_table_id() {
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: br0
@@ -179,7 +179,7 @@ fn test_route_rule_use_auto_route_table_id() {
     )
     .unwrap();
 
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         route-rules:
           config:
@@ -196,7 +196,7 @@ fn test_route_rule_use_auto_route_table_id() {
     )
     .unwrap();
 
-    let expected_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+    let expected_rules: Vec<RouteRuleEntry> = rmsd_yaml::from_str(
         r"
         - route-table: 500
           priority: 3200
@@ -224,7 +224,7 @@ fn test_route_rule_use_auto_route_table_id() {
 
 #[test]
 fn test_route_rule_use_default_auto_route_table_id() {
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -242,7 +242,7 @@ fn test_route_rule_use_default_auto_route_table_id() {
     )
     .unwrap();
 
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         route-rules:
           config:
@@ -255,7 +255,7 @@ fn test_route_rule_use_default_auto_route_table_id() {
     )
     .unwrap();
 
-    let expected_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+    let expected_rules: Vec<RouteRuleEntry> = rmsd_yaml::from_str(
         r"
         - route-table: 254
           priority: 3200
@@ -281,7 +281,7 @@ fn test_route_rule_use_default_auto_route_table_id() {
 
 #[test]
 fn test_route_rule_use_loopback() {
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: lo
@@ -301,7 +301,7 @@ fn test_route_rule_use_loopback() {
     )
     .unwrap();
 
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         route-rules:
           config:
@@ -314,7 +314,7 @@ fn test_route_rule_use_loopback() {
     )
     .unwrap();
 
-    let expected_ipv4_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+    let expected_ipv4_rules: Vec<RouteRuleEntry> = rmsd_yaml::from_str(
         r"
         - priority: 3200
           route-table: 255
@@ -322,7 +322,7 @@ fn test_route_rule_use_loopback() {
     )
     .unwrap();
 
-    let expected_ipv6_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+    let expected_ipv6_rules: Vec<RouteRuleEntry> = rmsd_yaml::from_str(
         r"
         - priority: 3200
           route-table: 255
@@ -346,7 +346,7 @@ fn test_route_rule_use_loopback() {
 
 #[test]
 fn test_route_rule_add_twice() {
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -364,7 +364,7 @@ fn test_route_rule_add_twice() {
     )
     .unwrap();
 
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         route-rules:
           config:
@@ -377,7 +377,7 @@ fn test_route_rule_add_twice() {
     )
     .unwrap();
 
-    let mut expected_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+    let mut expected_rules: Vec<RouteRuleEntry> = rmsd_yaml::from_str(
         r"
         - route-table: 254
           priority: 3200
@@ -405,7 +405,7 @@ fn test_route_rule_add_twice() {
 
 #[test]
 fn test_route_rule_iif_on_disconnected_iface() {
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -420,7 +420,7 @@ fn test_route_rule_iif_on_disconnected_iface() {
     )
     .unwrap();
 
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         route-rules:
           config:

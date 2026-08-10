@@ -7,7 +7,7 @@ use crate::{
 };
 
 fn gen_br1_merged_ifaces() -> MergedInterfaces {
-    let desired_ifaces: Interfaces = serde_yaml::from_str(
+    let desired_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
          - name: br1
            type: ovs-bridge
@@ -20,7 +20,7 @@ fn gen_br1_merged_ifaces() -> MergedInterfaces {
         ",
     )
     .unwrap();
-    let current_ifaces: Interfaces = serde_yaml::from_str(
+    let current_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
          - name: eth1
            type: ethernet
@@ -39,7 +39,7 @@ fn gen_br1_merged_ifaces() -> MergedInterfaces {
 
 #[test]
 fn test_ovsdb_merge_with_mappings() {
-    let desired: OvnConfiguration = serde_yaml::from_str(
+    let desired: OvnConfiguration = rmsd_yaml::from_str(
         r"---
         bridge-mappings:
         - localnet: net1
@@ -47,7 +47,7 @@ fn test_ovsdb_merge_with_mappings() {
     )
     .unwrap();
 
-    let current: OvnConfiguration = serde_yaml::from_str(
+    let current: OvnConfiguration = rmsd_yaml::from_str(
         r"---
 bridge-mappings: []
         ",
@@ -66,7 +66,7 @@ bridge-mappings: []
 
 #[test]
 fn test_ovsdb_merge_delete_existing_mappings() {
-    let desired: OvnConfiguration = serde_yaml::from_str(
+    let desired: OvnConfiguration = rmsd_yaml::from_str(
         r"---
         bridge-mappings:
         - localnet: net1
@@ -75,7 +75,7 @@ fn test_ovsdb_merge_delete_existing_mappings() {
     )
     .unwrap();
 
-    let current: OvnConfiguration = serde_yaml::from_str(
+    let current: OvnConfiguration = rmsd_yaml::from_str(
         r"---
         bridge-mappings:
         - localnet: net1
@@ -91,7 +91,7 @@ fn test_ovsdb_merge_delete_existing_mappings() {
 
 #[test]
 fn test_ovn_duplicate_localnet_keys_are_forbidden_on_desired_state() {
-    let desired: OvnConfiguration = serde_yaml::from_str(
+    let desired: OvnConfiguration = rmsd_yaml::from_str(
         r"---
         bridge-mappings:
         - localnet: net1
@@ -101,7 +101,7 @@ fn test_ovn_duplicate_localnet_keys_are_forbidden_on_desired_state() {
     )
     .unwrap();
 
-    let current: OvnConfiguration = serde_yaml::from_str(
+    let current: OvnConfiguration = rmsd_yaml::from_str(
         r"---
         bridge-mappings:
         - localnet: net1
@@ -281,7 +281,7 @@ fn test_sanitize_correct_mapping_remove() {
 
 #[test]
 fn test_ovn_map_support_state_present() {
-    let mut desired: OvnConfiguration = serde_yaml::from_str(
+    let mut desired: OvnConfiguration = rmsd_yaml::from_str(
         r"---
         bridge-mappings:
         - localnet: net1
@@ -303,7 +303,7 @@ fn test_ovn_map_support_state_present() {
 
 #[test]
 fn test_ovn_serialize_state_absent() {
-    let desired: OvnConfiguration = serde_yaml::from_str(
+    let desired: OvnConfiguration = rmsd_yaml::from_str(
         r#"---
         bridge-mappings:
         - localnet: blue
@@ -318,15 +318,14 @@ fn test_ovn_serialize_state_absent() {
     .unwrap();
 
     let new: OvnConfiguration =
-        serde_yaml::from_str(&serde_yaml::to_string(&desired).unwrap())
-            .unwrap();
+        rmsd_yaml::from_str(&rmsd_yaml::to_string(&desired).unwrap()).unwrap();
 
     assert_eq!(desired, new);
 }
 
 #[test]
 fn test_ovn_bridge_not_found() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
         - name: br1
@@ -344,7 +343,7 @@ fn test_ovn_bridge_not_found() {
             state: present"#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
         - name: eth1
@@ -365,7 +364,7 @@ fn test_ovn_bridge_not_found() {
 
 #[test]
 fn test_ovn_ref_to_absent_bridge() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
         - name: br1
@@ -378,7 +377,7 @@ fn test_ovn_ref_to_absent_bridge() {
             state: present"#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
         - name: eth1
@@ -407,7 +406,7 @@ fn test_ovn_ref_to_absent_bridge() {
 
 #[test]
 fn test_ovn_absent_ref_to_absent_bridge() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
         - name: br1
@@ -420,7 +419,7 @@ fn test_ovn_absent_ref_to_absent_bridge() {
             state: absent"#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
         - name: eth1

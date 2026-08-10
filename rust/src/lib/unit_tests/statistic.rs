@@ -18,7 +18,7 @@ const CUR_STATE_STR: &str = r"---
 
 #[test]
 fn test_statistic_topology_static_ip() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
         - name: br0.101
@@ -58,7 +58,7 @@ fn test_statistic_topology_static_ip() {
             - name: bond1",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -70,7 +70,7 @@ fn test_statistic_topology_static_ip() {
 
 #[test]
 fn test_statistic_feature_dns() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -103,7 +103,7 @@ fn test_statistic_feature_dns() {
 
 #[test]
 fn test_statistic_feature_route() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -132,7 +132,7 @@ fn test_statistic_feature_route() {
         ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -141,7 +141,7 @@ fn test_statistic_feature_route() {
 
 #[test]
 fn test_statistic_feature_route_rule() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         route-rules:
           config:
@@ -154,7 +154,7 @@ fn test_statistic_feature_route_rule() {
         ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -169,13 +169,13 @@ fn test_statistic_feature_route_rule() {
 
 #[test]
 fn test_statistic_feature_hostname() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         hostname:
           config: hosta.example.org",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -184,7 +184,7 @@ fn test_statistic_feature_hostname() {
 
 #[test]
 fn test_statistic_feature_sriov() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -198,7 +198,7 @@ fn test_statistic_feature_sriov() {
             state: up",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -213,7 +213,7 @@ fn test_statistic_feature_sriov() {
 
 #[test]
 fn test_statistic_feature_ovs_dpdk_with_bond() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
         - name: ovs0
@@ -243,7 +243,7 @@ fn test_statistic_feature_ovs_dpdk_with_bond() {
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -259,7 +259,7 @@ fn test_statistic_feature_ovs_dpdk_with_bond() {
 
 #[test]
 fn test_statistic_feature_ovs_patch_with_iface_ovsdb() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
         - name: patch0
@@ -290,7 +290,7 @@ fn test_statistic_feature_ovs_patch_with_iface_ovsdb() {
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -302,7 +302,7 @@ fn test_statistic_feature_ovs_patch_with_iface_ovsdb() {
 
 #[test]
 fn test_statistic_feature_ovn_map() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
          - name: eth1
@@ -334,7 +334,7 @@ fn test_statistic_feature_ovn_map() {
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -343,7 +343,7 @@ fn test_statistic_feature_ovn_map() {
 
 #[test]
 fn test_statistic_feature_mac_based_iface_id() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
           - name: wan0
@@ -354,7 +354,7 @@ fn test_statistic_feature_mac_based_iface_id() {
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -366,7 +366,7 @@ fn test_statistic_feature_mac_based_iface_id() {
 
 #[test]
 fn test_statistic_feature_dhcp_hostname() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
           - name: eth1
@@ -387,7 +387,7 @@ fn test_statistic_feature_dhcp_hostname() {
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -402,7 +402,7 @@ fn test_statistic_feature_dhcp_hostname() {
 
 #[test]
 fn test_statistic_feature_lldp() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r#"---
         interfaces:
           - name: eth1
@@ -413,7 +413,7 @@ fn test_statistic_feature_lldp() {
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
     let stat = desired.statistic(&current).unwrap();
 
@@ -430,8 +430,7 @@ fn test_statistic_feature_iface_count() {
         (500, NmstateFeature::IfaceCount500Plus),
     ] {
         let desired: NetworkState = gen_dummy_ifaces(count);
-        let current: NetworkState =
-            serde_yaml::from_str(CUR_STATE_STR).unwrap();
+        let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
         let stat = desired.statistic(&current).unwrap();
 
@@ -457,7 +456,7 @@ fn gen_dummy_ifaces(iface_count: usize) -> NetworkState {
 
 #[test]
 fn test_statistic_multple_states() {
-    let mut desired: NetworkState = serde_yaml::from_str(
+    let mut desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: br0.101
@@ -519,9 +518,9 @@ fn test_statistic_multple_states() {
                 total-vfs: 2",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(CUR_STATE_STR).unwrap();
+    let current: NetworkState = rmsd_yaml::from_str(CUR_STATE_STR).unwrap();
 
-    let desired2: NetworkState = serde_yaml::from_str(
+    let desired2: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
         - name: br0

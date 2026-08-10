@@ -7,7 +7,7 @@ use crate::{
 
 #[test]
 fn test_ib_autoremove_pkey_if_base_iface_removed() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: mlx5_ib2
   type: infiniband
@@ -15,7 +15,7 @@ fn test_ib_autoremove_pkey_if_base_iface_removed() {
 ",
     )
     .unwrap();
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -57,7 +57,7 @@ fn test_ib_autoremove_pkey_if_base_iface_removed() {
 
 #[test]
 fn test_ib_support_integer_pkey() {
-    let iface: InfiniBandInterface = serde_yaml::from_str(
+    let iface: InfiniBandInterface = rmsd_yaml::from_str(
         r#"---
 name: mlx5_ib2.8001
 type: infiniband
@@ -74,7 +74,7 @@ infiniband:
 
 #[test]
 fn test_ib_support_string_pkey() {
-    let iface: InfiniBandInterface = serde_yaml::from_str(
+    let iface: InfiniBandInterface = rmsd_yaml::from_str(
         r#"---
 name: mlx5_ib2.8001
 type: infiniband
@@ -91,7 +91,7 @@ infiniband:
 
 #[test]
 fn test_ib_support_hex_string_pkey() {
-    let iface: InfiniBandInterface = serde_yaml::from_str(
+    let iface: InfiniBandInterface = rmsd_yaml::from_str(
         r#"---
 name: mlx5_ib2.8001
 type: infiniband
@@ -108,7 +108,7 @@ infiniband:
 
 #[test]
 fn test_ib_port_of_bridge_in_desire() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -140,7 +140,7 @@ fn test_ib_port_of_bridge_in_desire() {
 
 #[test]
 fn test_ib_port_of_bridge_in_current() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: br0
   type: linux-bridge
@@ -151,7 +151,7 @@ fn test_ib_port_of_bridge_in_current() {
     )
     .unwrap();
 
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -174,7 +174,7 @@ fn test_ib_port_of_bridge_in_current() {
 
 #[test]
 fn test_ib_port_of_bond_mode_in_desire() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond0
   type: bond
@@ -187,7 +187,7 @@ fn test_ib_port_of_bond_mode_in_desire() {
     )
     .unwrap();
 
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -209,7 +209,7 @@ fn test_ib_port_of_bond_mode_in_desire() {
 
 #[test]
 fn test_ib_port_of_bond_mode_in_current() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond0
   type: bond
@@ -221,7 +221,7 @@ fn test_ib_port_of_bond_mode_in_current() {
     )
     .unwrap();
 
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -250,7 +250,7 @@ fn test_ib_port_of_bond_mode_in_current() {
 
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_current() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond0
   type: bond
@@ -262,7 +262,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_current() {
     )
     .unwrap();
 
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -286,7 +286,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_current() {
 
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_both() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond0
   type: bond
@@ -299,7 +299,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_both() {
     )
     .unwrap();
 
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -341,7 +341,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_both() {
 
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_desire() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond0
   type: bond
@@ -354,7 +354,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_desire() {
     )
     .unwrap();
 
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband

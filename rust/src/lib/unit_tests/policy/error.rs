@@ -346,7 +346,7 @@ fn test_policy_reference_with_two_paths() {
 
 #[test]
 fn test_policy_reference_capture_not_found() {
-    let template: NetworkStateTemplate = serde_yaml::from_str(
+    let template: NetworkStateTemplate = rmsd_yaml::from_str(
         r#"---
 interfaces:
   - name: "{{ capture.void.interface.0.name }}""#,
@@ -364,7 +364,7 @@ interfaces:
 
 #[test]
 fn test_policy_reference_capture_concatenate_with_prefix() {
-    let template: NetworkStateTemplate = serde_yaml::from_str(
+    let template: NetworkStateTemplate = rmsd_yaml::from_str(
         r#"---
         interfaces:
           - name: "{{ capture.void.interfaces.0.name }}.1""#,
@@ -373,7 +373,7 @@ fn test_policy_reference_capture_concatenate_with_prefix() {
     let mut capture_results: HashMap<String, NetworkState> = HashMap::new();
     capture_results.insert(
         "void".to_string(),
-        serde_yaml::from_str(
+        rmsd_yaml::from_str(
             r"
             interfaces:
               - name: eth1",
@@ -388,7 +388,7 @@ fn test_policy_reference_capture_concatenate_with_prefix() {
 
 #[test]
 fn test_policy_reference_capture_property_not_found() {
-    let template: NetworkStateTemplate = serde_yaml::from_str(
+    let template: NetworkStateTemplate = rmsd_yaml::from_str(
         r#"---
         interfaces:
           - name: "{{ capture.void.interface.0.name }}""#,
@@ -397,7 +397,7 @@ fn test_policy_reference_capture_property_not_found() {
     let mut capture_results: HashMap<String, NetworkState> = HashMap::new();
     capture_results.insert(
         "void".to_string(),
-        serde_yaml::from_str(
+        rmsd_yaml::from_str(
             r"
             interfaces:
               - name: eth1",
@@ -415,7 +415,7 @@ fn test_policy_reference_capture_property_not_found() {
 
 #[test]
 fn test_policy_reference_capture_property_not_array() {
-    let template: NetworkStateTemplate = serde_yaml::from_str(
+    let template: NetworkStateTemplate = rmsd_yaml::from_str(
         r#"---
         interfaces:
           - name: "{{ capture.void.0.name }}""#,
@@ -424,7 +424,7 @@ fn test_policy_reference_capture_property_not_array() {
     let mut capture_results: HashMap<String, NetworkState> = HashMap::new();
     capture_results.insert(
         "void".to_string(),
-        serde_yaml::from_str(
+        rmsd_yaml::from_str(
             r"
             interfaces:
               - name: eth1",
@@ -478,7 +478,7 @@ fn test_policy_value_after_pipe() {
 
 #[test]
 fn test_policy_template_no_capture() {
-    let template: NetworkStateTemplate = serde_yaml::from_str(
+    let template: NetworkStateTemplate = rmsd_yaml::from_str(
         r#"---
 interfaces:
   - name: "{{ interface.0.name }}""#,

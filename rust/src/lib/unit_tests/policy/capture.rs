@@ -146,7 +146,7 @@ fn test_policy_capture_retain_only() {
     let cap_con =
         NetworkCaptureCommand::parse(" dns-resolver.running").unwrap();
 
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -213,7 +213,7 @@ fn test_policy_capture_route_rule() {
         NetworkCaptureCommand::parse("route-rules.config.route-table==500")
             .unwrap();
 
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         routes:
           config:
@@ -270,7 +270,7 @@ fn test_policy_capture_by_alt_name() {
     )
     .unwrap();
 
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth0

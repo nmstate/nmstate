@@ -34,7 +34,7 @@ pub(crate) fn statistic(
     Ok(if matches.get_flag("JSON") {
         serde_json::to_string_pretty(&statistic)?
     } else {
-        serde_yaml::to_string(&statistic)?
+        rmsd_yaml::to_string(&statistic)?
     })
 }
 

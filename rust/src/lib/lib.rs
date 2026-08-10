@@ -40,7 +40,7 @@
 //!     // Use kernel mode
 //!     net_state.set_kernel_only(true);
 //!     net_state.retrieve()?;
-//!     println!("{}", serde_yaml::to_string(&net_state)?);
+//!     println!("{}", rmsd_yaml::to_string(&net_state)?);
 //!     Ok(())
 //! }
 //! ```
@@ -51,7 +51,7 @@
 //! use nmstate::NetworkState;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let mut net_state: NetworkState = serde_yaml::from_str(
+//!     let mut net_state: NetworkState = rmsd_yaml::from_str(
 //!         r#"---
 //!         interfaces:
 //!           - name: eth1

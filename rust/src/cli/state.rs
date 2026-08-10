@@ -73,7 +73,7 @@ where
     fd.read_to_string(&mut content)?;
     let content = content.replace('\u{A0}', " ");
 
-    match serde_yaml::from_str(&content) {
+    match rmsd_yaml::from_str(&content) {
         Ok(s) => Ok(NetworkStateOrPolicy::State(s)),
         Err(e) => Err(CliError::from(format!(
             "Provide file is not valid NetworkState: {e}"
@@ -93,11 +93,11 @@ where
     fd.read_to_string(&mut content)?;
     let content = content.replace('\u{A0}', " ");
 
-    match serde_yaml::from_str(&content) {
+    match rmsd_yaml::from_str(&content) {
         Ok(s) => Ok(NetworkStateOrPolicy::State(s)),
         Err(state_error) => {
             // Try NetworkPolicy
-            let net_policy: NetworkPolicy = match serde_yaml::from_str(&content)
+            let net_policy: NetworkPolicy = match rmsd_yaml::from_str(&content)
             {
                 Ok(p) => p,
                 Err(policy_error) => {

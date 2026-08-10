@@ -6,7 +6,7 @@ use crate::{NetworkPolicy, NetworkState, RouteState};
 
 #[test]
 fn test_policy_move_dhcp_gw_eth_to_bridge() {
-    let mut policy: NetworkPolicy = serde_yaml::from_str(
+    let mut policy: NetworkPolicy = rmsd_yaml::from_str(
         r#"
 capture:
   gw: routes.running.destination=="0.0.0.0/0"
@@ -27,7 +27,7 @@ desiredState:
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -64,7 +64,7 @@ desiredState:
 
 #[test]
 fn test_policy_move_static_gw_eth_to_bridge() {
-    let mut policy: NetworkPolicy = serde_yaml::from_str(
+    let mut policy: NetworkPolicy = rmsd_yaml::from_str(
         r#"
 capture:
   void: this capture will just clone current without modification
@@ -95,7 +95,7 @@ desiredState:
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -165,7 +165,7 @@ desiredState:
 
 #[test]
 fn test_policy_convert_dhcp_to_static_with_dns() {
-    let mut policy: NetworkPolicy = serde_yaml::from_str(
+    let mut policy: NetworkPolicy = rmsd_yaml::from_str(
         r#"
         capture:
           eth1-iface: interfaces.name == "eth1"
@@ -187,7 +187,7 @@ fn test_policy_convert_dhcp_to_static_with_dns() {
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -260,14 +260,14 @@ fn test_policy_convert_dhcp_to_static_with_dns() {
 
 #[test]
 fn test_policy_empty_policy() {
-    let policy: NetworkPolicy = serde_yaml::from_str("").unwrap();
+    let policy: NetworkPolicy = rmsd_yaml::from_str("").unwrap();
     let state = NetworkState::try_from(policy).unwrap();
     assert_eq!(state, NetworkState::new());
 }
 
 #[test]
 fn test_policy_no_capture() {
-    let policy: NetworkPolicy = serde_yaml::from_str(
+    let policy: NetworkPolicy = rmsd_yaml::from_str(
         r"
         desiredState:
           interfaces:
@@ -279,7 +279,7 @@ fn test_policy_no_capture() {
     .unwrap();
 
     let state = NetworkState::try_from(policy).unwrap();
-    let expected_state: NetworkState = serde_yaml::from_str(
+    let expected_state: NetworkState = rmsd_yaml::from_str(
         r"
         interfaces:
           - name: eth1
@@ -293,7 +293,7 @@ fn test_policy_no_capture() {
 
 #[test]
 fn test_policy_bridge_on_alt_name_capture() {
-    let mut policy: NetworkPolicy = serde_yaml::from_str(
+    let mut policy: NetworkPolicy = rmsd_yaml::from_str(
         r#"
 capture:
   base-iface: interfaces.alt-names.name == "primary"
@@ -308,7 +308,7 @@ desiredState:
         "#,
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth0

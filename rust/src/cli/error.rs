@@ -54,11 +54,11 @@ impl From<NmstateError> for CliError {
     }
 }
 
-impl From<serde_yaml::Error> for CliError {
-    fn from(e: serde_yaml::Error) -> Self {
+impl From<rmsd_yaml::Error> for CliError {
+    fn from(e: rmsd_yaml::Error) -> Self {
         Self {
             code: EX_DATAERR,
-            error_msg: format!("serde_yaml::Error: {e}"),
+            error_msg: format!("rmsd_yaml::Error: {e}"),
         }
     }
 }

@@ -4,7 +4,7 @@ use crate::{IpsecInterface, NetworkState};
 
 #[test]
 fn test_ipsec_hide_psk() {
-    let mut state: NetworkState = serde_yaml::from_str(
+    let mut state: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
         - name: hosta_conn
@@ -37,16 +37,12 @@ fn test_ipsec_hide_psk() {
     .unwrap();
 
     state.hide_secrets();
-    assert!(
-        !serde_yaml::to_string(&state)
-            .unwrap()
-            .contains("TOP_SECRET")
-    );
+    assert!(!rmsd_yaml::to_string(&state).unwrap().contains("TOP_SECRET"));
 }
 
 #[test]
 fn test_invalid_ipsec_interface_value() {
-    let result = serde_yaml::from_str::<NetworkState>(
+    let result = rmsd_yaml::from_str::<NetworkState>(
         r"---
         interfaces:
         - name: hosta_conn
@@ -70,7 +66,7 @@ fn test_invalid_ipsec_interface_value() {
 
 #[test]
 fn test_parse_ipsec_interface_from_string_interger() {
-    let iface = serde_yaml::from_str::<IpsecInterface>(
+    let iface = rmsd_yaml::from_str::<IpsecInterface>(
         r"---
           name: hosta_conn
           type: ipsec
@@ -94,7 +90,7 @@ fn test_parse_ipsec_interface_from_string_interger() {
 
 #[test]
 fn test_parse_ipsec_interface_from_interger() {
-    let iface = serde_yaml::from_str::<IpsecInterface>(
+    let iface = rmsd_yaml::from_str::<IpsecInterface>(
         r"---
           name: hosta_conn
           type: ipsec
@@ -118,7 +114,7 @@ fn test_parse_ipsec_interface_from_interger() {
 
 #[test]
 fn test_parse_ipsec_interface_from_string_bool() {
-    let iface = serde_yaml::from_str::<IpsecInterface>(
+    let iface = rmsd_yaml::from_str::<IpsecInterface>(
         r"---
           name: hosta_conn
           type: ipsec
@@ -142,7 +138,7 @@ fn test_parse_ipsec_interface_from_string_bool() {
 
 #[test]
 fn test_ipsec_treat_dhcp_off_and_empty_ip_as_disabled() {
-    let mut iface = serde_yaml::from_str::<IpsecInterface>(
+    let mut iface = rmsd_yaml::from_str::<IpsecInterface>(
         r"---
           name: hosta_conn
           type: ipsec

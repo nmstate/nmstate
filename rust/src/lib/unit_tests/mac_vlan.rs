@@ -4,7 +4,7 @@ use crate::MacVlanInterface;
 
 #[test]
 fn test_mac_vlan_stringlized_attributes() {
-    let iface: MacVlanInterface = serde_yaml::from_str(
+    let iface: MacVlanInterface = rmsd_yaml::from_str(
         r#"---
 name: mac1
 type: mac-vlan

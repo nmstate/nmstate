@@ -7,7 +7,7 @@ use crate::{
 
 #[test]
 fn test_vrf_stringlized_attributes() {
-    let iface: VrfInterface = serde_yaml::from_str(
+    let iface: VrfInterface = rmsd_yaml::from_str(
         r#"---
 name: vrf1
 type: vrf
@@ -23,7 +23,7 @@ vrf:
 
 #[test]
 fn test_vrf_ports() {
-    let ifaces: Interfaces = serde_yaml::from_str(
+    let ifaces: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: vrf1
   type: vrf
@@ -42,7 +42,7 @@ fn test_vrf_ports() {
 
 #[test]
 fn test_vrf_on_bond_vlan_got_auto_remove() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: test-bond0.100
           type: vlan
@@ -65,7 +65,7 @@ fn test_vrf_on_bond_vlan_got_auto_remove() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: test-bond0
           type: bond
@@ -96,7 +96,7 @@ fn test_vrf_on_bond_vlan_got_auto_remove() {
 
 #[test]
 fn test_vrf_skip_port_if_null() {
-    let iface: VrfInterface = serde_yaml::from_str(
+    let iface: VrfInterface = rmsd_yaml::from_str(
         r#"---
         name: vrf1
         type: vrf
@@ -107,14 +107,14 @@ fn test_vrf_skip_port_if_null() {
     )
     .unwrap();
 
-    let iface_yaml = serde_yaml::to_string(&iface).unwrap();
+    let iface_yaml = rmsd_yaml::to_string(&iface).unwrap();
 
     assert!(!iface_yaml.contains("port"))
 }
 
 #[test]
 fn test_route_vrf_name() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -127,7 +127,7 @@ fn test_route_vrf_name() {
 
     let des_ifaces = Interfaces::default();
 
-    let mut des_routes: Routes = serde_yaml::from_str(
+    let mut des_routes: Routes = rmsd_yaml::from_str(
         r"---
         config:
           - destination: 198.51.200.0/24
@@ -152,7 +152,7 @@ fn test_route_vrf_name() {
 
 #[test]
 fn test_route_vrf_name_down() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -163,7 +163,7 @@ fn test_route_vrf_name_down() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -172,7 +172,7 @@ fn test_route_vrf_name_down() {
     )
     .unwrap();
 
-    let mut des_routes: Routes = serde_yaml::from_str(
+    let mut des_routes: Routes = rmsd_yaml::from_str(
         r"---
         config:
           - destination: 198.51.200.0/24
@@ -200,7 +200,7 @@ fn test_route_vrf_name_down() {
 
 #[test]
 fn test_route_vrf_name_absent() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -211,7 +211,7 @@ fn test_route_vrf_name_absent() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -220,7 +220,7 @@ fn test_route_vrf_name_absent() {
     )
     .unwrap();
 
-    let mut des_routes: Routes = serde_yaml::from_str(
+    let mut des_routes: Routes = rmsd_yaml::from_str(
         r"---
         config:
           - destination: 198.51.200.0/24
@@ -248,7 +248,7 @@ fn test_route_vrf_name_absent() {
 
 #[test]
 fn test_route_vrf_name_table_id_conflict() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -261,7 +261,7 @@ fn test_route_vrf_name_table_id_conflict() {
 
     let des_ifaces = Interfaces::default();
 
-    let mut des_routes: Routes = serde_yaml::from_str(
+    let mut des_routes: Routes = rmsd_yaml::from_str(
         r"---
         config:
           - destination: 198.51.200.0/24
@@ -290,7 +290,7 @@ fn test_route_vrf_name_table_id_conflict() {
 
 #[test]
 fn test_vrf_verify_ports_mixed_with_ignore_ifaces() {
-    let pre_apply_ifaces: Interfaces = serde_yaml::from_str(
+    let pre_apply_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -310,7 +310,7 @@ fn test_vrf_verify_ports_mixed_with_ignore_ifaces() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -338,7 +338,7 @@ fn test_vrf_verify_ports_mixed_with_ignore_ifaces() {
 
 #[test]
 fn test_vrf_verify_with_all_ignore_ifaces_and_desire_empty() {
-    let pre_apply_ifaces: Interfaces = serde_yaml::from_str(
+    let pre_apply_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -358,7 +358,7 @@ fn test_vrf_verify_with_all_ignore_ifaces_and_desire_empty() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: vrf0
           type: vrf
@@ -385,7 +385,7 @@ fn test_vrf_verify_with_all_ignore_ifaces_and_desire_empty() {
 
 #[test]
 fn test_vrf_verify_with_all_ignore_ifaces_and_desire_full() {
-    let pre_apply_ifaces: Interfaces = serde_yaml::from_str(
+    let pre_apply_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
            - name: eth1
              type: ethernet
@@ -405,7 +405,7 @@ fn test_vrf_verify_with_all_ignore_ifaces_and_desire_full() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
            - name: vrf0
              type: vrf
