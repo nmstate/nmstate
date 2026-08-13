@@ -930,7 +930,7 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
                         ));
                     }
                 };
-                if prefix >= 8 && route.is_unicast() {
+                if prefix >= 8 && route.is_unicast() && !route.is_absent() {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         "0.0.0.0/8 and its subnet cannot be used as the route \
@@ -941,7 +941,7 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
                     log::error!("{e}");
                     return Err(e);
                 }
-            } else if route.is_unicast() {
+            } else if route.is_unicast() && !route.is_absent() {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     "0.0.0.0/8 and its subnet cannot be used as the route \

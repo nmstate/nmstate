@@ -937,3 +937,20 @@ fn test_route_lock_mtu_deserialize_from_string() {
 
     assert_eq!(route.lock_mtu, Some(true));
 }
+
+#[test]
+fn test_allow_absent_zero_network_without_route_type() {
+    // Absent entries are wildcards; 0.0.0.0/8 must be removable without
+    // setting route-type (which would otherwise look like a unicast route).
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          state: absent
+          table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    routes.validate().unwrap();
+}
