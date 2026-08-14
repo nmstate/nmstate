@@ -10,7 +10,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, InterfaceType, MergedInterfaces, NmstateError,
+    ErrorKind, Interface, InterfaceType, MergedInterfaces, NmstateError,
+    ifaces::parse_sriov_vf_naming,
     ip::{is_ipv6_addr, sanitize_ip_network},
 };
 
@@ -123,58 +124,27 @@ impl Routes {
         &mut self,
         merged_ifaces: &MergedInterfaces,
     ) -> Result<(), NmstateError> {
-        let iface_name_search = &merged_ifaces.iface_name_search;
-
         if let Some(config_routes) = self.config.as_mut() {
             for route in config_routes.iter_mut() {
                 let new_iface_name = if let Some(next_hop_iface) =
                     route.next_hop_iface.as_ref()
                 {
-                    let kernel_names = iface_name_search.get(next_hop_iface);
-                    // Prefer kernel name as port name
-                    if kernel_names.contains(&next_hop_iface.as_str()) {
-                        continue;
-                    }
-                    if kernel_names.is_empty() && !route.is_absent() {
-                        if merged_ifaces.ignored_ifaces.iter().any(
-                            |(name, iface_type)| {
-                                name == next_hop_iface
-                                    && !iface_type.is_userspace()
-                            },
-                        ) {
-                            return Err(NmstateError::new(
-                                ErrorKind::InvalidArgument,
-                                format!(
-                                    "Route '{}': next hop interface {} is \
-                                     marked as ignored",
-                                    route,
-                                    next_hop_iface.as_str()
-                                ),
-                            ));
-                        } else {
-                            return Err(NmstateError::new(
-                                ErrorKind::InvalidArgument,
-                                format!(
-                                    "Route '{}': next hop interface {} not \
-                                     found",
-                                    route,
-                                    next_hop_iface.as_str()
-                                ),
-                            ));
-                        }
-                    } else if kernel_names.len() > 1 {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Route '{}' defined with next hop interface \
-                                 {} but multiple interfaces are sharing this \
-                                 profile name",
-                                route,
-                                next_hop_iface.as_str()
-                            ),
-                        ));
+                    if let Some((pf_name, vf_id)) =
+                        parse_sriov_vf_naming(next_hop_iface)?
+                    {
+                        Some(resolve_sriov_vf_iface_name(
+                            route,
+                            next_hop_iface,
+                            pf_name,
+                            vf_id,
+                            merged_ifaces,
+                        )?)
                     } else {
-                        kernel_names.first().map(|s| s.to_string())
+                        resolve_kernel_iface_name(
+                            route,
+                            next_hop_iface,
+                            merged_ifaces,
+                        )?
                     }
                 } else {
                     None
@@ -186,6 +156,85 @@ impl Routes {
         }
         Ok(())
     }
+}
+
+fn resolve_sriov_vf_iface_name(
+    route: &RouteEntry,
+    next_hop_iface: &str,
+    pf_name: &str,
+    vf_id: u32,
+    merged_ifaces: &MergedInterfaces,
+) -> Result<String, NmstateError> {
+    if let Some(mi) = merged_ifaces.kernel_ifaces.get(pf_name)
+        && let Some(Interface::Ethernet(eth)) = mi.current.as_ref()
+        && let Some(eth_config) = eth.ethernet.as_ref()
+        && let Some(sriov) = eth_config.sr_iov.as_ref()
+        && let Some(vfs) = sriov.vfs.as_ref()
+        && let Some(vf) = vfs.iter().find(|vf| vf.id == vf_id)
+        && !vf.iface_name.is_empty()
+    {
+        log::info!(
+            "SR-IOV VF route next-hop {} resolved to {}",
+            next_hop_iface,
+            vf.iface_name
+        );
+        Ok(vf.iface_name.clone())
+    } else {
+        Err(NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Route '{}': failed to resolve SR-IOV VF interface name for {}",
+                route, next_hop_iface
+            ),
+        ))
+    }
+}
+
+/// Returns `None` when `next_hop_iface` is already a kernel name.
+fn resolve_kernel_iface_name(
+    route: &RouteEntry,
+    next_hop_iface: &str,
+    merged_ifaces: &MergedInterfaces,
+) -> Result<Option<String>, NmstateError> {
+    let kernel_names = merged_ifaces.iface_name_search.get(next_hop_iface);
+    if kernel_names.contains(&next_hop_iface) {
+        return Ok(None);
+    }
+    if kernel_names.is_empty() && !route.is_absent() {
+        if merged_ifaces
+            .ignored_ifaces
+            .iter()
+            .any(|(name, iface_type)| {
+                name == next_hop_iface && !iface_type.is_userspace()
+            })
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Route '{}': next hop interface {} is marked as ignored",
+                    route, next_hop_iface,
+                ),
+            ));
+        } else {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Route '{}': next hop interface {} not found",
+                    route, next_hop_iface,
+                ),
+            ));
+        }
+    } else if kernel_names.len() > 1 {
+        return Err(NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Route '{}' defined with next hop interface {} but multiple \
+                interfaces are sharing this profile name",
+                route, next_hop_iface,
+            ),
+        ));
+    }
+    Ok(kernel_names.first().map(|s| s.to_string()))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
