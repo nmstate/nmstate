@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     InterfaceType, NmstateError,
     nm::{
@@ -46,6 +48,7 @@ pub(crate) fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
 pub(crate) async fn deactivate_nm_devices(
     nm_api: &mut NmApi<'_>,
     nm_devs: &[NmDevice],
+    suppress_autoconnect_dev_names: &HashSet<String>,
 ) -> Result<(), NmstateError> {
     for nm_dev in nm_devs {
         log::info!("Deactivating device {}", nm_dev.name);
@@ -53,6 +56,9 @@ pub(crate) async fn deactivate_nm_devices(
             && e.kind != ErrorKind::Device(NmDeviceError::NotActive)
         {
             return Err(nm_error_to_nmstate(e));
+        }
+        if suppress_autoconnect_dev_names.contains(&nm_dev.name) {
+            log::warn!("autoconnect has been suppressed for {}", nm_dev.name);
         }
     }
     Ok(())

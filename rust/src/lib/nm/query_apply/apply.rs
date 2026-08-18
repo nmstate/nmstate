@@ -106,6 +106,7 @@ pub(crate) async fn nm_apply(
         to_store: nm_conns_to_store,
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_devs_to_deactivate,
+        suppress_autoconnect_dev_names,
         to_delete: nm_conns_to_delete,
     } = prepare_nm_conns(
         &merged_state,
@@ -170,7 +171,12 @@ pub(crate) async fn nm_apply(
     // We have deleted most of the other matching connections, but we cannot
     // delete some connections with "multiconnect". This would lead to unwanted
     // connection activations if we use deactivate_nm_connections.
-    deactivate_nm_devices(&mut nm_api, &nm_devs_to_deactivate).await?;
+    deactivate_nm_devices(
+        &mut nm_api,
+        &nm_devs_to_deactivate,
+        &suppress_autoconnect_dev_names,
+    )
+    .await?;
 
     Ok(())
 }

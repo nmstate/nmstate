@@ -18,6 +18,7 @@ pub(crate) struct PreparedNmConnections {
     pub(crate) to_store: Vec<NmConnection>,
     pub(crate) to_activate: Vec<NmConnection>,
     pub(crate) to_deactivate: Vec<NmDevice>,
+    pub(crate) suppress_autoconnect_dev_names: HashSet<String>,
     pub(crate) to_delete: Vec<String>,
 }
 
@@ -50,18 +51,28 @@ pub(crate) fn prepare_nm_conns(
     });
 
     let nm_devs_indexed = create_index_for_nm_devs(nm_devs);
-    let mut nm_devs_to_deactivate: Vec<NmDevice> = ifaces
-        .iter()
-        .filter(|iface| {
-            iface.for_apply.as_ref().map(|i| i.is_down()) == Some(true)
-        })
-        .filter_map(|iface| {
-            nm_devs_indexed
-                .get(&(iface.merged.name(), iface.merged.iface_type()))
-                .copied()
-        })
-        .cloned()
-        .collect();
+    let mut nm_devs_to_deactivate: Vec<NmDevice> = Vec::new();
+    let mut suppress_autoconnect_dev_names: HashSet<String> = HashSet::new();
+    for iface in ifaces.iter() {
+        let should_deactivate = iface
+            .for_apply
+            .as_ref()
+            .map(|i| i.is_down() || i.is_absent())
+            == Some(true);
+        if !should_deactivate {
+            continue;
+        }
+        if let Some(nm_dev) = nm_devs_indexed
+            .get(&(iface.merged.name(), iface.merged.iface_type()))
+            .copied()
+        {
+            nm_devs_to_deactivate.push(nm_dev.clone());
+            if iface.merged.is_absent() {
+                suppress_autoconnect_dev_names
+                    .insert(iface.merged.name().to_string());
+            }
+        }
+    }
 
     for merged_iface in ifaces.iter().filter(|i| {
         i.merged.iface_type() != InterfaceType::Unknown && !i.merged.is_absent()
@@ -144,6 +155,7 @@ pub(crate) fn prepare_nm_conns(
         to_store: nm_conns_to_update,
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_devs_to_deactivate,
+        suppress_autoconnect_dev_names,
         to_delete: Vec::new(),
     };
 

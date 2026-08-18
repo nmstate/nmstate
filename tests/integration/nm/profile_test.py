@@ -3,6 +3,8 @@
 from contextlib import contextmanager
 from subprocess import SubprocessError
 
+import logging
+
 import pytest
 
 import time
@@ -822,4 +824,83 @@ def test_down_iface_with_multiconnect_profile(
             "nmcli -g GENERAL.CONNECTION d show eth1".split(), check=True
         )[1]
         == "\n"
+    )
+
+
+def _connection_active_on_iface(iface_name):
+    _, out, _ = cmdlib.exec_cmd(
+        "nmcli -f NAME,DEVICE connection show".split(), check=True
+    )
+    for line in out.strip().splitlines():
+        parts = [part.strip() for part in line.split(":")]
+        if len(parts) == 2 and parts[1] == iface_name:
+            return True
+    return False
+
+
+def _assert_iface_absent_from_multiconnect(iface_name):
+    time.sleep(1)  # Give some time to NetworkManager to auto-activate profiles
+    assert (
+        cmdlib.exec_cmd(
+            f"nmcli -g GENERAL.CONNECTION device show {iface_name}".split(),
+            check=True,
+        )[1].strip()
+        == ""
+    )
+    assert not _connection_active_on_iface(iface_name)
+    _, out, _ = cmdlib.exec_cmd(
+        f"ip link show {iface_name}".split(), check=True
+    )
+    assert "state DOWN" in out
+    assert (
+        cmdlib.exec_cmd(
+            f"nmcli -g IP4.ADDRESS device show {iface_name}".split(),
+            check=True,
+        )[1].strip()
+        == ""
+    )
+
+
+def test_state_absent_suppresses_multiconnect_dhcp(
+    multiconnect_profile_with_ip_enabled,
+    caplog,
+):
+    static_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: False,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    absent_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.ABSENT,
+            }
+        ]
+    }
+
+    libnmstate.apply(static_state)
+    with caplog.at_level(logging.WARNING, logger="libnmstate"):
+        libnmstate.apply(absent_state)
+        libnmstate.apply(absent_state)
+
+    _assert_iface_absent_from_multiconnect("eth1")
+    assert any(
+        "autoconnect has been suppressed for eth1" in record.message
+        for record in caplog.records
     )
