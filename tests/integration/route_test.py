@@ -301,6 +301,68 @@ def test_apply_route_with_route_type_multiple_times(eth1_up):
     assert routes_out_v6.count("unreachable") == 1
 
 
+# https://redhat.atlassian.net/browse/RHEL-82785
+@pytest.mark.tier1
+def test_reject_conflicting_special_routes_same_table():
+    routes = [
+        {
+            Route.DESTINATION: "0.0.0.0/8",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+            Route.METRIC: 200,
+            Route.TABLE_ID: 99,
+        },
+        {
+            Route.DESTINATION: "0.0.0.0/8",
+            Route.ROUTETYPE: Route.ROUTETYPE_PROHIBIT,
+            Route.METRIC: 200,
+            Route.TABLE_ID: 99,
+        },
+    ]
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply({Route.KEY: {Route.CONFIG: routes}})
+
+
+# https://redhat.atlassian.net/browse/RHEL-82785
+@pytest.mark.tier1
+def test_change_special_route_type_is_reported():
+    blackhole = [
+        {
+            Route.DESTINATION: "0.0.0.0/8",
+            Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+            Route.METRIC: 200,
+            Route.TABLE_ID: 99,
+        }
+    ]
+    prohibit = [
+        {
+            Route.DESTINATION: "0.0.0.0/8",
+            Route.ROUTETYPE: Route.ROUTETYPE_PROHIBIT,
+            Route.METRIC: 200,
+            Route.TABLE_ID: 99,
+        }
+    ]
+    libnmstate.apply({Route.KEY: {Route.CONFIG: blackhole}})
+    current = libnmstate.show_running_config()
+    diff = libnmstate.generate_differences(
+        {Route.KEY: {Route.CONFIG: prohibit}}, current
+    )
+    changed = diff.get(Route.KEY, {}).get(Route.CONFIG, [])
+    assert any(
+        rt.get(Route.ROUTETYPE) == Route.ROUTETYPE_PROHIBIT
+        and rt.get(Route.STATE) != Route.STATE_ABSENT
+        for rt in changed
+    ), f"expected prohibit route in gen_diff, got {changed}"
+    assert any(
+        rt.get(Route.ROUTETYPE) == Route.ROUTETYPE_BLACKHOLE
+        and rt.get(Route.STATE) == Route.STATE_ABSENT
+        for rt in changed
+    ), f"expected absent blackhole route in gen_diff, got {changed}"
+    libnmstate.apply({Route.KEY: {Route.CONFIG: prohibit}})
+    routes_out = _get_routes_from_iproute(4, 99)
+    assert Route.ROUTETYPE_PROHIBIT in routes_out
+    assert Route.ROUTETYPE_BLACKHOLE not in routes_out
+
+
 @pytest.mark.tier1
 def test_add_gateway(eth1_up):
     routes = [_get_ipv4_gateways()[0], _get_ipv6_test_routes()[0]]

@@ -17,7 +17,6 @@ use crate::{
 const DEFAULT_TABLE_ID: u32 = 254; // main route table ID
 const LOOPBACK_IFACE_NAME: &str = "lo";
 // Kernel metric for user/static IPv6 routes with unset/0 metric.
-#[cfg(feature = "query_apply")]
 const IP6_RT_PRIO_USER: u32 = 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -565,7 +564,6 @@ impl RouteEntry {
 
     // Metric the kernel will assign, for conflict detection. Unset/0 IPv6
     // metric is coerced to 1024, IPv4 to 0.
-    #[cfg(feature = "query_apply")]
     pub(crate) fn effective_metric(&self) -> u32 {
         match self.metric.and_then(|m| u32::try_from(m).ok()) {
             Some(m) if m > 0 => m,
@@ -576,7 +574,6 @@ impl RouteEntry {
 
     // Table the kernel will assign, for conflict detection. Unset table is
     // the main table.
-    #[cfg(feature = "query_apply")]
     pub(crate) fn effective_table_id(&self) -> u32 {
         match self.table_id {
             None | Some(Self::USE_DEFAULT_ROUTE_TABLE) => DEFAULT_TABLE_ID,
@@ -587,6 +584,18 @@ impl RouteEntry {
     pub(crate) fn is_unicast(&self) -> bool {
         self.route_type.is_none()
             || u8::from(self.route_type.unwrap()) == RTN_UNICAST
+    }
+
+    // True when both are non-unicast routes to the same destination, table,
+    // and metric. Netlink rejects a second route for the same triple on
+    // normal `ip route add` (IPv4/IPv6 fib); different metrics may coexist.
+    pub(crate) fn is_special_route_conflict_with(&self, other: &Self) -> bool {
+        !self.is_unicast()
+            && !other.is_unicast()
+            && self.destination.is_some()
+            && self.destination == other.destination
+            && self.effective_table_id() == other.effective_table_id()
+            && self.effective_metric() == other.effective_metric()
     }
 }
 
@@ -643,6 +652,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.table_id.as_ref() {
             props.push(format!("table-id: {v}"));
+        }
+        if let Some(v) = self.route_type.as_ref() {
+            props.push(format!("route-type: {v}"));
         }
         if let Some(v) = self.weight {
             props.push(format!("weight: {v}"));
@@ -711,6 +723,10 @@ impl MergedRoutes {
                 desired_routes.push(rt);
             }
         }
+        // After VRF resolution and destination sanitization so the key matches
+        // the destination/table/metric the kernel will use.
+        #[cfg(feature = "query_apply")]
+        validate_special_route_conflicts(desired_routes.as_slice())?;
 
         let mut changed_ifaces: HashSet<&str> = HashSet::new();
         let mut changed_routes: HashSet<RouteEntry> = HashSet::new();
@@ -799,6 +815,17 @@ impl MergedRoutes {
 
         let mut merged_routes: Vec<RouteEntry> = Vec::new();
 
+        // Desired special route with a different type for the same
+        // destination/table/metric replaces the current one (IPv4 has no oif;
+        // IPv6 keeps the kernel oif, so this must run in both branches below).
+        let is_replaced_special = |rt: &RouteEntry| {
+            desired_routes.as_slice().iter().any(|des_rt| {
+                !des_rt.is_absent()
+                    && des_rt.is_special_route_conflict_with(rt)
+                    && des_rt.route_type != rt.route_type
+            })
+        };
+
         if let Some(cur_rts) = current.config.as_ref() {
             for rt in cur_rts {
                 if let Some(via) = rt.next_hop_iface.as_ref() {
@@ -817,10 +844,29 @@ impl MergedRoutes {
                             .iter()
                             .filter(|r| r.is_absent())
                             .any(|absent_rt| absent_rt.is_match(rt))
+                        || is_replaced_special(rt)
                     {
                         let mut new_rt = rt.clone();
                         new_rt.state = Some(RouteState::Absent);
                         changed_routes.insert(new_rt);
+                    } else {
+                        merged_routes.push(rt.clone());
+                    }
+                } else if rt.route_type.is_some() {
+                    // Special routes with no next-hop interface. Drop them when
+                    // desired marks them absent or replaces the route-type for
+                    // the same destination, table, and metric.
+                    if desired_routes
+                        .as_slice()
+                        .iter()
+                        .filter(|r| r.is_absent())
+                        .any(|absent_rt| absent_rt.is_match(rt))
+                        || is_replaced_special(rt)
+                    {
+                        let mut new_rt = rt.clone();
+                        new_rt.state = Some(RouteState::Absent);
+                        changed_routes.insert(new_rt);
+                        changed_ifaces.insert(LOOPBACK_IFACE_NAME);
                     } else {
                         merged_routes.push(rt.clone());
                     }
@@ -905,6 +951,57 @@ impl MergedRoutes {
     pub(crate) fn is_changed(&self) -> bool {
         !self.route_changed_ifaces.is_empty()
     }
+}
+
+// Netlink rejects a second route when destination, table, and metric match on
+// normal `ip route add` (IPv4/IPv6 fib). Different metrics may coexist. IPv4
+// can store both special types via append; IPv6 replace keeps only the new
+// route because duplicate-nexthop comparison ignores route type. Callers must
+// pass routes after VRF resolution and destination sanitization so keys match
+// what the backend uses.
+#[cfg(feature = "query_apply")]
+fn validate_special_route_conflicts(
+    routes: &[RouteEntry],
+) -> Result<(), NmstateError> {
+    let mut special_routes: HashMap<(&str, u32, u32), &RouteEntry> =
+        HashMap::new();
+    for route in routes
+        .iter()
+        .filter(|rt| !rt.is_absent() && !rt.is_unicast())
+    {
+        let dst = if let Some(dst) = route.destination.as_deref() {
+            dst
+        } else {
+            continue;
+        };
+        let table = route.effective_table_id();
+        let metric = route.effective_metric();
+        if let Some(existing) = special_routes.get(&(dst, table, metric)) {
+            if existing.route_type != route.route_type {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Multiple special routes to {dst} in table {table} \
+                         with metric {metric} are not allowed, found '{}' and \
+                         '{}'. Netlink can only hold one of blackhole, \
+                         unreachable, or prohibit for the same destination, \
+                         table, and metric.",
+                        existing
+                            .route_type
+                            .map(|t| t.to_string())
+                            .unwrap_or_default(),
+                        route
+                            .route_type
+                            .map(|t| t.to_string())
+                            .unwrap_or_default(),
+                    ),
+                ));
+            }
+        } else {
+            special_routes.insert((dst, table, metric), route);
+        }
+    }
+    Ok(())
 }
 
 // Validating if the route destination network is valid,

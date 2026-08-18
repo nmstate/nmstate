@@ -19,15 +19,15 @@ impl MergedRoutes {
             }
         }
 
-        // Add back the deleted routes
-        if let Some(config_rts) = self.desired.config.as_ref() {
-            for config_rt in config_rts.iter().filter(|r| r.is_absent()) {
-                for cur_rt in current_rts
-                    .iter()
-                    .filter(|cur_rt| config_rt.is_match(cur_rt))
-                {
-                    let rt = cur_rt.clone();
-                    revert_rts.push(rt);
+        // Add back routes removed during merge (explicit absent entries and
+        // inferred special-route replacements tracked in changed_routes).
+        for removed_rt in self.changed_routes.iter().filter(|r| r.is_absent()) {
+            for cur_rt in current_rts {
+                let mut matcher = removed_rt.clone();
+                matcher.state = None;
+                if matcher.is_match(cur_rt) {
+                    revert_rts.push(cur_rt.clone());
+                    break;
                 }
             }
         }

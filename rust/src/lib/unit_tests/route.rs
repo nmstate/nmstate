@@ -954,3 +954,352 @@ fn test_allow_absent_zero_network_without_route_type() {
 
     routes.validate().unwrap();
 }
+
+#[test]
+fn test_reject_conflicting_special_routes_same_table() {
+    // Same destination, table, and metric with different special types is
+    // rejected by the kernel (RTNETLINK File exists).
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          route-type: blackhole
+          metric: 200
+          table-id: 99
+        - destination: 0.0.0.0/8
+          route-type: prohibit
+          metric: 200
+          table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    let err =
+        MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    assert!(err.msg().contains("0.0.0.0/8"));
+    assert!(err.msg().contains("99"));
+    assert!(err.msg().contains("200"));
+}
+
+#[test]
+fn test_allow_special_routes_same_table_different_metrics() {
+    // Distinct metrics make distinct fib entries; both types may coexist.
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          route-type: blackhole
+          metric: 200
+          table-id: 99
+        - destination: 0.0.0.0/8
+          route-type: prohibit
+          metric: 300
+          table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    let merged =
+        MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap();
+    assert_eq!(merged.changed_routes.len(), 2);
+}
+
+#[test]
+fn test_allow_special_routes_different_tables() {
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          route-type: blackhole
+          table-id: 99
+        - destination: 0.0.0.0/8
+          route-type: prohibit
+          table-id: 100
+        "#,
+    )
+    .unwrap();
+
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    let merged =
+        MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap();
+    assert_eq!(merged.changed_routes.len(), 2);
+}
+
+#[test]
+fn test_reject_equivalent_special_route_destinations() {
+    // 192.0.2.1/24 sanitizes to 192.0.2.0/24, so these collide.
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 192.0.2.1/24
+          route-type: blackhole
+          metric: 200
+          table-id: 99
+        - destination: 192.0.2.0/24
+          route-type: prohibit
+          metric: 200
+          table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    let err =
+        MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    assert!(err.msg().contains("192.0.2.0/24"));
+}
+
+#[test]
+fn test_allow_special_routes_in_different_vrfs() {
+    use crate::{Interfaces, MergedInterfaces};
+
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+        - name: vrf0
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 100
+        - name: vrf1
+          type: vrf
+          state: up
+          vrf:
+            route-table-id: 101
+        ",
+    )
+    .unwrap();
+
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          route-type: blackhole
+          vrf-name: vrf0
+        - destination: 0.0.0.0/8
+          route-type: prohibit
+          vrf-name: vrf1
+        "#,
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        Interfaces::default(),
+        cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let merged =
+        MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap();
+    assert_eq!(merged.changed_routes.len(), 2);
+}
+
+#[test]
+fn test_gen_diff_reports_special_route_type_change() {
+    use crate::NetworkState;
+
+    let current: NetworkState = serde_yaml::from_str(
+        r#"
+        routes:
+          config:
+          - destination: 0.0.0.0/8
+            route-type: blackhole
+            metric: 200
+            table-id: 99
+        "#,
+    )
+    .unwrap();
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"
+        routes:
+          config:
+          - destination: 0.0.0.0/8
+            route-type: prohibit
+            metric: 200
+            table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let diff = desired.gen_diff(&current).unwrap();
+    let diff_routes = diff.routes.config.as_ref().unwrap();
+    assert!(
+        diff_routes.iter().any(|rt| {
+            rt.route_type == Some(crate::RouteType::Prohibit) && !rt.is_absent()
+        }),
+        "gen_diff should report the new prohibit route: {diff_routes:?}"
+    );
+    assert!(
+        diff_routes.iter().any(|rt| {
+            rt.is_absent() && rt.route_type == Some(crate::RouteType::Blackhole)
+        }),
+        "gen_diff should mark the old blackhole route absent: {diff_routes:?}"
+    );
+}
+
+#[test]
+fn test_gen_diff_keeps_special_route_when_type_change_uses_different_metric() {
+    // Distinct metrics are separate fib entries; changing route-type alone
+    // must not remove the existing special route.
+    use crate::NetworkState;
+
+    let current: NetworkState = serde_yaml::from_str(
+        r#"
+        routes:
+          config:
+          - destination: 0.0.0.0/8
+            route-type: blackhole
+            metric: 200
+            table-id: 99
+        "#,
+    )
+    .unwrap();
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"
+        routes:
+          config:
+          - destination: 0.0.0.0/8
+            route-type: prohibit
+            metric: 300
+            table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let diff = desired.gen_diff(&current).unwrap();
+    let diff_routes = diff.routes.config.as_ref().unwrap();
+    assert!(
+        diff_routes.iter().any(|rt| {
+            rt.route_type == Some(crate::RouteType::Prohibit)
+                && rt.metric == Some(300)
+                && !rt.is_absent()
+        }),
+        "gen_diff should add the new prohibit route: {diff_routes:?}"
+    );
+    assert!(
+        !diff_routes.iter().any(|rt| {
+            rt.is_absent() && rt.route_type == Some(crate::RouteType::Blackhole)
+        }),
+        "gen_diff must not mark the blackhole absent when metrics differ: \
+         {diff_routes:?}"
+    );
+}
+
+#[test]
+fn test_gen_diff_reports_ipv6_special_route_type_change_with_oif() {
+    // IPv6 special routes retain next-hop-interface from the kernel oif.
+    use crate::NetworkState;
+
+    let current: NetworkState = serde_yaml::from_str(
+        r#"
+        routes:
+          config:
+          - destination: 2001:db8:1::/64
+            route-type: blackhole
+            next-hop-interface: lo
+            metric: 200
+            table-id: 99
+        "#,
+    )
+    .unwrap();
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"
+        routes:
+          config:
+          - destination: 2001:db8:1::/64
+            route-type: unreachable
+            metric: 200
+            table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let diff = desired.gen_diff(&current).unwrap();
+    let diff_routes = diff.routes.config.as_ref().unwrap();
+    assert!(
+        diff_routes.iter().any(|rt| {
+            rt.route_type == Some(crate::RouteType::Unreachable)
+                && !rt.is_absent()
+        }),
+        "gen_diff should report the new unreachable route: {diff_routes:?}"
+    );
+    assert!(
+        diff_routes.iter().any(|rt| {
+            rt.is_absent()
+                && rt.route_type == Some(crate::RouteType::Blackhole)
+                && rt.next_hop_iface.as_deref() == Some("lo")
+        }),
+        "gen_diff should mark the old blackhole route absent and keep oif lo: \
+         {diff_routes:?}"
+    );
+}
+
+#[test]
+fn test_allow_duplicate_identical_special_routes() {
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          route-type: blackhole
+          metric: 200
+          table-id: 99
+        - destination: 0.0.0.0/8
+          route-type: blackhole
+          metric: 200
+          table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    let merged =
+        MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap();
+    assert_eq!(merged.changed_routes.len(), 1);
+}
+
+#[test]
+fn test_revert_restores_replaced_special_route() {
+    let current: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          route-type: blackhole
+          metric: 200
+          table-id: 99
+        "#,
+    )
+    .unwrap();
+    let desired: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 0.0.0.0/8
+          route-type: prohibit
+          metric: 200
+          table-id: 99
+        "#,
+    )
+    .unwrap();
+
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    let merged = MergedRoutes::new(desired, current, &merged_ifaces).unwrap();
+    let revert = merged.generate_revert();
+    let revert_routes = revert.config.as_ref().unwrap();
+    assert!(
+        revert_routes.iter().any(|rt| {
+            rt.route_type == Some(crate::RouteType::Blackhole)
+                && !rt.is_absent()
+        }),
+        "revert should restore the replaced blackhole route: {revert_routes:?}"
+    );
+    assert!(
+        revert_routes.iter().any(|rt| {
+            rt.is_absent() && rt.route_type == Some(crate::RouteType::Prohibit)
+        }),
+        "revert should remove the added prohibit route: {revert_routes:?}"
+    );
+}
