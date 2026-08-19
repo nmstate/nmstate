@@ -334,9 +334,21 @@ def start_ipsec_srv_container():
         IpsecTestEnv.SRV_NIC,
         SRV_NAMESPACE,
     )
+    if os.environ.get("CI"):
+        # In GitHub Actions the runner scope lacks Delegate=yes so cgroup
+        # controllers (like pids) are not propagated to child cgroups.
+        # Explicitly enable them so the inner podman can use them.
+        # See podman-container-tools/podman#28944.
+        exec_cmd(
+            ["sh", "-c",
+             "echo '+pids +cpu +io +memory'"
+             " > /sys/fs/cgroup/cgroup.subtree_control"],
+            check=False,
+        )
     exec_cmd(
         "podman run -d --privileged --replace "
         "--pull=never "
+        "--cgroup-manager=cgroupfs "
         f"--name {SRV_CONTAINER_NAME} "
         "--hostname ipsec-srv.example.org "
         f"--network ns:/run/netns/{SRV_NAMESPACE} "
