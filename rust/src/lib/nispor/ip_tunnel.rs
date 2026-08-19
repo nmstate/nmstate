@@ -37,9 +37,9 @@ pub(crate) fn np_ip_tunnel_to_nmstate(
                 remote: np_ip_tunnel_info.remote,
                 ttl: np_ip_tunnel_info.ttl,
                 tos: np_ip_tunnel_info.tos,
-                flow_label: np_ip_tunnel_info.flow_info.map(|flow_info| {
-                    u32::from_be(flow_info) & IPV6_FLOWLABEL_MASK
-                }),
+                flow_label: np_ip_tunnel_info
+                    .flow_info
+                    .map(|flow_info| flow_info & IPV6_FLOWLABEL_MASK),
                 ip6tun_flags: np_ip_tunnel_info
                     .ip6tun_flags
                     .as_deref()
