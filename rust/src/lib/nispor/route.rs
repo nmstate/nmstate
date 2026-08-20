@@ -287,9 +287,7 @@ fn flat_multipath_route(
             new_np_route.oif = Some(mp_route.iface.to_string());
             let mut route =
                 np_route_to_nmstate(&new_np_route, table_id_to_vrf_names);
-            if np_route.address_family == nispor::AddressFamily::Ipv4 {
-                route.weight = Some(mp_route.weight);
-            }
+            route.weight = Some(mp_route.weight);
             ret.push(route);
         }
     }
