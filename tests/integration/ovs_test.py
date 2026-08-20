@@ -1364,6 +1364,68 @@ def test_attach_linux_bond_to_ovs_bridge(
     assertlib.assert_state_match(desired_state)
 
 
+@pytest.fixture
+def cleanup_ovs_bridge_bond_vlan():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: BOND1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: VLAN_IFNAME,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+
+
+# OpenShift Bare-Metal Networking commonly deploys this layered topology:
+# OVS bridge -> Linux bond -> VLAN -> physical Ethernet.
+# https://redhat.atlassian.net/browse/NMT-1147
+@pytest.mark.tier1
+def test_attach_linux_bond_over_vlan_to_ovs_bridge(
+    cleanup_ovs_bridge_bond_vlan, eth1_up
+):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+          - name: {VLAN_IFNAME}
+            state: up
+            type: vlan
+            vlan:
+              id: 101
+              base-iface: eth1
+          - name: {BOND1}
+            state: up
+            type: bond
+            link-aggregation:
+              mode: active-backup
+              port:
+                - {VLAN_IFNAME}
+          - name: {BRIDGE0}
+            type: ovs-bridge
+            state: up
+            bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+                - name: {BOND1}
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
 @pytest.mark.skipif(
     not os.environ.get("TEST_PCI_PATH"),
     reason="Need to define TEST_PCI_PATH for OVS DPDK tests.",
