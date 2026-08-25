@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::ifaces::qeth_vnicc::QethConfig;
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceType, Interfaces,
     MergedInterfaces, NetworkStateMode, NmstateError, SrIovConfig,
@@ -95,6 +96,18 @@ impl EthernetInterface {
             sriov_conf.sanitize()?
         }
 
+        // Validate qeth vnicc at the schema layer so invalid values
+        // (e.g. out-of-range learning-timeout) are rejected during the
+        // pre-apply validation pass, not mid-apply.
+        if let Some(vnicc) = self
+            .ethernet
+            .as_ref()
+            .and_then(|eth_conf| eth_conf.qeth.as_ref())
+            .and_then(|qeth_conf| qeth_conf.vnicc.as_ref())
+        {
+            vnicc.validate()?;
+        }
+
         Ok(())
     }
 
@@ -134,6 +147,11 @@ pub struct EthernetConfig {
     /// Single Root I/O Virtualization(SRIOV) configuration.
     /// Deserialize and serialize from/to `sr-iov`.
     pub sr_iov: Option<SrIovConfig>,
+    /// IBM Z (s390x) qeth-specific settings including VNIC characteristics
+    /// (vnicc). Only populated for OSA Express and HiperSockets interfaces
+    /// managed by the qeth kernel driver. `None` on all other hardware.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub qeth: Option<QethConfig>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "auto-negotiation",

@@ -344,6 +344,22 @@ impl NetworkState {
             |is_retry| async move {
                 nm_checkpoint_timeout_extend(checkpoint, timeout).await?;
                 nm_apply(merged_state, checkpoint, timeout, is_retry).await?;
+
+                // Apply qeth vnicc sysfs settings (s390x, NM backend path).
+                // MUST run here, inside the retry/verify loop, so sysfs is
+                // written before nmstate compares current vs desired state on
+                // every verification attempt. Re-writing identical sysfs
+                // values on retry is a harmless no-op at the kernel level.
+                for merged_iface in
+                    merged_state.interfaces.iter().filter(|i| i.is_changed())
+                {
+                    if let Some(crate::Interface::Ethernet(eth)) =
+                        merged_iface.for_apply.as_ref()
+                    {
+                        eth.apply_qeth()?;
+                    }
+                }
+
                 if ovsdb_is_running().await {
                     ovsdb_apply_global_conf(merged_state).await?;
                 }
