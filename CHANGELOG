@@ -1,4 +1,31 @@
 # Changelog
+## [2.2.62] - 2026-08-25
+### Breaking changes
+ - ifaces: deny unknown hsr/ip-tunnel/macsec fields. (15432fe2)
+
+### New features
+ - ip: Allow ignoring IP address with other protocol. (3bbac32a)
+ - loopback: Allow IPv6 disabled when kernel-disabled. (f097baa8)
+ - dns: auto-activate down ifaces only for desired link-local DNS and iif. (d83776fd)
+ - iface: warn on ignored props of absent interfaces. (0a8eb1c1)
+ - ifaces: warn on duplicate interface entries. (7cf6f7fa)
+
+### Bug fixes
+ - nm: keep ovs-iface for ovs-interface connections. (46d66ea0)
+ - route: reject conflicting special routes. (ae46e486)
+ - route: skip 0.0.0.0/8 check for absent routes. (fbf98ec7)
+ - nispor: adapt ip6tnl flow-label to nispor 2.0.3. (063fd6ed)
+ - sriov: omit query-only max-vfs from gen_diff. (3c7c37b6)
+ - nm: deactivate when auto-route-table-id changes. (7ec6d08b)
+ - base: reject MTU exceeding u32::MAX. (7c32e8a8)
+ - iface: include existing interfaces in name search. (a6e56c9e)
+ - ipv6: report disabled for per-interface kernel disable. (cf5a9e72)
+ - ipv6: report disabled when kernel has no IPv6 stack. (d27be6ab)
+ - nispor: skip alt-name removal for deleted virtual interfaces. (1527741c)
+ - nispor: pin physical non-ethernet alt-name match to owned identifier. (a1f5311a)
+ - nispor: keep OriginalName link match for stacked interfaces. (43a8ad16)
+ - nispor: derive alt-name link match from interface identifier. (45e5ed38)
+
 ## [2.2.61] - 2026-07-13
 ### Breaking changes
  - N/A
