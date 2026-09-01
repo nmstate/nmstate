@@ -514,25 +514,16 @@ impl RouteEntry {
                 self.source = Some(new_src);
             }
         }
-        if let Some(weight) = self.weight {
-            if !(1..=256).contains(&weight) {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Invalid ECMP route weight {weight}, should be in the \
-                         range of 1 to 256"
-                    ),
-                ));
-            }
-            if let Some(dst) = self.destination.as_deref()
-                && is_ipv6_addr(dst)
-            {
-                return Err(NmstateError::new(
-                    ErrorKind::NotSupportedError,
-                    "IPv6 ECMP route with weight is not supported yet"
-                        .to_string(),
-                ));
-            }
+        if let Some(weight) = self.weight
+            && !(1..=256).contains(&weight)
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid ECMP route weight {weight}, should be in the \
+                     range of 1 to 256"
+                ),
+            ));
         }
         if let Some(cwnd) = self.cwnd
             && cwnd == 0

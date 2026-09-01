@@ -1476,6 +1476,7 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
             Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
+            Route.WEIGHT: 1,
         },
         {
             Route.DESTINATION: IPV6_TEST_NET1,
@@ -1483,6 +1484,7 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
             Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
+            Route.WEIGHT: 1,
         },
     ]
     cur_state = libnmstate.show()
@@ -1973,6 +1975,43 @@ def test_add_and_remove_ecmp_route(eth1_static_ip):
             Route.KEY: {Route.CONFIG: routes},
         }
     )
+
+
+# https://redhat.atlassian.net/browse/RHEL-113392
+@pytest.mark.tier1
+def test_add_and_remove_ipv6_ecmp_route(eth1_static_ip):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.WEIGHT: 1,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
+            Route.WEIGHT: 256,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes(routes, cur_state)
+
+    absent_routes = [
+        dict(r, **{Route.STATE: Route.STATE_ABSENT}) for r in routes
+    ]
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: absent_routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    assert_routes_missing(routes, cur_state)
 
 
 @pytest.fixture
