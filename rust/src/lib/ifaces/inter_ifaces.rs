@@ -465,6 +465,18 @@ impl Interfaces {
                             .map(|m| m.to_ascii_uppercase())
                     };
                     if cur_mac_addr.as_deref() == Some(&mac_address) {
+                        if has_match {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Desired interface {} has `identifier: \
+                                     mac-address` with MAC address \
+                                     {mac_address}, but multiple interfaces \
+                                     are holding that MAC address",
+                                    iface.name()
+                                ),
+                            ));
+                        }
                         let mut new_iface = if iface.iface_type()
                             == InterfaceType::Unknown
                         {
@@ -488,7 +500,6 @@ impl Interfaces {
                             cur_iface.name().to_string();
                         changed_ifaces.push(new_iface);
                         has_match = true;
-                        break;
                     }
                 }
                 if has_match {
