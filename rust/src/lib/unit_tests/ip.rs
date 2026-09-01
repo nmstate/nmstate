@@ -729,6 +729,33 @@ fn test_error_on_route_metric_out_of_range() {
 }
 
 #[test]
+fn test_ipv6_auto_route_metric_sanitized_when_ipv6_disabled() {
+    let mut iface: Interface = serde_yaml::from_str(&format!(
+        r#"---
+        name: eth1
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: true
+        ipv6:
+          enabled: false
+          dhcp: false
+          auto-route-metric: 48"#,
+    ))
+    .unwrap();
+
+    iface.sanitize(true).unwrap();
+
+    let base_iface = iface.base_iface();
+
+    assert_eq!(
+        base_iface.ipv6.as_ref().and_then(|i| i.auto_route_metric),
+        None
+    );
+}
+
+#[test]
 fn test_disable_ipv6_where_all() {
     let mut ifaces = Interfaces::new();
 
