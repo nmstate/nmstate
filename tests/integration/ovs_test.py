@@ -413,6 +413,160 @@ class TestOvsLinkAggregation:
         assertlib.assert_absent(BOND1)
 
 
+# https://redhat.atlassian.net/browse/NMT-2789
+#
+# Regression test for the OVS based balance-slb use case described in
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/installing_on_bare_metal/user-provisioned-infrastructure#enabling-OVS-balance-slb-mode_installing-bare-metal
+#
+# Two OVS bridges are linked by a patch port pair: br-ex holds an internal
+# port (sharing the bridge name) with DHCP on IPv4 and IPv6 disabled, while
+# br-phy holds a balance-slb bond over two physical NICs. Both bridges enable
+# allow-extra-patch-ports. The OVN bridge-mappings and the br-int bridge from
+# the reference doc are intentionally omitted; enp2s0/enp3s0 map to eth1/eth2.
+@pytest.mark.tier1
+def test_ovs_balance_slb_with_patch_ports(port0_up, port1_up):
+    desired_state = yaml.load(
+        f"""---
+        interfaces:
+        - name: br-ex
+          type: ovs-bridge
+          state: up
+          bridge:
+            allow-extra-patch-ports: true
+            port:
+            - name: br-ex
+            - name: patch-ex-to-phy
+          ovs-db:
+            external_ids:
+              bridge-uplink: patch-ex-to-phy
+        - name: br-ex
+          type: ovs-interface
+          state: up
+          mtu: 1500
+          ipv4:
+            enabled: true
+            dhcp: true
+            auto-route-metric: 48
+          ipv6:
+            enabled: false
+            dhcp: false
+            auto-route-metric: 48
+        - name: br-phy
+          type: ovs-bridge
+          state: up
+          bridge:
+            allow-extra-patch-ports: true
+            port:
+            - name: patch-phy-to-ex
+            - name: ovs-bond
+              link-aggregation:
+                mode: balance-slb
+                port:
+                - name: {ETH1}
+                - name: {ETH2}
+        - name: patch-ex-to-phy
+          type: ovs-interface
+          state: up
+          patch:
+            peer: patch-phy-to-ex
+        - name: patch-phy-to-ex
+          type: ovs-interface
+          state: up
+          patch:
+            peer: patch-ex-to-phy
+        - name: {ETH1}
+          type: ethernet
+          state: up
+          mtu: 1500
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+        - name: {ETH2}
+          type: ethernet
+          state: up
+          mtu: 1500
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+        """,
+        Loader=yaml.SafeLoader,
+    )
+
+    try:
+        libnmstate.apply(desired_state)
+
+        # The balance-slb bond is reported back with its mode and members.
+        br_phy = statelib.show_only(("br-phy",))[Interface.KEY][0]
+        bond_port = None
+        for port in br_phy[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE]:
+            if OVSBridge.Port.LINK_AGGREGATION_SUBTREE in port:
+                bond_port = port
+                break
+        assert bond_port is not None
+
+        lag = bond_port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE]
+        assert (
+            lag[OVSBridge.Port.LinkAggregation.MODE]
+            == OVSBridge.Port.LinkAggregation.Mode.BALANCE_SLB
+        )
+        lag_ports = {
+            member[OVSBridge.Port.LinkAggregation.Port.NAME]
+            for member in lag[OVSBridge.Port.LinkAggregation.PORT_SUBTREE]
+        }
+        assert lag_ports == {ETH1, ETH2}
+
+        # with IPv6 disabled the auto-route-metric must be ignored
+        # https://redhat.atlassian.net/browse/RHEL-250308
+        ovs_iface = statelib.show_only(("br-ex",))[Interface.KEY][0]
+        ipv6_state = ovs_iface[Interface.IPV6]
+        assert ipv6_state[InterfaceIP.ENABLED] is False
+        assert InterfaceIP.AUTO_ROUTE_METRIC not in ipv6_state
+
+        # The patch port pair links the two bridges together.
+        patch_ex = statelib.show_only(("patch-ex-to-phy",))[Interface.KEY][0]
+        assert (
+            patch_ex[OVSInterface.PATCH_CONFIG_SUBTREE][
+                OVSInterface.Patch.PEER
+            ]
+            == "patch-phy-to-ex"
+        )
+        patch_phy = statelib.show_only(("patch-phy-to-ex",))[Interface.KEY][0]
+        assert (
+            patch_phy[OVSInterface.PATCH_CONFIG_SUBTREE][
+                OVSInterface.Patch.PEER
+            ]
+            == "patch-ex-to-phy"
+        )
+    finally:
+        libnmstate.apply(
+            yaml.load(
+                """---
+                interfaces:
+                - name: br-ex
+                  type: ovs-bridge
+                  state: absent
+                - name: br-phy
+                  type: ovs-bridge
+                  state: absent
+                - name: patch-ex-to-phy
+                  type: ovs-interface
+                  state: absent
+                - name: patch-phy-to-ex
+                  type: ovs-interface
+                  state: absent
+                """,
+                Loader=yaml.SafeLoader,
+            )
+        )
+
+    assertlib.assert_absent("br-ex")
+    assertlib.assert_absent("br-phy")
+    assertlib.assert_absent("patch-ex-to-phy")
+    assertlib.assert_absent("patch-phy-to-ex")
+
+
 @pytest.mark.tier1
 def test_ovs_vlan_access_tag():
     bridge = Bridge(BRIDGE1)

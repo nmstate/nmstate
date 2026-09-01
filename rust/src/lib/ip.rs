@@ -783,12 +783,10 @@ impl InterfaceIpv6 {
             self.auto_dns = None;
             self.auto_gateway = None;
             self.auto_routes = None;
+            self.auto_route_metric = None;
             self.auto_table_id = None;
             self.dhcp_send_hostname = None;
             self.dhcp_custom_hostname = None;
-        }
-        if self.autoconf == Some(false) {
-            self.auto_route_metric = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs.iter_mut() {
