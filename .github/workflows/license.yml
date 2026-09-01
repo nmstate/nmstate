@@ -17,6 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Check License Header - Rust
-        uses: apache/skywalking-eyes@v0.8.0
+        uses: apache/skywalking-eyes@v0.9.0
         with:
           config: .licenserc.yaml
