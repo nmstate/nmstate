@@ -43,9 +43,10 @@ fi
 
 if [ $NM_TYPE == "nm_min" ];then
     TEST_ARG="$TEST_ARG --copr nmstate/nm-rhel9"
-    PRETEST_EXEC='dnf copr enable -y nmstate/nm-libreswan-rhel9; \
-        dnf remove -y NetworkManager-libreswan; \
-        dnf install -y NetworkManager-libreswan \
+    # distro-sync to the Copr NEVRA without removing first. A Copr metadata
+    # timeout used to leave the system with no NetworkManager-libreswan.
+    PRETEST_EXEC='dnf copr enable -y nmstate/nm-libreswan-rhel9 && \
+        dnf distro-sync -y --refresh NetworkManager-libreswan \
             --disablerepo="*" \
             --enablerepo="copr:copr.fedorainfracloud.org:nmstate:nm-libreswan-rhel9"'
 fi
