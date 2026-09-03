@@ -4,7 +4,7 @@ use crate::{ErrorKind, MergedNetworkState, NetworkState};
 
 #[test]
 fn test_alt_name_conflict_with_other_port() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: port1
@@ -23,7 +23,7 @@ fn test_alt_name_conflict_with_other_port() {
                 - veryveryveryverylonglonglongname",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -47,7 +47,7 @@ fn test_alt_name_conflict_with_other_port() {
 
 #[test]
 fn test_two_alt_name_conflict_with_each_other() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: port1
@@ -66,7 +66,7 @@ fn test_two_alt_name_conflict_with_each_other() {
                 - veryveryveryverylonglonglongname",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -90,7 +90,7 @@ fn test_two_alt_name_conflict_with_each_other() {
 
 #[test]
 fn test_alt_name_overbook() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: port1
@@ -114,7 +114,7 @@ fn test_alt_name_overbook() {
                 - veryveryveryverylonglonglongname",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -139,7 +139,7 @@ fn test_alt_name_overbook() {
 
 #[test]
 fn test_remove_iface_via_alt_name_ref() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: veryveryveryverylonglonglongname
@@ -147,7 +147,7 @@ fn test_remove_iface_via_alt_name_ref() {
             state: absent",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -176,7 +176,7 @@ fn test_remove_iface_via_alt_name_ref() {
 
 #[test]
 fn test_change_iface_via_alt_name_ref() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: veryveryveryverylonglonglongname
@@ -187,7 +187,7 @@ fn test_change_iface_via_alt_name_ref() {
               dhcp: true",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -255,7 +255,7 @@ fn test_change_iface_via_alt_name_ref() {
 
 #[test]
 fn test_iface_ref_by_alt_name_but_desired_as_absent() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -269,7 +269,7 @@ fn test_iface_ref_by_alt_name_but_desired_as_absent() {
               dhcp: true",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -298,7 +298,7 @@ fn test_iface_ref_by_alt_name_but_desired_as_absent() {
 
 #[test]
 fn test_iface_ref_by_alt_name_but_conflict_desired() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -312,7 +312,7 @@ fn test_iface_ref_by_alt_name_but_conflict_desired() {
               dhcp: true",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -341,7 +341,7 @@ fn test_iface_ref_by_alt_name_but_conflict_desired() {
 
 #[test]
 fn test_iface_ref_by_alt_name_ok_to_conflict_when_both_absent() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -352,7 +352,7 @@ fn test_iface_ref_by_alt_name_ok_to_conflict_when_both_absent() {
             state: absent",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -382,7 +382,7 @@ fn test_iface_ref_by_alt_name_ok_to_conflict_when_both_absent() {
 
 #[test]
 fn test_do_not_resolve_mac_identifer_iface_to_alt_name() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: port1
@@ -392,7 +392,7 @@ fn test_do_not_resolve_mac_identifer_iface_to_alt_name() {
             state: absent",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -423,7 +423,7 @@ fn test_do_not_resolve_mac_identifer_iface_to_alt_name() {
 
 #[test]
 fn test_copy_mac_from_existing_down_port() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: bond99
@@ -437,7 +437,7 @@ fn test_copy_mac_from_existing_down_port() {
                 - eth2",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -467,7 +467,7 @@ fn test_copy_mac_from_existing_down_port() {
 
 #[test]
 fn test_copy_mac_from_new_down_interface_fails() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -484,7 +484,7 @@ fn test_copy_mac_from_new_down_interface_fails() {
                 - eth2",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth2

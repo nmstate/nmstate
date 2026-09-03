@@ -4,8 +4,8 @@ use nmstate::{
     DnsState, HostNameState, NetworkState, OvnConfiguration, OvsDbGlobalConfig,
     RouteRules, Routes,
 };
+use rmsd_yaml::{Mapping, Value, ValueData};
 use serde::Serialize;
-use serde_yaml::Value;
 
 use crate::error::CliError;
 
@@ -46,12 +46,12 @@ pub(crate) fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
         if matches.get_flag("JSON") {
             serde_json::to_string_pretty(&new_net_state)?
         } else {
-            serde_yaml::to_string(&new_net_state)?
+            rmsd_yaml::to_string(&new_net_state)?
         }
     } else if matches.get_flag("JSON") {
         serde_json::to_string_pretty(&sort_netstate(net_state)?)?
     } else {
-        serde_yaml::to_string(&sort_netstate(net_state)?)?
+        rmsd_yaml::to_string(&sort_netstate(net_state)?)?
     })
 }
 
@@ -61,23 +61,24 @@ pub(crate) fn sort_netstate(
     let mut ifaces = net_state.interfaces.to_vec();
     ifaces.sort_by(|a, b| a.name().cmp(b.name()));
 
-    if let Value::Sequence(ifaces) = serde_yaml::to_value(&ifaces)? {
+    let value = rmsd_yaml::to_value(&ifaces)?;
+    if let ValueData::Array(ifaces) = value.data {
         let mut new_ifaces = Vec::new();
         for iface_v in ifaces {
-            if let Value::Mapping(iface) = iface_v {
-                let mut new_iface = serde_yaml::Mapping::new();
+            if let ValueData::Map(iface) = iface_v.data {
+                let mut new_iface = Mapping::new();
                 for top_property in &IFACE_TOP_PRIORTIES {
                     if let Some(v) =
-                        iface.get(Value::String(top_property.to_string()))
+                        iface.get(&Value::from(top_property.to_string()))
                     {
                         new_iface.insert(
-                            Value::String(top_property.to_string()),
+                            Value::from(top_property.to_string()),
                             v.clone(),
                         );
                     }
                 }
                 for (k, v) in iface.iter() {
-                    if let Value::String(name) = &k
+                    if let ValueData::String(name) = &k.data
                         && IFACE_TOP_PRIORTIES.contains(&name.as_str())
                     {
                         continue;
@@ -85,7 +86,10 @@ pub(crate) fn sort_netstate(
                     new_iface.insert(k.clone(), v.clone());
                 }
 
-                new_ifaces.push(Value::Mapping(new_iface));
+                new_ifaces.push(Value {
+                    data: ValueData::Map(Box::new(new_iface)),
+                    ..Default::default()
+                });
             }
         }
         return Ok(SortedNetworkState {

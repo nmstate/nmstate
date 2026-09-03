@@ -4,7 +4,7 @@ use crate::MacVtapInterface;
 
 #[test]
 fn test_mac_vtap_stringlized_attributes() {
-    let iface: MacVtapInterface = serde_yaml::from_str(
+    let iface: MacVtapInterface = rmsd_yaml::from_str(
         r#"---
 name: mac1
 type: mac-vtap

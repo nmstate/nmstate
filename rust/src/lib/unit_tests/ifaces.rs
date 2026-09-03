@@ -142,7 +142,7 @@ fn test_check_orphan_vlan_change_parent() {
 
 #[test]
 fn test_ifaces_deny_unknonw_attribute() {
-    let result = serde_yaml::from_str::<Interfaces>(
+    let result = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -159,7 +159,7 @@ fn test_ifaces_deny_unknonw_attribute() {
 
 #[test]
 fn test_macsec_deny_unknown_config_field() {
-    let result = serde_yaml::from_str::<Interfaces>(
+    let result = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: macsec0
   type: macsec
@@ -181,7 +181,7 @@ fn test_macsec_deny_unknown_config_field() {
 #[test]
 fn test_duplicate_iface_entry_last_wins() {
     log_capture::start();
-    let ifaces = serde_yaml::from_str::<Interfaces>(
+    let ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -210,7 +210,7 @@ fn test_duplicate_iface_entry_last_wins() {
 #[test]
 fn test_untyped_iface_of_userspace_name_is_not_duplicate() {
     log_capture::start();
-    let ifaces = serde_yaml::from_str::<Interfaces>(
+    let ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: br0
   type: ovs-bridge
@@ -228,7 +228,7 @@ fn test_untyped_iface_of_userspace_name_is_not_duplicate() {
 #[test]
 fn test_absent_iface_warns_on_ignored_props() {
     log_capture::start();
-    let ifaces = serde_yaml::from_str::<Interfaces>(
+    let ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -243,7 +243,7 @@ fn test_absent_iface_warns_on_ignored_props() {
     assert_eq!(log_capture::warn_count(), 1);
 
     log_capture::start();
-    serde_yaml::from_str::<Interfaces>(
+    rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -257,7 +257,7 @@ fn test_absent_iface_warns_on_ignored_props() {
 
 #[test]
 fn test_ifaces_resolve_unknown_bond_iface() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: bond99
   type: bond
@@ -265,7 +265,7 @@ fn test_ifaces_resolve_unknown_bond_iface() {
 ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: bond99
   link-aggregation:
@@ -300,7 +300,7 @@ fn test_ifaces_resolve_unknown_bond_iface() {
 
 #[test]
 fn test_ifaces_ignore_iface_in_desire() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -311,7 +311,7 @@ fn test_ifaces_ignore_iface_in_desire() {
 ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -342,7 +342,7 @@ fn test_ifaces_ignore_iface_in_desire() {
 
 #[test]
 fn test_ifaces_iface_in_unknown_state() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -352,7 +352,7 @@ fn test_ifaces_iface_in_unknown_state() {
     state: up",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -391,7 +391,7 @@ fn test_ifaces_iface_in_unknown_state() {
 
 #[test]
 fn test_ifaces_ignore_iface_in_current() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -402,7 +402,7 @@ fn test_ifaces_ignore_iface_in_current() {
 ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: br0
   type: ovs-bridge
@@ -429,7 +429,7 @@ fn test_ifaces_ignore_iface_in_current() {
 
 #[test]
 fn test_ifaces_ignore_iface_in_current_but_desired() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -443,7 +443,7 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -477,7 +477,7 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 
 #[test]
 fn test_ifaces_iter() {
-    let ifaces = serde_yaml::from_str::<Interfaces>(
+    let ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -494,7 +494,7 @@ fn test_ifaces_iter() {
 
 #[test]
 fn test_ifaces_iter_mut() {
-    let mut ifaces = serde_yaml::from_str::<Interfaces>(
+    let mut ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -521,7 +521,7 @@ fn test_unknown_iface_type() {
         "foo_type"
     );
     assert_eq!(
-        serde_yaml::to_string(&InterfaceType::Other("foo_type".to_string()))
+        rmsd_yaml::to_string(&InterfaceType::Other("foo_type".to_string()))
             .unwrap(),
         "foo_type\n"
     );
@@ -529,7 +529,7 @@ fn test_unknown_iface_type() {
 
 #[test]
 fn test_hsr_mac_sync_no_mac_addresses_defined() {
-    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+    let cur_ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -542,7 +542,7 @@ fn test_hsr_mac_sync_no_mac_addresses_defined() {
     )
     .unwrap();
 
-    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+    let des_ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -588,7 +588,7 @@ fn test_hsr_mac_sync_no_mac_addresses_defined() {
 
 #[test]
 fn test_hsr_mac_sync_mac_address_defined() {
-    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+    let cur_ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -602,7 +602,7 @@ fn test_hsr_mac_sync_mac_address_defined() {
     )
     .unwrap();
 
-    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+    let des_ifaces = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -663,7 +663,7 @@ fn test_hsr_mac_sync_mac_address_defined() {
 #[test]
 fn test_hsr_conflicting_desired_port_macs() {
     let current = Interfaces::new();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -702,7 +702,7 @@ fn test_hsr_conflicting_desired_port_macs() {
 
 #[test]
 fn test_hsr_both_port_desired_macs() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -713,7 +713,7 @@ fn test_hsr_both_port_desired_macs() {
     ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -764,7 +764,7 @@ fn test_hsr_both_port_desired_macs() {
 
 #[test]
 fn test_hsr_all_ifaces_desired_macs() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -775,7 +775,7 @@ fn test_hsr_all_ifaces_desired_macs() {
     ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -827,7 +827,7 @@ fn test_hsr_all_ifaces_desired_macs() {
 
 #[test]
 fn test_hsr_port2_desired_mac() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -839,7 +839,7 @@ fn test_hsr_port2_desired_mac() {
     ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -889,7 +889,7 @@ fn test_hsr_port2_desired_mac() {
 
 #[test]
 fn test_hsr_all_ifaces_only_permanent_mac() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -902,7 +902,7 @@ fn test_hsr_all_ifaces_only_permanent_mac() {
     ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -948,7 +948,7 @@ fn test_hsr_all_ifaces_only_permanent_mac() {
 
 #[test]
 fn test_hsr_v1_protocol() {
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: eth1
     type: ethernet
@@ -969,7 +969,7 @@ fn test_hsr_v1_protocol() {
     ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
   - name: hsr0
     type: hsr
@@ -1014,7 +1014,7 @@ fn test_hsr_v1_protocol() {
 
 #[test]
 fn test_sort_ovs_bridge_with_same_name() {
-    let ifaces_1 = serde_yaml::from_str::<Interfaces>(
+    let ifaces_1 = rmsd_yaml::from_str::<Interfaces>(
         r"---
           - name: br-ex
             type: ovs-bridge
@@ -1024,7 +1024,7 @@ fn test_sort_ovs_bridge_with_same_name() {
             state: up",
     )
     .unwrap();
-    let ifaces_2 = serde_yaml::from_str::<Interfaces>(
+    let ifaces_2 = rmsd_yaml::from_str::<Interfaces>(
         r"---
           - name: br-ex
             type: ovs-interface
@@ -1047,7 +1047,7 @@ fn test_sort_ovs_bridge_with_same_name() {
 
 #[test]
 fn test_error_when_merge_two_different_type_ifaces() {
-    let desired = serde_yaml::from_str::<Interface>(
+    let desired = rmsd_yaml::from_str::<Interface>(
         r"---
         name: gretap0
         type: ethernet
@@ -1056,7 +1056,7 @@ fn test_error_when_merge_two_different_type_ifaces() {
         ",
     )
     .unwrap();
-    let current = serde_yaml::from_str::<Interface>(
+    let current = rmsd_yaml::from_str::<Interface>(
         r"---
         name: gretap0
         type: ip-tunnel

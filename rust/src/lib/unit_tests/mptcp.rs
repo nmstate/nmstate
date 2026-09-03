@@ -4,7 +4,7 @@ use crate::{BaseInterface, ErrorKind, Interface, MergedInterface};
 
 #[test]
 fn test_valid_mptcp_flags() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: eth1
 type: ethernet
@@ -28,7 +28,7 @@ mptcp:
 
 #[test]
 fn test_mptcp_sanitize_remove_per_addr_flag() {
-    let mut des_iface: BaseInterface = serde_yaml::from_str(
+    let mut des_iface: BaseInterface = rmsd_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -59,7 +59,7 @@ ipv6:
 "#,
     )
     .unwrap();
-    let expected_iface: BaseInterface = serde_yaml::from_str(
+    let expected_iface: BaseInterface = rmsd_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet

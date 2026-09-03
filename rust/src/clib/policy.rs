@@ -103,7 +103,7 @@ pub extern "C" fn nmstate_net_state_from_policy(
                     )
                 })
             } else {
-                serde_yaml::to_string(&s).map_err(|e| {
+                rmsd_yaml::to_string(&s).map_err(|e| {
                     nmstate::NmstateError::new(
                         nmstate::ErrorKind::Bug,
                         format!("Failed to convert state {s:?} to YAML: {e}"),
@@ -177,7 +177,7 @@ where
         }
     };
 
-    match serde_yaml::from_str(content_str) {
+    match rmsd_yaml::from_str(content_str) {
         Ok(n) => Some(n),
         Err(e) => {
             unsafe {

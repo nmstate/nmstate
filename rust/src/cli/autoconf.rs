@@ -56,7 +56,7 @@ pub(crate) fn autoconf(argv: &[String]) -> Result<String, CliError> {
         eprintln!("This is a experimental function!");
         desire_state.apply()?;
     }
-    Ok(serde_yaml::to_string(&desire_state)?)
+    Ok(rmsd_yaml::to_string(&desire_state)?)
 }
 
 fn filter_net_state(

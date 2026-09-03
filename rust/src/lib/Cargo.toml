@@ -16,7 +16,7 @@ edition.workspace = true
 path = "lib.rs"
 
 [dependencies]
-serde_yaml = { workspace = true }
+rmsd_yaml = { workspace = true }
 
 [dependencies.nispor]
 workspace = true
@@ -52,7 +52,7 @@ workspace = true
 optional = true
 
 [dev-dependencies]
-serde_yaml = { workspace = true }
+rmsd_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]

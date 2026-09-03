@@ -75,7 +75,7 @@ pub(crate) fn policy(matches: &clap::ArgMatches) -> Result<String, CliError> {
     Ok(if matches.get_flag("JSON") {
         serde_json::to_string_pretty(&new_net_state)?
     } else {
-        serde_yaml::to_string(&new_net_state)?
+        rmsd_yaml::to_string(&new_net_state)?
     })
 }
 
@@ -89,7 +89,7 @@ where
     if content.is_empty() {
         return Ok(T::default());
     }
-    match serde_yaml::from_str(&content) {
+    match rmsd_yaml::from_str(&content) {
         Ok(n) => Ok(n),
         Err(yaml_error) => match serde_json::from_str(&content) {
             Ok(n) => Ok(n),
@@ -137,7 +137,7 @@ fn store_capture_states_from_file(
     let states_string = if use_json_format {
         serde_json::to_string_pretty(&cli_cap_states)?
     } else {
-        serde_yaml::to_string(&cli_cap_states)?
+        rmsd_yaml::to_string(&cli_cap_states)?
     };
     let mut fd = std::fs::OpenOptions::new()
         .write(true)

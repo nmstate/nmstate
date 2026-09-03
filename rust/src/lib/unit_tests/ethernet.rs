@@ -7,7 +7,7 @@ use crate::{
 
 #[test]
 fn test_ethernet_stringlized_attributes() {
-    let iface: EthernetInterface = serde_yaml::from_str(
+    let iface: EthernetInterface = rmsd_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -48,7 +48,7 @@ ethernet:
 
 #[test]
 fn test_veth_change_peer_away_from_ignored_peer() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: veth1
   type: veth
@@ -58,7 +58,7 @@ fn test_veth_change_peer_away_from_ignored_peer() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: veth1
   type: veth
@@ -90,7 +90,7 @@ fn test_veth_change_peer_away_from_ignored_peer() {
 
 #[test]
 fn test_veth_change_peer_away_from_missing_peer() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: veth1
           type: veth
@@ -102,7 +102,7 @@ fn test_veth_change_peer_away_from_missing_peer() {
     .unwrap();
     // The peer of veth1 does not exist in current state means the veth peer is
     // in another network namespace
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: veth1
           type: veth
@@ -126,7 +126,7 @@ fn test_veth_change_peer_away_from_missing_peer() {
 
 #[test]
 fn test_eth_verify_absent_ignore_current_up() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -134,7 +134,7 @@ fn test_eth_verify_absent_ignore_current_up() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: eth1
   type: ethernet
@@ -155,7 +155,7 @@ fn test_eth_verify_absent_ignore_current_up() {
 
 #[test]
 fn test_eth_change_veth_peer() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: veth1
   type: veth
@@ -165,7 +165,7 @@ fn test_eth_change_veth_peer() {
 ",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: veth1
   type: veth
@@ -202,7 +202,7 @@ fn test_eth_change_veth_peer() {
 
 #[test]
 fn test_new_veth_without_peer_config() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: veth1
   type: veth
@@ -227,7 +227,7 @@ fn test_new_veth_without_peer_config() {
 
 #[test]
 fn test_mac_identifer_use_permanent_mac_first() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -243,7 +243,7 @@ fn test_mac_identifer_use_permanent_mac_first() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: wan0
           type: ethernet
@@ -279,7 +279,7 @@ fn test_mac_identifer_use_permanent_mac_first() {
 
 #[test]
 fn test_mac_identifer_use_fallback_to_mac() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -299,7 +299,7 @@ fn test_mac_identifer_use_fallback_to_mac() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: wan0
           type: ethernet
@@ -335,7 +335,7 @@ fn test_mac_identifer_use_fallback_to_mac() {
 
 #[test]
 fn test_mac_identifer_check_iface_type_also() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0
           type: bond
@@ -360,7 +360,7 @@ fn test_mac_identifer_check_iface_type_also() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: wan0
           type: ethernet
@@ -396,7 +396,7 @@ fn test_mac_identifer_check_iface_type_also() {
 
 #[test]
 fn test_ignore_speed_duplex_when_auto_negotiate() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -409,7 +409,7 @@ fn test_ignore_speed_duplex_when_auto_negotiate() {
     )
     .unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -431,7 +431,7 @@ fn test_ignore_speed_duplex_when_auto_negotiate() {
     .unwrap();
     merged_ifaces.verify(&cur_ifaces).unwrap();
 
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet

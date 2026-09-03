@@ -88,7 +88,7 @@ pub(crate) fn apply_state(
         diff_state.hide_secrets();
     }
     let sorted_net_state = crate::query::sort_netstate(diff_state)?;
-    Ok(serde_yaml::to_string(&sorted_net_state)?)
+    Ok(rmsd_yaml::to_string(&sorted_net_state)?)
 }
 
 pub(crate) fn commit(checkpoint: &str) -> Result<String, CliError> {
@@ -157,7 +157,7 @@ pub(crate) fn state_edit(
         diff_state.hide_secrets();
     }
     let sorted_net_state = crate::query::sort_netstate(diff_state)?;
-    Ok(serde_yaml::to_string(&sorted_net_state)?)
+    Ok(rmsd_yaml::to_string(&sorted_net_state)?)
 }
 
 fn gen_tmp_file_path() -> String {
@@ -179,7 +179,7 @@ fn write_state_to_file(
     net_state: &NetworkState,
 ) -> Result<(), CliError> {
     let mut fd = File::create(file_path)?;
-    fd.write_all(serde_yaml::to_string(net_state)?.as_bytes())?;
+    fd.write_all(rmsd_yaml::to_string(net_state)?.as_bytes())?;
     Ok(())
 }
 
@@ -209,7 +209,7 @@ fn run_editor(tmp_file_path: &str) -> Result<NetworkState, CliError> {
             });
         }
         let fd = std::fs::File::open(tmp_file_path)?;
-        match serde_yaml::from_reader(fd) {
+        match rmsd_yaml::from_reader(fd) {
             Ok(n) => return Ok(n),
             Err(e) => {
                 if !ask_for_retry() {

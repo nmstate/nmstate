@@ -4,7 +4,7 @@ use crate::{Interface, NetworkState};
 
 #[test]
 fn test_debug_trait() {
-    let ethernet = serde_yaml::from_str(
+    let ethernet = rmsd_yaml::from_str(
         r"
         name: eth1
         type: ethernet

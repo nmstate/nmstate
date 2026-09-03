@@ -4,7 +4,7 @@ use crate::VxlanInterface;
 
 #[test]
 fn test_vxlan_stringlized_attributes() {
-    let iface: VxlanInterface = serde_yaml::from_str(
+    let iface: VxlanInterface = rmsd_yaml::from_str(
         r#"---
 name: vxlan1
 type: vxlan
@@ -25,7 +25,7 @@ vxlan:
 
 #[test]
 fn test_vxlan_evpn_config_stringlized_attributes() {
-    let iface: VxlanInterface = serde_yaml::from_str(
+    let iface: VxlanInterface = rmsd_yaml::from_str(
         r#"---
 name: vxlan1
 type: vxlan
@@ -50,7 +50,7 @@ vxlan:
 
 #[test]
 fn test_vxlan_serialization_skips_none_destination_port() {
-    let iface: VxlanInterface = serde_yaml::from_str(
+    let iface: VxlanInterface = rmsd_yaml::from_str(
         r#"---
 name: vxlan1
 type: vxlan
@@ -62,7 +62,7 @@ vxlan:
     )
     .unwrap();
     let new: VxlanInterface =
-        serde_yaml::from_str(&serde_yaml::to_string(&iface).unwrap()).unwrap();
+        rmsd_yaml::from_str(&rmsd_yaml::to_string(&iface).unwrap()).unwrap();
 
     assert_eq!(iface, new);
 }

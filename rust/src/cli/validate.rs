@@ -29,11 +29,11 @@ pub(crate) fn validate(matches: &clap::ArgMatches) -> Result<String, CliError> {
         NetworkStateOrPolicy::Policy(mut policy) => {
             policy.current = cur_state;
             policy.validate()?;
-            Ok(serde_yaml::to_string(&policy)?)
+            Ok(rmsd_yaml::to_string(&policy)?)
         }
         NetworkStateOrPolicy::State(state) => {
             state.validate(cur_state.as_ref())?;
-            Ok(serde_yaml::to_string(&state)?)
+            Ok(rmsd_yaml::to_string(&state)?)
         }
     }
 }

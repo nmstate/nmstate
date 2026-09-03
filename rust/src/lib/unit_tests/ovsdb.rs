@@ -4,7 +4,7 @@ use crate::{MergedOvsDbGlobalConfig, NetworkState, OvsDbGlobalConfig};
 
 #[test]
 fn test_ovsdb_verify_null_current() {
-    let desired: OvsDbGlobalConfig = serde_yaml::from_str("{}").unwrap();
+    let desired: OvsDbGlobalConfig = rmsd_yaml::from_str("{}").unwrap();
     let pre_apply_current = desired.clone();
     let current = desired.clone();
 
@@ -16,7 +16,7 @@ fn test_ovsdb_verify_null_current() {
 
 #[test]
 fn test_ovsdb_purge_by_empty_section() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         ovs-db: {}
         ",
@@ -28,7 +28,7 @@ fn test_ovsdb_purge_by_empty_section() {
 
 #[test]
 fn test_ovsdb_purge_by_empty_hash() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         ovs-db:
           external_ids: {}

@@ -4,7 +4,7 @@ use crate::{ErrorKind, Interfaces, MergedInterfaces};
 
 #[test]
 fn test_hsr_port_cannot_have_ip_enabled_explicitly() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: hsr0
           type: hsr
@@ -26,7 +26,7 @@ fn test_hsr_port_cannot_have_ip_enabled_explicitly() {
             autoconf: true",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -54,7 +54,7 @@ fn test_hsr_port_cannot_have_ip_enabled_explicitly() {
 
 #[test]
 fn test_auto_include_hsr_port_as_changed() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: hsr0
           type: hsr
@@ -66,7 +66,7 @@ fn test_auto_include_hsr_port_as_changed() {
             multicast-spec: 40",
     )
     .unwrap();
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth1
           type: ethernet
@@ -127,7 +127,7 @@ fn test_auto_include_hsr_port_as_changed() {
 
 #[test]
 fn test_prp_interlink_is_forbidden() {
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
       - name: eth1
         type: ethernet
@@ -138,7 +138,7 @@ fn test_prp_interlink_is_forbidden() {
       ",
     )
     .unwrap();
-    let des_ifaces = serde_yaml::from_str(
+    let des_ifaces = rmsd_yaml::from_str(
         r"---
         - name: hsr0
           type: hsr
@@ -166,7 +166,7 @@ fn test_prp_interlink_is_forbidden() {
 
 #[test]
 fn test_hsr_deny_unknown_config_field() {
-    let result = serde_yaml::from_str::<Interfaces>(
+    let result = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: hsr0
           type: hsr

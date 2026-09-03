@@ -49,7 +49,7 @@ pub extern "C" fn nmstate_net_state_format(
             )
         })
     } else {
-        serde_yaml::to_string(&net_state).map_err(|e| {
+        rmsd_yaml::to_string(&net_state).map_err(|e| {
             nmstate::NmstateError::new(
                 nmstate::ErrorKind::Bug,
                 format!("Failed to convert state {net_state:?} to YAML: {e}"),

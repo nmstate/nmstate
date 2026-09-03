@@ -9,7 +9,7 @@ use crate::{
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_undefined() {
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -27,7 +27,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined() {
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -46,7 +46,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_for_exist_bond() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -55,7 +55,7 @@ mac-address: 00:01:02:03:04:05
 ",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -74,7 +74,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_changing_mode() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -85,7 +85,7 @@ link-aggregation:
 ",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -104,7 +104,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_changing_opt() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -117,7 +117,7 @@ link-aggregation:
 ",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -136,7 +136,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_bond_mode_not_defined_for_new_iface() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -154,7 +154,7 @@ state: up
 
 #[test]
 fn test_bond_validate_ad_actor_system_mac_address() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -176,7 +176,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_miimon_and_arp_interval() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
 name: bond99
 type: bond
@@ -199,7 +199,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_stringlized_attributes() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let iface: BondInterface = rmsd_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -261,7 +261,7 @@ link-aggregation:
 
 #[test]
 fn test_integer_bond_mode() {
-    let ifaces: Interfaces = serde_yaml::from_str(
+    let ifaces: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: bond0
   type: bond
@@ -367,7 +367,7 @@ fn test_integer_bond_mode() {
 
 #[test]
 fn test_integer_bond_opts() {
-    let ifaces: Interfaces = serde_yaml::from_str(
+    let ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond60
   type: bond
@@ -421,7 +421,7 @@ fn test_integer_bond_opts() {
 
 #[test]
 fn test_bond_ports() {
-    let ifaces: Interfaces = serde_yaml::from_str(
+    let ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond99
           type: bond
@@ -439,7 +439,7 @@ fn test_bond_ports() {
 
 #[test]
 fn test_balance_slb_invalid_mode_from_current() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -454,7 +454,7 @@ fn test_balance_slb_invalid_mode_from_current() {
         ",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -478,7 +478,7 @@ fn test_balance_slb_invalid_mode_from_current() {
 
 #[test]
 fn test_balance_slb_invalid_xmit_from_current() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -492,7 +492,7 @@ fn test_balance_slb_invalid_xmit_from_current() {
         ",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -518,7 +518,7 @@ fn test_balance_slb_invalid_xmit_from_current() {
 
 #[test]
 fn test_balance_slb_valid_override_current() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -533,7 +533,7 @@ fn test_balance_slb_valid_override_current() {
         ",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -555,7 +555,7 @@ fn test_balance_slb_valid_override_current() {
 
 #[test]
 fn test_disable_balance_slb_valid_override_current() {
-    let des_iface: Interface = serde_yaml::from_str(
+    let des_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -570,7 +570,7 @@ fn test_disable_balance_slb_valid_override_current() {
         ",
     )
     .unwrap();
-    let cur_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -593,7 +593,7 @@ fn test_disable_balance_slb_valid_override_current() {
 
 #[test]
 fn test_bond_port_queue_id_overlap() {
-    let mut des_iface: BondInterface = serde_yaml::from_str(
+    let mut des_iface: BondInterface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -620,7 +620,7 @@ fn test_bond_port_queue_id_overlap() {
 
 #[test]
 fn test_bond_port_queue_id_not_overlap_on_default() {
-    let mut des_iface: BondInterface = serde_yaml::from_str(
+    let mut des_iface: BondInterface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -641,7 +641,7 @@ fn test_bond_port_queue_id_not_overlap_on_default() {
 
 #[test]
 fn test_bond_mode_lacp_alias() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let iface: BondInterface = rmsd_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -657,7 +657,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_link_aggregation_alias() {
-    let des_iface: BondInterface = serde_yaml::from_str(
+    let des_iface: BondInterface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -678,7 +678,7 @@ fn test_bond_link_aggregation_alias() {
 
 #[test]
 fn test_bond_opt_lacp_active() {
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -702,7 +702,7 @@ fn test_bond_opt_lacp_active() {
 #[test]
 fn test_bond_opt_arp_interval() {
     for mode in ["balance-tlb", "802.3ad", "balance-alb"] {
-        let iface: Interface = serde_yaml::from_str(&format!(
+        let iface: Interface = rmsd_yaml::from_str(&format!(
             r"---
             name: bond99
             type: bond
@@ -726,7 +726,7 @@ fn test_bond_opt_arp_interval() {
 
 #[test]
 fn test_bond_opt_arp_ip_target() {
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -750,7 +750,7 @@ fn test_bond_opt_arp_ip_target() {
 
 #[test]
 fn test_bond_opt_ns_ip6_target() {
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -776,7 +776,7 @@ fn test_bond_opt_ns_ip6_target() {
 
 #[test]
 fn test_bond_ports_ports_config_conflict() {
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond
@@ -798,7 +798,7 @@ fn test_bond_ports_ports_config_conflict() {
     let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
     merged_iface.post_inter_ifaces_process_bond().unwrap();
 
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r"---
         name: bond99
         type: bond

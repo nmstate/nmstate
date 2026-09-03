@@ -7,7 +7,7 @@ use crate::{
 
 #[test]
 fn test_dns_ignore_dns_purge_on_absent_iface() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
 dns-resolver:
   config:
@@ -19,7 +19,7 @@ interfaces:
 ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
 dns-resolver:
   config:
@@ -65,7 +65,7 @@ interfaces:
 
 #[test]
 fn test_dns_ipv6_link_local_iface_has_ipv6_disabled() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -74,7 +74,7 @@ fn test_dns_ipv6_link_local_iface_has_ipv6_disabled() {
         ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -96,7 +96,7 @@ fn test_dns_ipv6_link_local_iface_has_ipv6_disabled() {
 
 #[test]
 fn test_dns_ipv6_link_local_on_disconnected_iface() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -105,7 +105,7 @@ fn test_dns_ipv6_link_local_on_disconnected_iface() {
         ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -132,7 +132,7 @@ fn test_dns_ipv6_link_local_on_disconnected_iface() {
 
 #[test]
 fn test_inherited_link_local_dns_does_not_activate_down_iface() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth2
@@ -144,7 +144,7 @@ fn test_inherited_link_local_dns_does_not_activate_down_iface() {
         ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -186,7 +186,7 @@ fn test_inherited_link_local_dns_does_not_activate_down_iface() {
 
 #[test]
 fn test_mark_as_up_for_apply_skips_orphan_absent_iface() {
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: bond0
@@ -208,7 +208,7 @@ fn test_mark_as_up_for_apply_skips_orphan_absent_iface() {
         ",
     )
     .unwrap();
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: bond0
@@ -239,7 +239,7 @@ fn test_mark_as_up_for_apply_skips_orphan_absent_iface() {
 
 #[test]
 fn test_two_dns_ipv6_link_local_iface() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -249,7 +249,7 @@ fn test_two_dns_ipv6_link_local_iface() {
         ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -281,7 +281,7 @@ fn test_two_dns_ipv6_link_local_iface() {
 
 #[test]
 fn test_two_dns_ipv6_link_local_same_iface() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -291,7 +291,7 @@ fn test_two_dns_ipv6_link_local_same_iface() {
         ",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
@@ -312,14 +312,14 @@ fn test_two_dns_ipv6_link_local_same_iface() {
 
 #[test]
 fn test_dns_iface_has_no_ip_stack_info() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: eth1
         ",
     )
     .unwrap();
-    let mut current: NetworkState = serde_yaml::from_str(
+    let mut current: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -408,7 +408,7 @@ fn test_dns_iface_has_no_ip_stack_info() {
 
 #[test]
 fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -420,7 +420,7 @@ fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
             - 2001:4860:4860::8888",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: dummy0
@@ -456,7 +456,7 @@ fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
 
 #[test]
 fn test_dns_prefer_desired_over_current() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -485,7 +485,7 @@ fn test_dns_prefer_desired_over_current() {
                 prefix-length: 64",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: dummy1
@@ -516,7 +516,7 @@ fn test_dns_prefer_desired_over_current() {
 
 #[test]
 fn test_copy_ip_stack_if_marked_for_dns() {
-    let desired: NetworkState = serde_yaml::from_str(
+    let desired: NetworkState = rmsd_yaml::from_str(
         r"---
         dns-resolver:
           config:
@@ -532,7 +532,7 @@ fn test_copy_ip_stack_if_marked_for_dns() {
             state: up",
     )
     .unwrap();
-    let current: NetworkState = serde_yaml::from_str(
+    let current: NetworkState = rmsd_yaml::from_str(
         r"---
         interfaces:
           - name: dummy0

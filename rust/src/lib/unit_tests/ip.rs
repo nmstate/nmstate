@@ -14,7 +14,7 @@ fn gen_test_eth_ifaces() -> Interfaces {
 
 #[test]
 fn test_ip_stringlized_attributes() {
-    let iface: BaseInterface = serde_yaml::from_str(
+    let iface: BaseInterface = rmsd_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -54,7 +54,7 @@ ipv6:
 
 #[test]
 fn test_ip_ignore_deserialize_error_of_absent_iface() {
-    let iface: Interface = serde_yaml::from_str(
+    let iface: Interface = rmsd_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -82,7 +82,7 @@ ipv6:
 
 #[test]
 fn test_ip_allow_extra_address_by_default() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -102,7 +102,7 @@ fn test_ip_allow_extra_address_by_default() {
 "#,
     )
     .unwrap();
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -140,7 +140,7 @@ fn test_ip_allow_extra_address_by_default() {
 
 #[test]
 fn test_ipv4_not_allow_extra_address() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -155,7 +155,7 @@ fn test_ipv4_not_allow_extra_address() {
 "#,
     )
     .unwrap();
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -189,7 +189,7 @@ fn test_ipv4_not_allow_extra_address() {
 
 #[test]
 fn test_ipv6_not_allow_extra_address() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -204,7 +204,7 @@ fn test_ipv6_not_allow_extra_address() {
 "#,
     )
     .unwrap();
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -238,7 +238,7 @@ fn test_ipv6_not_allow_extra_address() {
 
 #[test]
 fn test_ipv6_mtu_lower_than_1280() {
-    let mut iface: BaseInterface = serde_yaml::from_str(
+    let mut iface: BaseInterface = rmsd_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -264,7 +264,7 @@ ipv6:
 
 #[test]
 fn test_ipv6_verify_emtpy() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r#"---
             - name: eth1
               type: ethernet
@@ -276,7 +276,7 @@ fn test_ipv6_verify_emtpy() {
     )
     .unwrap();
 
-    let cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = rmsd_yaml::from_str(
         r#"---
             - name: eth1
               type: ethernet
@@ -300,7 +300,7 @@ fn test_ipv6_verify_emtpy() {
 
 #[test]
 fn test_should_not_have_ipv6_in_ipv4_section() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r#"---
             - name: eth1
               type: ethernet
@@ -329,7 +329,7 @@ fn test_should_not_have_ipv6_in_ipv4_section() {
 
 #[test]
 fn test_should_not_have_ipv4_in_ipv6_section() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
             - name: eth1
               type: ethernet
@@ -358,7 +358,7 @@ fn test_should_not_have_ipv4_in_ipv6_section() {
 
 #[test]
 fn test_ipv4_verify_valid_prefix() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
             - name: eth1
               type: ethernet
@@ -385,7 +385,7 @@ fn test_ipv4_verify_valid_prefix() {
 
 #[test]
 fn test_ipv6_verify_valid_prefix() {
-    let des_ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = rmsd_yaml::from_str(
         r#"---
             - name: eth1
               type: ethernet
@@ -497,7 +497,7 @@ fn test_sanitize_ip_network_ipv6_net() {
 
 #[test]
 fn test_auto_ip_lift_time() {
-    let left_fmt: BaseInterface = serde_yaml::from_str(
+    let left_fmt: BaseInterface = rmsd_yaml::from_str(
         r#"---
         name: eth1
         type: ethernet
@@ -521,7 +521,7 @@ fn test_auto_ip_lift_time() {
         "#,
     )
     .unwrap();
-    let life_time_fmt: BaseInterface = serde_yaml::from_str(
+    let life_time_fmt: BaseInterface = rmsd_yaml::from_str(
         r#"---
         name: eth1
         type: ethernet
@@ -546,7 +546,7 @@ fn test_auto_ip_lift_time() {
     )
     .unwrap();
 
-    let iproute_fmt: BaseInterface = serde_yaml::from_str(
+    let iproute_fmt: BaseInterface = rmsd_yaml::from_str(
         r#"---
         name: eth1
         type: ethernet
@@ -577,7 +577,7 @@ fn test_auto_ip_lift_time() {
 
 #[test]
 fn test_ip_serlize_allow_extra_address() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r#"---
         - name: eth1
           type: ethernet
@@ -594,8 +594,7 @@ fn test_ip_serlize_allow_extra_address() {
     .unwrap();
 
     let new: Interfaces =
-        serde_yaml::from_str(&serde_yaml::to_string(&desired).unwrap())
-            .unwrap();
+        rmsd_yaml::from_str(&rmsd_yaml::to_string(&desired).unwrap()).unwrap();
 
     assert_eq!(desired, new);
 }
@@ -616,7 +615,7 @@ ipv6:
     prefix-length: 64
 "#;
 
-    let value = serde_yaml::from_str::<serde_yaml::Value>(desired).unwrap();
+    let value = rmsd_yaml::from_str::<rmsd_yaml::Value>(desired).unwrap();
 
     let result = serde_json::from_value::<Interface>(
         serde_json::to_value(value).unwrap(),
@@ -632,7 +631,7 @@ ipv6:
 
 #[test]
 fn test_no_error_on_diff_auto_metric_without_dhcpv4() {
-    let mut iface: Interface = serde_yaml::from_str(
+    let mut iface: Interface = rmsd_yaml::from_str(
         r#"---
         name: eth1
         type: ethernet
@@ -654,7 +653,7 @@ fn test_no_error_on_diff_auto_metric_if_one_is_default() {
         (RouteEntry::USE_DEFAULT_METRIC, 101),
         (101, RouteEntry::USE_DEFAULT_METRIC),
     ] {
-        let mut iface: Interface = serde_yaml::from_str(&format!(
+        let mut iface: Interface = rmsd_yaml::from_str(&format!(
             r#"---
             name: eth1
             type: ethernet
@@ -684,7 +683,7 @@ fn test_no_error_on_diff_auto_metric_if_one_is_default() {
 
 #[test]
 fn test_error_on_diff_auto_metric_with_dhcpv4() {
-    let mut iface: Interface = serde_yaml::from_str(
+    let mut iface: Interface = rmsd_yaml::from_str(
         r#"---
         name: eth1
         type: ethernet
@@ -708,7 +707,7 @@ fn test_error_on_diff_auto_metric_with_dhcpv4() {
 fn test_error_on_route_metric_out_of_range() {
     for prop_name in ["auto-route-metric", "prefix-route-metric"] {
         for invalid_value in [-2i64, u32::MAX as i64 + 1] {
-            let mut iface: Interface = serde_yaml::from_str(&format!(
+            let mut iface: Interface = rmsd_yaml::from_str(&format!(
                 r#"---
                 name: eth1
                 type: ethernet

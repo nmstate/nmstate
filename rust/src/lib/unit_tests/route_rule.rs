@@ -18,7 +18,7 @@ fn test_sort_uniqe_route_rules() {
 
 #[test]
 fn test_route_rule_stringlized_attributes() {
-    let rule: RouteRuleEntry = serde_yaml::from_str(
+    let rule: RouteRuleEntry = rmsd_yaml::from_str(
         r#"
 priority: "500"
 route-table: "129"
@@ -31,7 +31,7 @@ route-table: "129"
 
 #[test]
 fn test_route_rule_sanitize_ipv4_from_to() {
-    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+    let mut rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
 ip-to: 192.0.3.1/24
 ip-from: 192.0.3.2/24
@@ -47,7 +47,7 @@ ip-from: 192.0.3.2/24
 
 #[test]
 fn test_route_rule_sanitize_ipv6_from_to() {
-    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+    let mut rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
 ip-to: 2001:db8:1::2/64
 ip-from: 2001:db8:2::ffff/64
@@ -63,7 +63,7 @@ ip-from: 2001:db8:2::ffff/64
 
 #[test]
 fn test_route_rule_sanitize_ipv4_from_to_host() {
-    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+    let mut rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
 ip-to: 192.0.3.1
 ip-from: 192.0.3.2
@@ -79,7 +79,7 @@ ip-from: 192.0.3.2
 
 #[test]
 fn test_route_rule_sanitize_ipv6_from_to_host() {
-    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+    let mut rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
 ip-to: 2001:db8:1::2
 ip-from: 2001:db8:2::ffff
@@ -95,7 +95,7 @@ ip-from: 2001:db8:2::ffff
 
 #[test]
 fn test_route_rule_sanitize_none_compact_ipv6_from_to() {
-    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+    let mut rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
 ip-to: 2001:db8:1:0000::2
 ip-from: 2001:db8:2:0000::ffff
@@ -111,7 +111,7 @@ ip-from: 2001:db8:2:0000::ffff
 
 #[test]
 fn test_route_rule_sanitize_ipv6_family_ip_from() {
-    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+    let mut rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
 ip-from: 2001:db8:b::/64
 priority: 30000
@@ -126,7 +126,7 @@ family: ipv6
 
 #[test]
 fn test_route_rule_validate_ipv4_family_ip_from() {
-    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+    let mut rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
 ip-from: 192.168.2.0/24
 priority: 30000
@@ -141,7 +141,7 @@ family: ipv4
 
 #[test]
 fn test_route_rule_matching_empty_ip_from_with_none() {
-    let absent_rule: RouteRuleEntry = serde_yaml::from_str(
+    let absent_rule: RouteRuleEntry = rmsd_yaml::from_str(
         r#"
         ip-from: ""
         state: absent
@@ -150,7 +150,7 @@ fn test_route_rule_matching_empty_ip_from_with_none() {
     )
     .unwrap();
 
-    let not_match_rule: RouteRuleEntry = serde_yaml::from_str(
+    let not_match_rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
         ip-from: 192.168.2.0/24
         priority: 30000
@@ -160,7 +160,7 @@ fn test_route_rule_matching_empty_ip_from_with_none() {
     )
     .unwrap();
 
-    let match_rule: RouteRuleEntry = serde_yaml::from_str(
+    let match_rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
         priority: 30000
         route-table: 200
@@ -175,7 +175,7 @@ fn test_route_rule_matching_empty_ip_from_with_none() {
 
 #[test]
 fn test_route_rule_matching_empty_ip_to_with_none() {
-    let absent_rule: RouteRuleEntry = serde_yaml::from_str(
+    let absent_rule: RouteRuleEntry = rmsd_yaml::from_str(
         r#"
         ip-to: ""
         state: absent
@@ -184,7 +184,7 @@ fn test_route_rule_matching_empty_ip_to_with_none() {
     )
     .unwrap();
 
-    let not_match_rule: RouteRuleEntry = serde_yaml::from_str(
+    let not_match_rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
         ip-to: 192.168.2.0/24
         priority: 30000
@@ -194,7 +194,7 @@ fn test_route_rule_matching_empty_ip_to_with_none() {
     )
     .unwrap();
 
-    let match_rule: RouteRuleEntry = serde_yaml::from_str(
+    let match_rule: RouteRuleEntry = rmsd_yaml::from_str(
         r"
         priority: 30000
         route-table: 200
@@ -209,7 +209,7 @@ fn test_route_rule_matching_empty_ip_to_with_none() {
 
 #[test]
 fn test_route_rule_auto_priority_increasing_from_desire() {
-    let des_rules: RouteRules = serde_yaml::from_str(
+    let des_rules: RouteRules = rmsd_yaml::from_str(
         r"
         config:
         - state: absent
@@ -230,7 +230,7 @@ fn test_route_rule_auto_priority_increasing_from_desire() {
     )
     .unwrap();
 
-    let cur_rules: RouteRules = serde_yaml::from_str(
+    let cur_rules: RouteRules = rmsd_yaml::from_str(
         r"
         config:
         - ip-to: 192.168.2.100
@@ -280,7 +280,7 @@ fn test_route_rule_auto_priority_increasing_from_desire() {
 
 #[test]
 fn test_route_rule_auto_priority_increasing_from_empty() {
-    let des_rules: RouteRules = serde_yaml::from_str(
+    let des_rules: RouteRules = rmsd_yaml::from_str(
         r"
         config:
         - ip-to: 192.168.2.30
@@ -323,7 +323,7 @@ fn test_route_rule_auto_priority_increasing_from_empty() {
 
 #[test]
 fn test_route_rule_auto_priority_existing() {
-    let des_rules: RouteRules = serde_yaml::from_str(
+    let des_rules: RouteRules = rmsd_yaml::from_str(
         r"
         config:
         - ip-to: 192.168.2.30
@@ -339,7 +339,7 @@ fn test_route_rule_auto_priority_existing() {
     )
     .unwrap();
 
-    let cur_rules: RouteRules = serde_yaml::from_str(
+    let cur_rules: RouteRules = rmsd_yaml::from_str(
         r"
         config:
         - ip-to: 192.168.2.30
@@ -383,7 +383,7 @@ fn test_route_rule_auto_priority_existing() {
 
 #[test]
 fn test_route_rule_auto_priority_some_existing_and_some_new() {
-    let des_rules: RouteRules = serde_yaml::from_str(
+    let des_rules: RouteRules = rmsd_yaml::from_str(
         r"
         config:
         - ip-to: 192.168.2.30
@@ -399,7 +399,7 @@ fn test_route_rule_auto_priority_some_existing_and_some_new() {
     )
     .unwrap();
 
-    let cur_rules: RouteRules = serde_yaml::from_str(
+    let cur_rules: RouteRules = rmsd_yaml::from_str(
         r"
         config:
         - ip-to: 192.168.2.30

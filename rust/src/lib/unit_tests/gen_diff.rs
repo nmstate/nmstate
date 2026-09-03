@@ -19,10 +19,10 @@ fn test_gen_diff() {
         let current = load_state(&path.join(CURRENT_FILE_NAME));
         let desired = load_state(&path.join(DESIRED_FILE_NAME));
         let expected_diff =
-            serde_yaml::to_string(&load_state(&path.join(REVERT_FILE_NAME)))
+            rmsd_yaml::to_string(&load_state(&path.join(REVERT_FILE_NAME)))
                 .unwrap();
-        let diff = serde_yaml::to_string(&desired.gen_diff(&current).unwrap())
-            .unwrap();
+        let diff =
+            rmsd_yaml::to_string(&desired.gen_diff(&current).unwrap()).unwrap();
         if expected_diff != diff {
             panic!(
                 "FAIL: {:?}\nExpected:\n\n{}\nGot:\n\n{}",
@@ -37,7 +37,7 @@ fn test_gen_diff() {
 
 fn load_state(file_path: &std::path::Path) -> NetworkState {
     let fd = std::fs::File::open(file_path).unwrap();
-    match serde_yaml::from_reader(fd) {
+    match rmsd_yaml::from_reader(fd) {
         Ok(n) => n,
         Err(e) => {
             panic!("FAIL to load NetworkState from {file_path:?}: {e}");

@@ -19,10 +19,10 @@ fn test_gen_revert() {
         let current = load_state(&path.join(CURRENT_FILE_NAME));
         let desired = load_state(&path.join(DESIRED_FILE_NAME));
         let expected_revert =
-            serde_yaml::to_string(&load_state(&path.join(REVERT_FILE_NAME)))
+            rmsd_yaml::to_string(&load_state(&path.join(REVERT_FILE_NAME)))
                 .unwrap();
         let revert =
-            serde_yaml::to_string(&desired.generate_revert(&current).unwrap())
+            rmsd_yaml::to_string(&desired.generate_revert(&current).unwrap())
                 .unwrap();
         if expected_revert != revert {
             panic!(
@@ -38,7 +38,7 @@ fn test_gen_revert() {
 
 fn load_state(file_path: &std::path::Path) -> NetworkState {
     let fd = std::fs::File::open(file_path).unwrap();
-    match serde_yaml::from_reader(fd) {
+    match rmsd_yaml::from_reader(fd) {
         Ok(n) => n,
         Err(e) => {
             panic!("FAIL to load NetworkState from {file_path:?}: {e}");

@@ -118,7 +118,7 @@ fn test_verify_current_has_more_routes() {
 
 #[test]
 fn test_route_ignore_iface() {
-    let routes: Routes = serde_yaml::from_str(
+    let routes: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0/0
@@ -156,7 +156,7 @@ config:
 
 #[test]
 fn test_route_verify_ignore_iface() {
-    let desire: Routes = serde_yaml::from_str(
+    let desire: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0/0
@@ -166,7 +166,7 @@ config:
 ",
     )
     .unwrap();
-    let current: Routes = serde_yaml::from_str(
+    let current: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0/0
@@ -195,7 +195,7 @@ config:
 
 #[test]
 fn test_route_stringlized_attributes() {
-    let route: RouteEntry = serde_yaml::from_str(
+    let route: RouteEntry = rmsd_yaml::from_str(
         r#"
 metric: "500"
 table-id: "129"
@@ -208,7 +208,7 @@ table-id: "129"
 
 #[test]
 fn test_route_sanitize_ipv4() {
-    let mut route: RouteEntry = serde_yaml::from_str(
+    let mut route: RouteEntry = rmsd_yaml::from_str(
         r#"
 destination: "192.0.2.1/24"
 "#,
@@ -220,7 +220,7 @@ destination: "192.0.2.1/24"
 
 #[test]
 fn test_route_sanitize_ipv4_host() {
-    let mut route: RouteEntry = serde_yaml::from_str(
+    let mut route: RouteEntry = rmsd_yaml::from_str(
         r#"
 destination: "192.0.2.1"
 "#,
@@ -232,7 +232,7 @@ destination: "192.0.2.1"
 
 #[test]
 fn test_route_sanitize_ipv6() {
-    let mut route: RouteEntry = serde_yaml::from_str(
+    let mut route: RouteEntry = rmsd_yaml::from_str(
         r#"
 destination: "2001:db8:1::1/64"
 "#,
@@ -244,7 +244,7 @@ destination: "2001:db8:1::1/64"
 
 #[test]
 fn test_route_sanitize_ipv6_host() {
-    let mut route: RouteEntry = serde_yaml::from_str(
+    let mut route: RouteEntry = rmsd_yaml::from_str(
         r#"
 destination: "2001:db8:1::1"
 "#,
@@ -256,7 +256,7 @@ destination: "2001:db8:1::1"
 
 #[test]
 fn test_route_sanitize_ipv6_host_not_compact() {
-    let mut route: RouteEntry = serde_yaml::from_str(
+    let mut route: RouteEntry = rmsd_yaml::from_str(
         r#"
 destination: "2001:db8:1:0000:000::1"
 next-hop-address: "2001:db8:a:0000:000::1"
@@ -275,7 +275,7 @@ source: "2001:0db8:85a3:0000:0000:8a2e:0370:7001"
 
 #[test]
 fn test_route_not_allowing_empty_dst() {
-    let desired: Routes = serde_yaml::from_str(
+    let desired: Routes = rmsd_yaml::from_str(
         r#"
         config:
         - destination: ""
@@ -293,7 +293,7 @@ fn test_route_not_allowing_empty_dst() {
 
 #[test]
 fn test_route_sanitize_ipv6_ecmp() {
-    let mut route: RouteEntry = serde_yaml::from_str(
+    let mut route: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 2001:db:1::/64
         metric: 150
@@ -311,7 +311,7 @@ fn test_route_sanitize_ipv6_ecmp() {
 
 #[test]
 fn test_route_ipv4_ecmp_is_match() {
-    let absent_route: RouteEntry = serde_yaml::from_str(
+    let absent_route: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 192.0.2.1
         metric: 150
@@ -323,7 +323,7 @@ fn test_route_ipv4_ecmp_is_match() {
         ",
     )
     .unwrap();
-    let route: RouteEntry = serde_yaml::from_str(
+    let route: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 192.0.2.1
         metric: 150
@@ -339,7 +339,7 @@ fn test_route_ipv4_ecmp_is_match() {
 
 #[test]
 fn test_route_valid_default_gateway() {
-    let routes: Routes = serde_yaml::from_str(
+    let routes: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0/0
@@ -353,7 +353,7 @@ config:
 
 #[test]
 fn test_route_invalid_destination() {
-    let routes1: Routes = serde_yaml::from_str(
+    let routes1: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0/8
@@ -366,7 +366,7 @@ config:
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
-    let routes2: Routes = serde_yaml::from_str(
+    let routes2: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0/f
@@ -379,7 +379,7 @@ config:
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
-    let routes3: Routes = serde_yaml::from_str(
+    let routes3: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0
@@ -392,7 +392,7 @@ config:
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
-    let routes4: Routes = serde_yaml::from_str(
+    let routes4: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0.0/0
@@ -405,7 +405,7 @@ config:
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
-    let routes5: Routes = serde_yaml::from_str(
+    let routes5: Routes = rmsd_yaml::from_str(
         r"
 config:
 - destination: 0.0.0.0.0/7
@@ -421,21 +421,21 @@ config:
 
 #[test]
 fn test_route_matching_empty_via_with_none() {
-    let absent_route: RouteEntry = serde_yaml::from_str(
+    let absent_route: RouteEntry = rmsd_yaml::from_str(
         r#"
         next-hop-address: ""
         state: absent
         "#,
     )
     .unwrap();
-    let not_match_route: RouteEntry = serde_yaml::from_str(
+    let not_match_route: RouteEntry = rmsd_yaml::from_str(
         r"
         next-hop-address: 2001:db8::2
         next-hop-interface: eth1
         ",
     )
     .unwrap();
-    let match_route: RouteEntry = serde_yaml::from_str(
+    let match_route: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 192.0.2.1
         next-hop-interface: eth1
@@ -448,14 +448,14 @@ fn test_route_matching_empty_via_with_none() {
 
 #[test]
 fn test_routes_delayed_by_nm() {
-    let route4: RouteEntry = serde_yaml::from_str(
+    let route4: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 192.0.2.1
         next-hop-interface: eth0
         ",
     )
     .unwrap();
-    let route6: RouteEntry = serde_yaml::from_str(
+    let route6: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 2001:db:1::/64
         next-hop-interface: eth0
@@ -463,7 +463,7 @@ fn test_routes_delayed_by_nm() {
     )
     .unwrap();
 
-    let current_ifaces: Interfaces = serde_yaml::from_str(
+    let current_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth0
           type: ethernet
@@ -484,14 +484,14 @@ fn test_routes_delayed_by_nm() {
 
 #[test]
 fn test_routes_not_delayed_by_nm() {
-    let route4: RouteEntry = serde_yaml::from_str(
+    let route4: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 192.0.2.1
         next-hop-interface: eth0
         ",
     )
     .unwrap();
-    let route6: RouteEntry = serde_yaml::from_str(
+    let route6: RouteEntry = rmsd_yaml::from_str(
         r"
         destination: 2001:db:1::/64
         next-hop-interface: eth0
@@ -499,7 +499,7 @@ fn test_routes_not_delayed_by_nm() {
     )
     .unwrap();
 
-    let current_ifaces: Interfaces = serde_yaml::from_str(
+    let current_ifaces: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: eth0
           type: ethernet
@@ -526,7 +526,7 @@ fn test_routes_not_delayed_by_nm() {
 
 #[test]
 fn test_route_cwnd_deserilize_from_string() {
-    let route = serde_yaml::from_str::<RouteEntry>(
+    let route = rmsd_yaml::from_str::<RouteEntry>(
         r#"
         cwnd: "100"
         "#,
@@ -538,7 +538,7 @@ fn test_route_cwnd_deserilize_from_string() {
 
 #[test]
 fn test_route_cwnd_zero_invalid() {
-    let route = serde_yaml::from_str::<RouteEntry>(
+    let route = rmsd_yaml::from_str::<RouteEntry>(
         r"
         cwnd: 0
         ",
@@ -551,7 +551,7 @@ fn test_route_cwnd_zero_invalid() {
 
 #[test]
 fn test_route_cwnd_invalid_type() {
-    let route = serde_yaml::from_str::<RouteEntry>(
+    let route = rmsd_yaml::from_str::<RouteEntry>(
         r"
         cwnd: -20
         ",
@@ -564,7 +564,7 @@ fn test_route_cwnd_invalid_type() {
 
 #[test]
 fn test_route_cwnd_is_match() {
-    let desired_route: RouteEntry = serde_yaml::from_str(
+    let desired_route: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         cwnd: 20
@@ -572,20 +572,20 @@ fn test_route_cwnd_is_match() {
     )
     .unwrap();
 
-    let not_match_route: RouteEntry = serde_yaml::from_str(
+    let not_match_route: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         "#,
     )
     .unwrap();
-    let not_match_route_2: RouteEntry = serde_yaml::from_str(
+    let not_match_route_2: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         cwnd: 15
         "#,
     )
     .unwrap();
-    let match_route: RouteEntry = serde_yaml::from_str(
+    let match_route: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         cwnd: 20
@@ -600,14 +600,14 @@ fn test_route_cwnd_is_match() {
 
 #[test]
 fn test_route_without_options_is_match_with_any() {
-    let desired_route: RouteEntry = serde_yaml::from_str(
+    let desired_route: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         "#,
     )
     .unwrap();
 
-    let not_match_route: RouteEntry = serde_yaml::from_str(
+    let not_match_route: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.100"
         metric: 1
@@ -616,7 +616,7 @@ fn test_route_without_options_is_match_with_any() {
         "#,
     )
     .unwrap();
-    let match_route: RouteEntry = serde_yaml::from_str(
+    let match_route: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         metric: 1
@@ -632,7 +632,7 @@ fn test_route_without_options_is_match_with_any() {
 
 #[test]
 fn test_route_initcwnd_initrcwnd_deserilize_from_string() {
-    let route = serde_yaml::from_str::<RouteEntry>(
+    let route = rmsd_yaml::from_str::<RouteEntry>(
         r#"
         initcwnd: "100"
         initrwnd: "20"
@@ -646,7 +646,7 @@ fn test_route_initcwnd_initrcwnd_deserilize_from_string() {
 
 #[test]
 fn test_route_initcwnd_equal() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         initcwnd: 201
@@ -654,7 +654,7 @@ fn test_route_initcwnd_equal() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "192.0.2.1"
         initcwnd: 202
@@ -667,7 +667,7 @@ fn test_route_initcwnd_equal() {
 
 #[test]
 fn test_route_initrwnd_equal() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         initrwnd: 2010
@@ -675,7 +675,7 @@ fn test_route_initrwnd_equal() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         initrwnd: 2020
@@ -688,7 +688,7 @@ fn test_route_initrwnd_equal() {
 
 #[test]
 fn test_route_initrwnd_and_initcwnd_is_match() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         initrwnd: 20
@@ -697,7 +697,7 @@ fn test_route_initrwnd_and_initcwnd_is_match() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         state: absent
@@ -712,7 +712,7 @@ fn test_route_initrwnd_and_initcwnd_is_match() {
 
 #[test]
 fn test_route_initcwnd_initrwnd_display() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         initrwnd: 2010
@@ -729,7 +729,7 @@ fn test_route_initcwnd_initrwnd_display() {
 
 #[test]
 fn test_route_mtu_equal() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1280
@@ -737,7 +737,7 @@ fn test_route_mtu_equal() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1281
@@ -750,7 +750,7 @@ fn test_route_mtu_equal() {
 
 #[test]
 fn test_route_mtu_is_match() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1280
@@ -758,7 +758,7 @@ fn test_route_mtu_is_match() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         state: absent
         mtu: 1280
@@ -771,7 +771,7 @@ fn test_route_mtu_is_match() {
 
 #[test]
 fn test_route_mtu_display() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1280
@@ -786,7 +786,7 @@ fn test_route_mtu_display() {
 
 #[test]
 fn test_route_mtu_deserilize_from_string() {
-    let route = serde_yaml::from_str::<RouteEntry>(
+    let route = rmsd_yaml::from_str::<RouteEntry>(
         r#"
         mtu: "1280"
         "#,
@@ -798,7 +798,7 @@ fn test_route_mtu_deserilize_from_string() {
 
 #[test]
 fn test_route_advmss_not_equal() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         advmss: 1500
@@ -806,7 +806,7 @@ fn test_route_advmss_not_equal() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         advmss: 1501
@@ -819,7 +819,7 @@ fn test_route_advmss_not_equal() {
 
 #[test]
 fn test_route_advmss_is_match() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         advmss: 1500
@@ -827,7 +827,7 @@ fn test_route_advmss_is_match() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         state: absent
         advmss: 1500
@@ -840,7 +840,7 @@ fn test_route_advmss_is_match() {
 
 #[test]
 fn test_route_advmss_display() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         advmss: 1500
@@ -855,7 +855,7 @@ fn test_route_advmss_display() {
 
 #[test]
 fn test_route_advmss_deserialize_from_string() {
-    let route = serde_yaml::from_str::<RouteEntry>(
+    let route = rmsd_yaml::from_str::<RouteEntry>(
         r#"
         advmss: "1500"
         "#,
@@ -867,7 +867,7 @@ fn test_route_advmss_deserialize_from_string() {
 
 #[test]
 fn test_route_lock_mtu_not_equal() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1280
@@ -876,7 +876,7 @@ fn test_route_lock_mtu_not_equal() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1280
@@ -890,7 +890,7 @@ fn test_route_lock_mtu_not_equal() {
 
 #[test]
 fn test_route_lock_mtu_is_match() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1280
@@ -899,7 +899,7 @@ fn test_route_lock_mtu_is_match() {
     )
     .unwrap();
 
-    let route2: RouteEntry = serde_yaml::from_str(
+    let route2: RouteEntry = rmsd_yaml::from_str(
         r#"
         state: absent
         lock-mtu: true
@@ -912,7 +912,7 @@ fn test_route_lock_mtu_is_match() {
 
 #[test]
 fn test_route_lock_mtu_display() {
-    let route1: RouteEntry = serde_yaml::from_str(
+    let route1: RouteEntry = rmsd_yaml::from_str(
         r#"
         destination: "2001:db8::/64"
         mtu: 1280
@@ -928,7 +928,7 @@ fn test_route_lock_mtu_display() {
 
 #[test]
 fn test_route_lock_mtu_deserialize_from_string() {
-    let route = serde_yaml::from_str::<RouteEntry>(
+    let route = rmsd_yaml::from_str::<RouteEntry>(
         r#"
         lock-mtu: "true"
         "#,

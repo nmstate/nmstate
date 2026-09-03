@@ -7,7 +7,7 @@ use crate::{
 
 #[test]
 fn test_vlan_stringlized_attributes() {
-    let iface: VlanInterface = serde_yaml::from_str(
+    let iface: VlanInterface = rmsd_yaml::from_str(
         r#"---
 name: vlan1
 type: vlan
@@ -24,7 +24,7 @@ vlan:
 
 #[test]
 fn test_vlan_get_parent_up_priority_plus_one() {
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
 - name: bond0.100
   type: vlan
@@ -80,7 +80,7 @@ fn test_vlan_get_parent_up_priority_plus_one() {
 
 #[test]
 fn test_vlan_orphan_check_auto_absent() {
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0.100
           type: vlan
@@ -93,7 +93,7 @@ fn test_vlan_orphan_check_auto_absent() {
             mode: balance-rr",
     )
     .unwrap();
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0
           type: bond
@@ -117,7 +117,7 @@ fn test_vlan_orphan_check_auto_absent() {
 
 #[test]
 fn test_vlan_orphan_but_desired() {
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0.100
           type: vlan
@@ -130,7 +130,7 @@ fn test_vlan_orphan_but_desired() {
             mode: balance-rr",
     )
     .unwrap();
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0.100
         - name: bond0
@@ -154,7 +154,7 @@ fn test_vlan_orphan_but_desired() {
 
 #[test]
 fn test_vlan_orphan_has_now_parent() {
-    let current: Interfaces = serde_yaml::from_str(
+    let current: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0.100
           type: vlan
@@ -167,7 +167,7 @@ fn test_vlan_orphan_has_now_parent() {
             mode: balance-rr",
     )
     .unwrap();
-    let desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = rmsd_yaml::from_str(
         r"---
         - name: bond0.100
           state: up
@@ -191,7 +191,7 @@ fn test_vlan_orphan_has_now_parent() {
 
 #[test]
 fn test_vlan_update() {
-    let mut iface1: VlanInterface = serde_yaml::from_str(
+    let mut iface1: VlanInterface = rmsd_yaml::from_str(
         r"---
         name: bond0.100
         type: vlan
@@ -201,7 +201,7 @@ fn test_vlan_update() {
     )
     .unwrap();
 
-    let iface2: VlanInterface = serde_yaml::from_str(
+    let iface2: VlanInterface = rmsd_yaml::from_str(
         r"---
         name: bond0.100
         type: vlan
@@ -222,7 +222,7 @@ fn test_vlan_update() {
 
 #[test]
 fn test_vlan_base_iface_optional() {
-    let current: Interface = serde_yaml::from_str(
+    let current: Interface = rmsd_yaml::from_str(
         r"---
         name: vlan1
         type: vlan
@@ -231,7 +231,7 @@ fn test_vlan_base_iface_optional() {
           id: 100",
     )
     .unwrap();
-    let desired: Interface = serde_yaml::from_str(
+    let desired: Interface = rmsd_yaml::from_str(
         r"---
         name: vlan1
         type: vlan
@@ -247,7 +247,7 @@ fn test_vlan_base_iface_optional() {
 
 #[test]
 fn test_vlan_invalid_egress_qos() {
-    let mut iface: VlanInterface = serde_yaml::from_str(
+    let mut iface: VlanInterface = rmsd_yaml::from_str(
         r"---
         name: vlan1
         type: vlan
@@ -272,7 +272,7 @@ fn test_vlan_invalid_egress_qos() {
 
 #[test]
 fn test_vlan_invalid_ingress_qos() {
-    let mut iface: VlanInterface = serde_yaml::from_str(
+    let mut iface: VlanInterface = rmsd_yaml::from_str(
         r"---
         name: vlan1
         type: vlan
@@ -297,7 +297,7 @@ fn test_vlan_invalid_ingress_qos() {
 
 #[test]
 fn test_vlan_valid_egress_qos() {
-    let mut iface: VlanInterface = serde_yaml::from_str(
+    let mut iface: VlanInterface = rmsd_yaml::from_str(
         r"---
         name: vlan1
         type: vlan
@@ -316,7 +316,7 @@ fn test_vlan_valid_egress_qos() {
 
 #[test]
 fn test_vlan_valid_ingress_qos() {
-    let mut iface: VlanInterface = serde_yaml::from_str(
+    let mut iface: VlanInterface = rmsd_yaml::from_str(
         r"---
         name: vlan1
         type: vlan

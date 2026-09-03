@@ -74,7 +74,7 @@ pub extern "C" fn nmstate_net_state_retrieve(
     match result {
         Ok(s) => {
             let serialize = if (flags & NMSTATE_FLAG_YAML_OUTPUT) > 0 {
-                serde_yaml::to_string(&s).map_err(|e| {
+                rmsd_yaml::to_string(&s).map_err(|e| {
                     nmstate::NmstateError::new(
                         nmstate::ErrorKind::Bug,
                         format!("Failed to convert state {s:?} to YAML: {e}"),

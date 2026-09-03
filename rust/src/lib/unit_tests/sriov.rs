@@ -62,7 +62,7 @@ fn test_sriov_vf_mac_mix_case() {
 fn test_ignore_sriov_if_not_desired() {
     let mut pre_apply_cur_ifaces = Interfaces::new();
     pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -85,7 +85,7 @@ fn test_ignore_sriov_if_not_desired() {
 ",
     )
     .unwrap();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
 - name: eth1
   type: ethernet
@@ -107,7 +107,7 @@ fn test_ignore_sriov_if_not_desired() {
 }
 
 fn gen_sriov_current_ifaces() -> Interfaces {
-    let mut current = serde_yaml::from_str::<Interfaces>(
+    let mut current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet
@@ -158,7 +158,7 @@ fn gen_sriov_current_ifaces() -> Interfaces {
 #[test]
 fn test_resolve_sriov_name() {
     let current = gen_sriov_current_ifaces();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let mut desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: sriov:eth1:0
           type: ethernet
@@ -185,7 +185,7 @@ fn test_resolve_sriov_name() {
 #[test]
 fn test_resolve_sriov_name_duplicate() {
     let current = gen_sriov_current_ifaces();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let mut desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: sriov:eth1:0
           type: ethernet
@@ -208,7 +208,7 @@ fn test_resolve_sriov_name_duplicate() {
 #[test]
 fn test_failed_to_resolve_sriov_in_ovs_port_list() {
     let current = gen_sriov_current_ifaces();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let mut desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: ovs-br0
           type: ovs-bridge
@@ -230,7 +230,7 @@ fn test_failed_to_resolve_sriov_in_ovs_port_list() {
 #[test]
 fn test_verify_sriov_name() {
     let current = gen_sriov_current_ifaces();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: sriov:eth1:0
           type: ethernet
@@ -252,7 +252,7 @@ fn test_verify_sriov_name() {
 #[test]
 fn test_resolve_sriov_port_name_linux_bridge() {
     let current = gen_sriov_current_ifaces();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let mut desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: br0
           type: linux-bridge
@@ -288,7 +288,7 @@ fn test_resolve_sriov_port_name_linux_bridge() {
 #[test]
 fn test_resolve_sriov_port_name_bond() {
     let current = gen_sriov_current_ifaces();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let mut desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: bond0
           type: bond
@@ -311,7 +311,7 @@ fn test_resolve_sriov_port_name_bond() {
 #[test]
 fn test_resolve_sriov_port_name_ovs_bridge() {
     let current = gen_sriov_current_ifaces();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let mut desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: ovs-br0
           type: ovs-bridge
@@ -335,7 +335,7 @@ fn test_resolve_sriov_port_name_ovs_bridge() {
 #[test]
 fn test_resolve_sriov_port_name_ovs_bond() {
     let current = gen_sriov_current_ifaces();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let mut desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: ovs-br0
           type: ovs-bridge
@@ -363,7 +363,7 @@ fn test_resolve_sriov_port_name_ovs_bond() {
 #[test]
 fn test_verify_sriov_port_name_linux_bridge() {
     let pre_apply_current = gen_sriov_current_ifaces();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: br0
           type: linux-bridge
@@ -379,7 +379,7 @@ fn test_verify_sriov_port_name_linux_bridge() {
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
-        serde_yaml::from_str::<Interface>(
+        rmsd_yaml::from_str::<Interface>(
             r"---
             name: br0
             type: linux-bridge
@@ -408,7 +408,7 @@ fn test_verify_sriov_port_name_linux_bridge() {
 #[test]
 fn test_verify_sriov_port_name_bond() {
     let pre_apply_current = gen_sriov_current_ifaces();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: bond0
           type: bond
@@ -422,7 +422,7 @@ fn test_verify_sriov_port_name_bond() {
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
-        serde_yaml::from_str::<Interface>(
+        rmsd_yaml::from_str::<Interface>(
             r"---
             name: bond0
             type: bond
@@ -450,7 +450,7 @@ fn test_verify_sriov_port_name_bond() {
 #[test]
 fn test_verify_sriov_port_name_ovs_bridge() {
     let pre_apply_current = gen_sriov_current_ifaces();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: ovs-br0
           type: ovs-bridge
@@ -463,7 +463,7 @@ fn test_verify_sriov_port_name_ovs_bridge() {
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
-        serde_yaml::from_str::<Interface>(
+        rmsd_yaml::from_str::<Interface>(
             r"---
             name: ovs-br0
             type: ovs-bridge
@@ -489,7 +489,7 @@ fn test_verify_sriov_port_name_ovs_bridge() {
 #[test]
 fn test_verify_sriov_port_name_ovs_bond() {
     let pre_apply_current = gen_sriov_current_ifaces();
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: ovs-br0
           type: ovs-bridge
@@ -507,7 +507,7 @@ fn test_verify_sriov_port_name_ovs_bond() {
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
-        serde_yaml::from_str::<Interface>(
+        rmsd_yaml::from_str::<Interface>(
             r"---
             name: ovs-br0
             type: ovs-bridge
@@ -629,7 +629,7 @@ fn test_sriov_vf_auto_fill_vf_conf() {
 
 #[test]
 fn test_sriov_enable_and_use_in_single_yaml() {
-    let desired = serde_yaml::from_str::<NetworkState>(
+    let desired = rmsd_yaml::from_str::<NetworkState>(
         r"---
         interfaces:
         - name: eth1
@@ -670,7 +670,7 @@ fn test_sriov_enable_and_use_in_single_yaml() {
 
 #[test]
 fn test_has_sriov_and_missing_eth() {
-    let desired = serde_yaml::from_str::<NetworkState>(
+    let desired = rmsd_yaml::from_str::<NetworkState>(
         r"---
         interfaces:
         - name: eth1
@@ -691,7 +691,7 @@ fn test_has_sriov_and_missing_eth() {
         ",
     )
     .unwrap();
-    let current = serde_yaml::from_str::<NetworkState>(
+    let current = rmsd_yaml::from_str::<NetworkState>(
         r"---
         interfaces:
         - name: eth1
@@ -712,7 +712,7 @@ fn test_has_sriov_and_missing_eth() {
 
 #[test]
 fn test_sriov_has_sriov_and_missing_eth_pf_none() {
-    let desired = serde_yaml::from_str::<NetworkState>(
+    let desired = rmsd_yaml::from_str::<NetworkState>(
         r"---
         interfaces:
         - name: eth1
@@ -731,7 +731,7 @@ fn test_sriov_has_sriov_and_missing_eth_pf_none() {
         ",
     )
     .unwrap();
-    let current = serde_yaml::from_str::<NetworkState>(
+    let current = rmsd_yaml::from_str::<NetworkState>(
         r"---
         interfaces:
         - name: eth1
@@ -746,7 +746,7 @@ fn test_sriov_has_sriov_and_missing_eth_pf_none() {
 
 #[test]
 fn test_sriov_vf_revert_to_default() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet
@@ -759,7 +759,7 @@ fn test_sriov_vf_revert_to_default() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet
@@ -834,7 +834,7 @@ fn test_sriov_vf_revert_to_default() {
 
 #[test]
 fn test_get_sriov_vf_count() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           state: up
@@ -846,7 +846,7 @@ fn test_get_sriov_vf_count() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet
@@ -879,7 +879,7 @@ fn test_get_sriov_vf_count() {
 
 #[test]
 fn test_sriov_not_allow_802_1ad_vlan_protocol_for_vlan_0_and_qos_0() {
-    let mut desired = serde_yaml::from_str::<Interface>(
+    let mut desired = rmsd_yaml::from_str::<Interface>(
         r"---
         name: eth1
         type: ethernet
@@ -906,7 +906,7 @@ fn test_sriov_not_allow_802_1ad_vlan_protocol_for_vlan_0_and_qos_0() {
 
 #[test]
 fn test_desired_sriov_vfs_count_exceeded_max() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           state: up
@@ -917,7 +917,7 @@ fn test_desired_sriov_vfs_count_exceeded_max() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet
@@ -944,7 +944,7 @@ fn test_desired_sriov_vfs_count_exceeded_max() {
 
 #[test]
 fn test_ignore_sriov_max_vfs_when_verify() {
-    let desired = serde_yaml::from_str::<Interfaces>(
+    let desired = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet
@@ -957,7 +957,7 @@ fn test_ignore_sriov_max_vfs_when_verify() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<Interfaces>(
+    let current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet
@@ -970,7 +970,7 @@ fn test_ignore_sriov_max_vfs_when_verify() {
     )
     .unwrap();
 
-    let post_apply_current = serde_yaml::from_str::<Interfaces>(
+    let post_apply_current = rmsd_yaml::from_str::<Interfaces>(
         r"---
         - name: eth1
           type: ethernet

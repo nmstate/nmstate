@@ -44,7 +44,7 @@ mod tests {
 
     #[test]
     fn test_gen_conf_change_unknown_to_eth() {
-        let mut ifaces: Interfaces = serde_yaml::from_str(
+        let mut ifaces: Interfaces = rmsd_yaml::from_str(
             r"---
 - name: foo
   state: up
