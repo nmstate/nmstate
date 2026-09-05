@@ -275,8 +275,9 @@ pub(crate) fn gen_nm_ip_setting(
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let base_iface = iface.base_iface();
-    // Explicitly disable IP on HSR ports.
+    // Disable IP explicitly on HSR and unknown controller ports.
     if base_iface.can_have_ip()
+        || base_iface.controller_type.is_none()
         || base_iface.controller_type == Some(InterfaceType::Hsr)
     {
         gen_nm_ipv4_setting(base_iface.ipv4.as_ref(), routes, nm_conn)?;
@@ -429,6 +430,35 @@ ipv6:
 
         gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
 
+        assert_eq!(
+            nm_conn.ipv6.as_ref().and_then(|s| s.method.as_ref()),
+            Some(&NmSettingIpMethod::Disabled)
+        );
+    }
+
+    #[test]
+    fn test_gen_nm_disabled_ip_on_port_with_unknown_controller() {
+        let iface: Interface = serde_yaml::from_str(
+            r#"---
+name: veth0
+type: veth
+state: up
+controller: ovs-system
+ipv4:
+  enabled: false
+ipv6:
+  enabled: false
+"#,
+        )
+        .unwrap();
+        let mut nm_conn = NmConnection::default();
+
+        gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
+
+        assert_eq!(
+            nm_conn.ipv4.as_ref().and_then(|s| s.method.as_ref()),
+            Some(&NmSettingIpMethod::Disabled)
+        );
         assert_eq!(
             nm_conn.ipv6.as_ref().and_then(|s| s.method.as_ref()),
             Some(&NmSettingIpMethod::Disabled)
