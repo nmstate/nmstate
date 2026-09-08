@@ -1,0 +1,35 @@
+---
+interfaces:
+- name: br0
+  type: ovs-interface
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    options:
+      stp: true
+    port:
+    - name: br0
+    - name: bond0
+      ovs-db:
+        other_config:
+          stp-path-cost: "2"
+- name: bond0
+  type: bond
+  state: up
+  mtu: 9000
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+  link-aggregation:
+    mode: active-backup
+    options:
+      primary: ens1f3
+    port:
+    - ens1f3

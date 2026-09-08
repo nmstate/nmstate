@@ -1165,3 +1165,118 @@ fn test_ovs_bridge_ignore_extra_ports_for_apply() {
     assert_eq!(for_apply_bridge.ports(), Some(vec!["eth1", "eth2"]));
     assert_eq!(for_apply_eth3, None);
 }
+
+#[test]
+#[cfg(feature = "gen_conf")]
+fn test_ovs_linux_bond_port_db_gen_conf() {
+    let state: crate::NetworkState = serde_yaml::from_str(
+        r#"
+interfaces:
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: bond0
+      ovs-db:
+        other_config:
+          stp-path-cost: "2"
+- name: bond0
+  type: bond
+  state: up
+  link-aggregation:
+    mode: active-backup
+    port: [eth1]
+"#,
+    )
+    .unwrap();
+    let configs = state.gen_conf().unwrap();
+    let configs = &configs["NetworkManager"];
+    let port = configs
+        .iter()
+        .find(|(_, c)| c.contains("type=ovs-port\n"))
+        .unwrap();
+    assert!(port.1.contains("[ovs-other-config]\n"));
+    assert!(port.1.contains("data.stp-path-cost=2\n"));
+    let bond = configs
+        .iter()
+        .find(|(_, c)| c.contains("type=bond\n"))
+        .unwrap();
+    assert!(!bond.1.contains("[ovs-other-config]"));
+}
+
+#[test]
+fn test_ovs_bond_port_db_normalization() {
+    let mut iface: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+name: br0
+type: ovs-bridge
+"#,
+    )
+    .unwrap();
+    let port: crate::OvsBridgePortConfig = serde_yaml::from_str(
+        r#"
+name: bond0
+ovs-db:
+  other_config:
+    stp-path-cost: "2"
+link-aggregation:
+  mode: active-backup
+  port:
+  - name: eth1
+  - name: eth2
+"#,
+    )
+    .unwrap();
+    let ovsdb = port.ovsdb.clone();
+    iface.bridge = Some(crate::OvsBridgeConfig {
+        ports: Some(vec![port.clone()]),
+        ..Default::default()
+    });
+    iface.sanitize(true).unwrap();
+    let normalized = &iface.bridge.as_ref().unwrap().ports.as_ref().unwrap()[0];
+    assert!(normalized.ovsdb.is_none());
+    assert_eq!(normalized.bond.as_ref().unwrap().ovsdb, ovsdb);
+
+    let mut conflicting = port;
+    conflicting.bond.as_mut().unwrap().ovsdb = Some(Default::default());
+    iface.bridge.as_mut().unwrap().ports = Some(vec![conflicting]);
+    assert_eq!(
+        iface.sanitize(true).unwrap_err().kind(),
+        ErrorKind::InvalidArgument
+    );
+}
+
+#[test]
+fn test_ovs_port_db_verify_clear() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: bond0
+      ovs-db:
+        other_config: {}
+- name: bond0
+  type: bond
+  state: up
+",
+    )
+    .unwrap();
+    let mut current = desired.clone();
+    if let Some(Interface::OvsBridge(iface)) =
+        current.get_iface_mut("br0", InterfaceType::OvsBridge)
+    {
+        iface.bridge.as_mut().unwrap().ports.as_mut().unwrap()[0].ovsdb = None;
+    }
+    let merged = MergedInterfaces::new(
+        desired,
+        current.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+    merged.verify(&current).unwrap();
+}

@@ -144,10 +144,29 @@ impl OvsBridgeInterface {
 
         if let Some(port_confs) = self
             .bridge
-            .as_ref()
-            .and_then(|br_conf| br_conf.ports.as_ref())
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_mut())
         {
             for port_conf in port_confs {
+                // Keep the existing representation for OVS bonds, which also
+                // store their settings in the OVS Port table.
+                if let Some(bond_conf) = port_conf.bond.as_mut()
+                    && let Some(ovsdb) = port_conf.ovsdb.take()
+                {
+                    if let Some(bond_ovsdb) = bond_conf.ovsdb.as_ref()
+                        && bond_ovsdb != &ovsdb
+                    {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Conflicting ovs-db settings for OVS port {} \
+                                 and its link-aggregation",
+                                port_conf.name
+                            ),
+                        ));
+                    }
+                    bond_conf.ovsdb = Some(ovsdb);
+                }
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
                     vlan_conf.sanitize(is_desired)?;
                 }
@@ -331,6 +350,14 @@ impl OvsBridgeOptions {
 #[non_exhaustive]
 pub struct OvsBridgePortConfig {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "ovs-db")]
+    /// Settings for the OVS `Port` table, including system ports backed by
+    /// Linux bonds. Interface-level `ovs-db` configures the `Interface` table.
+    /// Omit to preserve existing settings; use an empty map to clear them.
+    /// For OVS bonds, these settings are shown under
+    /// `link-aggregation.ovs-db`. If both locations are specified, their
+    /// values must be identical.
+    pub ovsdb: Option<OvsDbIfaceConfig>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "link-aggregation",

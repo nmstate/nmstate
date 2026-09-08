@@ -102,6 +102,9 @@ impl OvsBridgeInterface {
             .and_then(|br_conf| br_conf.ports.as_mut())
         {
             for port_conf in port_confs {
+                if port_conf.ovsdb.is_none() {
+                    port_conf.ovsdb = Some(OvsDbIfaceConfig::new_empty());
+                }
                 if let Some(bond_conf) = port_conf.bond.as_mut() {
                     bond_conf.sanitize_current_for_verify();
                 }
