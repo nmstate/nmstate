@@ -39,6 +39,8 @@ fi
 
 if [ $NM_TYPE == "nm_main" ];then
     TEST_ARG="$TEST_ARG --copr networkmanager/NetworkManager-main-debug"
+    PRETEST_EXEC='dnf copr enable -y networkmanager/NetworkManager-libreswan-next; \
+        dnf update -y NetworkManager-libreswan'
 fi
 
 if [ $NM_TYPE == "nm_min" ];then
@@ -48,6 +50,11 @@ if [ $NM_TYPE == "nm_min" ];then
         dnf install -y NetworkManager-libreswan \
             --disablerepo="*" \
             --enablerepo="copr:copr.fedorainfracloud.org:nmstate:nm-libreswan-rhel9"'
+fi
+
+if [ $OS_TYPE == "c10s" ];then
+    PRETEST_EXEC='dnf copr enable -y networkmanager/NetworkManager-libreswan-next; \
+        dnf update -y NetworkManager-libreswan'
 fi
 
 
