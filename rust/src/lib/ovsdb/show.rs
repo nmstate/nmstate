@@ -97,6 +97,8 @@ fn parse_ovs_bridge_conf(
             if ovsdb_port.ports.len() > 1 {
                 port_conf.bond =
                     Some(parse_ovs_bond_conf(ovsdb_port, ovsdb_ifaces));
+            } else {
+                port_conf.ovsdb = parse_ovs_port_db_conf(ovsdb_port);
             }
             port_conf.vlan = parse_ovs_vlan_conf(ovsdb_port);
             port_confs.push(port_conf);
@@ -185,6 +187,12 @@ fn parse_ovs_bond_conf(
     {
         bond_conf.bond_downdelay = if v == 0 { None } else { Some(v as u32) };
     }
+    bond_conf.ovsdb = parse_ovs_port_db_conf(ovsdb_port);
+    bond_conf.ports = Some(bond_port_confs);
+    bond_conf
+}
+
+fn parse_ovs_port_db_conf(ovsdb_port: &OvsDbEntry) -> Option<OvsDbIfaceConfig> {
     let external_ids = HashMap::from_iter(
         ovsdb_port
             .external_ids
@@ -201,14 +209,13 @@ fn parse_ovs_bond_conf(
             .map(|(k, v)| (k, Some(v))),
     );
     if !external_ids.is_empty() || !other_config.is_empty() {
-        bond_conf.ovsdb = Some(OvsDbIfaceConfig {
+        Some(OvsDbIfaceConfig {
             external_ids: Some(external_ids),
             other_config: Some(other_config),
-        });
+        })
+    } else {
+        None
     }
-
-    bond_conf.ports = Some(bond_port_confs);
-    bond_conf
 }
 
 fn parse_ovs_vlan_conf(
@@ -417,5 +424,46 @@ fn get_dpdk_mtu(ovsdb_iface: &OvsDbEntry) -> Option<u64> {
         v.as_u64()
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ovs_system_port_db_readback() {
+        let bridge = OvsDbEntry {
+            ports: vec!["port-uuid".into()],
+            ..Default::default()
+        };
+        let port = OvsDbEntry {
+            name: "bond0-port".into(),
+            ports: vec!["iface-uuid".into()],
+            other_config: HashMap::from([("stp-path-cost".into(), "2".into())]),
+            external_ids: HashMap::from([("owner".into(), "nmstate".into())]),
+            ..Default::default()
+        };
+        let iface = OvsDbEntry {
+            name: "bond0".into(),
+            ..Default::default()
+        };
+        let conf = parse_ovs_bridge_conf(
+            &bridge,
+            &HashMap::from([("port-uuid".into(), port)]),
+            &HashMap::from([("iface-uuid".into(), iface)]),
+        );
+        let port = &conf.ports.as_ref().unwrap()[0];
+        assert_eq!(port.name, "bond0");
+        assert!(port.bond.is_none());
+        let db = port.ovsdb.as_ref().unwrap();
+        assert_eq!(db.get_other_config()["stp-path-cost"], "2");
+        assert_eq!(db.get_external_ids()["owner"], "nmstate");
+        let yaml = serde_yaml::to_string(&conf).unwrap();
+        assert_eq!(
+            serde_yaml::from_str::<OvsBridgeConfig>(&yaml).unwrap(),
+            conf
+        );
+        assert!(parse_ovs_port_db_conf(&OvsDbEntry::default()).is_none());
     }
 }
