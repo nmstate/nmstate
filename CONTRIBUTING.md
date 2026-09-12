@@ -225,6 +225,9 @@ cargo test
 ```
 
 ### Running the integration tests
+Read the [tests/README.md](tests/README.md) document to learn about the
+tests themselves and how to write them.
+
 The most straightforward way to run the integration tests is using the
 [automation/run-tests.sh script](automation/run-tests.sh). Read its documentation
 in [automation/README.md](automation/README.md) or run `automation/run-tests.sh --help`.
