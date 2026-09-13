@@ -117,6 +117,7 @@ impl Interface {
                 if let Self::Ethernet(other_iface) = other {
                     iface.update_ethernet(other_iface);
                     iface.update_veth(other_iface);
+                    iface.update_qeth(other_iface);
                 } else {
                     log::warn!(
                         "Don't know how to update iface {iface:?} with \
