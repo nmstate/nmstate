@@ -3,10 +3,14 @@
 #       -t quay.io/nmstate/test-env:libreswan-srv-c10s .
 FROM quay.io/centos/centos:stream10-development
 
+# TODO: remove libreswan RPM overlay once >= 5.5 lands in c10s repos
+COPY packaging/libreswan-rpms/libreswan-*.rpm /tmp/
 RUN dnf update -y && \
     dnf install -y systemd systemd-udev net-tools \
         tcpdump iproute procps-ng libreswan iputils \
         nmstate NetworkManager && \
+    dnf update -y /tmp/libreswan-*.rpm && \
+    rm -f /tmp/libreswan-*.rpm && \
     dnf clean all
 
 COPY tests/integration/test_ipsec_files/psk.secrets \
