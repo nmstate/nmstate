@@ -17,7 +17,7 @@ from .cmdlib import exec_cmd
 from .veth import create_veth_pair
 from .veth import remove_veth_pair
 
-SRV_CONTAINER_IMG = "quay.io/nmstate/test-env:libreswan-srv-c9s"
+SRV_CONTAINER_IMG = "quay.io/nmstate/test-env:libreswan-srv-c10s"
 SRV_CONTAINER_NAME = "nmstate-ipsec-srv"
 SRV_NAMESPACE = "ipsec_test_srv"
 TEST_FILES_DIR = "test_ipsec_files"

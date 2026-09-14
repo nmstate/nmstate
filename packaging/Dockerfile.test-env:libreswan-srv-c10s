@@ -1,0 +1,37 @@
+# Build from repo root:
+#   podman build -f packaging/Dockerfile.test-env:libreswan-srv-c10s \
+#       -t quay.io/nmstate/test-env:libreswan-srv-c10s .
+FROM quay.io/centos/centos:stream10-development
+
+# TODO: remove libreswan RPM overlay once >= 5.5 lands in c10s repos
+COPY packaging/libreswan-rpms/libreswan-*.rpm /tmp/
+RUN dnf update -y && \
+    dnf install -y systemd systemd-udev net-tools \
+        tcpdump iproute procps-ng libreswan iputils \
+        nmstate NetworkManager && \
+    dnf update -y /tmp/libreswan-*.rpm && \
+    rm -f /tmp/libreswan-*.rpm && \
+    dnf clean all
+
+COPY tests/integration/test_ipsec_files/psk.secrets \
+     /etc/ipsec.d/psk.secrets
+COPY tests/integration/test_ipsec_files/ipsec_srv_network.yml \
+     /etc/nmstate/ipsec_srv_network.yml
+COPY tests/integration/test_ipsec_files/ipsec-srv.example.org.p12 \
+     /tmp/ipsec-srv.example.org.p12
+
+RUN ipsec checknss && \
+    pk12util -i /tmp/ipsec-srv.example.org.p12 \
+        -d sql:/var/lib/ipsec/nss -W "" && \
+    certutil -M -n "Easy-RSA CA" -t CT \
+        -d sql:/var/lib/ipsec/nss/ && \
+    rm -f /tmp/ipsec-srv.example.org.p12
+
+RUN ln -sf /usr/lib/systemd/system/systemd-udevd.service \
+        /etc/systemd/system/sysinit.target.wants/systemd-udevd.service && \
+    ln -sf /usr/lib/systemd/system/NetworkManager.service \
+        /etc/systemd/system/multi-user.target.wants/NetworkManager.service && \
+    ln -sf /usr/lib/systemd/system/nmstate.service \
+        /etc/systemd/system/multi-user.target.wants/nmstate.service
+
+CMD ["/usr/sbin/init"]

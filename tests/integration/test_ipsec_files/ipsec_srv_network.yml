@@ -1,0 +1,54 @@
+capture:
+  nic: interfaces.type==veth
+desired:
+  routes:
+    config:
+    - destination: 0.0.0.0/0
+      next-hop-interface: dummy0
+      table-id: 254
+    - destination: ::/0
+      next-hop-interface: dummy0
+      table-id: 254
+    - destination: 10.0.1.0/24
+      next-hop-interface: "{{ capture.nic.interfaces.0.name }}"
+      table-id: 254
+    - destination: 2001:db8:c::/64
+      next-hop-interface: "{{ capture.nic.interfaces.0.name }}"
+      table-id: 254
+  interfaces:
+  - name: "{{ capture.nic.interfaces.0.name }}"
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: 192.0.2.1
+          prefix-length: 24
+    ipv6:
+      enabled: true
+      dhcp: false
+      autoconf: false
+      address:
+        - ip: 2001:db8:a::1
+          prefix-length: 64
+  - name: dummy0
+    type: dummy
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: 10.0.0.1
+          prefix-length: 24
+        - ip: 10.1.0.1
+          prefix-length: 24
+    ipv6:
+      enabled: true
+      dhcp: false
+      autoconf: false
+      address:
+        - ip: fd00:a::1
+          prefix-length: 64
+        - ip: fd00:b::1
+          prefix-length: 64
