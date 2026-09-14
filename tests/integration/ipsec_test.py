@@ -14,7 +14,10 @@ from .testlib import cmdlib
 from .testlib.env import is_el10
 from .testlib.env import nm_libreswan_version_int
 from .testlib.env import version_str_to_int
+from .testlib.ipsec import IPSEC_IFACE_TIMEOUT_SECS
 from .testlib.ipsec import IpsecTestEnv
+from .testlib.ipsec import ipsec_numbered_iface_exists
+from .testlib.ipsec import wait_for_ipsec_numbered_ifaces_gone
 from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import show_only
 
@@ -96,6 +99,8 @@ def _check_ipsec_policy(left, right):
 
 
 def _check_ipsec_ip(ip_net_prefix, nic):
+    if not ipsec_numbered_iface_exists(nic):
+        return False
     try:
         iface_state = show_only([nic])[Interface.KEY][0]
         for ip in iface_state.get(Interface.IPV4, {}).get(
@@ -104,9 +109,9 @@ def _check_ipsec_ip(ip_net_prefix, nic):
             if ip.get(InterfaceIPv4.ADDRESS_IP, "").startswith(ip_net_prefix):
                 return True
         for ip in iface_state.get(Interface.IPV6, {}).get(
-            InterfaceIPv4.ADDRESS, []
+            InterfaceIPv6.ADDRESS, []
         ):
-            if ip.get(InterfaceIPv4.ADDRESS_IP, "").startswith(ip_net_prefix):
+            if ip.get(InterfaceIPv6.ADDRESS_IP, "").startswith(ip_net_prefix):
                 return True
     except Exception:
         pass
@@ -125,6 +130,7 @@ def ipsec_cli_cleanup():
         Loader=yaml.SafeLoader,
     )
     libnmstate.apply(desired_state)
+    wait_for_ipsec_numbered_ifaces_gone()
 
 
 def test_ipsec_ipv4_libreswan_cert_auth_add_and_remove(ipsec_srv_cert_gw):
@@ -898,7 +904,7 @@ def test_ipsec_dhcpv4_off_and_empty_ip_addr(
     # The libreswan might take time to create xfrm interface after
     # xfrm policy been created.
     assert retry_till_true_or_timeout(
-        RETRY_COUNT, _is_ipsec_nic_ipv4_disabled, "ipsec97"
+        IPSEC_IFACE_TIMEOUT_SECS, _is_ipsec_nic_ipv4_disabled, "ipsec97"
     )
 
 
@@ -928,7 +934,7 @@ def test_ipsec_ipv6_host_to_site_with_dhcpv6_off(ipsec_srv_host_to_site):
             right: {IpsecTestEnv.SRV_ADDR_V6}
             rightid: '%fromcert'
             rightsubnet: {IpsecTestEnv.SRV_SUBNET_V6}
-            ipsec-interface: 97
+            ipsec-interface: 98
             ikev2: insist""",
         Loader=yaml.SafeLoader,
     )
@@ -943,7 +949,7 @@ def test_ipsec_ipv6_host_to_site_with_dhcpv6_off(ipsec_srv_host_to_site):
     # The libreswan might take time to create xfrm interface after
     # xfrm policy been created.
     assert retry_till_true_or_timeout(
-        RETRY_COUNT, _is_ipsec_nic_ipv6_no_auto, "ipsec97"
+        IPSEC_IFACE_TIMEOUT_SECS, _is_ipsec_nic_ipv6_no_auto, "ipsec98"
     )
 
 
@@ -1011,21 +1017,31 @@ def test_ipsec_require_id_on_certificate(ipsec_srv_cert_gw, load_both_keys):
 
 
 def _is_ipsec_nic_ipv4_disabled(nic_name):
+    if not ipsec_numbered_iface_exists(nic_name):
+        return False
     try:
         iface_state = show_only((nic_name,))[Interface.KEY][0]
     except IndexError:
         return False
-    return not iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
+    ipv4 = iface_state.get(Interface.IPV4)
+    if not ipv4:
+        return False
+    return not ipv4.get(InterfaceIPv4.ENABLED, True)
 
 
 def _is_ipsec_nic_ipv6_no_auto(nic_name):
+    if not ipsec_numbered_iface_exists(nic_name):
+        return False
     try:
         iface_state = show_only((nic_name,))[Interface.KEY][0]
     except IndexError:
         return False
+    ipv6 = iface_state.get(Interface.IPV6)
+    if not ipv6:
+        return False
     return not (
-        iface_state[Interface.IPV6].get(InterfaceIPv6.DHCP)
-        or iface_state[Interface.IPV6].get(InterfaceIPv6.AUTOCONF)
+        ipv6.get(InterfaceIPv6.DHCP, True)
+        or ipv6.get(InterfaceIPv6.AUTOCONF, True)
     )
 
 
