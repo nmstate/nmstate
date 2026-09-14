@@ -2,6 +2,8 @@
 
 use std::collections::hash_map::Entry;
 
+use std::collections::HashSet;
+
 use crate::{
     BaseInterface, ErrorKind, EthernetConfig, EthernetInterface, Interface,
     InterfaceType, Interfaces, NmstateError, SrIovConfig, SrIovVfConfig,
@@ -47,6 +49,7 @@ impl SrIovConfig {
         &self,
         pf_name: &str,
         cur_ifaces: &Interfaces,
+        desired_iface_names: &HashSet<String>,
     ) -> Result<(), NmstateError> {
         let cur_pf_iface =
             match cur_ifaces.get_iface(pf_name, InterfaceType::Ethernet) {
@@ -86,6 +89,9 @@ impl SrIovConfig {
             return Ok(());
         };
         for vf in vfs {
+            if !desired_iface_names.contains(&vf.iface_name) {
+                continue;
+            }
             if vf.iface_name.is_empty() {
                 return Err(NmstateError::new(
                     ErrorKind::SrIovVfNotFound,
