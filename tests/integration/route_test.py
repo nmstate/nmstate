@@ -1476,6 +1476,7 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
             Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
+            Route.WEIGHT: 1,
         },
         {
             Route.DESTINATION: IPV6_TEST_NET1,
@@ -1483,6 +1484,7 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
             Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
+            Route.WEIGHT: 1,
         },
     ]
     cur_state = libnmstate.show()
@@ -1973,6 +1975,86 @@ def test_add_and_remove_ecmp_route(eth1_static_ip):
             Route.KEY: {Route.CONFIG: routes},
         }
     )
+
+
+@pytest.fixture
+def ipv6_ecmp_iface(request, kernel_only):
+    if not kernel_only:
+        request.getfixturevalue("eth1_static_ip")
+        return "eth1"
+
+    request.getfixturevalue("cleanup_veth1_kernel_mode")
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: veth1
+          type: veth
+          state: up
+          veth:
+            peer: veth1_peer
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+            - ip: 2001:db8:1::1
+              prefix-length: 64
+        """
+    )
+    libnmstate.apply(desired_state, kernel_only=True)
+    return "veth1"
+
+
+# https://redhat.atlassian.net/browse/RHEL-113392
+@pytest.mark.parametrize(
+    "kernel_only",
+    [
+        pytest.param(False, id="nm", marks=pytest.mark.tier1),
+        pytest.param(True, id="kernel", marks=pytest.mark.kernel),
+    ],
+)
+def test_add_and_remove_ipv6_ecmp_route(ipv6_ecmp_iface, kernel_only):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: ipv6_ecmp_iface,
+            Route.DESTINATION: IPV6_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.WEIGHT: 1,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: ipv6_ecmp_iface,
+            Route.DESTINATION: IPV6_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
+            Route.WEIGHT: 256,
+        },
+    ]
+    libnmstate.apply(
+        {Route.KEY: {Route.CONFIG: routes}}, kernel_only=kernel_only
+    )
+    cur_state = libnmstate.show(kernel_only=kernel_only)
+    assert_routes(routes, cur_state, nic=ipv6_ecmp_iface)
+
+    shown_routes = [
+        route
+        for route in cur_state[Route.KEY][Route.CONFIG]
+        if route.get(Route.NEXT_HOP_INTERFACE) == ipv6_ecmp_iface
+        and route.get(Route.DESTINATION) == IPV6_DEFAULT_GATEWAY
+    ]
+    assert len(shown_routes) == 2
+    libnmstate.apply(
+        {Route.KEY: {Route.CONFIG: shown_routes}}, kernel_only=kernel_only
+    )
+    cur_state = libnmstate.show(kernel_only=kernel_only)
+    assert_routes(routes, cur_state, nic=ipv6_ecmp_iface)
+
+    absent_routes = [
+        dict(r, **{Route.STATE: Route.STATE_ABSENT}) for r in routes
+    ]
+    libnmstate.apply(
+        {Route.KEY: {Route.CONFIG: absent_routes}}, kernel_only=kernel_only
+    )
+    cur_state = libnmstate.show(kernel_only=kernel_only)
+    assert_routes_missing(routes, cur_state, nic=ipv6_ecmp_iface)
 
 
 @pytest.fixture

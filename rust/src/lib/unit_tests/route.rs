@@ -304,9 +304,35 @@ fn test_route_sanitize_ipv6_ecmp() {
         ",
     )
     .unwrap();
-    let result = route.sanitize();
-    assert!(result.is_err());
-    assert_eq!(result.err().unwrap().kind(), ErrorKind::NotSupportedError);
+    route.sanitize().unwrap();
+}
+
+#[test]
+fn test_route_ipv6_ecmp_is_match() {
+    let absent_route: RouteEntry = serde_yaml::from_str(
+        r"
+        destination: 2001:db8::/32
+        metric: 150
+        next-hop-address: 2001:db8::2
+        next-hop-interface: eth1
+        weight: 2
+        table-id: 254
+        state: absent
+        ",
+    )
+    .unwrap();
+    let route: RouteEntry = serde_yaml::from_str(
+        r"
+        destination: 2001:db8::/32
+        metric: 150
+        next-hop-address: 2001:db8::2
+        next-hop-interface: eth1
+        weight: 2
+        table-id: 254
+        ",
+    )
+    .unwrap();
+    assert!(absent_route.is_match(&route));
 }
 
 #[test]
