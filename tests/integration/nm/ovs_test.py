@@ -6,6 +6,7 @@ import pytest
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
@@ -17,6 +18,7 @@ from ..testlib import statelib
 from ..testlib.ovslib import Bridge
 from ..testlib.retry import retry_till_true_or_timeout
 from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.veth import veth_interface
 from ..testlib.yaml import load_yaml
 
 BRIDGE0 = "brtest0"
@@ -30,6 +32,8 @@ OVS_DUP_NAME = "br-ex"
 ETH1 = "eth1"
 VERIFY_RETRY_TMO = 5
 DUMMY1 = "dummy1"
+VETH1 = "veth1"
+VETH1PEER = "veth1peer"
 
 
 @pytest.fixture
@@ -61,6 +65,32 @@ def test_do_not_show_unmanaged_ovs_bridge(ovs_unmanaged_bridge):
     # The output should only contains the OVS internal interface
     ovs_internal_iface = statelib.show_only((BRIDGE0,))[Interface.KEY][0]
     assert ovs_internal_iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE
+
+
+@pytest.mark.tier1
+def test_reapply_disabled_ip_on_unmanaged_ovs_port(ovs_unmanaged_bridge):
+    with veth_interface(VETH1, VETH1PEER) as desired_state:
+        iface = desired_state[Interface.KEY][0]
+        iface[Interface.IPV4] = {InterfaceIPv4.ENABLED: False}
+        iface[Interface.IPV6] = {InterfaceIPv6.ENABLED: False}
+        libnmstate.apply(desired_state)
+
+        cmdlib.exec_cmd(
+            f"ovs-vsctl add-port {BRIDGE0} {VETH1}".split(), check=True
+        )
+        port_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: VETH1,
+                    Interface.CONTROLLER: "ovs-system",
+                }
+            ]
+        }
+        assertlib.assert_state_match(port_state)
+
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+        assertlib.assert_state_match(port_state)
 
 
 @pytest.fixture
