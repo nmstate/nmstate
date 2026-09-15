@@ -38,6 +38,9 @@ pub(crate) fn create_ovs_port_nm_conn(
 
     let mut nm_ovs_port_set =
         nm_conn.ovs_port.as_ref().cloned().unwrap_or_default();
+    if let Some(ovsdb_conf) = port_conf.ovsdb.as_ref() {
+        apply_iface_ovsdb_conf(ovsdb_conf, &mut nm_conn);
+    }
     if let Some(bond_conf) = &port_conf.bond {
         if let Some(bond_mode) = &bond_conf.mode {
             match bond_mode {
@@ -244,5 +247,76 @@ pub(crate) fn fix_ovs_iface_controller_setting(
     if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
         nm_conn_set.controller_type = Some(NmIfaceType::OvsPort);
         nm_conn_set.controller = Some(ovs_port_name);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ovs_port_db_update_preserve_and_clear() {
+        let port: OvsBridgePortConfig = serde_yaml::from_str(
+            r#"
+name: bond0
+ovs-db:
+  external_ids:
+    owner: nmstate
+  other_config:
+    stp-path-cost: "2"
+"#,
+        )
+        .unwrap();
+        let conn = create_ovs_port_nm_conn("br0", &port, None, false).unwrap();
+        assert_eq!(conn.iface_type(), Some(&NmIfaceType::OvsPort));
+        assert_eq!(
+            conn.ovs_other_config
+                .as_ref()
+                .unwrap()
+                .data
+                .as_ref()
+                .unwrap()["stp-path-cost"],
+            "2"
+        );
+        assert_eq!(
+            conn.ovs_ext_ids.as_ref().unwrap().data.as_ref().unwrap()["owner"],
+            "nmstate"
+        );
+
+        let mut port = port;
+        port.ovsdb = None;
+        let preserved =
+            create_ovs_port_nm_conn("br0", &port, Some(&conn), false).unwrap();
+        assert_eq!(preserved.ovs_other_config, conn.ovs_other_config);
+        assert_eq!(preserved.ovs_ext_ids, conn.ovs_ext_ids);
+
+        port.ovsdb = Some(
+            serde_yaml::from_str("other_config: {stp-path-cost: 4}").unwrap(),
+        );
+        let updated =
+            create_ovs_port_nm_conn("br0", &port, Some(&conn), false).unwrap();
+        assert_eq!(
+            updated
+                .ovs_other_config
+                .as_ref()
+                .unwrap()
+                .data
+                .as_ref()
+                .unwrap()["stp-path-cost"],
+            "4"
+        );
+
+        for empty in [
+            "{}",
+            "other_config: {}",
+            "other_config: {stp-path-cost: null}",
+        ] {
+            port.ovsdb = Some(serde_yaml::from_str(empty).unwrap());
+            let cleared =
+                create_ovs_port_nm_conn("br0", &port, Some(&conn), false)
+                    .unwrap();
+            assert!(cleared.ovs_other_config.unwrap().data.unwrap().is_empty());
+            assert!(cleared.ovs_ext_ids.unwrap().data.unwrap().is_empty());
+        }
     }
 }

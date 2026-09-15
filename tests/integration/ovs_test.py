@@ -1518,6 +1518,143 @@ def test_attach_linux_bond_to_ovs_bridge(
     assertlib.assert_state_match(desired_state)
 
 
+@pytest.mark.tier1
+@pytest.mark.parametrize("clear_db", [{}, {"other_config": {}}])
+def test_linux_bond_ovs_port_db_roundtrip(
+    cleanup_ovs_bridge_and_bond, eth1_up, clear_db
+):
+    desired_state = load_yaml(
+        """---
+        interfaces:
+        - name: bond1
+          type: bond
+          state: up
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+          link-aggregation:
+            mode: active-backup
+            options:
+              primary: eth1
+            port:
+            - eth1
+          ovs-db:
+            other_config:
+              emc-insert-inv-prob: "90"
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            options:
+              stp:
+                enabled: true
+            port:
+            - name: bond1
+              ovs-db:
+                external_ids:
+                  owner: nmstate
+                other_config:
+                  stp-path-cost: "2"
+        """
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+    _assert_linux_bond_ovs_port_path_cost("2")
+
+    # The Port and Interface tables must retain their separate settings.
+    assert (
+        cmdlib.exec_cmd(
+            [
+                "ovs-vsctl",
+                "get",
+                "Interface",
+                BOND1,
+                "other_config:emc-insert-inv-prob",
+            ],
+            check=True,
+        )[1].strip()
+        == '"90"'
+    )
+    shown = statelib.show_only((BRIDGE0, BOND1))
+    shown_bond = next(
+        iface
+        for iface in shown[Interface.KEY]
+        if iface[Interface.NAME] == BOND1
+        and iface[Interface.TYPE] == InterfaceType.BOND
+    )
+    assert (
+        shown_bond[OvsDB.OVS_DB_SUBTREE][OvsDB.OTHER_CONFIG][
+            "emc-insert-inv-prob"
+        ]
+        == "90"
+    )
+    shown_bridge = next(
+        iface
+        for iface in shown[Interface.KEY]
+        if iface[Interface.NAME] == BRIDGE0
+        and iface[Interface.TYPE] == InterfaceType.OVS_BRIDGE
+    )
+    shown_port = next(
+        port
+        for port in shown_bridge[OVSBridge.CONFIG_SUBTREE][
+            OVSBridge.PORT_SUBTREE
+        ]
+        if port[Interface.NAME] == BOND1
+    )
+    port_db = shown_port[OVSBridge.Port.OVS_DB_SUBTREE]
+    assert port_db[OvsDB.EXTERNAL_IDS]["owner"] == "nmstate"
+    assert port_db[OvsDB.OTHER_CONFIG]["stp-path-cost"] == "2"
+    libnmstate.apply(shown)
+    assertlib.assert_state_match(shown)
+    _assert_linux_bond_ovs_port_path_cost("2")
+
+    # An unrelated port update must preserve the OVSDB settings.
+    bridge = desired_state[Interface.KEY][1]
+    port = bridge[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE][0]
+    port.pop(OVSBridge.Port.OVS_DB_SUBTREE)
+    libnmstate.apply({Interface.KEY: [bridge]})
+    _assert_linux_bond_ovs_port_path_cost("2")
+
+    port[OVSBridge.Port.OVS_DB_SUBTREE] = {
+        OvsDB.OTHER_CONFIG: {"stp-path-cost": "4"}
+    }
+    libnmstate.apply({Interface.KEY: [bridge]})
+    _assert_linux_bond_ovs_port_path_cost("4")
+
+    port[OVSBridge.Port.OVS_DB_SUBTREE] = clear_db
+    libnmstate.apply({Interface.KEY: [bridge]})
+    assert (
+        cmdlib.exec_cmd(
+            ["ovs-vsctl", "get", "Port", BOND1, "other_config"], check=True
+        )[1].strip()
+        == "{}"
+    )
+    shown_bridge = statelib.show_only((BRIDGE0,))[Interface.KEY][0]
+    shown_port = shown_bridge[OVSBridge.CONFIG_SUBTREE][
+        OVSBridge.PORT_SUBTREE
+    ][0]
+    assert not shown_port.get(OVSBridge.Port.OVS_DB_SUBTREE, {}).get(
+        OvsDB.OTHER_CONFIG
+    )
+
+
+def _assert_linux_bond_ovs_port_path_cost(value):
+    assert (
+        cmdlib.exec_cmd(
+            [
+                "ovs-vsctl",
+                "get",
+                "Port",
+                BOND1,
+                "other_config:stp-path-cost",
+            ],
+            check=True,
+        )[1].strip()
+        == f'"{value}"'
+    )
+
+
 @pytest.fixture
 def cleanup_ovs_bridge_bond_vlan():
     yield

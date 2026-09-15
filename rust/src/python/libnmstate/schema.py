@@ -425,6 +425,7 @@ class OVSBridge(Bridge, OvsDB):
 
     class Port(Bridge.Port):
         LINK_AGGREGATION_SUBTREE = "link-aggregation"
+        OVS_DB_SUBTREE = "ovs-db"
 
         class LinkAggregation:
             MODE = "mode"

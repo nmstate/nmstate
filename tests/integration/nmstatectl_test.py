@@ -328,6 +328,7 @@ def test_automatic_rollback(eth1_up):
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
 
         time.sleep(CONFIRMATION_TIMEOUT)
+        assertlib.assert_absent(CONFIRMATION_INTERFACE)
         assertlib.assert_state(clean_state)
 
 
