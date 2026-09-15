@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use super::super::{
     NmConnectionMatcher,
     error::nm_error_to_nmstate,
@@ -82,15 +84,26 @@ pub(crate) async fn save_nm_connections(
 pub(crate) async fn activate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
-    conn_matcher: &NmConnectionMatcher,
 ) -> Result<(), NmstateError> {
     let mut nm_conns = nm_conns.to_vec();
     for i in 1..ACTIVATION_RETRY_COUNT + 1 {
         if !nm_conns.is_empty() {
+            // Refresh ACs after deactivate/delete so we do not reapply a
+            // connection that was intentionally deactivated (e.g. VLAN
+            // protocol change which requires full activate/recreate).
+            let nm_acs = nm_api
+                .active_connections_get()
+                .await
+                .map_err(nm_error_to_nmstate)?;
+            let acs_by_uuid: HashMap<&str, &NmActiveConnection> = nm_acs
+                .iter()
+                .map(|nm_ac| (nm_ac.uuid.as_str(), nm_ac))
+                .collect();
+
             let remain_nm_conns = _activate_nm_connections(
                 nm_api,
                 nm_conns.as_slice(),
-                conn_matcher,
+                &acs_by_uuid,
             )
             .await?;
             if remain_nm_conns.is_empty() {
@@ -124,7 +137,7 @@ pub(crate) async fn activate_nm_connections(
 async fn _activate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
-    conn_matcher: &NmConnectionMatcher,
+    acs_by_uuid: &HashMap<&str, &NmActiveConnection>,
 ) -> Result<Vec<(NmConnection, NmstateError)>, NmstateError> {
     // Contain a list of `(iface_name, nm_iface_type)`.
     let mut new_controllers: Vec<(&str, NmIfaceType)> = Vec::new();
@@ -134,7 +147,7 @@ async fn _activate_nm_connections(
         .filter(|c| c.iface_type().map(|t| t.is_controller()) == Some(true))
     {
         if let Some(uuid) = nm_conn.uuid() {
-            if let Some(nm_ac) = conn_matcher.get_nm_ac_by_uuid(uuid) {
+            if let Some(nm_ac) = acs_by_uuid.get(uuid) {
                 if let Err(e) =
                     reapply_or_activate(nm_api, nm_conn, nm_ac).await
                 {
@@ -174,7 +187,7 @@ async fn _activate_nm_connections(
         .filter(|c| c.iface_type().map(|t| t.is_controller()) != Some(true))
     {
         if let Some(uuid) = nm_conn.uuid() {
-            if let Some(nm_ac) = conn_matcher.get_nm_ac_by_uuid(uuid) {
+            if let Some(nm_ac) = acs_by_uuid.get(uuid) {
                 if let Err(e) =
                     reapply_or_activate(nm_api, nm_conn, nm_ac).await
                 {

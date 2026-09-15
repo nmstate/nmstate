@@ -158,12 +158,8 @@ pub(crate) async fn nm_apply(
         .await?;
     }
 
-    activate_nm_connections(
-        &mut nm_api,
-        nm_conns_to_activate.as_slice(),
-        &conn_matcher,
-    )
-    .await?;
+    activate_nm_connections(&mut nm_api, nm_conns_to_activate.as_slice())
+        .await?;
 
     // Deactivate the devices, not their connections. According to NM's
     // documentation, this prevents automatic connection activations.
