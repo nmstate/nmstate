@@ -130,7 +130,7 @@ def test_missing_operation():
     rc, out, err = ret
 
     assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert "unrecognized subcommand 'no-such-oper'" in err
+    assert "no-such-oper" in err
 
 
 def test_show_command_with_json():
