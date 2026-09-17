@@ -13,10 +13,20 @@ function container_exec {
 }
 
 function container_exec_with_retry {
-    time ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
-        /bin/bash -c "cd $CONTAINER_WORKSPACE && $1" ||
-    time ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
-        /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
+    local retries=5
+    local i
+    for ((i=1; i<=retries; i++)); do
+        if time ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
+            /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
+        then
+            return 0
+        fi
+        if [ "$i" -lt "$retries" ]; then
+            echo "Command failed, retrying ($i/$retries) after 10s..."
+            sleep 10
+        fi
+    done
+    return 1
 }
 
 function open_shell {
