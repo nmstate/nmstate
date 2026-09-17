@@ -684,14 +684,10 @@ def test_ipsec_ipv6_host_to_subnet(ipsec_srv_host_to_site):
     )
 
 
-# https://redhat.atlassian.net/browse/RHEL-176474
-@pytest.mark.skipif(
-    is_el10(),
-    reason="Waive: currently failing on EL10 due to known bug",
-)
 @pytest.mark.xfail(
-    nm_libreswan_version_int() < version_str_to_int("1.2.22"),
-    reason="Need NetworkManager-libreswan 1.2.22+ to support IPv6",
+    nm_libreswan_version_int() < version_str_to_int("1.2.31"),
+    reason="Need NetworkManager-libreswan 1.2.31+ for mixed address "
+    "family tunnels, https://redhat.atlassian.net/browse/RHEL-176474",
 )
 @pytest.mark.parametrize(
     "left,right,leftsubnet,rightsubnet",
@@ -860,10 +856,10 @@ def test_ipsec_ipv4_libreswan_change_ipsec_iface(ipsec_psk_with_ipsec_iface):
 
 
 # DHCPv4 off with empty IP address means IP disabled for IPSec interface
-# https://redhat.atlassian.net/browse/RHEL-176474
 @pytest.mark.skipif(
     is_el10(),
-    reason="Waive: currently failing on EL10 due to known bug",
+    reason="Waive: NetworkManager on EL10 reports the pluto-created xfrm "
+    "interface as a generic device, so nmstate cannot show it",
 )
 def test_ipsec_dhcpv4_off_and_empty_ip_addr(
     ipsec_srv_rsa_gw,
