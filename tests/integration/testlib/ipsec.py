@@ -2,6 +2,7 @@
 
 import glob
 import os
+import re
 import time
 from subprocess import SubprocessError
 
@@ -14,8 +15,41 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
 from .cmdlib import exec_cmd
+from .retry import retry_till_false_or_timeout
 from .veth import create_veth_pair
 from .veth import remove_veth_pair
+
+# Libreswan may create the xfrm netdev well after xfrm policy/state appear.
+IPSEC_IFACE_TIMEOUT_SECS = 30
+
+
+def ipsec_numbered_iface_exists(nic_name):
+    return os.path.exists(f"/sys/class/net/{nic_name}")
+
+
+def list_ipsec_numbered_ifaces():
+    return sorted(
+        name
+        for name in os.listdir("/sys/class/net")
+        if re.fullmatch(r"ipsec\d+", name)
+    )
+
+
+def _ipsec_numbered_ifaces_exist():
+    return bool(list_ipsec_numbered_ifaces())
+
+
+def wait_for_ipsec_numbered_ifaces_gone(timeout=IPSEC_IFACE_TIMEOUT_SECS):
+    still_exist = retry_till_false_or_timeout(
+        timeout, _ipsec_numbered_ifaces_exist
+    )
+    if still_exist:
+        ifaces = list_ipsec_numbered_ifaces()
+        raise RuntimeError(
+            f"ipsec interfaces {ifaces} still exist after waiting "
+            f"{timeout} seconds"
+        )
+
 
 SRV_CONTAINER_IMG = "quay.io/nmstate/test-env:libreswan-srv-c9s"
 SRV_CONTAINER_NAME = "nmstate-ipsec-srv"
