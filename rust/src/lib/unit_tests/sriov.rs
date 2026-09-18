@@ -59,6 +59,55 @@ fn test_sriov_vf_mac_mix_case() {
 }
 
 #[test]
+fn test_verify_sriov_skip_unreferenced_vfs() {
+    let mut pre_apply_cur_ifaces = Interfaces::new();
+    pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
+
+    let mut cur_ifaces = Interfaces::new();
+    let mut cur_iface = new_eth_iface("eth1");
+    if let Interface::Ethernet(eth_iface) = &mut cur_iface {
+        let mut eth_conf = EthernetConfig::new();
+        let mut sriov_conf = SrIovConfig::new();
+        let mut vf0 = SrIovVfConfig::new();
+        vf0.id = 0;
+        vf0.iface_name = "eth1v0".to_string();
+        let mut vf1 = SrIovVfConfig::new();
+        vf1.id = 1;
+        // Empty iface_name simulates a VF rebound to vfio-pci
+        sriov_conf.vfs = Some(vec![vf0, vf1]);
+        sriov_conf.total_vfs = Some(2);
+        eth_conf.sr_iov = Some(sriov_conf);
+        eth_iface.ethernet = Some(eth_conf);
+    } else {
+        panic!("Should be ethernet interface");
+    }
+    cur_ifaces.push(new_eth_iface("eth1v0"));
+    cur_ifaces.push(cur_iface);
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+#[test]
 fn test_ignore_sriov_if_not_desired() {
     let mut pre_apply_cur_ifaces = Interfaces::new();
     pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
