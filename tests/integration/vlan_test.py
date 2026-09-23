@@ -312,7 +312,7 @@ def test_preserve_existing_vlan_conf(eth1_up):
         assertlib.assert_state(desired_state)
 
 
-def test_change_vlan_protocol(vlan_on_eth1):
+def test_change_vlan_protocol(vlan_on_eth1, caplog):
     dot1q_state = {
         Interface.KEY: [
             {
@@ -348,11 +348,27 @@ def test_change_vlan_protocol(vlan_on_eth1):
     )
     assertlib.assert_state_match(qinq_state)
 
+    caplog.clear()
+    caplog.set_level("INFO", logger="libnmstate")
     apply_with_description(
         "Create the vlan interface eth1.101 with ID 102, "
         "using vlan protocol 802.1q",
         dot1q_state,
     )
+    # Changing the VLAN protocol requires deactivation and activation.
+    # Check the logs because failed reapply also falls back to activation.
+    vlan_logs = [
+        message
+        for message in caplog.messages
+        if f": {VLAN_IFNAME}/vlan" in message
+    ]
+    assert any(
+        "Deactivating connection " in msg for msg in vlan_logs
+    ), vlan_logs
+    assert any("Activating connection " in msg for msg in vlan_logs), vlan_logs
+    assert not any(
+        "Reapplying connection " in msg for msg in vlan_logs
+    ), vlan_logs
     assertlib.assert_state_match(dot1q_state)
 
 
