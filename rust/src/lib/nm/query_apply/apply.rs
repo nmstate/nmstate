@@ -24,6 +24,10 @@ use crate::{
     InterfaceType, MergedInterfaces, MergedNetworkState, NmstateError,
 };
 
+const DEACTIVATE_WAIT_TIMEOUT_SEC: u32 = 10;
+// Bulk OVS absents (many bridges/ports) need longer than a single teardown.
+const DEACTIVATE_WAIT_PER_CONN_SEC: u32 = 2;
+
 // There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
 // `cur_net_state`, `des_net_state` into single struct. Suppress the clippy
 // warning for now
@@ -268,6 +272,21 @@ async fn delete_ifaces(
                  deletion: {e:?}"
             );
         }
+    }
+    // DeactivateConnection only acknowledges the request; wait until the
+    // active connections are gone so OVS ports are detached before delete.
+    if !ovs_iface_uuids_to_deactivate.is_empty() {
+        let timeout = DEACTIVATE_WAIT_TIMEOUT_SEC.saturating_add(
+            (ovs_iface_uuids_to_deactivate.len() as u32)
+                .saturating_mul(DEACTIVATE_WAIT_PER_CONN_SEC),
+        );
+        nm_api
+            .wait_connections_inactive(
+                ovs_iface_uuids_to_deactivate.as_slice(),
+                timeout,
+            )
+            .await
+            .map_err(nm_error_to_nmstate)?;
     }
 
     for uuid in &uuids_to_delete {
