@@ -152,14 +152,6 @@ def _lookup_iface_by_name_and_type(ifaces, name, iface_type):
     )
 
 
-def _sort_ovs_bridge_ports(iface):
-    ports = (
-        iface.get(OVSBridge.CONFIG_SUBTREE, {}).get(OVSBridge.PORT_SUBTREE)
-        or []
-    )
-    ports.sort(key=lambda port: port.get(OVSBridge.Port.NAME, ""))
-
-
 def _assert_interface_state_match(expected_iface):
     """
     Match one interface by (name, type).
@@ -170,7 +162,6 @@ def _assert_interface_state_match(expected_iface):
     name = expected_iface[Interface.NAME]
     iface_type = expected_iface[Interface.TYPE]
     expected = copy.deepcopy(expected_iface)
-    _sort_ovs_bridge_ports(expected)
 
     for i in range(RETRY_COUNT):
         current_iface = _lookup_iface_by_name_and_type(
@@ -180,11 +171,6 @@ def _assert_interface_state_match(expected_iface):
         )
         if current_iface is not None:
             current = copy.deepcopy(current_iface)
-            _sort_ovs_bridge_ports(current)
-            # Interface state can flap briefly during rollback; assertlib also
-            # ignores it during verify.
-            expected.pop(Interface.STATE, None)
-            current.pop(Interface.STATE, None)
             desired_state = statelib.State({Interface.KEY: [expected]})
             current_state = statelib.State({Interface.KEY: [current]})
             desired_state.normalize()
@@ -242,6 +228,15 @@ def _trigger_post_apply_verification_failure(modified_state):
     _set_route_verification_failure(modified_state, ovs_iface)
 
 
+def _assert_verification_failure_route_absent():
+    current_routes = libnmstate.show().get(Route.KEY, {}).get(Route.CONFIG, [])
+    assert not any(
+        route.get(Route.DESTINATION) == "203.0.113.0/24"
+        and route.get(Route.NEXT_HOP_INTERFACE) == BR_EX
+        for route in current_routes
+    ), current_routes
+
+
 def _assert_rollback_after_failed_modification(initial_state):
     topology_ifaces = initial_state[Interface.KEY]
 
@@ -258,6 +253,7 @@ def _assert_rollback_after_failed_modification(initial_state):
     # Compare desired topology only (by name+type). A full show() snapshot
     # includes ephemeral runtime fields that often differ after rollback.
     _assert_interfaces_state_match(topology_ifaces)
+    _assert_verification_failure_route_absent()
 
 
 @pytest.fixture
