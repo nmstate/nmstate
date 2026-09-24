@@ -420,6 +420,11 @@ impl NmApi<'_> {
                 .filter(|uuid| nm_acs.iter().any(|ac| ac.uuid == *uuid))
                 .collect()
         };
+        // The last 500 ms sleep can finish after the deadline even when
+        // deactivation completed inside the timeout.
+        if still_active.is_empty() {
+            return Ok(());
+        }
         Err(NmError::new(
             ErrorKind::Timeout,
             format!(
