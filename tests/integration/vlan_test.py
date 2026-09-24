@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from contextlib import contextmanager
+import os
+import socket
 import time
 
 import pytest
@@ -23,6 +25,10 @@ from .testlib.vlan import vlan_interface
 
 VLAN_IFNAME = "eth1.101"
 VLAN2_IFNAME = "eth1.102"
+NM_PRE_DOWN_FOLDER = "/etc/NetworkManager/dispatcher.d/pre-down.d"
+VLAN_PRE_DOWN_DELAY_SCRIPT = (
+    f"{NM_PRE_DOWN_FOLDER}/90-nmstate-test-vlan-pre-down.sh"
+)
 
 
 @pytest.mark.tier1
@@ -312,7 +318,7 @@ def test_preserve_existing_vlan_conf(eth1_up):
         assertlib.assert_state(desired_state)
 
 
-def test_change_vlan_protocol(vlan_on_eth1, caplog):
+def test_change_vlan_protocol(vlan_on_eth1, vlan_pre_down_delay):
     dot1q_state = {
         Interface.KEY: [
             {
@@ -348,28 +354,45 @@ def test_change_vlan_protocol(vlan_on_eth1, caplog):
     )
     assertlib.assert_state_match(qinq_state)
 
-    caplog.clear()
-    caplog.set_level("INFO", logger="libnmstate")
+    # The pre-down delay holds deactivation briefly. Without waiting for
+    # deactivation to finish before activate, NM can keep the old protocol.
+    ifindex_before = socket.if_nametoindex(VLAN_IFNAME)
     apply_with_description(
         "Create the vlan interface eth1.101 with ID 102, "
         "using vlan protocol 802.1q",
         dot1q_state,
     )
-    # Changing the VLAN protocol requires deactivation and activation.
-    # Check the logs because failed reapply also falls back to activation.
-    vlan_logs = [
-        message
-        for message in caplog.messages
-        if f": {VLAN_IFNAME}/vlan" in message
-    ]
-    assert any(
-        "Deactivating connection " in msg for msg in vlan_logs
-    ), vlan_logs
-    assert any("Activating connection " in msg for msg in vlan_logs), vlan_logs
-    assert not any(
-        "Reapplying connection " in msg for msg in vlan_logs
-    ), vlan_logs
     assertlib.assert_state_match(dot1q_state)
+    # Protocol change must recreate the VLAN device (deactivate + activate),
+    # not reapply in place.
+    assert socket.if_nametoindex(VLAN_IFNAME) != ifindex_before
+
+
+@pytest.fixture
+def vlan_pre_down_delay():
+    """
+    Delay VLAN pre-down so activation that races with teardown would leave
+    the old VLAN protocol in place.
+
+    NetworkManager only runs pre-down hooks from dispatcher.d/pre-down.d/.
+    """
+    script = (
+        "#!/bin/bash\n"
+        f'if [ "$1" = "{VLAN_IFNAME}" ] && [ "$2" = "pre-down" ]; then\n'
+        "    sleep 3\n"
+        "fi\n"
+    )
+    os.makedirs(NM_PRE_DOWN_FOLDER, exist_ok=True)
+    with open(VLAN_PRE_DOWN_DELAY_SCRIPT, "w") as fd:
+        fd.write(script)
+    os.chmod(VLAN_PRE_DOWN_DELAY_SCRIPT, 0o755)
+    try:
+        yield
+    finally:
+        try:
+            os.unlink(VLAN_PRE_DOWN_DELAY_SCRIPT)
+        except FileNotFoundError:
+            pass
 
 
 def test_add_qinq_vlan(eth1_up):

@@ -14,6 +14,7 @@ use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
+const DEACTIVATE_WAIT_TIMEOUT_SEC: u32 = 10;
 
 pub(crate) async fn delete_exist_connections(
     nm_api: &mut NmApi<'_>,
@@ -243,6 +244,7 @@ pub(crate) async fn deactivate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
 ) -> Result<(), NmstateError> {
+    let mut deactivated_uuids: Vec<&str> = Vec::new();
     for nm_conn in nm_conns {
         if let Some(uuid) = nm_conn.uuid() {
             log::info!(
@@ -259,7 +261,20 @@ pub(crate) async fn deactivate_nm_connections(
             {
                 return Err(nm_error_to_nmstate(e));
             }
+            deactivated_uuids.push(uuid);
         }
+    }
+    // DeactivateConnection only acknowledges the request. Wait until the
+    // active connections are gone so activation does not race with teardown
+    // (e.g. VLAN protocol change).
+    if !deactivated_uuids.is_empty() {
+        nm_api
+            .wait_connections_inactive(
+                deactivated_uuids.as_slice(),
+                DEACTIVATE_WAIT_TIMEOUT_SEC,
+            )
+            .await
+            .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
 }
