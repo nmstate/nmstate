@@ -383,6 +383,52 @@ impl NmApi<'_> {
         ))
     }
 
+    // DeactivateConnection returns when NM accepts the request; the active
+    // connection can remain present until deactivation finishes. Poll until
+    // the given UUIDs are no longer in the active connection list.
+    pub async fn wait_connections_inactive(
+        &mut self,
+        uuids: &[&str],
+        timeout: u32,
+    ) -> Result<(), NmError> {
+        if uuids.is_empty() {
+            return Ok(());
+        }
+        debug!("wait_connections_inactive: {uuids:?}");
+        let start = Instant::now();
+        while start.elapsed() <= Duration::from_secs(timeout.into()) {
+            self.extend_timeout_if_required().await?;
+            let nm_acs = self.active_connections_get().await?;
+            let still_active: Vec<&str> = uuids
+                .iter()
+                .copied()
+                .filter(|uuid| nm_acs.iter().any(|ac| ac.uuid == *uuid))
+                .collect();
+            if still_active.is_empty() {
+                return Ok(());
+            }
+            debug!(
+                "Waiting for connections to become inactive: {still_active:?}"
+            );
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+        let still_active: Vec<&str> = {
+            let nm_acs = self.active_connections_get().await?;
+            uuids
+                .iter()
+                .copied()
+                .filter(|uuid| nm_acs.iter().any(|ac| ac.uuid == *uuid))
+                .collect()
+        };
+        Err(NmError::new(
+            ErrorKind::Timeout,
+            format!(
+                "Timeout on waiting connections to deactivate: {}",
+                still_active.join(", ")
+            ),
+        ))
+    }
+
     pub async fn get_dns_configuration(
         &mut self,
     ) -> Result<Vec<NmDnsEntry>, NmError> {
