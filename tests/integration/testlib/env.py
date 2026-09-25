@@ -28,6 +28,14 @@ def nm_minor_version():
     return int(version_str.split("~")[0].split(".")[1])
 
 
+def nm_version_int():
+    version_str = exec_cmd(
+        "rpm -q NetworkManager --qf %{VERSION}".split(),
+        check=True,
+    )[1]
+    return version_str_to_int(version_str)
+
+
 def nm_libreswan_version_int():
     ret_code, version_str, _ = exec_cmd(
         "rpm -q NetworkManager-libreswan --qf %{VERSION}".split()
