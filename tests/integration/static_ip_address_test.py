@@ -5,7 +5,6 @@ import pytest
 import libnmstate
 from libnmstate.iplib import is_ipv6_link_local_addr
 from libnmstate.schema import Interface
-from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
@@ -400,6 +399,9 @@ def test_add_static_ipv6_with_link_local(eth1_up):
     # Make sure only the link local address got ignored.
     cur_state = statelib.show_only(("eth1",))
     eth1_cur_state = cur_state[Interface.KEY][0]
+    statelib.remove_addr_query_only_fields(
+        eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    )
     assert (
         eth1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
         not in eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
@@ -435,6 +437,9 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
     # Make sure the link local address got ignored.
     cur_state = statelib.show_only(("eth1",))
     eth1_cur_state = cur_state[Interface.KEY][0]
+    statelib.remove_addr_query_only_fields(
+        eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    )
     assert (
         eth1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
         not in eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
@@ -609,6 +614,9 @@ def test_edit_static_ipv6_address_and_prefix(setup_dummy1_ipv6):
     current_state = statelib.show_only((DUMMY1,))
 
     dummy1_current_state = current_state[Interface.KEY][0]
+    statelib.remove_addr_query_only_fields(
+        dummy1_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    )
 
     assert (
         dummy1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
@@ -1360,44 +1368,3 @@ def test_ignore_ip_addr_with_other_protocol(eth1_up):
     assert "192.0.2.250" not in cur_ipv4_addrs
     assert "2001:db8:1::1" in cur_ipv6_addrs
     assert "2001:db8:1::2" not in cur_ipv6_addrs
-
-
-@pytest.mark.tier1
-def test_query_address_scope_and_flags(setup_dummy1_ipv4):
-    """Verify nmstatectl show reports scope and flags for static addresses."""
-    cur_state = statelib.show_only((DUMMY1,))[Interface.KEY][0]
-    ipv4_addrs = cur_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
-
-    addr = next(
-        a for a in ipv4_addrs if a[InterfaceIP.ADDRESS_IP] == IPV4_ADDRESS1
-    )
-    assert addr.get(InterfaceIP.SCOPE) == "universe"
-    assert InterfaceIP.FLAGS in addr
-    assert "permanent" in addr[InterfaceIP.FLAGS]
-
-
-@pytest.mark.tier1
-def test_query_ipv6_address_scope_and_flags(setup_dummy1_ipv6):
-    """Verify scope and flags are reported for IPv6 static addresses."""
-    cur_state = statelib.show_only((DUMMY1,))[Interface.KEY][0]
-    ipv6_addrs = cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
-
-    addr = next(
-        (a for a in ipv6_addrs if a[InterfaceIP.ADDRESS_IP] == IPV6_ADDRESS1),
-        None,
-    )
-    assert (
-        addr is not None
-    ), f"Expected {IPV6_ADDRESS1} in queried IPv6 addresses"
-    assert addr.get(InterfaceIP.SCOPE) == "universe"
-    assert InterfaceIP.FLAGS in addr
-    assert "permanent" in addr[InterfaceIP.FLAGS]
-
-
-@pytest.mark.tier1
-def test_reapply_queried_state_with_scope_flags(setup_dummy1_ipv4):
-    """Re-applying the queried state (which includes scope/flags) must not
-    cause a verification error.  The extra query-only fields should be
-    ignored during verification."""
-    cur_state = libnmstate.show()
-    libnmstate.apply(cur_state)

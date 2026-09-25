@@ -1420,9 +1420,11 @@ def test_set_static_to_ovs_interface_with_the_same_name_bridge(
             if iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
                 cur_iface_state = iface
                 break
-        return cur_iface_state and cur_iface_state[Interface.IPV4][
-            InterfaceIPv4.ADDRESS
-        ] == [
+        if not cur_iface_state:
+            return False
+        addrs = cur_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
+        statelib.remove_addr_query_only_fields(addrs)
+        return addrs == [
             {
                 InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,

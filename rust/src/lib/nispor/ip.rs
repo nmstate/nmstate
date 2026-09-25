@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use crate::{
-    AddressFlag, AddressProtocol, AddressScope, InterfaceIpAddr, InterfaceIpv4,
-    InterfaceIpv6, MergedInterface, nispor::mptcp::get_mptcp_flags,
+    AddressFlag, AddressProtocol, AddressScope, ErrorKind, InterfaceIpAddr,
+    InterfaceIpv4, InterfaceIpv6, InterfaceState, MergedInterface,
+    MergedNetworkState, NmstateError, nispor::mptcp::get_mptcp_flags,
 };
 
 pub(crate) fn np_ipv4_to_nmstate(
@@ -304,4 +305,163 @@ pub(crate) fn strip_query_only_fields(
     a.valid_life_time = None;
     a.preferred_life_time = None;
     a
+}
+
+/// A saved IFA_PROTO address together with its interface name and all
+/// kernel attributes (scope, flags, label, peer, etc.).
+#[derive(Clone)]
+pub(crate) struct SavedIfaProtoAddr {
+    pub iface_name: String,
+    pub is_ipv6: bool,
+    pub conf: nispor::IpAddrConf,
+}
+
+/// Collect IFA_PROTO addresses (those with `AddressProtocol::Other`) from
+/// every interface that will be touched during apply.  This includes
+/// interfaces explicitly changed AND interfaces that only have route
+/// changes (which NM still reapplies, potentially removing addresses).
+pub(crate) fn collect_ifa_proto_addrs(
+    merged_state: &MergedNetworkState,
+) -> Vec<SavedIfaProtoAddr> {
+    let mut result = Vec::new();
+    let route_ifaces = &merged_state.routes.route_changed_ifaces;
+    for merged_iface in merged_state.interfaces.iter().filter(|i| {
+        i.is_changed() || route_ifaces.contains(&i.merged.name().to_string())
+    }) {
+        let iface_name = merged_iface.merged.name();
+        let iface_state = merged_iface.merged.base_iface().state;
+        if matches!(iface_state, InterfaceState::Down | InterfaceState::Absent)
+        {
+            continue;
+        }
+        let cur_iface = match merged_iface.current.as_ref() {
+            Some(i) => i,
+            None => continue,
+        };
+        let ipv4_disabled = merged_iface
+            .merged
+            .base_iface()
+            .ipv4
+            .as_ref()
+            .is_some_and(|ip| !ip.enabled);
+        let ipv6_disabled = merged_iface
+            .merged
+            .base_iface()
+            .ipv6
+            .as_ref()
+            .is_some_and(|ip| !ip.enabled);
+
+        if !ipv4_disabled && let Some(ipv4) = &cur_iface.base_iface().ipv4 {
+            for addr in ipv4.addresses.as_deref().unwrap_or_default() {
+                if addr.is_protocol_other() {
+                    result.push(SavedIfaProtoAddr {
+                        iface_name: iface_name.to_string(),
+                        is_ipv6: false,
+                        conf: nmstate_addr_to_conf(addr),
+                    });
+                }
+            }
+        }
+        if !ipv6_disabled && let Some(ipv6) = &cur_iface.base_iface().ipv6 {
+            for addr in ipv6.addresses.as_deref().unwrap_or_default() {
+                if addr.is_protocol_other() {
+                    result.push(SavedIfaProtoAddr {
+                        iface_name: iface_name.to_string(),
+                        is_ipv6: true,
+                        conf: nmstate_addr_to_conf(addr),
+                    });
+                }
+            }
+        }
+    }
+    result
+}
+
+pub(crate) fn nmstate_addr_to_conf(
+    addr: &InterfaceIpAddr,
+) -> nispor::IpAddrConf {
+    let mut conf = nispor::IpAddrConf::default();
+    conf.address = addr.ip.to_string();
+    conf.prefix_len = addr.prefix_length;
+    if let Some(vlt) = &addr.valid_life_time {
+        conf.valid_lft = vlt.clone();
+    }
+    if let Some(plt) = &addr.preferred_life_time {
+        conf.preferred_lft = plt.clone();
+    }
+    if let Some(proto) = addr.protocol {
+        conf.protocol = Some(nispor::AddressProtocol::from(proto));
+    }
+    if let Some(scope) = addr.scope {
+        conf.scope = Some(nispor::AddressScope::from(scope));
+    }
+    if let Some(flags) = &addr.flags {
+        conf.flags =
+            flags.iter().map(|f| nispor::IpAddrFlag::from(*f)).collect();
+    }
+    conf.label = addr.label.clone();
+    conf.peer = addr.peer.clone();
+    conf
+}
+
+/// Re-add previously saved IFA_PROTO addresses to the kernel via nispor.
+///
+/// The `IfaceConf` objects carry only IP address fields (no MTU, MAC,
+/// state, etc.), so nispor's `apply_iface_conf` skips the RTM_SETLINK
+/// messages and only sends RTM_NEWADDR — avoiding triggering
+/// NetworkManager to re-activate the connection profile.
+pub(crate) async fn restore_ifa_proto_addrs(
+    addrs: &[SavedIfaProtoAddr],
+) -> Result<(), NmstateError> {
+    if addrs.is_empty() {
+        return Ok(());
+    }
+
+    // Group addresses by interface, splitting IPv4 / IPv6.
+    let mut iface_map: HashMap<&str, (nispor::IpConf, nispor::IpConf)> =
+        HashMap::new();
+    for saved in addrs {
+        let (v4, v6) = iface_map
+            .entry(saved.iface_name.as_str())
+            .or_insert_with(|| {
+                (nispor::IpConf::default(), nispor::IpConf::default())
+            });
+        if saved.is_ipv6 {
+            v6.addresses.push(saved.conf.clone());
+        } else {
+            v4.addresses.push(saved.conf.clone());
+        }
+    }
+
+    let mut np_ifaces = Vec::new();
+    for (iface_name, (ipv4, ipv6)) in &iface_map {
+        let mut np_iface = nispor::IfaceConf::default();
+        np_iface.name = iface_name.to_string();
+        if !ipv4.addresses.is_empty() {
+            np_iface.ipv4 = Some(ipv4.clone());
+        }
+        if !ipv6.addresses.is_empty() {
+            np_iface.ipv6 = Some(ipv6.clone());
+        }
+        np_ifaces.push(np_iface);
+    }
+
+    let mut net_conf = nispor::NetConf::default();
+    net_conf.ifaces = Some(np_ifaces);
+
+    log::info!(
+        "Restoring {} IFA_PROTO address(es) on {} interface(s)",
+        addrs.len(),
+        iface_map.len(),
+    );
+    if let Err(e) = net_conf.apply_async().await {
+        return Err(NmstateError::new(
+            ErrorKind::PluginFailure,
+            format!(
+                "Failed to restore IFA_PROTO addresses: {}, {}",
+                e.kind, e.msg
+            ),
+        ));
+    }
+    Ok(())
 }

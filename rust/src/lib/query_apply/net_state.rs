@@ -6,8 +6,9 @@ use crate::{
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
     NetworkStateMode, NmstateError,
     nispor::{
-        apply_ifaces_alt_names, nispor_apply, nispor_retrieve,
-        persist_alt_name_config, set_running_hostname,
+        apply_ifaces_alt_names, collect_ifa_proto_addrs, nispor_apply,
+        nispor_retrieve, persist_alt_name_config, restore_ifa_proto_addrs,
+        set_running_hostname,
     },
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
@@ -336,6 +337,12 @@ impl NetworkState {
         retry_count: usize,
         timeout: u32,
     ) -> Result<(), NmstateError> {
+        // Save IFA_PROTO addresses before NM operations so they can be
+        // restored afterwards.  NM does not know about IFA_PROTO and will
+        // remove these addresses during reapply or activate.
+        let ifa_proto_addrs = collect_ifa_proto_addrs(merged_state);
+        let ifa_proto_addrs = ifa_proto_addrs.as_slice();
+
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
         with_retry(
@@ -376,6 +383,16 @@ impl NetworkState {
             },
         )
         .await?;
+
+        // Restore IFA_PROTO addresses after the verify loop.  NM's
+        // reapply/activate is asynchronous: even after nm_apply()
+        // returns, NM may still be cleaning up IP addresses.  The
+        // verify loop naturally waits for NM to settle (it retries
+        // until the kernel state matches the desired state).
+        // IFA_PROTO addresses are excluded from verification (see
+        // sanitize_addrs_for_verify), so they do not interfere.
+        restore_ifa_proto_addrs(ifa_proto_addrs).await?;
+
         Ok(())
     }
 

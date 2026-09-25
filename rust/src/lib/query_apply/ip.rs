@@ -4,9 +4,13 @@ use crate::{
     Interface, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, RouteEntry,
 };
 
-// Query-only kernel attributes must be cleared so that address equality
-// used by process_allow_extra_address() ignores them.
+// IFA_PROTO (AddressProtocol::Other) addresses are managed outside NM
+// and restored separately after verification, so they must be excluded
+// from both desired and current before comparison.  Query-only kernel
+// attributes are then cleared so that address equality used by
+// process_allow_extra_address() ignores them.
 fn sanitize_addrs_for_verify(addrs: &mut Vec<InterfaceIpAddr>) {
+    addrs.retain(|a| !a.is_protocol_other());
     for addr in addrs.iter_mut() {
         addr.protocol = None;
         addr.scope = None;

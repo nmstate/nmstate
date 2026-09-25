@@ -3,7 +3,11 @@
 from subprocess import SubprocessError
 
 from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 import libnmstate
@@ -16,9 +20,6 @@ from ..testlib.ifacelib import get_mac_address
 from ..testlib.iproutelib import ip_monitor_assert_stable_link_up
 from ..testlib.route import assert_routes
 from ..testlib.dummy import nm_unmanaged_dummy
-
-
-from libnmstate.error import NmstateVerificationError
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
@@ -587,6 +588,30 @@ def eth1_with_static_ip_and_other_protocol_addr(eth1_up):
     yield
 
 
+def _assert_ifa_proto_addrs_present(iface_name):
+    """Assert IFA_PROTO addresses are present via the nmstate query API."""
+    cur_state = libnmstate.show()
+    iface = next(
+        i for i in cur_state[Interface.KEY] if i[Interface.NAME] == iface_name
+    )
+    ipv4_addrs = [
+        a[InterfaceIP.ADDRESS_IP]
+        for a in iface[Interface.IPV4][InterfaceIPv4.ADDRESS]
+    ]
+    ipv6_addrs = [
+        a[InterfaceIP.ADDRESS_IP]
+        for a in iface[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    ]
+    assert IPV4_ADDRESS3 in ipv4_addrs
+    assert IPV6_ADDRESS3 in ipv6_addrs
+    ipv4_proto_addr = next(
+        a
+        for a in iface[Interface.IPV4][InterfaceIPv4.ADDRESS]
+        if a[InterfaceIP.ADDRESS_IP] == IPV4_ADDRESS3
+    )
+    assert ipv4_proto_addr.get(InterfaceIP.PROTOCOL) == "0x54"
+
+
 @pytest.mark.tier1
 def test_modify_route_of_iface_should_ignore_other_protocol_addr(
     eth1_with_static_ip_and_other_protocol_addr,
@@ -616,9 +641,67 @@ def test_modify_route_of_iface_should_ignore_other_protocol_addr(
     ipv6_conf = exec_cmd(
         "nmcli -f ipv6.addresses c show eth1".split(), check=True
     )[1]
-    # NM's reapply prunes addresses absent from the profile unless Reapply()
-    # gets the preserve-external-ip flag.
+    # Other-protocol addresses are not stored in the NM profile.
     assert IPV4_ADDRESS1 in ipv4_conf
     assert IPV4_ADDRESS3 not in ipv4_conf
     assert IPV6_ADDRESS1 in ipv6_conf
     assert IPV6_ADDRESS3 not in ipv6_conf
+
+    # IFA_PROTO addresses are saved before the NM apply and restored
+    # afterwards.  Verify via the nmstate query API that the addresses
+    # are still present with the original protocol attribute.
+    _assert_ifa_proto_addrs_present("eth1")
+
+
+@pytest.mark.tier1
+def test_query_other_protocol_addr_has_scope_and_flags(
+    eth1_with_static_ip_and_other_protocol_addr,
+):
+    """IFA_PROTO addresses visible in nmstate query must include kernel
+    attributes such as scope and protocol."""
+    cur_state = libnmstate.show()
+    eth1 = next(
+        i for i in cur_state[Interface.KEY] if i[Interface.NAME] == "eth1"
+    )
+    ipv4_addrs = eth1[Interface.IPV4][InterfaceIPv4.ADDRESS]
+    proto_addr = next(
+        (a for a in ipv4_addrs if a[InterfaceIP.ADDRESS_IP] == IPV4_ADDRESS3),
+        None,
+    )
+    assert proto_addr is not None
+    assert proto_addr.get(InterfaceIP.PROTOCOL) == "0x54"
+    assert proto_addr.get(InterfaceIP.SCOPE) == "universe"
+
+
+@pytest.mark.tier1
+def test_reapply_after_ifa_proto_addr_does_not_fail_verify(
+    eth1_with_static_ip_and_other_protocol_addr,
+):
+    """Re-applying the full queried state (which now carries scope/flags
+    on every address) must not cause a verification error."""
+    cur_state = libnmstate.show()
+    libnmstate.apply(cur_state)
+
+
+@pytest.mark.tier1
+def test_route_only_change_preserves_other_protocol_addr(
+    eth1_with_static_ip_and_other_protocol_addr,
+):
+    """When only routes change (no explicit interface changes), NM still
+    reapplies the connection.  IFA_PROTO addresses must survive."""
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.DESTINATION: "203.0.113.128/25",
+                        Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+                        Route.TABLE_ID: 254,
+                    },
+                ]
+            }
+        }
+    )
+
+    _assert_ifa_proto_addrs_present("eth1")

@@ -802,6 +802,14 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
     _remove_ip_lifetime(origin_ipv6_state[InterfaceIP.ADDRESS])
     _remove_ip_lifetime(new_ipv4_state[InterfaceIP.ADDRESS])
     _remove_ip_lifetime(new_ipv6_state[InterfaceIP.ADDRESS])
+    statelib.remove_addr_query_only_fields(
+        origin_ipv4_state[InterfaceIP.ADDRESS]
+    )
+    statelib.remove_addr_query_only_fields(
+        origin_ipv6_state[InterfaceIP.ADDRESS]
+    )
+    statelib.remove_addr_query_only_fields(new_ipv4_state[InterfaceIP.ADDRESS])
+    statelib.remove_addr_query_only_fields(new_ipv6_state[InterfaceIP.ADDRESS])
     assert origin_ipv4_state == new_ipv4_state
     assert origin_ipv6_state == new_ipv6_state
 

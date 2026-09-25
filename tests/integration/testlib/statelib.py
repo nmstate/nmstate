@@ -113,6 +113,7 @@ class State:
         self._sort_ovs_lag_ports()
         self._sort_mptcp_flags()
         self._remove_mptcp_flags_of_ip_addr()
+        self._remove_query_only_fields_of_ip_addr()
         self._remove_top_descriptions()
         self._sort_vlan_qos_map()
 
@@ -312,6 +313,23 @@ class State:
             ):
                 addr.pop(InterfaceIPv6.MPTCP_FLAGS, None)
 
+    def _remove_query_only_fields_of_ip_addr(self):
+        for iface_state in self._state[Interface.KEY]:
+            for addr in iface_state.get(Interface.IPV4, {}).get(
+                InterfaceIPv4.ADDRESS, []
+            ):
+                addr.pop(InterfaceIP.SCOPE, None)
+                addr.pop(InterfaceIP.FLAGS, None)
+                addr.pop(InterfaceIP.LABEL, None)
+                addr.pop(InterfaceIP.PEER, None)
+            for addr in iface_state.get(Interface.IPV6, {}).get(
+                InterfaceIPv6.ADDRESS, []
+            ):
+                addr.pop(InterfaceIP.SCOPE, None)
+                addr.pop(InterfaceIP.FLAGS, None)
+                addr.pop(InterfaceIP.LABEL, None)
+                addr.pop(InterfaceIP.PEER, None)
+
     def _remove_top_descriptions(self):
         self._state.pop(Description.KEY, None)
 
@@ -395,3 +413,12 @@ def _canonicalize_ipv6_addr(addr):
 
 def _is_ipv6_address(addr):
     return ":" in addr
+
+
+def remove_addr_query_only_fields(addresses):
+    """Strip query-only fields (scope, flags, label, peer) from addresses."""
+    for addr in addresses:
+        addr.pop(InterfaceIP.SCOPE, None)
+        addr.pop(InterfaceIP.FLAGS, None)
+        addr.pop(InterfaceIP.LABEL, None)
+        addr.pop(InterfaceIP.PEER, None)
