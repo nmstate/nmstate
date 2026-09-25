@@ -181,8 +181,15 @@ rpm: dist
 	rm -f $(TARBALL)
 	rm -f $(VENDOR_TARBALL)
 
+.PHONY: clib_header_check
+clib_header_check: $(CLIB_HEADER)
+	$(CC) -Wall -Wextra -Werror -fsyntax-only -Irust/src/clib \
+		rust/src/clib/test/nmstate_header_test.c
+	$(CXX) -Wall -Wextra -Werror -x c++ -fsyntax-only -Irust/src/clib \
+		rust/src/clib/test/nmstate_header_test.c
+
 .PHONY: clib_check
-clib_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
+clib_check: $(CLIB_SO_DEV_DEBUG) clib_header_check
 	$(eval TMPDIR := $(shell mktemp -d))
 	cp $(CLIB_SO_DEV_DEBUG) $(TMPDIR)/$(CLIB_SO_FULL)
 	ln -sfv $(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_SO_MAN)

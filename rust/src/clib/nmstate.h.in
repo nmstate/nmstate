@@ -392,4 +392,8 @@ int nmstate_net_state_format(const char *state,
 int nmstate_validate(const char *state_or_policy, const char *current_state,
                      char **err_kind, char **err_msg);
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif // _LIBNMSTATE_H_
