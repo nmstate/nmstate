@@ -56,7 +56,7 @@ def version_str_to_int(version_str):
     # if it is a rc version, then use 90 based versioning to ensure
     # that a release candidate is less than a full release.
     # Example: "1.58~rc1" would become 1.57.90 but "1.58.0" would stay 1.58.0.
-    if len(parts) == 2:
+    if len(parts) == 2 and parts[1].startswith("rc"):
         rc_num = int(parts[1].lstrip("rc"))
         return version_int(int(versions[0]), int(versions[1]) - 1, 89 + rc_num)
     return version_int(int(versions[0]), int(versions[1]), int(versions[2]))
