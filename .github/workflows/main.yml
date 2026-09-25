@@ -58,7 +58,7 @@ jobs:
         # Workaround for https://github.com/actions/runner-images/issues/9733
         sudo rm /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt-get update;
-        sudo apt-get -y install valgrind
+        sudo apt-get -y install valgrind g++
 
     - name: Disable MPTCP
       # Nmstate query will fail due to permission deny when MPTCP is enabled
