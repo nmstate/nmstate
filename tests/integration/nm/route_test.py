@@ -16,6 +16,8 @@ from ..testlib.ifacelib import get_mac_address
 from ..testlib.iproutelib import ip_monitor_assert_stable_link_up
 from ..testlib.route import assert_routes
 from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.env import nm_version_int
+from ..testlib.env import version_str_to_int
 
 
 from libnmstate.error import NmstateVerificationError
@@ -517,6 +519,10 @@ def external_managed_dummy1_with_static_ip_and_other_protocol_addr():
 
 
 @pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_version_int() < version_str_to_int("1.54.4"),
+    reason="NM 1.54.4+ required for other protocol addresses",
+)
 def test_modify_route_of_ext_iface_should_ignore_other_protocol_addr(
     external_managed_dummy1_with_static_ip_and_other_protocol_addr,
 ):
@@ -588,6 +594,10 @@ def eth1_with_static_ip_and_other_protocol_addr(eth1_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_version_int() < version_str_to_int("1.54.4"),
+    reason="NM 1.54.4+ required for other protocol addresses",
+)
 def test_modify_route_of_iface_should_ignore_other_protocol_addr(
     eth1_with_static_ip_and_other_protocol_addr,
 ):
