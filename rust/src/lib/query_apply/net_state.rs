@@ -2,6 +2,7 @@
 
 use std::future::Future;
 
+use super::iface_filter::get_related_iface_names;
 use crate::{
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
     NetworkStateMode, NmstateError,
@@ -121,8 +122,18 @@ impl NetworkState {
                 }
             }
         }
+        // The filter only applies to a single retrieve.
+        let iface_filter = self.iface_filter.take();
         if !self.kernel_only {
-            let nm_state = nm_retrieve(self.running_config_only, self).await?;
+            let related_ifaces = iface_filter.as_deref().and_then(|name| {
+                get_related_iface_names(&self.interfaces, name)
+            });
+            let nm_state = nm_retrieve(
+                self.running_config_only,
+                self,
+                related_ifaces.as_deref(),
+            )
+            .await?;
             // TODO: Priority handling
             self.update_state(&nm_state);
         }
