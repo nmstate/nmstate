@@ -76,6 +76,7 @@ pub extern "C" fn nmstate_net_state_apply(
     }
 
     if (flags & NMSTATE_FLAG_OVERRIDE_IFACE) > 0 {
+        #[allow(deprecated)]
         net_state.set_override_iface(true);
     }
 

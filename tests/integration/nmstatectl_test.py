@@ -486,6 +486,7 @@ def test_format_command():
         )
 
 
+# --override-iface is deprecated
 def test_cli_apply_with_override_iface(eth1_with_static_route_and_rule):
     with NamedTemporaryFile() as fd:
         fd.write(
@@ -498,9 +499,11 @@ def test_cli_apply_with_override_iface(eth1_with_static_route_and_rule):
             )
         )
         fd.flush()
-        cmdlib.exec_cmd(
+        _, _, err = cmdlib.exec_cmd(
             f"nmstatectl apply --override-iface {fd.name}".split(), check=True
         )
+
+        assert err.count("override_iface is deprecated") == 1
     iface_state = show_only(("eth1",))[Interface.KEY][0]
     assert not iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]
     assert not iface_state[Interface.IPV6][InterfaceIPv6.ENABLED]

@@ -29,6 +29,11 @@ def apply(
     rollback_timeout=60,
     override_iface=False,
 ):
+    """Apply a desired network state.
+
+    ``override_iface`` is deprecated. Specify interface settings explicitly
+    in ``desired_state`` instead (for example, ``ipv4: {enabled: false}``).
+    """
     return apply_net_state(
         desired_state,
         kernel_only=kernel_only,
