@@ -105,6 +105,12 @@ trait NetworkManager {
     /// GetAllDevices method
     fn get_all_devices(&self) -> zbus::Result<Vec<zvariant::OwnedObjectPath>>;
 
+    /// GetDeviceByIpIface method
+    fn get_device_by_ip_iface(
+        &self,
+        iface: &str,
+    ) -> zbus::Result<zvariant::OwnedObjectPath>;
+
     /// CheckpointAdjustRollbackTimeout method
     fn checkpoint_adjust_rollback_timeout(
         &self,
@@ -418,6 +424,17 @@ impl NmDbus<'_> {
             .into_iter()
             .map(obj_path_to_string)
             .collect())
+    }
+
+    /// Invoke `GetDeviceByIpIface` which matches the IP interface name of
+    /// realized devices.
+    pub(crate) async fn nm_dev_obj_path_get_by_iface(
+        &self,
+        iface_name: &str,
+    ) -> Result<String, NmError> {
+        Ok(obj_path_to_string(
+            self.proxy.get_device_by_ip_iface(iface_name).await?,
+        ))
     }
 
     pub(crate) async fn nm_dev_applied_connection_get(
