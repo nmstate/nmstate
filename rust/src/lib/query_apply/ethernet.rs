@@ -169,6 +169,7 @@ impl NetworkState {
             for pf_iface in pf_ifaces {
                 pf_state.interfaces.push(pf_iface);
             }
+            #[allow(deprecated)]
             pf_state.set_override_iface(self.override_iface);
             Some(pf_state)
         }

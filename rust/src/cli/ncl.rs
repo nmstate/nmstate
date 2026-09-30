@@ -198,8 +198,9 @@ fn main() {
                         .long("override-iface")
                         .action(clap::ArgAction::SetTrue)
                         .help(
-                            "Override interface settings without merge \
-                             current network state",
+                            "Deprecated: override interface settings without \
+                             merging current state; specify settings \
+                             explicitly instead",
                         ),
                 ),
         )

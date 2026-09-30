@@ -89,6 +89,7 @@ pub(crate) fn ncl_service(
         let mut state = state_from_fd(&mut fd)?;
 
         if config.service.override_iface {
+            #[allow(deprecated)]
             state.set_override_iface(true);
         }
 
