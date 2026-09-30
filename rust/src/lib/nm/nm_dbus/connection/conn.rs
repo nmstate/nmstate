@@ -129,6 +129,11 @@ pub struct NmConnection {
     pub obj_path: String,
     #[serde(skip)]
     pub(crate) flags: Vec<NmSettingsConnectionFlag>,
+    /// When true, pass `NM_DEVICE_REAPPLY_FLAGS_PRESERVE_EXTERNAL_IP`
+    /// (0x1) to the Reapply D-Bus call so that externally added IP
+    /// addresses (e.g. those carrying IFA_PROTO) are not removed.
+    #[serde(skip)]
+    pub(crate) preserve_external_ip: bool,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
 }
 

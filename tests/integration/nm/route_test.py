@@ -626,9 +626,14 @@ def test_modify_route_of_iface_should_ignore_other_protocol_addr(
     ipv6_conf = exec_cmd(
         "nmcli -f ipv6.addresses c show eth1".split(), check=True
     )[1]
-    # NM's reapply prunes addresses absent from the profile unless Reapply()
-    # gets the preserve-external-ip flag.
+    # Other-protocol addresses are not stored in the NM profile.
     assert IPV4_ADDRESS1 in ipv4_conf
     assert IPV4_ADDRESS3 not in ipv4_conf
     assert IPV6_ADDRESS1 in ipv6_conf
     assert IPV6_ADDRESS3 not in ipv6_conf
+
+    # Route-only changes use NM Reapply with preserve-external-ip flag,
+    # so the kernel must still have the other-protocol addresses.
+    ip_addr_output = exec_cmd("ip addr show dev eth1".split(), check=True)[1]
+    assert IPV4_ADDRESS3 in ip_addr_output
+    assert IPV6_ADDRESS3 in ip_addr_output

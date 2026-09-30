@@ -34,6 +34,8 @@ const NM_SETTINGS_CREATE2_FLAGS_BLOCK_AUTOCONNECT: u32 = 32;
 const NM_SETTINGS_UPDATE2_FLAGS_TO_DISK: u32 = 1;
 const NM_SETTINGS_UPDATE2_FLAGS_IN_MEMORY: u32 = 2;
 const NM_SETTINGS_UPDATE2_FLAGS_BLOCK_AUTOCONNECT: u32 = 32;
+// Prevent auto-reapply when updating an active connection (since NM 1.44).
+const NM_SETTINGS_UPDATE2_FLAGS_NO_REAPPLY: u32 = 64;
 
 // These proxy() macros only generate private struct, hence it should be
 // sit with its consumer.
@@ -378,6 +380,7 @@ impl NmDbus<'_> {
         con_obj_path: &str,
         nm_conn: &NmConnection,
         memory_only: bool,
+        no_reapply: bool,
     ) -> Result<(), NmError> {
         let value = nm_conn.to_value()?;
         let proxy = zbus::Proxy::new(
@@ -387,12 +390,15 @@ impl NmDbus<'_> {
             NM_DBUS_INTERFACE_SETTING,
         )
         .await?;
-        let flags = NM_SETTINGS_UPDATE2_FLAGS_BLOCK_AUTOCONNECT
+        let mut flags = NM_SETTINGS_UPDATE2_FLAGS_BLOCK_AUTOCONNECT
             + if memory_only {
                 NM_SETTINGS_UPDATE2_FLAGS_IN_MEMORY
             } else {
                 NM_SETTINGS_UPDATE2_FLAGS_TO_DISK
             };
+        if no_reapply {
+            flags += NM_SETTINGS_UPDATE2_FLAGS_NO_REAPPLY;
+        }
         proxy.call::<&str, (
                 NmConnectionDbusValue,
                 u32,
@@ -447,6 +453,7 @@ impl NmDbus<'_> {
         &self,
         nm_dev_obj_path: &str,
         nm_conn: &NmConnection,
+        flags: u32,
     ) -> Result<(), NmError> {
         let value = nm_conn.to_value()?;
         let proxy = zbus::Proxy::new(
@@ -459,10 +466,7 @@ impl NmDbus<'_> {
         match proxy
             .call::<&str, (NmConnectionDbusValue, u64, u32), ()>(
                 "Reapply",
-                &(
-                    value, 0, /* ignore version id */
-                    0, /* flag, NM document require always be zero */
-                ),
+                &(value, 0 /* ignore version id */, flags),
             )
             .await
         {

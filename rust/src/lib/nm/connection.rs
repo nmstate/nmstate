@@ -78,6 +78,13 @@ pub(crate) fn prepare_nm_conns(
             conn_matcher,
             gen_conf_mode,
         )? {
+            // When the interface is changed only because of route updates
+            // (not explicitly desired by the user), ask NM to preserve
+            // externally added IP addresses (e.g. those with IFA_PROTO
+            // set by tools like OVN) during reapply.
+            if !merged_iface.is_desired() && merged_iface.is_changed() {
+                nm_conn.preserve_external_ip = true;
+            }
             // Clear forwarding when not supported by NetworkManager to prevent
             // failures. TODO: Remove this code once the minimum
             // supported NetworkManager version is >= 1.54

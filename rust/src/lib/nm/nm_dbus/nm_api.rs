@@ -237,6 +237,7 @@ impl NmApi<'_> {
                     nm_conn.obj_path.as_str(),
                     nm_conn,
                     memory_only,
+                    nm_conn.preserve_external_ip,
                 )
                 .await
         } else {
@@ -265,11 +266,14 @@ impl NmApi<'_> {
         &mut self,
         nm_conn: &NmConnection,
         nm_dev_obj_path: &str,
+        flags: u32,
     ) -> Result<(), NmError> {
         debug!("connection_reapply: {nm_conn:?}");
         self.extend_timeout_if_required().await?;
 
-        self.dbus.nm_dev_reapply(nm_dev_obj_path, nm_conn).await
+        self.dbus
+            .nm_dev_reapply(nm_dev_obj_path, nm_conn, flags)
+            .await
     }
 
     pub async fn active_connections_get(

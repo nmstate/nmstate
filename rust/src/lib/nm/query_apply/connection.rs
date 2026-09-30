@@ -12,6 +12,9 @@ use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
+// NM_DEVICE_REAPPLY_FLAGS_PRESERVE_EXTERNAL_IP (since NM 1.42):
+// preserve externally added IP addresses and routes during reapply.
+const NM_REAPPLY_FLAGS_PRESERVE_EXTERNAL_IP: u32 = 0x1;
 
 pub(crate) async fn delete_exist_connections(
     nm_api: &mut NmApi<'_>,
@@ -281,6 +284,11 @@ async fn reapply_or_activate(
             ));
         }
     };
+    let reapply_flags = if nm_conn.preserve_external_ip {
+        NM_REAPPLY_FLAGS_PRESERVE_EXTERNAL_IP
+    } else {
+        0
+    };
     if let Some(nm_dev_obj_path) = nm_ac.dev_obj_path.as_deref() {
         log::info!(
             "Reapplying connection {}: {}/{}",
@@ -288,8 +296,9 @@ async fn reapply_or_activate(
             nm_ac.iface_name,
             nm_ac.iface_type,
         );
-        if let Err(e) =
-            nm_api.connection_reapply(nm_conn, nm_dev_obj_path).await
+        if let Err(e) = nm_api
+            .connection_reapply(nm_conn, nm_dev_obj_path, reapply_flags)
+            .await
         {
             log::info!(
                 "Reapply operation failed on {} {} {uuid}, reason: {}, retry \
