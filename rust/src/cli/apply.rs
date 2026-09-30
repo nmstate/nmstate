@@ -67,6 +67,7 @@ where
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
+    #[allow(deprecated)]
     net_state.set_override_iface(override_iface);
     net_state.set_memory_only(matches.get_flag("MEMORY_ONLY"));
     apply_state(&net_state, matches.get_flag("SHOW_SECRETS"))

@@ -225,6 +225,11 @@ impl NetworkState {
     ///
     /// For example, if desired interface has no IPv4 section defined, nmstate
     /// will treat it as disabled regardless current network status.
+    ///
+    /// Deprecated: specify the desired interface settings explicitly instead.
+    /// For example, set `ipv4.enabled: false` to disable IPv4. Unspecified
+    /// settings otherwise continue to be merged with the current state.
+    #[deprecated(since = "2.2.63", note = "specify interface settings explicitly instead")]
     pub fn set_override_iface(&mut self, value: bool) -> &mut Self {
         self.override_iface = value;
         self

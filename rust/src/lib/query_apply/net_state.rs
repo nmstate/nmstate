@@ -169,6 +169,12 @@ impl NetworkState {
     /// Apply the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub async fn apply_async(&self) -> Result<(), NmstateError> {
+        if self.override_iface {
+            log::warn!(
+                "override_iface is deprecated; specify interface settings \
+                 explicitly in the desired state instead"
+            );
+        }
         if self.interfaces.kernel_ifaces.len()
             + self.interfaces.user_ifaces.len()
             >= MAX_SUPPORTED_INTERFACES

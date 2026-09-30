@@ -31,10 +31,10 @@ With \fBkeep_state_file_after_apply = true\fR, the service copies the network
 state file to a file with \fB.applied\fR, but preserves the original file.
 
 .PP
-By default, nmstate merges network state file with current network state,
-if you want to override interface settings without merging, please set
-`override_iface = true` in `[service]` section in
-\fB/etc/nmstate/nmstate.conf\fR:
+By default, nmstate merges network state files with the current network state.
+The deprecated \fBoverride_iface = true\fR setting in the \fB[service]\fR
+section of \fB/etc/nmstate/nmstate.conf\fR instead overrides interface
+settings without merging:
 
 .EX
 \fB
@@ -42,6 +42,12 @@ if you want to override interface settings without merging, please set
 override_iface = true
 \fR
 .EE
+
+The \fBoverride_iface\fR setting is deprecated. It remains supported but
+emits a warning when used. Specify the desired interface settings explicitly
+in the state file instead (for example, \fBipv4: {enabled: false}\fR to
+disable IPv4). By default, unspecified settings are merged with the current
+state.
 
 If `override_iface = true`, for network state to apply, nmstate.service will:
 

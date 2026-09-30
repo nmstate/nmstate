@@ -98,8 +98,9 @@ int nmstate_net_state_retrieve(uint32_t flags, char **state, char **log,
  *              Do not commit new state after verification
  *          * NMSTATE_FLAG_MEMORY_ONLY
  *              No not store network state to persistent.
- *          * NMSTATE_FLAG_OVERRIDE_IFACE
+ *          * NMSTATE_FLAG_OVERRIDE_IFACE (deprecated)
  *              Override interface configuration without merging from current.
+ *              Specify interface settings explicitly instead.
  * @state:
  *      Pointer of char array for network state in json format.
  * @log:
