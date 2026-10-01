@@ -139,6 +139,7 @@ fn get_unapplied_state_files(
 ) -> Result<Vec<FileContent>, CliError> {
     let folder = Path::new(folder);
     let mut yml_files = HashSet::<FileContent>::new();
+    let mut yml_file_names = HashSet::<PathBuf>::new();
     let mut applied_files = HashSet::<FileContent>::new();
     for entry in folder.read_dir()? {
         let file = entry?.path();
@@ -147,16 +148,14 @@ fn get_unapplied_state_files(
         {
             let content = fs::read_to_string(&file)?;
             let file_name_no_extention = folder.join(&file).with_extension("");
-            if !yml_files.insert(FileContent::new(
-                file_name_no_extention.clone(),
-                content,
-            )) {
+            if !yml_file_names.insert(file_name_no_extention.clone()) {
                 return Err(CliError::from(format!(
                     "Conflict YAML file {}.yml and {}.yaml",
                     file_name_no_extention.display(),
                     file_name_no_extention.display(),
                 )));
             }
+            yml_files.insert(FileContent::new(file_name_no_extention, content));
         } else if keep_state_file_after_apply
             && file.extension() == Some(OsStr::new(APPLIED_FILE_EXTENSION))
         {
@@ -236,4 +235,103 @@ fn relocate_file(file_path: &Path) -> Result<(), CliError> {
         new_path.display()
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct TestDir(PathBuf);
+
+    impl TestDir {
+        fn new() -> Self {
+            let path = std::env::temp_dir()
+                .join(format!("nmstate-service-{}", uuid::Uuid::new_v4()));
+            fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+
+        fn write(&self, name: &str, content: &str) {
+            fs::write(self.0.join(name), content).unwrap();
+        }
+
+        fn collect(&self, keep: bool) -> Result<Vec<FileContent>, CliError> {
+            get_unapplied_state_files(self.0.to_str().unwrap(), keep)
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn test_conflicting_yaml_extensions() {
+        for keep in [false, true] {
+            for yaml_content in ["interfaces: []", "dns-resolver: {}"] {
+                let dir = TestDir::new();
+                dir.write("state.yml", "interfaces: []");
+                dir.write("state.yaml", yaml_content);
+                dir.write("state.applied", "interfaces: []");
+
+                let err = dir
+                    .collect(keep)
+                    .err()
+                    .expect("colliding YAML basenames must fail");
+                assert_eq!(err.code, crate::error::DEFAULT_ERROR_CODE);
+                assert_eq!(
+                    err.error_msg,
+                    format!(
+                        "Conflict YAML file {}.yml and {}.yaml",
+                        dir.0.join("state").display(),
+                        dir.0.join("state").display(),
+                    )
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_distinct_yaml_files_with_identical_contents() {
+        for keep in [false, true] {
+            let dir = TestDir::new();
+            dir.write("b.yaml", "interfaces: []");
+            dir.write("a.yml", "interfaces: []");
+
+            let files = dir.collect(keep).unwrap();
+            assert_eq!(
+                files
+                    .iter()
+                    .map(|file| (file.path.clone(), file.content.as_str()))
+                    .collect::<Vec<_>>(),
+                vec![
+                    (dir.0.join("a.yml"), "interfaces: []"),
+                    (dir.0.join("b.yaml"), "interfaces: []"),
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn test_applied_content_change_detection() {
+        for extension in ["yml", "yaml"] {
+            let dir = TestDir::new();
+            let name = format!("state.{extension}");
+            dir.write(&name, "interfaces: []");
+            dir.write("state.applied", "interfaces: []");
+            assert!(dir.collect(true).unwrap().is_empty());
+
+            let files = dir.collect(false).unwrap();
+            assert_eq!(files.len(), 1);
+            assert_eq!(files[0].path, dir.0.join(&name));
+            assert_eq!(files[0].content, "interfaces: []");
+
+            dir.write(&name, "dns-resolver: {}");
+            let files = dir.collect(true).unwrap();
+            assert_eq!(files.len(), 1);
+            assert_eq!(files[0].path, dir.0.join(&name));
+            assert_eq!(files[0].content, "dns-resolver: {}");
+        }
+    }
 }
