@@ -10,6 +10,7 @@ use crate::{
     BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
     InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, InterfaceType,
     Ipv6AddrGenMode, NmstateError, RouteEntry, WaitIp,
+    ip::is_ipv6_unicast_link_local,
     nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod},
 };
 
@@ -151,12 +152,16 @@ fn gen_nm_ipv6_setting(
         }
         Some(i) => i,
     };
+    // Dynamic addresses (DHCPv6/autoconf) and kernel link-local addresses must
+    // not be stored as static `ipv6.addresses`. Route-only applies copy the
+    // current address list, which includes both. Persisting the link-local
+    // address makes NetworkManager rewrite IPv6 and drop the DHCPv6 lease.
     let nmstate_ip_addrs: Vec<InterfaceIpAddr> = iface_ip
         .addresses
         .as_deref()
         .unwrap_or_default()
         .iter()
-        .filter(|i| !i.is_auto())
+        .filter(|addr| is_persistable_ipv6_addr(addr))
         .cloned()
         .collect();
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
@@ -319,6 +324,21 @@ fn flip_bool(v: bool) -> bool {
     v.bitxor(true)
 }
 
+fn is_persistable_ipv6_addr(addr: &InterfaceIpAddr) -> bool {
+    if addr.is_auto()
+        || matches!(
+            addr.protocol,
+            Some(crate::AddressProtocol::RouterAnnouncement)
+        )
+    {
+        return false;
+    }
+    match addr.ip {
+        std::net::IpAddr::V6(ip) => !is_ipv6_unicast_link_local(&ip),
+        _ => false,
+    }
+}
+
 fn nmstate_dhcp_client_id_to_nm(client_id: &Dhcpv4ClientId) -> String {
     match client_id {
         Dhcpv4ClientId::LinkLayerAddress => "mac".into(),
@@ -420,6 +440,49 @@ ipv6:
             nm_conn.ipv6.as_ref().and_then(|s| s.method.as_ref()),
             Some(&NmSettingIpMethod::Auto)
         );
+    }
+
+    #[test]
+    fn test_gen_nm_ipv6_auto_route_does_not_persist_dynamic_or_link_local() {
+        let iface: Interface = serde_yaml::from_str(
+            r#"---
+name: dhcpcli
+type: ethernet
+state: up
+ipv6:
+  enabled: true
+  dhcp: true
+  autoconf: true
+  address:
+  - ip: fe80::1234
+    prefix-length: 64
+  - ip: 2001:db8:1::ac0
+    prefix-length: 128
+    valid-life-time: 172798sec
+    preferred-life-time: 172798sec
+"#,
+        )
+        .unwrap();
+        let routes: Vec<RouteEntry> = serde_yaml::from_str(
+            r#"
+- destination: ::/0
+  next-hop-interface: dhcpcli
+  next-hop-address: fe80::1
+"#,
+        )
+        .unwrap();
+        let mut nm_conn = NmConnection::default();
+
+        gen_nm_ip_setting(&iface, Some(&routes), &mut nm_conn).unwrap();
+
+        let ipv6 = nm_conn.ipv6.as_ref().unwrap();
+        assert_eq!(ipv6.method, Some(NmSettingIpMethod::Auto));
+        assert!(
+            ipv6.addresses.is_empty(),
+            "dynamic and link-local addresses were stored: {:?}",
+            ipv6.addresses
+        );
+        assert_eq!(ipv6.routes.len(), 1);
     }
 
     #[test]
