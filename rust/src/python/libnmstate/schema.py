@@ -175,6 +175,10 @@ class InterfaceIP:
     DHCP_CUSTOM_HOSTNAME = "dhcp-custom-hostname"
     PREFIX_ROUTE_METRIC = "prefix-route-metric"
     PROTOCOL = "protocol"
+    SCOPE = "scope"
+    FLAGS = "flags"
+    LABEL = "label"
+    PEER = "peer"
 
 
 class InterfaceIPv4(InterfaceIP):

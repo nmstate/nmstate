@@ -166,8 +166,9 @@ pub use crate::{
         VxlanConfig, VxlanInterface, XfrmInterface,
     },
     ip::{
-        AddressFamily, AddressProtocol, Dhcpv4ClientId, Dhcpv6Duid,
-        InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, WaitIp,
+        AddressFamily, AddressFlag, AddressProtocol, AddressScope,
+        Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4,
+        InterfaceIpv6, Ipv6AddrGenMode, WaitIp,
     },
     lldp::{
         LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,

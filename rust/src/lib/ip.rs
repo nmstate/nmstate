@@ -1028,6 +1028,23 @@ pub struct InterfaceIpAddr {
         deserialize_with = "crate::deserializer::option_enum_string_or_integer"
     )]
     pub protocol: Option<AddressProtocol>,
+    /// IP address scope as reported by the kernel (e.g. global, link, host).
+    /// This property is query only.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub scope: Option<AddressScope>,
+    /// IP address flags as reported by the kernel (e.g. nodad,
+    /// noprefixroute, permanent).
+    /// This property is query only.
+    #[serde(skip_serializing_if = "is_empty_addr_flags", default)]
+    pub flags: Option<Vec<AddressFlag>>,
+    /// Address label (IPv4 only, e.g. "eth0:1").
+    /// This property is query only.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub label: Option<String>,
+    /// Peer address for point-to-point interfaces.
+    /// This property is query only.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub peer: Option<String>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -1039,6 +1056,10 @@ impl Default for InterfaceIpAddr {
             valid_life_time: None,
             preferred_life_time: None,
             protocol: None,
+            scope: None,
+            flags: None,
+            label: None,
+            peer: None,
         }
     }
 }
@@ -1116,6 +1137,10 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             valid_life_time: None,
             preferred_life_time: None,
             protocol: None,
+            scope: None,
+            flags: None,
+            label: None,
+            peer: None,
         })
     }
 }
@@ -1381,6 +1406,10 @@ fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
     if let Some(v) = v { v.is_empty() } else { true }
 }
 
+fn is_empty_addr_flags(v: &Option<Vec<AddressFlag>>) -> bool {
+    if let Some(v) = v { v.is_empty() } else { true }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
@@ -1621,6 +1650,18 @@ impl From<nispor::AddressProtocol> for AddressProtocol {
     }
 }
 
+#[cfg(feature = "query_apply")]
+impl From<AddressProtocol> for nispor::AddressProtocol {
+    fn from(d: AddressProtocol) -> Self {
+        match d {
+            AddressProtocol::Loopback => Self::Loopback,
+            AddressProtocol::RouterAnnouncement => Self::RouterAnnouncement,
+            AddressProtocol::LinkLocal => Self::LinkLocal,
+            AddressProtocol::Other(v) => nispor::AddressProtocol::Other(v),
+        }
+    }
+}
+
 const IFAPROT_KERNEL_LO: u8 = 1;
 const IFAPROT_KERNEL_RA: u8 = 2;
 const IFAPROT_KERNEL_LL: u8 = 3;
@@ -1632,6 +1673,17 @@ impl From<u8> for AddressProtocol {
             IFAPROT_KERNEL_RA => Self::RouterAnnouncement,
             IFAPROT_KERNEL_LL => Self::LinkLocal,
             _ => Self::Other(d),
+        }
+    }
+}
+
+impl From<AddressProtocol> for u8 {
+    fn from(d: AddressProtocol) -> Self {
+        match d {
+            AddressProtocol::Loopback => IFAPROT_KERNEL_LO,
+            AddressProtocol::RouterAnnouncement => IFAPROT_KERNEL_RA,
+            AddressProtocol::LinkLocal => IFAPROT_KERNEL_LL,
+            AddressProtocol::Other(v) => v,
         }
     }
 }
@@ -1653,5 +1705,136 @@ impl<'de> Deserialize<'de> for AddressProtocol {
         };
         Self::try_from(s.as_str())
             .map_err(|e| serde::de::Error::custom(e.to_string()))
+    }
+}
+
+/// IP address scope as reported by the kernel.
+/// This property is query only.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    Default,
+)]
+#[serde(rename_all = "lowercase")]
+#[non_exhaustive]
+pub enum AddressScope {
+    #[default]
+    Universe,
+    Site,
+    Link,
+    Host,
+    Nowhere,
+    Other(u8),
+}
+
+#[cfg(feature = "query_apply")]
+impl From<nispor::AddressScope> for AddressScope {
+    fn from(d: nispor::AddressScope) -> Self {
+        match d {
+            nispor::AddressScope::Universe => Self::Universe,
+            nispor::AddressScope::Site => Self::Site,
+            nispor::AddressScope::Link => Self::Link,
+            nispor::AddressScope::Host => Self::Host,
+            nispor::AddressScope::Nowhere => Self::Nowhere,
+            nispor::AddressScope::Other(d) => Self::Other(d),
+        }
+    }
+}
+
+#[cfg(feature = "query_apply")]
+impl From<AddressScope> for nispor::AddressScope {
+    fn from(d: AddressScope) -> Self {
+        match d {
+            AddressScope::Universe => Self::Universe,
+            AddressScope::Site => Self::Site,
+            AddressScope::Link => Self::Link,
+            AddressScope::Host => Self::Host,
+            AddressScope::Nowhere => Self::Nowhere,
+            AddressScope::Other(v) => Self::Other(v),
+        }
+    }
+}
+
+/// IP address flag as reported by the kernel.
+/// This property is query only.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+#[non_exhaustive]
+pub enum AddressFlag {
+    Secondary,
+    Nodad,
+    Optimistic,
+    Dadfailed,
+    Homeaddress,
+    Deprecated,
+    Tentative,
+    Permanent,
+    Managetempaddr,
+    Noprefixroute,
+    Mcautojoin,
+    #[serde(rename = "stable-privacy")]
+    StablePrivacy,
+    Other(u32),
+}
+
+#[cfg(feature = "query_apply")]
+impl From<nispor::IpAddrFlag> for AddressFlag {
+    fn from(d: nispor::IpAddrFlag) -> Self {
+        match d {
+            nispor::IpAddrFlag::Secondary => Self::Secondary,
+            nispor::IpAddrFlag::Nodad => Self::Nodad,
+            nispor::IpAddrFlag::Optimistic => Self::Optimistic,
+            nispor::IpAddrFlag::Dadfailed => Self::Dadfailed,
+            nispor::IpAddrFlag::Homeaddress => Self::Homeaddress,
+            nispor::IpAddrFlag::Deprecated => Self::Deprecated,
+            nispor::IpAddrFlag::Tentative => Self::Tentative,
+            nispor::IpAddrFlag::Permanent => Self::Permanent,
+            nispor::IpAddrFlag::Managetempaddr => Self::Managetempaddr,
+            nispor::IpAddrFlag::Noprefixroute => Self::Noprefixroute,
+            nispor::IpAddrFlag::Mcautojoin => Self::Mcautojoin,
+            nispor::IpAddrFlag::StablePrivacy => Self::StablePrivacy,
+            nispor::IpAddrFlag::Other(d) => Self::Other(d),
+            _ => Self::Other(0),
+        }
+    }
+}
+
+#[cfg(feature = "query_apply")]
+impl From<AddressFlag> for nispor::IpAddrFlag {
+    fn from(d: AddressFlag) -> Self {
+        match d {
+            AddressFlag::Secondary => Self::Secondary,
+            AddressFlag::Nodad => Self::Nodad,
+            AddressFlag::Optimistic => Self::Optimistic,
+            AddressFlag::Dadfailed => Self::Dadfailed,
+            AddressFlag::Homeaddress => Self::Homeaddress,
+            AddressFlag::Deprecated => Self::Deprecated,
+            AddressFlag::Tentative => Self::Tentative,
+            AddressFlag::Permanent => Self::Permanent,
+            AddressFlag::Managetempaddr => Self::Managetempaddr,
+            AddressFlag::Noprefixroute => Self::Noprefixroute,
+            AddressFlag::Mcautojoin => Self::Mcautojoin,
+            AddressFlag::StablePrivacy => Self::StablePrivacy,
+            AddressFlag::Other(d) => Self::Other(d),
+        }
     }
 }

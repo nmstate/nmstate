@@ -399,6 +399,9 @@ def test_add_static_ipv6_with_link_local(eth1_up):
     # Make sure only the link local address got ignored.
     cur_state = statelib.show_only(("eth1",))
     eth1_cur_state = cur_state[Interface.KEY][0]
+    statelib.remove_addr_query_only_fields(
+        eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    )
     assert (
         eth1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
         not in eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
@@ -434,6 +437,9 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
     # Make sure the link local address got ignored.
     cur_state = statelib.show_only(("eth1",))
     eth1_cur_state = cur_state[Interface.KEY][0]
+    statelib.remove_addr_query_only_fields(
+        eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    )
     assert (
         eth1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]
         not in eth1_cur_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
@@ -608,6 +614,9 @@ def test_edit_static_ipv6_address_and_prefix(setup_dummy1_ipv6):
     current_state = statelib.show_only((DUMMY1,))
 
     dummy1_current_state = current_state[Interface.KEY][0]
+    statelib.remove_addr_query_only_fields(
+        dummy1_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+    )
 
     assert (
         dummy1_desired_state[Interface.IPV6][InterfaceIPv6.ADDRESS][0]

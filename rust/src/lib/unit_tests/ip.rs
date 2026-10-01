@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    AddressProtocol, BaseInterface, ErrorKind, Interface, InterfaceIpv4,
-    InterfaceIpv6, InterfaceState, Interfaces, MergedInterfaces, RouteEntry,
-    ip::sanitize_ip_network, unit_tests::testlib::new_eth_iface,
+    AddressFlag, AddressProtocol, AddressScope, BaseInterface, ErrorKind,
+    Interface, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6, InterfaceState,
+    Interfaces, MergedInterfaces, RouteEntry,
+    ip::sanitize_ip_network,
+    nispor::{nmstate_addr_to_conf, strip_query_only_fields},
+    unit_tests::testlib::new_eth_iface,
 };
 
 fn gen_test_eth_ifaces() -> Interfaces {
@@ -973,4 +976,271 @@ fn test_verify_ignore_current_address_protocol() {
     .unwrap();
 
     merged_ifaces.verify(&current).unwrap();
+}
+
+#[test]
+fn test_verify_ignores_ifa_proto_addr_in_desired() {
+    // When the desired state includes an IFA_PROTO (Other) address that
+    // is absent from the current state, verification must still pass
+    // because IFA_PROTO addresses are restored outside the verify loop.
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: "192.168.1.1"
+      prefix-length: 24
+    - ip: "192.168.1.2"
+      prefix-length: 24
+      protocol: "0x54"
+"#,
+    )
+    .unwrap();
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: "192.168.1.1"
+      prefix-length: 24
+"#,
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
+}
+
+#[test]
+fn test_address_scope_flags_peer_serde_round_trip() {
+    let ipv4: InterfaceIpv4 = serde_yaml::from_str(
+        r#"---
+enabled: true
+dhcp: false
+address:
+- ip: "192.0.2.1"
+  prefix-length: 24
+  scope: universe
+  flags:
+  - permanent
+  - noprefixroute
+  label: "eth0:1"
+  peer: "192.0.2.2"
+- ip: "192.0.2.3"
+  prefix-length: 24
+  scope: link
+"#,
+    )
+    .unwrap();
+
+    let addrs = ipv4.addresses.as_deref().unwrap();
+    assert_eq!(addrs[0].scope, Some(AddressScope::Universe));
+    assert_eq!(
+        addrs[0].flags,
+        Some(vec![AddressFlag::Permanent, AddressFlag::Noprefixroute])
+    );
+    assert_eq!(addrs[0].label, Some("eth0:1".to_string()));
+    assert_eq!(addrs[0].peer, Some("192.0.2.2".to_string()));
+
+    assert_eq!(addrs[1].scope, Some(AddressScope::Link));
+    assert_eq!(addrs[1].flags, None);
+    assert_eq!(addrs[1].label, None);
+    assert_eq!(addrs[1].peer, None);
+
+    // Serialize and deserialize back, verify round-trip.
+    let yaml = serde_yaml::to_string(&ipv4).unwrap();
+    let ipv4_rt: InterfaceIpv4 = serde_yaml::from_str(&yaml).unwrap();
+    assert_eq!(ipv4, ipv4_rt);
+}
+
+#[test]
+fn test_address_scope_flags_absent_by_default() {
+    let ipv4: InterfaceIpv4 = serde_yaml::from_str(
+        r#"---
+enabled: true
+dhcp: false
+address:
+- ip: "192.0.2.1"
+  prefix-length: 24
+"#,
+    )
+    .unwrap();
+
+    let addr = &ipv4.addresses.as_deref().unwrap()[0];
+    assert_eq!(addr.scope, None);
+    assert_eq!(addr.flags, None);
+    assert_eq!(addr.label, None);
+    assert_eq!(addr.peer, None);
+}
+
+#[test]
+fn test_strip_query_only_fields_clears_all() {
+    let addr = InterfaceIpAddr {
+        ip: "192.0.2.1".parse().unwrap(),
+        prefix_length: 24,
+        mptcp_flags: None,
+        valid_life_time: Some("120sec".to_string()),
+        preferred_life_time: Some("60sec".to_string()),
+        protocol: Some(AddressProtocol::Other(0x55)),
+        scope: Some(AddressScope::Universe),
+        flags: Some(vec![AddressFlag::Permanent]),
+        label: Some("eth0:1".to_string()),
+        peer: Some("192.0.2.2".to_string()),
+    };
+
+    let stripped = strip_query_only_fields(addr);
+    assert_eq!(
+        stripped.ip,
+        "192.0.2.1".parse::<std::net::IpAddr>().unwrap()
+    );
+    assert_eq!(stripped.prefix_length, 24);
+    assert_eq!(stripped.protocol, None);
+    assert_eq!(stripped.scope, None);
+    assert_eq!(stripped.flags, None);
+    assert_eq!(stripped.label, None);
+    assert_eq!(stripped.peer, None);
+    assert_eq!(stripped.valid_life_time, None);
+    assert_eq!(stripped.preferred_life_time, None);
+}
+
+#[test]
+fn test_strip_query_only_fields_preserves_mptcp() {
+    use crate::MptcpAddressFlag;
+
+    let addr = InterfaceIpAddr {
+        ip: "192.0.2.1".parse().unwrap(),
+        prefix_length: 24,
+        mptcp_flags: Some(vec![MptcpAddressFlag::Signal]),
+        valid_life_time: None,
+        preferred_life_time: None,
+        protocol: None,
+        scope: None,
+        flags: None,
+        label: None,
+        peer: None,
+    };
+
+    let stripped = strip_query_only_fields(addr);
+    assert_eq!(stripped.mptcp_flags, Some(vec![MptcpAddressFlag::Signal]));
+}
+
+#[test]
+fn test_verify_ignores_query_only_fields_in_current() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: "192.168.1.1"
+      prefix-length: 24
+"#,
+    )
+    .unwrap();
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: "192.168.1.1"
+      prefix-length: 24
+      scope: universe
+      flags:
+      - permanent
+      - noprefixroute
+"#,
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        gen_test_eth_ifaces(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
+}
+
+#[test]
+fn test_nmstate_addr_to_conf_full() {
+    let addr = InterfaceIpAddr {
+        ip: "192.0.2.1".parse().unwrap(),
+        prefix_length: 24,
+        mptcp_flags: None,
+        valid_life_time: Some("120sec".to_string()),
+        preferred_life_time: Some("60sec".to_string()),
+        protocol: Some(AddressProtocol::Other(0x55)),
+        scope: Some(AddressScope::Universe),
+        flags: Some(vec![AddressFlag::Permanent, AddressFlag::Noprefixroute]),
+        label: Some("eth0:1".to_string()),
+        peer: Some("192.0.2.2".to_string()),
+    };
+
+    let conf = nmstate_addr_to_conf(&addr);
+    assert_eq!(conf.address, "192.0.2.1");
+    assert_eq!(conf.prefix_len, 24);
+    assert_eq!(conf.valid_lft, "120sec");
+    assert_eq!(conf.preferred_lft, "60sec");
+    assert_eq!(conf.protocol, Some(nispor::AddressProtocol::Other(0x55)));
+    assert_eq!(conf.scope, Some(nispor::AddressScope::Universe));
+    assert_eq!(
+        conf.flags,
+        vec![
+            nispor::IpAddrFlag::Permanent,
+            nispor::IpAddrFlag::Noprefixroute,
+        ]
+    );
+    assert_eq!(conf.label, Some("eth0:1".to_string()));
+    assert_eq!(conf.peer, Some("192.0.2.2".to_string()));
+}
+
+#[test]
+fn test_nmstate_addr_to_conf_minimal() {
+    let addr = InterfaceIpAddr {
+        ip: "2001:db8::1".parse().unwrap(),
+        prefix_length: 64,
+        mptcp_flags: None,
+        valid_life_time: None,
+        preferred_life_time: None,
+        protocol: None,
+        scope: None,
+        flags: None,
+        label: None,
+        peer: None,
+    };
+
+    let conf = nmstate_addr_to_conf(&addr);
+    assert_eq!(conf.address, "2001:db8::1");
+    assert_eq!(conf.prefix_len, 64);
+    assert_eq!(conf.valid_lft, "");
+    assert_eq!(conf.preferred_lft, "");
+    assert_eq!(conf.protocol, None);
+    assert_eq!(conf.scope, None);
+    assert!(conf.flags.is_empty());
+    assert_eq!(conf.label, None);
+    assert_eq!(conf.peer, None);
 }

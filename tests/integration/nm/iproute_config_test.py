@@ -21,6 +21,7 @@ from ..testlib.assertlib import assert_state_match
 from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.retry import retry_till_true_or_timeout
 from ..testlib.iproutelib import iproute_get_ip_addrs_with_order
+from ..testlib.statelib import remove_addr_query_only_fields
 from ..testlib.statelib import show_only
 
 BOND99 = "bond99"
@@ -204,6 +205,7 @@ def test_external_managed_veth_with_static_ip(
     ipv6_info = iface_state[Interface.IPV6]
 
     assert ipv4_info[InterfaceIPv4.ENABLED]
+    remove_addr_query_only_fields(ipv4_info[InterfaceIPv4.ADDRESS])
     assert ipv4_info[InterfaceIPv4.ADDRESS] == [
         {
             InterfaceIPv4.ADDRESS_IP: "192.0.2.2",
@@ -218,10 +220,12 @@ def test_external_managed_veth_with_static_ip(
         cur_ipv6 = show_only(("veth1",))[Interface.KEY][0].get(
             Interface.IPV6, {}
         )
+        addrs = cur_ipv6.get(InterfaceIPv6.ADDRESS, [])
+        remove_addr_query_only_fields(addrs)
         return {
             InterfaceIPv6.ADDRESS_IP: "2001:db8:f::1",
             InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
-        } in cur_ipv6.get(InterfaceIPv6.ADDRESS, [])
+        } in addrs
 
     assert retry_till_true_or_timeout(10, _has_static_ipv6)
 

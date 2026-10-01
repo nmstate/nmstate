@@ -182,9 +182,13 @@ def vlan_is_down():
 def vlan_is_up_with_ip():
     current_state = statelib.show_only((TEST_VLAN,))
     iface_state = current_state[Interface.KEY][0]
+    ipv4_addrs = iface_state[Interface.IPV4].get(InterfaceIPv4.ADDRESS, [])
+    ipv6_addrs = iface_state[Interface.IPV6].get(InterfaceIPv6.ADDRESS, [])
+    statelib.remove_addr_query_only_fields(ipv4_addrs)
+    statelib.remove_addr_query_only_fields(ipv6_addrs)
     return (
         iface_state[Interface.STATE] == InterfaceState.UP
-        and iface_state[Interface.IPV4].get(InterfaceIPv4.ADDRESS, [])
+        and ipv4_addrs
         == [
             {
                 InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
@@ -195,7 +199,7 @@ def vlan_is_up_with_ip():
             InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
             InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
         }
-        in iface_state[Interface.IPV6].get(InterfaceIPv6.ADDRESS, [])
+        in ipv6_addrs
     )
 
 
