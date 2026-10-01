@@ -344,7 +344,7 @@ impl MergedInterfaces {
         Ok(())
     }
 
-    // When only port iface with `controller` peppery without its controller
+    // When only port iface with `controller` property without its controller
     // interface been mentioned in desired state, we need to resolve its
     // controller type for backend to proceed.
     pub(crate) fn resolve_port_iface_controller_type(
@@ -568,8 +568,8 @@ impl MergedInterfaces {
         Ok(())
     }
 
-    // Infiniband over IP can only be port of active_backup bond as it is a
-    // layer 3 interface like tun.
+    // InfiniBand ports require an active-backup bond and cannot be mixed
+    // with other port types in the same bond.
     pub(crate) fn check_infiniband_as_ports(&self) -> Result<(), NmstateError> {
         let ib_iface_names: HashSet<&str> = self
             .kernel_ifaces
@@ -580,26 +580,75 @@ impl MergedInterfaces {
             .map(|iface| iface.merged.name())
             .collect();
 
-        for iface in self
+        let mut controllers: HashSet<&str> = self
             .kernel_ifaces
             .values()
             .filter(|i| i.is_desired() && i.merged.is_controller())
-            .map(|i| &i.merged)
-        {
-            if let Some(ports) = iface.ports() {
-                let ports = HashSet::from_iter(ports.iter().cloned());
-                if !ib_iface_names.is_disjoint(&ports) {
-                    if let Interface::Bond(iface) = iface
-                        && iface.mode() == Some(BondMode::ActiveBackup)
+            .map(|i| i.merged.name())
+            .collect();
+
+        controllers.extend(self.kernel_ifaces.values().filter_map(|iface| {
+            iface
+                .desired
+                .as_ref()?
+                .base_iface()
+                .controller
+                .as_deref()
+                .filter(|name| !name.is_empty())
+        }));
+
+        for name in controllers {
+            let Some(controller) = self.kernel_ifaces.get(name) else {
+                continue;
+            };
+            let iface = &controller.merged;
+            let mut ports: HashSet<&str> = self
+                .kernel_ifaces
+                .iter()
+                .filter_map(|(iface_name, iface)| {
+                    let desired = iface.desired.as_ref()?;
+                    if !desired.is_absent()
+                        && desired.base_iface().controller.as_deref()
+                            == Some(name)
                     {
-                        continue;
+                        Some(iface_name.as_str())
+                    } else {
+                        None
                     }
+                })
+                .collect();
+            if let Some(iface_ports) = iface.ports() {
+                ports.extend(iface_ports)
+            }
+            let ib_ports: Vec<&str> =
+                ports.intersection(&ib_iface_names).copied().collect();
+            if ib_ports.is_empty() {
+                continue;
+            }
+
+            match iface {
+                Interface::Bond(bond)
+                    if bond.mode() == Some(BondMode::ActiveBackup) =>
+                {
+                    if ib_ports.len() != ports.len() {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Bond {} cannot mix InfiniBand and \
+                                 non-InfiniBand ports: {ports:?}",
+                                iface.name()
+                            ),
+                        );
+                        log::error!("{e}");
+                        return Err(e);
+                    }
+                }
+                _ => {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "InfiniBand interface {:?} cannot use as port of \
-                             {}. Only active-backup bond allowed.",
-                            ib_iface_names.intersection(&ports),
+                            "InfiniBand port(s) {ib_ports:?} on {} require an \
+                             active-backup bond.",
                             iface.name()
                         ),
                     );
