@@ -568,8 +568,6 @@ impl MergedInterfaces {
         Ok(())
     }
 
-    // Infiniband over IP can only be port of active_backup bond as it is a
-    // layer 3 interface like tun.
     pub(crate) fn check_infiniband_as_ports(&self) -> Result<(), NmstateError> {
         let ib_iface_names: HashSet<&str> = self
             .kernel_ifaces
@@ -586,20 +584,41 @@ impl MergedInterfaces {
             .filter(|i| i.is_desired() && i.merged.is_controller())
             .map(|i| &i.merged)
         {
-            if let Some(ports) = iface.ports() {
-                let ports = HashSet::from_iter(ports.iter().cloned());
-                if !ib_iface_names.is_disjoint(&ports) {
-                    if let Interface::Bond(iface) = iface
-                        && iface.mode() == Some(BondMode::ActiveBackup)
-                    {
-                        continue;
+            let Some(ports) = iface.ports() else {
+                continue;
+            };
+            let ib_ports: Vec<&str> = ports
+                .iter()
+                .copied()
+                .filter(|port| ib_iface_names.contains(*port))
+                .collect();
+            if ib_ports.is_empty() {
+                continue;
+            }
+
+            match iface {
+                Interface::Bond(bond)
+                    if bond.mode() == Some(BondMode::ActiveBackup) =>
+                {
+                    if ib_ports.len() != ports.len() {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Bond {} cannot mix InfiniBand and \
+                                 non-InfiniBand ports: {ports:?}",
+                                iface.name()
+                            ),
+                        );
+                        log::error!("{e}");
+                        return Err(e);
                     }
+                }
+                _ => {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "InfiniBand interface {:?} cannot use as port of \
-                             {}. Only active-backup bond allowed.",
-                            ib_iface_names.intersection(&ports),
+                            "InfiniBand port(s) {ib_ports:?} on {} require an \
+                             active-backup bond.",
                             iface.name()
                         ),
                     );
