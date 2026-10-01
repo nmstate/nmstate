@@ -167,6 +167,10 @@ rebooting.
 the user must commit the changes within \fItimeout\fR, or they will be
 automatically rolled back. Default: 60 seconds.
 .IP \fB--override-iface\fR
+Deprecated; still supported but emits a warning when applying network state.
+Specify the desired interface settings explicitly instead (for example,
+\fBipv4: {enabled: false}\fR to disable IPv4). By default, settings not
+specified in the desired state are merged with the current state.
 If defined when applying network state:
 
  * For `interfaces` section, any defined interface will be configured by
