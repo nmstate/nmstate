@@ -173,6 +173,69 @@ fn test_ib_port_of_bridge_in_current() {
 }
 
 #[test]
+fn test_ib_port_of_active_backup_bond_with_ethernet() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r"---
+- name: bond0
+  type: bond
+  state: up
+  link-aggregation:
+    mode: active-backup
+    port:
+    - mlx5_ib2
+    - eth1
+",
+    )
+    .unwrap();
+
+    let current: Interfaces = serde_yaml::from_str(
+        r"---
+- name: mlx5_ib2
+  type: infiniband
+  state: up
+- name: eth1
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
+    assert!(matches!(result, Err(e) if e.kind() == ErrorKind::InvalidArgument));
+}
+
+#[test]
+fn test_ethernet_only_bond_with_infiniband_elsewhere() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r"---
+- name: bond0
+  type: bond
+  state: up
+  link-aggregation:
+    mode: active-backup
+    port:
+    - eth1
+",
+    )
+    .unwrap();
+
+    let current: Interfaces = serde_yaml::from_str(
+        r"---
+- name: mlx5_ib2
+  type: infiniband
+  state: up
+- name: eth1
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+
+    MergedInterfaces::new(desired, current, Default::default(), false).unwrap();
+}
+
+#[test]
 fn test_ib_port_of_bond_mode_in_desire() {
     let desired: Interfaces = serde_yaml::from_str(
         r"---
