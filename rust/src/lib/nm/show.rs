@@ -71,7 +71,7 @@ pub(crate) async fn nm_retrieve(
         // tun interface, we only store ovs-interface here, then
         // `merge_ovs_netdev_tun_iface()` afterwards
         if nm_dev.iface_type == NmIfaceType::Tun
-            && nm_devs.as_slice().iter().any(|n| {
+            && nm_devs.iter().any(|n| {
                 n.name == nm_dev.name && n.iface_type == NmIfaceType::OvsIface
             })
         {

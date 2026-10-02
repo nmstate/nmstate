@@ -89,9 +89,7 @@ impl LinuxBridgeInterface {
         self.bridge
             .as_ref()
             .and_then(|br_conf| br_conf.port.as_ref())
-            .map(|ports| {
-                ports.as_slice().iter().map(|p| p.name.as_str()).collect()
-            })
+            .map(|ports| ports.iter().map(|p| p.name.as_str()).collect())
     }
 
     pub fn new() -> Self {
@@ -223,7 +221,7 @@ impl LinuxBridgeInterface {
     pub(crate) fn vlan_filtering_is_enabled(&self) -> bool {
         if let Some(ports) = self.bridge.as_ref().and_then(|b| b.port.as_ref())
         {
-            ports.as_slice().iter().any(|port_conf| {
+            ports.iter().any(|port_conf| {
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
                     vlan_conf != &BridgePortVlanConfig::default()
                 } else {

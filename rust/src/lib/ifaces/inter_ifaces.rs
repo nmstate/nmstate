@@ -1324,7 +1324,7 @@ impl InterfaceNameSearch {
         {
             vec![n]
         } else if let Some(nics) = self.profile_2_kernel.get(name) {
-            nics.as_slice().iter().map(|s| s.as_str()).collect()
+            nics.iter().map(|s| s.as_str()).collect()
         } else {
             Vec::new()
         }
