@@ -753,11 +753,7 @@ impl MergedRoutes {
             .collect();
 
         // Interface has route added.
-        for rt in desired_routes
-            .as_slice()
-            .iter()
-            .filter(|rt| !rt.is_absent())
-        {
+        for rt in desired_routes.iter().filter(|rt| !rt.is_absent()) {
             if let Some(via) = rt.next_hop_iface.as_ref() {
                 if ifaces_marked_as_absent.contains(&via.as_str()) {
                     return Err(NmstateError::new(
@@ -797,9 +793,7 @@ impl MergedRoutes {
         }
 
         // Interface has route deleted.
-        for absent_rt in
-            desired_routes.as_slice().iter().filter(|rt| rt.is_absent())
-        {
+        for absent_rt in desired_routes.iter().filter(|rt| rt.is_absent()) {
             if let Some(cur_rts) = current.config.as_ref() {
                 for rt in cur_rts {
                     if absent_rt.is_match(rt) {
@@ -819,7 +813,7 @@ impl MergedRoutes {
         // destination/table/metric replaces the current one (IPv4 has no oif;
         // IPv6 keeps the kernel oif, so this must run in both branches below).
         let is_replaced_special = |rt: &RouteEntry| {
-            desired_routes.as_slice().iter().any(|des_rt| {
+            desired_routes.iter().any(|des_rt| {
                 !des_rt.is_absent()
                     && des_rt.is_special_route_conflict_with(rt)
                     && des_rt.route_type != rt.route_type
@@ -840,7 +834,6 @@ impl MergedRoutes {
                             && ifaces_with_ipv4_disabled
                                 .contains(&via.as_str()))
                         || desired_routes
-                            .as_slice()
                             .iter()
                             .filter(|r| r.is_absent())
                             .any(|absent_rt| absent_rt.is_match(rt))
@@ -857,7 +850,6 @@ impl MergedRoutes {
                     // desired marks them absent or replaces the route-type for
                     // the same destination, table, and metric.
                     if desired_routes
-                        .as_slice()
                         .iter()
                         .filter(|r| r.is_absent())
                         .any(|absent_rt| absent_rt.is_match(rt))
@@ -875,14 +867,9 @@ impl MergedRoutes {
         }
 
         // Append desired routes
-        for rt in desired_routes
-            .as_slice()
-            .iter()
-            .filter(|rt| !rt.is_absent())
-        {
+        for rt in desired_routes.iter().filter(|rt| !rt.is_absent()) {
             if let Some(cur_rts) = current.config.as_ref() {
-                if !cur_rts.as_slice().iter().any(|cur_rt| cur_rt.is_match(rt))
-                {
+                if !cur_rts.iter().any(|cur_rt| cur_rt.is_match(rt)) {
                     changed_routes.insert(rt.clone());
                 }
             } else {

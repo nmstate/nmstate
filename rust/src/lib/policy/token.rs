@@ -51,7 +51,7 @@ pub(crate) fn parse_str_to_capture_tokens(
             '=' => {
                 if let Some((_, c)) = line_iter.next() {
                     if c == '=' {
-                        if ret.as_slice().iter().any(|c| {
+                        if ret.iter().any(|c| {
                             matches!(c, &NetworkCaptureToken::Equal(_))
                         }) {
                             return Err(NmstateError::new_policy_error(
@@ -83,7 +83,6 @@ pub(crate) fn parse_str_to_capture_tokens(
             }
             '|' => {
                 if ret
-                    .as_slice()
                     .iter()
                     .any(|t| matches!(t, &NetworkCaptureToken::Pipe(_)))
                 {
@@ -99,7 +98,7 @@ pub(crate) fn parse_str_to_capture_tokens(
             ':' => {
                 if let Some((_, c)) = line_iter.next() {
                     if c == '=' {
-                        if ret.as_slice().iter().any(|t| {
+                        if ret.iter().any(|t| {
                             matches!(t, &NetworkCaptureToken::Replace(_))
                         }) {
                             return Err(NmstateError::new_policy_error(
@@ -178,7 +177,6 @@ pub(crate) fn parse_str_to_capture_tokens(
     }
 
     if let Some(pos) = ret
-        .as_slice()
         .iter()
         .position(|c| matches!(c, &NetworkCaptureToken::Pipe(_)))
     {
@@ -256,7 +254,7 @@ pub(crate) fn parse_str_to_template_tokens(
             '{' => {
                 if let Some((_, c)) = line_iter.next() {
                     if c == '{' {
-                        if ret.as_slice().iter().any(|c| {
+                        if ret.iter().any(|c| {
                             matches!(
                                 c,
                                 &NetworkTemplateToken::ReferenceStart(_)
@@ -302,7 +300,7 @@ pub(crate) fn parse_str_to_template_tokens(
             '}' => {
                 if let Some((_, c)) = line_iter.next() {
                     if c == '}' {
-                        if ret.as_slice().iter().any(|c| {
+                        if ret.iter().any(|c| {
                             matches!(c, &NetworkTemplateToken::ReferenceEnd(_))
                         }) {
                             return Err(NmstateError::new_policy_error(
@@ -367,11 +365,9 @@ pub(crate) fn parse_str_to_template_tokens(
 
     // The reference start and end should be paired.
     if let Some(token_start) = ret
-        .as_slice()
         .iter()
         .find(|c| matches!(c, &NetworkTemplateToken::ReferenceStart(_)))
         && !ret
-            .as_slice()
             .iter()
             .any(|c| matches!(c, &NetworkTemplateToken::ReferenceEnd(_)))
     {
@@ -383,11 +379,9 @@ pub(crate) fn parse_str_to_template_tokens(
     }
 
     if let Some(token_end) = ret
-        .as_slice()
         .iter()
         .find(|c| matches!(c, &NetworkTemplateToken::ReferenceEnd(_)))
         && !ret
-            .as_slice()
             .iter()
             .any(|c| matches!(c, &NetworkTemplateToken::ReferenceStart(_)))
     {
@@ -399,11 +393,10 @@ pub(crate) fn parse_str_to_template_tokens(
     }
 
     if let (Some(token_start_pos), Some(token_end_pos)) = (
-        ret.as_slice().iter().position(|t| {
+        ret.iter().position(|t| {
             matches!(t, &NetworkTemplateToken::ReferenceStart(_))
         }),
-        ret.as_slice()
-            .iter()
+        ret.iter()
             .position(|t| matches!(t, &NetworkTemplateToken::ReferenceEnd(_))),
     ) {
         if token_start_pos >= token_end_pos {

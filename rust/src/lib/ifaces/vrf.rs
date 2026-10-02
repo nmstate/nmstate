@@ -62,7 +62,7 @@ impl VrfInterface {
         self.vrf
             .as_ref()
             .and_then(|vrf_conf| vrf_conf.port.as_ref())
-            .map(|ports| ports.as_slice().iter().map(|p| p.as_str()).collect())
+            .map(|ports| ports.iter().map(|p| p.as_str()).collect())
     }
 
     pub(crate) fn sanitize(

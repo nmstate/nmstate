@@ -56,10 +56,10 @@ fn resolve_capture_data(
         let tokens = parse_str_to_template_tokens(line)?;
 
         if let (Some(token_start_pos), Some(token_end_pos)) = (
-            tokens.as_slice().iter().position(|t| {
+            tokens.iter().position(|t| {
                 matches!(t, &NetworkTemplateToken::ReferenceStart(_))
             }),
-            tokens.as_slice().iter().position(|t| {
+            tokens.iter().position(|t| {
                 matches!(t, &NetworkTemplateToken::ReferenceEnd(_))
             }),
         ) {

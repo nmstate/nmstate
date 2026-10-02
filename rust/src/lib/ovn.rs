@@ -119,8 +119,7 @@ impl OvnConfiguration {
                 None
             } else {
                 Some(
-                    maps.as_slice()
-                        .iter()
+                    maps.iter()
                         .map(|map| map.to_string())
                         .collect::<Vec<String>>()
                         .join(Self::SEPARATOR),
@@ -132,6 +131,7 @@ impl OvnConfiguration {
     }
 }
 
+#[allow(clippy::try_from_instead_of_from_str)]
 impl TryFrom<&str> for OvnConfiguration {
     type Error = NmstateError;
 
@@ -259,6 +259,7 @@ impl Ord for OvnBridgeMapping {
     }
 }
 
+#[allow(clippy::try_from_instead_of_from_str)]
 impl TryFrom<&str> for OvnBridgeMapping {
     type Error = NmstateError;
 

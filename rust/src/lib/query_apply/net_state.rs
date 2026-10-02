@@ -564,7 +564,6 @@ impl MergedNetworkState {
         let ignored_kernel_ifaces: Vec<&str> = self
             .interfaces
             .ignored_ifaces
-            .as_slice()
             .iter()
             .filter(|(_, t)| !t.is_userspace())
             .map(|(n, _)| n.as_str())

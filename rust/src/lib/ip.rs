@@ -246,7 +246,7 @@ impl InterfaceIpv4 {
         {
             self.addresses.clone_from(&current.addresses);
             if let Some(addrs) = self.addresses.as_mut() {
-                addrs.as_mut_slice().iter_mut().for_each(|a| {
+                addrs.iter_mut().for_each(|a| {
                     a.valid_life_time = None;
                     a.preferred_life_time = None;
                 });
@@ -394,12 +394,10 @@ impl InterfaceIpv4 {
 
         if let Some(addrs) = self.addresses.as_mut() {
             if is_desired {
-                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                for addr in addrs.iter().filter(|a| a.is_auto()) {
                     log::info!("Ignoring Auto IP address {addr}");
                 }
-                if let Some(addr) =
-                    addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
-                {
+                if let Some(addr) = addrs.iter().find(|a| a.ip.is_ipv6()) {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
@@ -689,7 +687,7 @@ impl InterfaceIpv6 {
     ) -> Result<(), NmstateError> {
         if let Some(addrs) = self.addresses.as_mut() {
             if is_desired {
-                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                for addr in addrs.iter().filter(|a| a.is_auto()) {
                     log::info!("Ignoring Auto IP address {addr}");
                 }
                 if let Some(addr) = addrs.iter().find(|a| a.ip.is_ipv4()) {
@@ -877,7 +875,7 @@ impl InterfaceIpv6 {
         {
             self.addresses.clone_from(&current.addresses);
             if let Some(addrs) = self.addresses.as_mut() {
-                addrs.as_mut_slice().iter_mut().for_each(|a| {
+                addrs.iter_mut().for_each(|a| {
                     a.valid_life_time = None;
                     a.preferred_life_time = None;
                 });
@@ -1083,6 +1081,7 @@ pub(crate) fn is_ipv6_unicast_link_local(ip: &Ipv6Addr) -> bool {
     (ip.segments()[0] & 0xffc0) == 0xfe80
 }
 
+#[allow(clippy::try_from_instead_of_from_str)]
 impl std::convert::TryFrom<&str> for InterfaceIpAddr {
     type Error = NmstateError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -1577,6 +1576,7 @@ impl std::fmt::Display for AddressProtocol {
     }
 }
 
+#[allow(clippy::try_from_instead_of_from_str)]
 impl std::convert::TryFrom<&str> for AddressProtocol {
     type Error = NmstateError;
 
