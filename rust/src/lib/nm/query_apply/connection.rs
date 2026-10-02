@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use super::super::{
     NmConnectionMatcher,
     error::nm_error_to_nmstate,
@@ -12,6 +14,7 @@ use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
+const DEACTIVATE_WAIT_TIMEOUT_SEC: u32 = 10;
 
 pub(crate) async fn delete_exist_connections(
     nm_api: &mut NmApi<'_>,
@@ -82,15 +85,26 @@ pub(crate) async fn save_nm_connections(
 pub(crate) async fn activate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
-    conn_matcher: &NmConnectionMatcher,
 ) -> Result<(), NmstateError> {
     let mut nm_conns = nm_conns.to_vec();
     for i in 1..ACTIVATION_RETRY_COUNT + 1 {
         if !nm_conns.is_empty() {
+            // Refresh ACs after deactivate/delete so we do not reapply a
+            // connection that was intentionally deactivated (e.g. VLAN
+            // protocol change which requires full activate/recreate).
+            let nm_acs = nm_api
+                .active_connections_get()
+                .await
+                .map_err(nm_error_to_nmstate)?;
+            let acs_by_uuid: HashMap<&str, &NmActiveConnection> = nm_acs
+                .iter()
+                .map(|nm_ac| (nm_ac.uuid.as_str(), nm_ac))
+                .collect();
+
             let remain_nm_conns = _activate_nm_connections(
                 nm_api,
                 nm_conns.as_slice(),
-                conn_matcher,
+                &acs_by_uuid,
             )
             .await?;
             if remain_nm_conns.is_empty() {
@@ -124,7 +138,7 @@ pub(crate) async fn activate_nm_connections(
 async fn _activate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
-    conn_matcher: &NmConnectionMatcher,
+    acs_by_uuid: &HashMap<&str, &NmActiveConnection>,
 ) -> Result<Vec<(NmConnection, NmstateError)>, NmstateError> {
     // Contain a list of `(iface_name, nm_iface_type)`.
     let mut new_controllers: Vec<(&str, NmIfaceType)> = Vec::new();
@@ -134,7 +148,7 @@ async fn _activate_nm_connections(
         .filter(|c| c.iface_type().map(|t| t.is_controller()) == Some(true))
     {
         if let Some(uuid) = nm_conn.uuid() {
-            if let Some(nm_ac) = conn_matcher.get_nm_ac_by_uuid(uuid) {
+            if let Some(nm_ac) = acs_by_uuid.get(uuid) {
                 if let Err(e) =
                     reapply_or_activate(nm_api, nm_conn, nm_ac).await
                 {
@@ -174,7 +188,7 @@ async fn _activate_nm_connections(
         .filter(|c| c.iface_type().map(|t| t.is_controller()) != Some(true))
     {
         if let Some(uuid) = nm_conn.uuid() {
-            if let Some(nm_ac) = conn_matcher.get_nm_ac_by_uuid(uuid) {
+            if let Some(nm_ac) = acs_by_uuid.get(uuid) {
                 if let Err(e) =
                     reapply_or_activate(nm_api, nm_conn, nm_ac).await
                 {
@@ -230,6 +244,7 @@ pub(crate) async fn deactivate_nm_connections(
     nm_api: &mut NmApi<'_>,
     nm_conns: &[NmConnection],
 ) -> Result<(), NmstateError> {
+    let mut deactivated_uuids: Vec<&str> = Vec::new();
     for nm_conn in nm_conns {
         if let Some(uuid) = nm_conn.uuid() {
             log::info!(
@@ -246,7 +261,20 @@ pub(crate) async fn deactivate_nm_connections(
             {
                 return Err(nm_error_to_nmstate(e));
             }
+            deactivated_uuids.push(uuid);
         }
+    }
+    // DeactivateConnection only acknowledges the request. Wait until the
+    // active connections are gone so activation does not race with teardown
+    // (e.g. VLAN protocol change).
+    if !deactivated_uuids.is_empty() {
+        nm_api
+            .wait_connections_inactive(
+                deactivated_uuids.as_slice(),
+                DEACTIVATE_WAIT_TIMEOUT_SEC,
+            )
+            .await
+            .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
 }

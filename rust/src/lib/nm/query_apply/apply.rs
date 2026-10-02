@@ -24,6 +24,10 @@ use crate::{
     InterfaceType, MergedInterfaces, MergedNetworkState, NmstateError,
 };
 
+const DEACTIVATE_WAIT_TIMEOUT_SEC: u32 = 10;
+// Bulk OVS absents (many bridges/ports) need longer than a single teardown.
+const DEACTIVATE_WAIT_PER_CONN_SEC: u32 = 2;
+
 // There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
 // `cur_net_state`, `des_net_state` into single struct. Suppress the clippy
 // warning for now
@@ -158,12 +162,8 @@ pub(crate) async fn nm_apply(
         .await?;
     }
 
-    activate_nm_connections(
-        &mut nm_api,
-        nm_conns_to_activate.as_slice(),
-        &conn_matcher,
-    )
-    .await?;
+    activate_nm_connections(&mut nm_api, nm_conns_to_activate.as_slice())
+        .await?;
 
     // Deactivate the devices, not their connections. According to NM's
     // documentation, this prevents automatic connection activations.
@@ -192,6 +192,10 @@ async fn delete_ifaces(
     );
 
     let mut uuids_to_delete: HashSet<&str> = HashSet::new();
+    // OVS internal interfaces must be deactivated (brought down and detached
+    // from their bridge) before their NM connections are deleted, otherwise
+    // OVSDB/NM can race and leave stale ports.
+    let mut ovs_iface_uuids_to_deactivate: Vec<&str> = Vec::new();
 
     for merged_iface in merged_state
         .interfaces
@@ -199,6 +203,7 @@ async fn delete_ifaces(
         .filter(|i| i.is_changed() && i.merged.is_absent())
     {
         let iface = &merged_iface.merged;
+        let is_ovs_iface = iface.iface_type() == InterfaceType::OvsInterface;
 
         let nm_conns_to_delete = conn_matcher.get_saved(iface.base_iface());
 
@@ -214,6 +219,9 @@ async fn delete_ifaces(
                     uuid
                 );
                 uuids_to_delete.insert(uuid);
+                if is_ovs_iface {
+                    ovs_iface_uuids_to_deactivate.push(uuid);
+                }
             }
             // Delete OVS port profile along with OVS system and internal
             // Interface
@@ -249,6 +257,36 @@ async fn delete_ifaces(
                 }
             }
         }
+    }
+
+    for uuid in &ovs_iface_uuids_to_deactivate {
+        log::info!(
+            "Deactivating OVS internal interface connection {uuid} before \
+             deletion"
+        );
+        if let Err(e) = nm_api.connection_deactivate(uuid).await {
+            // Already inactive is fine; other errors are unexpected but
+            // deletion may still succeed.
+            log::debug!(
+                "Failed to deactivate OVS interface connection {uuid} before \
+                 deletion: {e:?}"
+            );
+        }
+    }
+    // DeactivateConnection only acknowledges the request; wait until the
+    // active connections are gone so OVS ports are detached before delete.
+    if !ovs_iface_uuids_to_deactivate.is_empty() {
+        let timeout = DEACTIVATE_WAIT_TIMEOUT_SEC.saturating_add(
+            (ovs_iface_uuids_to_deactivate.len() as u32)
+                .saturating_mul(DEACTIVATE_WAIT_PER_CONN_SEC),
+        );
+        nm_api
+            .wait_connections_inactive(
+                ovs_iface_uuids_to_deactivate.as_slice(),
+                timeout,
+            )
+            .await
+            .map_err(nm_error_to_nmstate)?;
     }
 
     for uuid in &uuids_to_delete {
