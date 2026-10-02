@@ -22,7 +22,6 @@ pub(crate) fn np_bond_to_nmstate(
         bond_conf.port = Some(
             np_bond
                 .ports
-                .as_slice()
                 .iter()
                 .map(|iface_name| iface_name.to_string())
                 .collect(),
@@ -30,7 +29,6 @@ pub(crate) fn np_bond_to_nmstate(
         bond_conf.ports_config = Some(
             np_bond
                 .ports
-                .as_slice()
                 .iter()
                 .map(|iface_name| {
                     let mut port_conf = BondPortConfig::new();

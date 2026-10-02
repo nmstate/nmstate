@@ -25,7 +25,7 @@ impl MergedInterface {
         if ret.is_empty() {
             None
         } else {
-            Some(ret.as_slice().join(","))
+            Some(ret.join(","))
         }
     }
 }

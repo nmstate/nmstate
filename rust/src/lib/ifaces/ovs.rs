@@ -630,9 +630,10 @@ pub enum OvsBridgeBondMode {
     Lacp,
 }
 
-impl TryFrom<&str> for OvsBridgeBondMode {
-    type Error = NmstateError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+impl std::str::FromStr for OvsBridgeBondMode {
+    type Err = NmstateError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "active-backup" => Ok(Self::ActiveBackup),
             "balance-slb" => Ok(Self::BalanceSlb),
@@ -643,6 +644,14 @@ impl TryFrom<&str> for OvsBridgeBondMode {
                 format!("Unsupported OVS Bond mode {value}"),
             )),
         }
+    }
+}
+
+impl TryFrom<&str> for OvsBridgeBondMode {
+    type Error = NmstateError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        std::str::FromStr::from_str(value)
     }
 }
 
