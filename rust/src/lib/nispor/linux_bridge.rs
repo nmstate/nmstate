@@ -21,7 +21,6 @@ pub(crate) fn np_bridge_to_nmstate(
         br_conf.port = Some(
             np_bridge
                 .ports
-                .as_slice()
                 .iter()
                 .map(|iface_name| {
                     let mut port_conf = LinuxBridgePortConfig::new();

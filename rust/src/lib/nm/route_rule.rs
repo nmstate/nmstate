@@ -296,8 +296,7 @@ fn find_interface_for_rule<'a>(
     }
 
     // Fallback to first interface in desire state with IP stack enabled.
-    for (iface_name, iface_type) in
-        merged_state.interfaces.insert_order.as_slice().iter()
+    for (iface_name, iface_type) in merged_state.interfaces.insert_order.iter()
     {
         if let Some(iface) = merged_state
             .interfaces
@@ -328,8 +327,7 @@ fn iface_has_route_for_table_id(
     table_id: u32,
 ) -> bool {
     if let Some(routes) = merged_state.routes.merged.get(iface_name) {
-        for route in routes.as_slice().iter().filter(|r| r.is_ipv6() == is_ipv6)
-        {
+        for route in routes.iter().filter(|r| r.is_ipv6() == is_ipv6) {
             if route.table_id == Some(table_id)
                 || (route.table_id == Some(RouteEntry::USE_DEFAULT_ROUTE_TABLE)
                     && table_id == DEFAULT_TABLE_ID)

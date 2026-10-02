@@ -51,8 +51,8 @@ impl MergedDnsState {
                 format!(
                     "Failed to apply DNS config: desire name servers '{}', \
                      got '{}'",
-                    self.servers.as_slice().join(" "),
-                    cur_srvs.as_slice().join(" "),
+                    self.servers.join(" "),
+                    cur_srvs.join(" "),
                 ),
             ));
         }
@@ -65,8 +65,8 @@ impl MergedDnsState {
                 format!(
                     "Failed to apply DNS config: desire searches '{}', got \
                      '{}'",
-                    self.searches.as_slice().join(" "),
-                    cur_schs.as_slice().join(" "),
+                    self.searches.join(" "),
+                    cur_schs.join(" "),
                 ),
             ));
         }
@@ -87,8 +87,8 @@ impl MergedDnsState {
                 ErrorKind::VerificationError,
                 format!(
                     "Failed to apply DNS config: desire options '{}', got '{}'",
-                    des_opts.as_slice().join(" "),
-                    cur_opts.as_slice().join(" "),
+                    des_opts.join(" "),
+                    cur_opts.join(" "),
                 ),
             ));
         }

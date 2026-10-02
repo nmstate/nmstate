@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, HashSet};
+use std::{
+    collections::{BTreeMap, HashSet},
+    str::FromStr,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -119,8 +122,7 @@ impl OvnConfiguration {
                 None
             } else {
                 Some(
-                    maps.as_slice()
-                        .iter()
+                    maps.iter()
                         .map(|map| map.to_string())
                         .collect::<Vec<String>>()
                         .join(Self::SEPARATOR),
@@ -132,10 +134,10 @@ impl OvnConfiguration {
     }
 }
 
-impl TryFrom<&str> for OvnConfiguration {
-    type Error = NmstateError;
+impl FromStr for OvnConfiguration {
+    type Err = NmstateError;
 
-    fn try_from(maps_str: &str) -> Result<Self, NmstateError> {
+    fn from_str(maps_str: &str) -> Result<Self, Self::Err> {
         let mut maps = Vec::new();
         for map_str in maps_str.split(Self::SEPARATOR) {
             if !map_str.is_empty() {
@@ -148,6 +150,14 @@ impl TryFrom<&str> for OvnConfiguration {
         Ok(Self {
             bridge_mappings: if maps.is_empty() { None } else { Some(maps) },
         })
+    }
+}
+
+impl TryFrom<&str> for OvnConfiguration {
+    type Error = NmstateError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 
@@ -259,10 +269,10 @@ impl Ord for OvnBridgeMapping {
     }
 }
 
-impl TryFrom<&str> for OvnBridgeMapping {
-    type Error = NmstateError;
+impl FromStr for OvnBridgeMapping {
+    type Err = NmstateError;
 
-    fn try_from(map_str: &str) -> Result<Self, NmstateError> {
+    fn from_str(map_str: &str) -> Result<Self, Self::Err> {
         let items: Vec<&str> = map_str.split(Self::SEPARATOR).collect();
         if items.len() != 2 || items[1].is_empty() || items[0].is_empty() {
             Err(NmstateError::new(
@@ -280,6 +290,14 @@ impl TryFrom<&str> for OvnBridgeMapping {
                 ..Default::default()
             })
         }
+    }
+}
+
+impl TryFrom<&str> for OvnBridgeMapping {
+    type Error = NmstateError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 

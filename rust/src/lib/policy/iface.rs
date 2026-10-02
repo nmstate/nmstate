@@ -32,14 +32,8 @@ pub(crate) fn update_ifaces(
     line: &str,
     pos: usize,
 ) -> Result<Interfaces, NmstateError> {
-    let ifaces: Vec<Interface> = state
-        .interfaces
-        .to_vec()
-        .as_slice()
-        .iter()
-        .cloned()
-        .cloned()
-        .collect();
+    let ifaces: Vec<Interface> =
+        state.interfaces.to_vec().iter().cloned().cloned().collect();
 
     let mut ret = Interfaces::new();
     for iface in

@@ -16,11 +16,11 @@ impl ToKeyfile for NmSettingIp {
                 ret.insert(k.to_string(), v);
             }
         }
-        for (i, addr) in self.addresses.as_slice().iter().enumerate() {
+        for (i, addr) in self.addresses.iter().enumerate() {
             ret.insert(format!("address{i}"), zvariant::Value::new(addr));
         }
 
-        for (i, route) in self.routes.as_slice().iter().enumerate() {
+        for (i, route) in self.routes.iter().enumerate() {
             for (k, v) in route.to_keyfile().drain() {
                 ret.insert(
                     if k.is_empty() {
@@ -32,7 +32,7 @@ impl ToKeyfile for NmSettingIp {
                 );
             }
         }
-        for (i, rule) in self.route_rules.as_slice().iter().enumerate() {
+        for (i, rule) in self.route_rules.iter().enumerate() {
             for (_, v) in rule.to_keyfile().drain() {
                 ret.insert(format!("routing-rule{i}"), zvariant::Value::new(v));
             }
