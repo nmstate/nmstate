@@ -41,7 +41,7 @@ impl MergedRoutes {
 
         for rt in desired_routes.as_slice() {
             if (!rt.is_absent())
-                || desired_routes.as_slice().iter().any(|r| rt.is_match(r))
+                || desired_routes.iter().any(|r| rt.is_match(r))
             {
                 new_desired_routes.push(rt.clone());
             }
@@ -83,16 +83,13 @@ impl MergedRoutes {
                 // We do not valid absent route if desire has a match there.
                 // For example, user is changing a gateway.
                 if routes_for_verify
-                    .as_slice()
                     .iter()
                     .any(|r| !r.is_absent() && rt.is_match(r))
                 {
                     continue;
                 }
-                if let Some(cur_rt) = cur_routes
-                    .as_slice()
-                    .iter()
-                    .find(|cur_rt| rt.is_match(cur_rt))
+                if let Some(cur_rt) =
+                    cur_routes.iter().find(|cur_rt| rt.is_match(cur_rt))
                 {
                     return Err(NmstateError::new(
                         ErrorKind::VerificationError,

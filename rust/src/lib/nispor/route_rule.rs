@@ -83,7 +83,111 @@ pub(crate) fn get_route_rules(
         };
         rules.push(rule);
     }
+    rules.sort();
     ret.config = Some(rules);
 
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rule(
+        family: nispor::AddressFamily,
+        table: u32,
+        priority: u32,
+    ) -> nispor::RouteRule {
+        let mut rule = nispor::RouteRule::default();
+        rule.action = nispor::RuleAction::Table;
+        rule.address_family = family;
+        rule.table = Some(table);
+        rule.priority = Some(priority);
+        rule.protocol = Some(nispor::RouteProtocol::Static);
+        rule
+    }
+
+    #[test]
+    fn test_retrieved_route_rules_are_sorted() {
+        use nispor::AddressFamily::{Ipv4, Ipv6};
+
+        let rules = vec![
+            rule(Ipv4, 100, 300),
+            rule(Ipv6, 200, 100),
+            rule(Ipv4, 100, 100),
+            rule(Ipv6, 100, 300),
+        ];
+
+        for running_config_only in [false, true] {
+            let retrieved = get_route_rules(&rules, running_config_only);
+            assert_eq!(
+                retrieved
+                    .config
+                    .unwrap()
+                    .iter()
+                    .map(|r| (r.family, r.table_id, r.priority))
+                    .collect::<Vec<_>>(),
+                vec![
+                    (Some(AddressFamily::IPv6), Some(100), Some(300)),
+                    (Some(AddressFamily::IPv6), Some(200), Some(100)),
+                    (Some(AddressFamily::IPv4), Some(100), Some(100)),
+                    (Some(AddressFamily::IPv4), Some(100), Some(300)),
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn test_retrieved_route_rules_preserve_equal_sort_keys() {
+        let mut first = rule(nispor::AddressFamily::Ipv4, 100, 100);
+        first.iif = Some("eth2".into());
+        let mut second = first.clone();
+        second.iif = Some("eth1".into());
+        let rules = vec![first.clone(), second, first];
+
+        for running_config_only in [false, true] {
+            let retrieved = get_route_rules(&rules, running_config_only);
+            assert_eq!(
+                retrieved
+                    .config
+                    .unwrap()
+                    .iter()
+                    .map(|r| r.iif.as_deref())
+                    .collect::<Vec<_>>(),
+                vec![Some("eth2"), Some("eth1"), Some("eth2")]
+            );
+        }
+    }
+
+    #[test]
+    fn test_retrieved_route_rules_filter_protocols() {
+        let mut dynamic = rule(nispor::AddressFamily::Ipv4, 100, 30);
+        dynamic.protocol = Some(nispor::RouteProtocol::Dhcp);
+        let mut unsupported = rule(nispor::AddressFamily::Ipv4, 100, 5);
+        unsupported.protocol = Some(nispor::RouteProtocol::Kernel);
+        let mut unspecified = rule(nispor::AddressFamily::Ipv4, 100, 10);
+        unspecified.protocol = None;
+        let rules = vec![
+            dynamic,
+            rule(nispor::AddressFamily::Ipv4, 100, 20),
+            unsupported,
+            unspecified,
+        ];
+
+        for (running_config_only, priorities) in [
+            (false, vec![Some(10), Some(20), Some(30)]),
+            (true, vec![Some(10), Some(20)]),
+        ] {
+            let retrieved = get_route_rules(&rules, running_config_only);
+            assert_eq!(
+                retrieved
+                    .config
+                    .unwrap()
+                    .iter()
+                    .map(|r| r.priority)
+                    .collect::<Vec<_>>(),
+                priorities
+            );
+        }
+    }
 }

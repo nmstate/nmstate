@@ -168,16 +168,10 @@ impl BondInterface {
             bond_conf
                 .port
                 .as_ref()
-                .map(|ports| {
-                    ports.as_slice().iter().map(|p| p.as_str()).collect()
-                })
+                .map(|ports| ports.iter().map(|p| p.as_str()).collect())
                 .or_else(|| {
                     bond_conf.ports_config.as_ref().map(|ports| {
-                        ports
-                            .as_slice()
-                            .iter()
-                            .map(|p| p.name.as_str())
-                            .collect()
+                        ports.iter().map(|p| p.name.as_str()).collect()
                     })
                 })
         })

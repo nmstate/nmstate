@@ -658,7 +658,6 @@ impl Interfaces {
                         // Or new interface.
                         if cur_iface.and_then(|i| i.ports()).map(|cur_ports| {
                             cur_ports
-                                .as_slice()
                                 .iter()
                                 .any(|cur_port| full_ignores.contains(cur_port))
                         }) != Some(true)

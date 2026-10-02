@@ -265,11 +265,8 @@ fn detach_saved_nm_conn_from_controller(
         let ctrl_iface_name = merged_iface.merged.name();
         let ctrl_iface_type = &merged_iface.merged.base_iface().iface_type;
         let ctrl_nm_iface_type = NmIfaceType::from(ctrl_iface_type);
-        if let Some(ctrl_nm_conn) = prepared_conns
-            .to_activate
-            .as_slice()
-            .iter()
-            .find(|nm_conn| {
+        if let Some(ctrl_nm_conn) =
+            prepared_conns.to_activate.iter().find(|nm_conn| {
                 nm_conn.iface_name() == Some(ctrl_iface_name)
                     && nm_conn.iface_type() == Some(&ctrl_nm_iface_type)
             })
@@ -360,7 +357,6 @@ fn is_prepared_to_store(
 ) -> bool {
     prepared_conns
         .to_store
-        .as_slice()
         .iter()
         .any(|nm_conn| nm_conn.uuid() == Some(uuid))
 }

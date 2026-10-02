@@ -521,7 +521,7 @@ impl MergedRouteRules {
 
         let mut des_absent_rules: Vec<&RouteRuleEntry> = Vec::new();
         if let Some(rules) = desired.config.as_ref() {
-            for rule in rules.as_slice().iter() {
+            for rule in rules.iter() {
                 if !rule.is_absent() {
                     let mut new_rule = rule.clone();
                     new_rule.sanitize()?;
@@ -535,7 +535,6 @@ impl MergedRouteRules {
         if let Some(cur_rules) = current.config.as_ref() {
             for rule in cur_rules {
                 if des_absent_rules
-                    .as_slice()
                     .iter()
                     .any(|absent_rule| absent_rule.is_match(rule))
                 {

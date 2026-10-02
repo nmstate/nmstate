@@ -61,12 +61,10 @@ pub(crate) fn apply_dns_conf_to_etc(
     let mut content = String::new();
 
     if !config.options.is_empty() {
-        writeln!(content, "options {}", config.options.as_slice().join(" "))
-            .ok();
+        writeln!(content, "options {}", config.options.join(" ")).ok();
     }
     if !config.searches.is_empty() {
-        writeln!(content, "search {}", config.searches.as_slice().join(" "))
-            .ok();
+        writeln!(content, "search {}", config.searches.join(" ")).ok();
     }
 
     for srv in config.servers.as_slice() {

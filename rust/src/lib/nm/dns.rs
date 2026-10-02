@@ -140,19 +140,13 @@ fn find_dns_iface(
 
     // Do not use loopback interface for DNS
     // Use insert order to produce consistent DNS interface choice
-    for iface_name in
-        merged_ifaces
-            .insert_order
-            .as_slice()
-            .iter()
-            .filter_map(|(n, t)| {
-                if !t.is_userspace() && t != &InterfaceType::Loopback {
-                    Some(n)
-                } else {
-                    None
-                }
-            })
-    {
+    for iface_name in merged_ifaces.insert_order.iter().filter_map(|(n, t)| {
+        if !t.is_userspace() && t != &InterfaceType::Loopback {
+            Some(n)
+        } else {
+            None
+        }
+    }) {
         if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
             if !iface.is_changed() {
                 continue;
@@ -165,19 +159,13 @@ fn find_dns_iface(
 
     // Do not use loopback interface for DNS
     // Use insert order to produce consistent DNS interface choice
-    for iface_name in
-        merged_ifaces
-            .insert_order
-            .as_slice()
-            .iter()
-            .filter_map(|(n, t)| {
-                if !t.is_userspace() && t != &InterfaceType::Loopback {
-                    Some(n)
-                } else {
-                    None
-                }
-            })
-    {
+    for iface_name in merged_ifaces.insert_order.iter().filter_map(|(n, t)| {
+        if !t.is_userspace() && t != &InterfaceType::Loopback {
+            Some(n)
+        } else {
+            None
+        }
+    }) {
         if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
             if !iface.is_changed() {
                 continue;
@@ -678,18 +666,18 @@ fn store_dns_search_or_options_to_auto_iface(
     nm_devs: &[NmDevice],
 ) -> Result<(), NmstateError> {
     // Use insert order to produce consistent DNS interface choice
-    for iface_name in merged_state
-        .interfaces
-        .insert_order
-        .as_slice()
-        .iter()
-        .filter_map(|(n, t)| {
-            if !t.is_userspace() && t != &InterfaceType::Loopback {
-                Some(n)
-            } else {
-                None
-            }
-        })
+    for iface_name in
+        merged_state
+            .interfaces
+            .insert_order
+            .iter()
+            .filter_map(|(n, t)| {
+                if !t.is_userspace() && t != &InterfaceType::Loopback {
+                    Some(n)
+                } else {
+                    None
+                }
+            })
     {
         let iface =
             match merged_state.interfaces.kernel_ifaces.get_mut(iface_name) {
@@ -798,8 +786,8 @@ fn store_dns_search_or_options_to_auto_iface(
         format!(
             "Failed to find suitable(Auto IP) interface for DNS searches '{}' \
              or options '{}'",
-            merged_state.dns.searches.as_slice().join(" "),
-            merged_state.dns.options.as_slice().join(" ")
+            merged_state.dns.searches.join(" "),
+            merged_state.dns.options.join(" ")
         ),
     ))
 }
@@ -810,18 +798,18 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
     nm_devs: &[NmDevice],
 ) -> Result<(), NmstateError> {
     // Use insert order to produce consistent DNS interface choice
-    for iface_name in merged_state
-        .interfaces
-        .insert_order
-        .as_slice()
-        .iter()
-        .filter_map(|(n, t)| {
-            if !t.is_userspace() && t != &InterfaceType::Loopback {
-                Some(n)
-            } else {
-                None
-            }
-        })
+    for iface_name in
+        merged_state
+            .interfaces
+            .insert_order
+            .iter()
+            .filter_map(|(n, t)| {
+                if !t.is_userspace() && t != &InterfaceType::Loopback {
+                    Some(n)
+                } else {
+                    None
+                }
+            })
     {
         let iface =
             match merged_state.interfaces.kernel_ifaces.get_mut(iface_name) {
@@ -930,7 +918,7 @@ fn store_dns_search_or_options_to_ip_enabled_iface(
         format!(
             "Failed to find suitable(IP enabled) interface for DNS searches \
              '{}'",
-            merged_state.dns.searches.as_slice().join(" ")
+            merged_state.dns.searches.join(" ")
         ),
     ))
 }

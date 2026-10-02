@@ -630,6 +630,7 @@ pub enum OvsBridgeBondMode {
     Lacp,
 }
 
+#[allow(clippy::try_from_instead_of_from_str)]
 impl TryFrom<&str> for OvsBridgeBondMode {
     type Error = NmstateError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {

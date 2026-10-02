@@ -45,7 +45,6 @@ impl OvsDbSelect {
                 "columns".to_string(),
                 Value::Array(
                     columns
-                        .as_slice()
                         .iter()
                         .map(|c| Value::String(c.to_string()))
                         .collect(),
@@ -112,12 +111,8 @@ impl OvsDbMutate {
         let condition_values: Vec<Value> =
             self.conditions.iter().map(|c| c.to_value()).collect();
         ret.insert("where".to_string(), Value::Array(condition_values));
-        let mutations: Vec<Value> = self
-            .mutations
-            .as_slice()
-            .iter()
-            .map(|m| m.to_value())
-            .collect();
+        let mutations: Vec<Value> =
+            self.mutations.iter().map(|m| m.to_value()).collect();
         ret.insert("mutations".to_string(), Value::Array(mutations));
         Value::Object(ret)
     }

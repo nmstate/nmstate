@@ -57,16 +57,13 @@ impl MergedRouteRules {
                 // Ignore absent rule when desired matches
                 if self
                     .for_verify
-                    .as_slice()
                     .iter()
                     .any(|r| !r.is_absent() && rule.is_match(r))
                 {
                     continue;
                 }
-                if let Some(cur_rt) = cur_rules
-                    .as_slice()
-                    .iter()
-                    .find(|cur_r| rule.is_match(cur_r))
+                if let Some(cur_rt) =
+                    cur_rules.iter().find(|cur_r| rule.is_match(cur_r))
                 {
                     return Err(NmstateError::new(
                         ErrorKind::VerificationError,
@@ -76,11 +73,7 @@ impl MergedRouteRules {
                         ),
                     ));
                 }
-            } else if !cur_rules
-                .as_slice()
-                .iter()
-                .any(|cur_r| rule.is_match(cur_r))
-            {
+            } else if !cur_rules.iter().any(|cur_r| rule.is_match(cur_r)) {
                 return Err(NmstateError::new(
                     ErrorKind::VerificationError,
                     format!("Desired route rule {rule} not found after apply"),
