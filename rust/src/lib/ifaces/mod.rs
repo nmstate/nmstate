@@ -71,6 +71,8 @@ pub use ovs::{
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
     OvsBridgeStpOptions, OvsDpdkConfig, OvsInterface, OvsPatchConfig,
 };
+#[cfg(feature = "query_apply")]
+pub(crate) use sriov::parse_sriov_vf_naming;
 pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{
     VlanConfig, VlanInterface, VlanProtocol, VlanQosMapping,

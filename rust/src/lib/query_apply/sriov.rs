@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::hash_map::Entry;
+use std::collections::{HashSet, hash_map::Entry};
 
 use crate::{
     BaseInterface, ErrorKind, EthernetConfig, EthernetInterface, Interface,
     InterfaceType, Interfaces, NmstateError, SrIovConfig, SrIovVfConfig,
+    parse_sriov_vf_naming,
 };
 
 impl SrIovConfig {
@@ -47,6 +48,8 @@ impl SrIovConfig {
         &self,
         pf_name: &str,
         cur_ifaces: &Interfaces,
+        desired_iface_names: &HashSet<String>,
+        referenced_vfs: &HashSet<(String, u32)>,
     ) -> Result<(), NmstateError> {
         let cur_pf_iface =
             match cur_ifaces.get_iface(pf_name, InterfaceType::Ethernet) {
@@ -86,6 +89,19 @@ impl SrIovConfig {
             return Ok(());
         };
         for vf in vfs {
+            // A VF netdev is only worth waiting for when it is referenced
+            // somewhere in the desired state, either through a resolved
+            // interface name or through a `sriov:<pf>:<vf_id>` reference. The
+            // reference is matched by (PF name, VF id) so that a VF whose
+            // netdev has not appeared yet (empty `iface_name`) is still
+            // verified instead of being silently skipped.
+            let referenced_by_id =
+                referenced_vfs.contains(&(pf_name.to_string(), vf.id));
+            let referenced_by_name = !vf.iface_name.is_empty()
+                && desired_iface_names.contains(&vf.iface_name);
+            if !referenced_by_id && !referenced_by_name {
+                continue;
+            }
             if vf.iface_name.is_empty() {
                 return Err(NmstateError::new(
                     ErrorKind::SrIovVfNotFound,
@@ -113,6 +129,38 @@ impl SrIovConfig {
 }
 
 impl Interfaces {
+    // Collect the SR-IOV VFs referenced by `sriov:<pf>:<vf_id>` naming, either
+    // as an interface name or as a controller port. These references cannot be
+    // resolved to real interface names until the VF netdevs appear, so they are
+    // tracked as (PF name, VF id) pairs. This is used during verification to
+    // wait for referenced VFs to show up, notably in the first apply phase of
+    // the enable-and-use path where the VF interfaces are still absent.
+    pub(crate) fn referenced_sriov_vfs(&self) -> HashSet<(String, u32)> {
+        let mut refs = HashSet::new();
+        for iface in self
+            .kernel_ifaces
+            .values()
+            .chain(self.user_ifaces.values())
+            .filter(|i| i.is_up())
+        {
+            if let Ok(Some((pf_name, vf_id))) =
+                parse_sriov_vf_naming(iface.name())
+            {
+                refs.insert((pf_name.to_string(), vf_id));
+            }
+            if let Some(ports) = iface.ports() {
+                for port in ports {
+                    if let Ok(Some((pf_name, vf_id))) =
+                        parse_sriov_vf_naming(port)
+                    {
+                        refs.insert((pf_name.to_string(), vf_id));
+                    }
+                }
+            }
+        }
+        refs
+    }
+
     pub(crate) fn has_sriov_naming(&self) -> bool {
         self.kernel_ifaces
             .values()

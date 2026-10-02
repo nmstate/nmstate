@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::future::Future;
+use std::{collections::HashSet, future::Future};
 
 use crate::{
     ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
@@ -252,6 +252,13 @@ impl NetworkState {
             DEFAULT_ROLLBACK_TIMEOUT
         };
 
+        // Collect the desired SR-IOV VF references from the original state so
+        // that both apply phases can wait for the referenced VF netdevs. The
+        // first (PF-only) phase of the enable-and-use path applies a state
+        // stripped of VF interfaces, so these references would otherwise be
+        // lost and the VFs never waited for before their names are resolved.
+        let referenced_vfs = self.interfaces.referenced_sriov_vfs();
+
         let checkpoint = match nm_checkpoint_create(timeout).await {
             Ok(c) => c,
             Err(e) => {
@@ -286,6 +293,7 @@ impl NetworkState {
                     &checkpoint,
                     verify_count,
                     timeout,
+                    &referenced_vfs,
                 )
                 .await?;
                 // Refresh current state
@@ -320,6 +328,7 @@ impl NetworkState {
                 &checkpoint,
                 verify_count,
                 timeout,
+                &referenced_vfs,
             )
             .await
         })
@@ -335,6 +344,7 @@ impl NetworkState {
         checkpoint: &str,
         retry_count: usize,
         timeout: u32,
+        referenced_vfs: &HashSet<(String, u32)>,
     ) -> Result<(), NmstateError> {
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
@@ -366,7 +376,8 @@ impl NetworkState {
                             let mut new_cur_net_state = cur_net_state.clone();
                             new_cur_net_state.set_include_secrets(true);
                             new_cur_net_state.retrieve_async().await?;
-                            merged_state.verify(&new_cur_net_state)
+                            merged_state
+                                .verify(&new_cur_net_state, referenced_vfs)
                         },
                     )
                     .await
@@ -392,6 +403,8 @@ impl NetworkState {
             self.memory_only,
         )?;
 
+        let referenced_vfs = self.interfaces.referenced_sriov_vfs();
+
         nispor_apply(&merged_state).await?;
         if let Some(running_hostname) =
             self.hostname.as_ref().and_then(|c| c.running.as_ref())
@@ -405,7 +418,7 @@ impl NetworkState {
                 |_| async {
                     let mut new_cur_net_state = cur_net_state.clone();
                     new_cur_net_state.retrieve_async().await?;
-                    merged_state.verify(&new_cur_net_state)
+                    merged_state.verify(&new_cur_net_state, &referenced_vfs)
                 },
             )
             .await
@@ -558,9 +571,14 @@ where
 }
 
 impl MergedNetworkState {
-    fn verify(&self, current: &NetworkState) -> Result<(), NmstateError> {
+    fn verify(
+        &self,
+        current: &NetworkState,
+        referenced_vfs: &HashSet<(String, u32)>,
+    ) -> Result<(), NmstateError> {
         self.hostname.verify(current.hostname.as_ref())?;
-        self.interfaces.verify(&current.interfaces)?;
+        self.interfaces
+            .verify_with_referenced_vfs(&current.interfaces, referenced_vfs)?;
         let ignored_kernel_ifaces: Vec<&str> = self
             .interfaces
             .ignored_ifaces

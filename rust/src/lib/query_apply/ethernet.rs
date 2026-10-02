@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
     Interfaces, MergedInterfaces, NetworkState, NmstateError, VethConfig,
@@ -40,11 +42,18 @@ impl EthernetInterface {
     pub(crate) fn verify_sriov(
         &self,
         cur_ifaces: &Interfaces,
+        desired_iface_names: &HashSet<String>,
+        referenced_vfs: &HashSet<(String, u32)>,
     ) -> Result<(), NmstateError> {
         if let Some(eth_conf) = &self.ethernet
             && let Some(sriov_conf) = &eth_conf.sr_iov
         {
-            sriov_conf.verify_sriov(self.base.name.as_str(), cur_ifaces)?;
+            sriov_conf.verify_sriov(
+                self.base.name.as_str(),
+                cur_ifaces,
+                desired_iface_names,
+                referenced_vfs,
+            )?;
         }
         Ok(())
     }
