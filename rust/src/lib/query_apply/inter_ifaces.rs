@@ -242,6 +242,10 @@ impl MergedInterfaces {
                     {
                         eth_iface.verify_sriov(&current)?;
                     }
+                    // Verify qeth vnicc sysfs state (s390x only, no-op elsewhere)
+                    if let Interface::Ethernet(eth_iface) = iface {
+                        eth_iface.verify_qeth()?;
+                    }
                 }
             } else if iface.is_up() {
                 return Err(NmstateError::new(
