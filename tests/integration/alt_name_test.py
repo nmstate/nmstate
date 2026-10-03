@@ -8,6 +8,7 @@ import pytest
 import libnmstate
 
 from libnmstate.error import NmstateValueError
+from libnmstate.iplib import is_ipv6_address
 from libnmstate.schema import Bond
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceAltName
@@ -355,6 +356,8 @@ class TestAltNames:
 
         for route in expected_routes:
             route[Route.NEXT_HOP_INTERFACE] = "eth1"
+            if is_ipv6_address(route[Route.DESTINATION]):
+                route[Route.WEIGHT] = 1
 
         cur_state = libnmstate.show()
         assert_routes(expected_routes, cur_state)

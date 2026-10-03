@@ -287,9 +287,7 @@ fn flat_multipath_route(
             new_np_route.oif = Some(mp_route.iface.to_string());
             let mut route =
                 np_route_to_nmstate(&new_np_route, table_id_to_vrf_names);
-            if np_route.address_family == nispor::AddressFamily::Ipv4 {
-                route.weight = Some(mp_route.weight);
-            }
+            route.weight = Some(mp_route.weight);
             ret.push(route);
         }
     }
@@ -321,12 +319,6 @@ fn nmstate_to_nispor_route_conf(
             ret.table = Some(table_id as u8);
         }
     }
-    if nmstate_rt.weight.is_some() {
-        return Err(NmstateError::new(
-            ErrorKind::NotImplementedError,
-            "nispor apply does not support route weight yet".into(),
-        ));
-    }
 
     if nmstate_rt.route_type.is_some() {
         return Err(NmstateError::new(
@@ -344,14 +336,65 @@ fn nmstate_to_nispor_route_conf(
     Ok(ret)
 }
 
+fn nmstate_rt_to_nispor_multipath(
+    rt: &RouteEntry,
+) -> nispor::RouteMultipathConf {
+    let mut mp = nispor::RouteMultipathConf::default();
+    mp.via = rt.next_hop_addr.clone();
+    mp.weight = rt.weight;
+    mp.iface = rt.next_hop_iface.clone();
+    mp
+}
+
 pub(crate) fn gen_nispor_route_confs(
     merged_routes: &MergedRoutes,
 ) -> Result<Vec<nispor::RouteConf>, NmstateError> {
     validate_routes(merged_routes)?;
-    let mut ret = Vec::new();
-    for nmstate_rt in merged_routes.changed_routes.as_slice() {
-        ret.push(nmstate_to_nispor_route_conf(nmstate_rt)?)
+
+    // Group changed routes by (dst, table_id, metric) so that ECMP routes
+    // (same destination, multiple weighted nexthops) are applied as a single
+    // multipath RouteConf rather than as separate single-nexthop entries.
+    type EcmpKey = (String, Option<u32>, Option<i64>);
+    let mut ecmp_groups: HashMap<EcmpKey, Vec<&RouteEntry>> = HashMap::new();
+    let mut plain_routes: Vec<&RouteEntry> = Vec::new();
+
+    for rt in merged_routes.changed_routes.as_slice() {
+        if rt.weight.is_some() {
+            let key = (
+                rt.destination.clone().unwrap_or_default(),
+                rt.table_id,
+                rt.metric,
+            );
+            ecmp_groups.entry(key).or_default().push(rt);
+        } else {
+            plain_routes.push(rt);
+        }
     }
+
+    let mut ret = Vec::new();
+
+    for rt in plain_routes {
+        ret.push(nmstate_to_nispor_route_conf(rt)?);
+    }
+
+    for (_, group) in ecmp_groups {
+        // All routes in the group share the same dst/table/metric; use the
+        // first entry to set those fields and build the multipath nexthop list.
+        let first = group[0];
+        let mut conf = nmstate_to_nispor_route_conf(first)?;
+        // Clear the flat single-nexthop fields — they're expressed via
+        // multipath.
+        conf.oif = None;
+        conf.via = None;
+        conf.multipath = Some(
+            group
+                .iter()
+                .map(|rt| nmstate_rt_to_nispor_multipath(rt))
+                .collect(),
+        );
+        ret.push(conf);
+    }
+
     Ok(ret)
 }
 
@@ -362,16 +405,12 @@ fn validate_routes(merged_routes: &MergedRoutes) -> Result<(), NmstateError> {
         } else {
             continue;
         };
-        let mut hashed_rts: HashMap<(&str, u32, u32), &RouteEntry> =
+        // Group routes by (dst, effective_table, effective_metric).
+        // A group with > 1 entry is only valid when every entry carries a
+        // weight (ECMP).  Without weight it is an unresolvable conflict.
+        let mut groups: HashMap<(&str, u32, u32), Vec<&RouteEntry>> =
             HashMap::new();
         for rt in iface_routes {
-            if rt.weight.is_some() {
-                return Err(NmstateError::new(
-                    ErrorKind::NotSupportedError,
-                    "Kernel mode does not support ECMP routes".to_string(),
-                ));
-            }
-
             // The `Routes::validate()` already confirmed non-absent routes
             // always has destination.
             // The `merged_routes.merged` does not have absent route.
@@ -385,13 +424,13 @@ fn validate_routes(merged_routes: &MergedRoutes) -> Result<(), NmstateError> {
             // metric-less desired route conflicts with an existing route that
             // the kernel reports with the coerced default metric (e.g. IPv6
             // default route metric 1024).
-            if hashed_rts
-                .insert(
-                    (dst, rt.effective_table_id(), rt.effective_metric()),
-                    rt,
-                )
-                .is_some()
-            {
+            groups
+                .entry((dst, rt.effective_table_id(), rt.effective_metric()))
+                .or_default()
+                .push(rt);
+        }
+        for ((dst, _, _), group) in &groups {
+            if group.len() > 1 && group.iter().any(|rt| rt.weight.is_none()) {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
@@ -511,6 +550,43 @@ mod tests {
         let merged = merged_for(vec![
             route("::/0", "2001:db8:1::3", Some(0), 200),
             route("::/0", "2001:db8:1::2", None, 200),
+        ]);
+        let err = validate_routes(&merged).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    }
+
+    fn ecmp_route(
+        dst: &str,
+        via: &str,
+        metric: Option<i64>,
+        table: u32,
+        weight: u16,
+    ) -> RouteEntry {
+        RouteEntry {
+            destination: Some(dst.to_string()),
+            next_hop_iface: Some("eth1".to_string()),
+            next_hop_addr: Some(via.to_string()),
+            metric,
+            table_id: Some(table),
+            weight: Some(weight),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_ipv6_ecmp_routes_valid_in_kernel_mode() {
+        let merged = merged_for(vec![
+            ecmp_route("::/0", "2001:db8:1::2", Some(1024), 254, 1),
+            ecmp_route("::/0", "2001:db8:1::3", Some(1024), 254, 256),
+        ]);
+        validate_routes(&merged).unwrap();
+    }
+
+    #[test]
+    fn test_ecmp_mixed_weight_conflicts() {
+        let merged = merged_for(vec![
+            ecmp_route("::/0", "2001:db8:1::2", Some(1024), 254, 1),
+            route("::/0", "2001:db8:1::3", Some(1024), 254),
         ]);
         let err = validate_routes(&merged).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::InvalidArgument);
