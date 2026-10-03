@@ -85,7 +85,18 @@ function exec_cmd {
 # Some command like DNF might fail in container, hence we retry on failure
 function exec_cmd_with_retry {
     if [ ! -z ${RUN_BAREMETAL} ];then
-        bash -c "$1"
+        local retries=5
+        local i
+        for i in $(seq 1 $retries); do
+            if bash -c "$1"; then
+                return 0
+            fi
+            if [ "$i" -lt "$retries" ]; then
+                echo "Command failed, retrying ($i/$retries) after 10s..."
+                sleep 10
+            fi
+        done
+        return 1
     else
         container_exec_with_retry "$1"
     fi
@@ -405,7 +416,7 @@ fi
 install_nmstate
 
 if [[ -v PRETEST_EXEC ]];then
-    exec_cmd "$PRETEST_EXEC"
+    exec_cmd_with_retry "$PRETEST_EXEC"
 fi
 
 run_tests
