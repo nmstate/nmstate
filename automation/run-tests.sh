@@ -24,6 +24,7 @@ RAWHIDE_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:rawhide"
 CENTOS_8_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 CENTOS_9_STREAM_IMAGE_DEV="quay.io/nmstate/c9s-nmstate-dev"
 CENTOS_10_STREAM_IMAGE_DEV="quay.io/nmstate/c10s-nmstate-dev"
+DEFAULT_CONTAINER_IMAGE=$FEDORA_IMAGE_DEV
 
 COLLECT_LOGS="true"
 
@@ -65,6 +66,12 @@ function print_help() {
     echo "  --nolog"
     echo "  --pretest-exec=CMD"
     echo "  --help"
+    echo "Environment:"
+    echo "  CONTAINER_IMAGE          Override the image selected by OS options"
+    echo "  NMSTATE_REPO             Repository used for the packaging baseline"
+    echo "  NMSTATE_SKIP_IMAGE_REBUILD=1  With CI=true, pull the selected image"
+    echo "                           without checking Git"
+    echo "  NMSTATE_IPSEC_IMAGE      Override the IPsec server image"
 }
 
 function pyclean {
@@ -310,22 +317,22 @@ while true; do
         TEST_TYPE="$1"
         ;;
     --el8)
-        CONTAINER_IMAGE=$CENTOS_8_STREAM_IMAGE_DEV
+        DEFAULT_CONTAINER_IMAGE=$CENTOS_8_STREAM_IMAGE_DEV
         ;;
     --centos-stream)
-        CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
+        DEFAULT_CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
         ;;
     --el9)
-        CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
+        DEFAULT_CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
         ;;
     --el10)
-        CONTAINER_IMAGE=$CENTOS_10_STREAM_IMAGE_DEV
+        DEFAULT_CONTAINER_IMAGE=$CENTOS_10_STREAM_IMAGE_DEV
         ;;
     --fed)
-        CONTAINER_IMAGE=$FEDORA_IMAGE_DEV
+        DEFAULT_CONTAINER_IMAGE=$FEDORA_IMAGE_DEV
         ;;
     --rawhide)
-        CONTAINER_IMAGE=$RAWHIDE_IMAGE_DEV
+        DEFAULT_CONTAINER_IMAGE=$RAWHIDE_IMAGE_DEV
         ;;
     --artifacts-dir)
         shift
@@ -365,7 +372,7 @@ while true; do
 done
 
 : ${TEST_TYPE:=$TEST_TYPE_ALL}
-: ${CONTAINER_IMAGE:=$FEDORA_IMAGE_DEV}
+: "${CONTAINER_IMAGE:=$DEFAULT_CONTAINER_IMAGE}"
 : ${INSTALL_NMSTATE:="true"}
 : ${INSTALL_DEPS:="false"}
 : ${COMPILED_RPMS_DIR:=""}

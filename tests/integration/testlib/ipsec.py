@@ -17,7 +17,10 @@ from .cmdlib import exec_cmd
 from .veth import create_veth_pair
 from .veth import remove_veth_pair
 
-SRV_CONTAINER_IMG = "quay.io/nmstate/test-env:libreswan-srv-c10s"
+SRV_CONTAINER_IMG = (
+    os.environ.get("NMSTATE_IPSEC_IMAGE")
+    or "quay.io/nmstate/test-env:libreswan-srv-c10s"
+)
 SRV_CONTAINER_NAME = "nmstate-ipsec-srv"
 SRV_NAMESPACE = "ipsec_test_srv"
 TEST_FILES_DIR = "test_ipsec_files"
@@ -92,15 +95,12 @@ class IpsecTestEnv:
 
     def prepare():
         """
-        Pull the container image, please run this when you still
-        have internet access.
+        Pull the container image while its registry is reachable.
         """
         i = 0
         while i < 5:
             try:
-                exec_cmd(
-                    f"podman pull {SRV_CONTAINER_IMG}".split(), check=True
-                )
+                exec_cmd(["podman", "pull", SRV_CONTAINER_IMG], check=True)
                 break
             except SubprocessError:
                 i += 1
@@ -339,8 +339,8 @@ def start_ipsec_srv_container():
         "--pull=never "
         f"--name {SRV_CONTAINER_NAME} "
         "--hostname ipsec-srv.example.org "
-        f"--network ns:/run/netns/{SRV_NAMESPACE} "
-        f"{SRV_CONTAINER_IMG}".split(),
+        f"--network ns:/run/netns/{SRV_NAMESPACE}".split()
+        + [SRV_CONTAINER_IMG],
         check=True,
     )
     exec_cmd(
