@@ -28,33 +28,50 @@ function open_shell {
     run_exit
 }
 
-# Return 0 if file is changed else 1
+# Return 0 for changes, 1 for no changes, or 2 on error.
 function is_file_changed {
-    git remote add upstream https://github.com/nmstate/nmstate.git
-    git fetch upstream
-    if [ -n "$BRANCH_NAME" ]; then
-        git diff --exit-code --name-only upstream/$BRANCH_NAME -- $1
-    else
-        git diff --exit-code --name-only upstream/base -- $1
-    fi
-
-    if [ $? -eq 0 ];then
-        return 1
-    else
-        return 0
-    fi
+    local rc=0
+    git fetch -- "${NMSTATE_REPO:-https://github.com/nmstate/nmstate.git}" \
+        "refs/heads/${BRANCH_NAME:-base}" || return 2
+    git diff --exit-code --name-only FETCH_HEAD -- "$1" || rc=$?
+    case $rc in
+        0) return 1 ;;
+        1) return 0 ;;
+        *) return 2 ;;
+    esac
 }
 
 function rebuild_container_images {
-    if is_file_changed "$PROJECT_PATH/packaging"; then
-        IMAGE_NAME=$(basename $CONTAINER_IMAGE)
-        ${PROJECT_PATH}/packaging/build-container.sh $IMAGE_NAME
-    else
-        # pull the image to local, and retry if fails up to 5 times
-        for i in {1..5};do
-            ${CONTAINER_CMD} pull $CONTAINER_IMAGE && break
-        done
+    local image_name rc=0
+    if [ "${NMSTATE_SKIP_IMAGE_REBUILD:-0}" = 1 ]; then
+        pull_container_image
+        return
     fi
+    is_file_changed "$PROJECT_PATH/packaging" || rc=$?
+    case $rc in
+        1) pull_container_image; return ;;
+        0) ;;
+        *) return "$rc" ;;
+    esac
+    image_name=$(basename "$CONTAINER_IMAGE")
+    # build-container.sh always tags quay.io/nmstate/<name>
+    if [[ "$CONTAINER_IMAGE" != quay.io/nmstate/* || \
+          ! -f "$PROJECT_PATH/packaging/Dockerfile.$image_name" ]]; then
+        echo "Cannot rebuild $CONTAINER_IMAGE for changed packaging/," \
+            "set NMSTATE_SKIP_IMAGE_REBUILD=1" >&2
+        return 2
+    fi
+    "${PROJECT_PATH}/packaging/build-container.sh" "$image_name"
+}
+
+function pull_container_image {
+    local i
+    for i in {1..5}; do
+        if ${CONTAINER_CMD} pull "$CONTAINER_IMAGE"; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 function remove_tempdir {
@@ -83,7 +100,7 @@ function container_pre_test_setup {
     ${CONTAINER_CMD} --version && cat /etc/resolv.conf
 
     if [[ "$CI" == "true" ]];then
-        rebuild_container_images
+        rebuild_container_images || return $?
     fi
 
     create_container
@@ -111,9 +128,10 @@ function create_container {
   CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d \
       -e CI \
       -e SHIPPABLE \
+      -e NMSTATE_IPSEC_IMAGE \
       -v /var/lib/containers:/var/lib/containers \
       -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
-      -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
+      -v $EXPORT_DIR:$CONT_EXPORT_DIR "$CONTAINER_IMAGE")"
   [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
   # Wait systemd started
   until $CONTAINER_CMD exec $CONTAINER_ID sh -c "
