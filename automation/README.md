@@ -71,6 +71,41 @@ To specify a different container image for the tests, specify it with the
 
 `CONTAINER_IMAGE=local/c8s-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
+`CONTAINER_IMAGE` takes precedence over OS options such as `--el9`. Without
+an override, the last OS option selects the image.
+
+For CI using retained images, set `NMSTATE_SKIP_IMAGE_REBUILD=1` to pull the
+selected image without fetching the packaging baseline or rebuilding an image.
+Otherwise, `CI=true` keeps the packaging comparison and rebuild behavior.
+`NMSTATE_REPO` selects the repository for that comparison (default:
+`https://github.com/nmstate/nmstate.git`); `BRANCH_NAME` selects its branch
+(default: `base`). The fetch does not change configured Git remotes.
+
+`NMSTATE_IPSEC_IMAGE` selects the IPsec server image, including when tests run
+inside the outer container. Its default is
+`quay.io/nmstate/test-env:libreswan-srv-c10s`.
+
+For example, after publishing both images to an approved registry:
+
+```shell
+CONTAINER_IMAGE=registry.example.org/nmstate/c9s-nmstate-dev:retained \
+NMSTATE_IPSEC_IMAGE=registry.example.org/nmstate/libreswan-srv:retained \
+NMSTATE_SKIP_IMAGE_REBUILD=1 CI=true \
+./automation/run-tests.sh --el9 --test-type integ_tier1 --use-installed-nmstate
+```
+
+Image references may use digests. The prebuilt image must contain the required
+test dependencies and, for `--use-installed-nmstate`, the nmstate packages under
+test. Source builds, COPR options and DNF commands still need their configured
+repositories, Rust dependencies and build tools; these overrides do not mirror
+or disable those dependencies. Failed Git fetches and exhausted image pulls
+stop setup instead of using stale local content.
+
+Run the source and image configuration regression tests from the repository
+root with `python3 automation/test_container_sources.py`. They use temporary
+Git repositories with file transport only and stub container/build commands.
+They do not require root, a container runtime or access to external services.
+
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
 option, for example:
