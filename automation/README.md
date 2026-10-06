@@ -71,40 +71,38 @@ To specify a different container image for the tests, specify it with the
 
 `CONTAINER_IMAGE=local/c8s-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
-`CONTAINER_IMAGE` takes precedence over OS options such as `--el9`. Without
-an override, the last OS option selects the image.
+`CONTAINER_IMAGE` overrides OS options such as `--el9`. If it is unset or
+empty, the last OS option selects the image.
 
-For CI using retained images, set `NMSTATE_SKIP_IMAGE_REBUILD=1` to pull the
-selected image without fetching the packaging baseline or rebuilding an image.
-Otherwise, `CI=true` keeps the packaging comparison and rebuild behavior.
-`NMSTATE_REPO` selects the repository for that comparison (default:
-`https://github.com/nmstate/nmstate.git`); `BRANCH_NAME` selects its branch
-(default: `base`). The fetch does not change configured Git remotes.
-
-`NMSTATE_IPSEC_IMAGE` selects the IPsec server image, including when tests run
-inside the outer container. Its default is
-`quay.io/nmstate/test-env:libreswan-srv-c10s`.
-
-For example, after publishing both images to an approved registry:
+With `CI=true`, setup rebuilds the image when `packaging/` differs from
+`BRANCH_NAME` (default: `base`) in `NMSTATE_REPO` (default:
+`https://github.com/nmstate/nmstate.git`). The fetch leaves Git remotes unchanged.
+Only `quay.io/nmstate/` images with a matching `packaging/Dockerfile.<name>`
+can be rebuilt; with any other image, a `packaging/` difference fails setup.
+Set `NMSTATE_SKIP_IMAGE_REBUILD=1` to pull the image without that Git check
+or rebuild. This uses the CentOS Stream 9 image to build nmstate and run tier1
+tests:
 
 ```shell
-CONTAINER_IMAGE=registry.example.org/nmstate/c9s-nmstate-dev:retained \
-NMSTATE_IPSEC_IMAGE=registry.example.org/nmstate/libreswan-srv:retained \
-NMSTATE_SKIP_IMAGE_REBUILD=1 CI=true \
-./automation/run-tests.sh --el9 --test-type integ_tier1 --use-installed-nmstate
+CI=true NMSTATE_SKIP_IMAGE_REBUILD=1 ./automation/run-tests.sh \
+    --el9 --test-type integ_tier1
 ```
 
-Image references may use digests. The prebuilt image must contain the required
-test dependencies and, for `--use-installed-nmstate`, the nmstate packages under
-test. Source builds, COPR options and DNF commands still need their configured
-repositories, Rust dependencies and build tools; these overrides do not mirror
-or disable those dependencies. Failed Git fetches and exhausted image pulls
-stop setup instead of using stale local content.
+`NMSTATE_IPSEC_IMAGE` selects the IPsec server image and is passed into the test
+container. It defaults to `quay.io/nmstate/test-env:libreswan-srv-c10s`. Both
+image variables accept digests. To use a registry mirror, set both variables
+to images already published there.
 
-Run the source and image configuration regression tests from the repository
-root with `python3 automation/test_container_sources.py`. They use temporary
-Git repositories with file transport only and stub container/build commands.
-They do not require root, a container runtime or access to external services.
+The test image needs the test dependencies and, with `--use-installed-nmstate`,
+the nmstate packages to test. Source builds and COPR/DNF commands still use
+their configured repositories, Rust dependencies and build tools. Setup stops
+if the baseline fetch fails or all five attempts to pull the test image fail.
+A failed IPsec image pull does not stop the session; IPsec tests still need
+a usable image.
+
+Run `python3 automation/test_container_sources.py` from the repository root
+to check these options. It uses temporary Git repositories and stubbed
+container/build commands, without root or network access.
 
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
