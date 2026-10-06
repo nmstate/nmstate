@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterfaces,
     NmstateError,
@@ -187,9 +189,18 @@ impl MergedInterfaces {
         Ok(ret)
     }
 
+    #[cfg(test)]
     pub(crate) fn verify(
         &self,
         current: &Interfaces,
+    ) -> Result<(), NmstateError> {
+        self.verify_with_referenced_vfs(current, &HashSet::new())
+    }
+
+    pub(crate) fn verify_with_referenced_vfs(
+        &self,
+        current: &Interfaces,
+        referenced_vfs: &HashSet<(String, u32)>,
     ) -> Result<(), NmstateError> {
         let mut merged = self.clone();
         let mut current = current.clone();
@@ -217,6 +228,17 @@ impl MergedInterfaces {
             iface.sanitize_desired_for_verify();
         }
 
+        // Interfaces referenced by name that must be waited for during SR-IOV
+        // verification. This includes interfaces pulled in as controller ports
+        // (which are changed but not desired, hence only populate `for_apply`).
+        let desired_iface_names: HashSet<String> = merged
+            .iter()
+            .filter(|i| i.is_changed())
+            .filter_map(|i| i.for_verify.as_ref().or(i.for_apply.as_ref()))
+            .filter(|i| i.is_up())
+            .map(|i| i.name().to_string())
+            .collect();
+
         for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
             let iface = if let Some(i) = des_iface.for_verify.as_mut() {
                 i
@@ -240,7 +262,11 @@ impl MergedInterfaces {
                     if let Interface::Ethernet(eth_iface) = iface
                         && eth_iface.sriov_is_enabled()
                     {
-                        eth_iface.verify_sriov(&current)?;
+                        eth_iface.verify_sriov(
+                            &current,
+                            &desired_iface_names,
+                            referenced_vfs,
+                        )?;
                     }
                 }
             } else if iface.is_up() {
