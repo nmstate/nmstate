@@ -9,6 +9,7 @@ mod hsr;
 mod ieee8021x;
 mod ip;
 mod ip_tunnel;
+mod ipsec;
 mod ipvlan;
 mod lldp;
 mod mptcp;

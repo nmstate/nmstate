@@ -51,6 +51,11 @@ optional = true
 workspace = true
 optional = true
 
+# Linux-only. Used to create an XFRM interface before IPSec activation.
+# Not part of `query_apply` so macOS builds of that feature stay free of netlink.
+[target.'cfg(target_os = "linux")'.dependencies]
+rtnetlink = "0.23.0"
+
 [dev-dependencies]
 serde_yaml = { workspace = true }
 
