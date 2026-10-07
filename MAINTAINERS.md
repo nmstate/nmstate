@@ -9,6 +9,7 @@ The current Maintainers Group for the nmstate Project consists of:
 | [Mateusz Kowalski](https://github.com/mkowalski)           | Red Hat  | Kubernetes |
 | [Ján Václav](https://github.com/jvaclav-rh)                | Red Hat  | Everything |
 | [Emilia Desch](https://github.com/emy)                     | Red Hat  | Kubernetes |
+| [Rahul Rajesh](https://github.com/rajeshrah22)             | Red Hat  | Everything |
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for general contribution guidelines.
 
