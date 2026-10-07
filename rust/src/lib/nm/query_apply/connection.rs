@@ -187,6 +187,9 @@ async fn _activate_nm_connections(
         .iter()
         .filter(|c| c.iface_type().map(|t| t.is_controller()) != Some(true))
     {
+        // NetworkManager main aborts if a libreswan profile with ipv4.method
+        // other than auto receives its config before the xfrm device exists.
+        super::ipsec::prepare_ipsec_xfrm_for_nm(nm_api, nm_conn).await;
         if let Some(uuid) = nm_conn.uuid() {
             if let Some(nm_ac) = acs_by_uuid.get(uuid) {
                 if let Err(e) =
