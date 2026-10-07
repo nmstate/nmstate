@@ -14,6 +14,9 @@ pub(crate) fn np_ethernet_to_nmstate(
     let mut iface = EthernetInterface::new();
     iface.base = base_iface;
     iface.ethernet = Some(gen_eth_conf(np_iface));
+    iface.fill_qeth_from_kernel().unwrap_or_else(|e| {
+        log::warn!("Failed to query qeth vnicc for {}: {e}", iface.base.name);
+    });
     iface
 }
 
