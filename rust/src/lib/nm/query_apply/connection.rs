@@ -183,10 +183,22 @@ async fn _activate_nm_connections(
             }
         }
     }
-    for nm_conn in nm_conns
-        .iter()
-        .filter(|c| c.iface_type().map(|t| t.is_controller()) != Some(true))
-    {
+    // Profiles that own an IPSec `left` address are ordered first. Otherwise
+    // priority/name order can activate the VPN before that address exists,
+    // and pre-creation has no parent ifindex.
+    for nm_conn in super::ipsec::order_ipsec_parents_first(nm_conns) {
+        // NetworkManager main aborts if this profile is activated while its
+        // xfrm device is still missing. Leave it for a later attempt instead.
+        if let Err(e) =
+            super::ipsec::prepare_ipsec_xfrm_for_nm(nm_api, nm_conn).await
+        {
+            if e.kind().can_retry() {
+                failed_nm_conns.push((nm_conn.clone(), e));
+            } else {
+                return Err(e);
+            }
+            continue;
+        }
         if let Some(uuid) = nm_conn.uuid() {
             if let Some(nm_ac) = acs_by_uuid.get(uuid) {
                 if let Err(e) =
