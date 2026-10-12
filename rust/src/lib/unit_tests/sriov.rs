@@ -988,3 +988,121 @@ fn test_ignore_sriov_max_vfs_when_verify() {
 
     merged_ifaces.verify(&post_apply_current).unwrap();
 }
+
+#[test]
+// PF-only desired state (total-vfs + vfs[], no VF interface referenced) must
+// still trigger the SR-IOV PF-first pre-apply, so the VFs get created before
+// their per-VF config is applied.
+fn test_has_sriov_vf_count_increase_pf_only() {
+    let desired = serde_yaml::from_str::<NetworkState>(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                trust: true
+              - id: 1
+                trust: true
+        ",
+    )
+    .unwrap();
+    let current = serde_yaml::from_str::<NetworkState>(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 0
+        ",
+    )
+    .unwrap();
+
+    // No VF interface is referenced, so the old trigger would miss it.
+    assert!(!desired.has_sriov_and_missing_eth(&current));
+    // The VF-count-increase trigger catches it.
+    assert!(desired.has_sriov_vf_count_increase(&current));
+}
+
+#[test]
+fn test_has_sriov_vf_count_no_increase() {
+    let desired = serde_yaml::from_str::<NetworkState>(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        ",
+    )
+    .unwrap();
+    let current = serde_yaml::from_str::<NetworkState>(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        ",
+    )
+    .unwrap();
+
+    assert!(!desired.has_sriov_vf_count_increase(&current));
+}
+
+#[test]
+// The PF-first pre-apply state must create the VFs only: its `vfs[]` must be
+// reduced to id-only entries, with per-VF settings (mac/trust/...) deferred to
+// the main apply (they operate on VFs that do not exist yet in phase one).
+fn test_get_sriov_pf_conf_state_defers_vf_settings() {
+    let desired = serde_yaml::from_str::<NetworkState>(
+        r"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                mac-address: 00:11:22:33:44:55
+                trust: true
+                spoof-check: false
+              - id: 1
+                trust: true
+        ",
+    )
+    .unwrap();
+
+    let pf_state = desired.get_sriov_pf_conf_state().unwrap();
+    if let Interface::Ethernet(pf_iface) =
+        pf_state.interfaces.kernel_ifaces.get("eth1").unwrap()
+    {
+        let sr_iov_conf =
+            pf_iface.ethernet.as_ref().unwrap().sr_iov.as_ref().unwrap();
+        assert_eq!(sr_iov_conf.total_vfs, Some(2));
+        let vfs = sr_iov_conf.vfs.as_ref().unwrap();
+        assert_eq!(vfs.len(), 2);
+        for vf in vfs {
+            // id-only: no per-VF settings carried into phase one
+            assert_eq!(vf.mac_address, None);
+            assert_eq!(vf.trust, None);
+            assert_eq!(vf.spoof_check, None);
+        }
+        assert_eq!(vfs[0].id, 0);
+        assert_eq!(vfs[1].id, 1);
+    } else {
+        panic!("Expecting Ethernet interface, got {pf_state:?}");
+    }
+}

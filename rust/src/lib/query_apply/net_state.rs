@@ -234,7 +234,16 @@ impl NetworkState {
         // hence when user want `enable-and-use` single-transaction for SR-IOV,
         // they need define the interface type. It is overkill to do resolve at
         // this point for this corner use case.
-        let pf_state = if self.has_sriov_and_missing_eth(&cur_net_state) {
+        // Trigger the SR-IOV PF-first pre-apply either when a (future) VF
+        // interface is referenced (`has_sriov_and_missing_eth`) or when a PF
+        // simply requests more VFs than currently exist
+        // (`has_sriov_vf_count_increase`). The latter covers PF-only desired
+        // states (`total-vfs` + `vfs[]`, no VF interface referenced), which
+        // otherwise skip VF creation and fail applying per-VF config to
+        // not-yet-existent VFs.
+        let pf_state = if self.has_sriov_and_missing_eth(&cur_net_state)
+            || self.has_sriov_vf_count_increase(&cur_net_state)
+        {
             self.get_sriov_pf_conf_state()
         } else {
             None
