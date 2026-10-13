@@ -65,11 +65,25 @@ function rebuild_container_images {
 }
 
 function pull_container_image {
-    local i
+    local image i mirror="${NMSTATE_IMAGE_MIRROR:-}"
+    local images=("$CONTAINER_IMAGE")
+    while [[ "$mirror" == */ ]]; do
+        mirror="${mirror%/}"
+    done
+    if [[ "$CONTAINER_IMAGE" == quay.io/nmstate/* && \
+          -n "$mirror" && "$mirror" != quay.io/nmstate ]]; then
+        images+=("$mirror/${CONTAINER_IMAGE#quay.io/nmstate/}")
+    fi
     for i in {1..5}; do
-        if ${CONTAINER_CMD} pull "$CONTAINER_IMAGE"; then
-            return 0
-        fi
+        for image in "${images[@]}"; do
+            if ${CONTAINER_CMD} pull "$image"; then
+                if [ "$image" != "$CONTAINER_IMAGE" ]; then
+                    echo "Using mirror image $image"
+                fi
+                CONTAINER_IMAGE="$image"
+                return 0
+            fi
+        done
     done
     return 1
 }
@@ -101,9 +115,12 @@ function container_pre_test_setup {
 
     if [[ "$CI" == "true" ]];then
         rebuild_container_images || return $?
+    elif [ -n "${NMSTATE_IMAGE_MIRROR:-}" ] && \
+        ! ${CONTAINER_CMD} image inspect "$CONTAINER_IMAGE" >/dev/null 2>&1; then
+        pull_container_image || return $?
     fi
 
-    create_container
+    create_container || return $?
 
     container_exec "ulimit -c unlimited"
     container_exec "git config --global --add safe.directory \
@@ -123,15 +140,16 @@ function copy_workspace_container {
 }
 
 function create_container {
-  mkdir -p $EXPORT_DIR
+  mkdir -p "$EXPORT_DIR" || return $?
   # The podman support wildcard when passing enviroments, but docker does not.
   CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d \
       -e CI \
       -e SHIPPABLE \
       -e NMSTATE_IPSEC_IMAGE \
+      -e NMSTATE_IMAGE_MIRROR \
       -v /var/lib/containers:/var/lib/containers \
       -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
-      -v $EXPORT_DIR:$CONT_EXPORT_DIR "$CONTAINER_IMAGE")"
+      -v $EXPORT_DIR:$CONT_EXPORT_DIR "$CONTAINER_IMAGE")" || return $?
   [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
   # Wait systemd started
   until $CONTAINER_CMD exec $CONTAINER_ID sh -c "

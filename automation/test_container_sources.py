@@ -8,27 +8,31 @@ import shlex
 import subprocess
 import sys
 import tempfile
+from textwrap import dedent
 import unittest
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 HELPERS = ROOT / "automation/tests-container-utils.sh"
+FAKE_PODMAN = ROOT / "automation/test_fixtures/fake_podman.py"
 IPSEC = ROOT / "tests/integration/testlib/ipsec.py"
 INTERNAL_IMAGE = "registry.example.org/nmstate/dev@sha256:" + "a" * 64
+MIRROR = "registry.example.org/mirror"
 
 
-def stub(argv="sys.argv[1:]"):
-    return (
-        f"#!{sys.executable} -IS\n"
-        "import json, os, sys\n"
-        "with open(os.environ['COMMAND_LOG'], 'a') as log:\n"
-        f"    log.write(json.dumps({argv}) + '\\n')\n"
-    )
+def exec_commands(module):
+    return [args[0] for args, _ in module.exec_cmd.call_args_list]
 
 
 class SourceTests(unittest.TestCase):
+    """Run real Bash scripts with fake commands and inspect their JSON logs."""
+
     def setUp(self):
+        environment = patch.dict(os.environ)
+        environment.start()
+        self.addCleanup(environment.stop)
+        os.environ.pop("NMSTATE_IMAGE_MIRROR", None)
         self.tmp = tempfile.TemporaryDirectory(prefix="nmstate-sources-")
         self.addCleanup(self.tmp.cleanup)
         self.directory = Path(self.tmp.name)
@@ -44,11 +48,16 @@ class SourceTests(unittest.TestCase):
             "NMSTATE_REPO",
             "NMSTATE_SKIP_IMAGE_REBUILD",
             "NMSTATE_IPSEC_IMAGE",
+            "NMSTATE_IMAGE_MIRROR",
             "BRANCH_NAME",
+            "CI",
             "RUN_BAREMETAL",
             "debug_exit_shell",
             "FAIL_PULL",
+            "FAIL_PULL_IMAGES",
+            "FAIL_RUN",
             "PULL_FAILURES",
+            "IMAGE_INSPECT_RC",
             "BUILD_EXIT",
         ):
             self.env.pop(name, None)
@@ -63,29 +72,41 @@ class SourceTests(unittest.TestCase):
             GIT_CONFIG_NOSYSTEM="1",
             GIT_ALLOW_PROTOCOL="file",
         )
-        self.write_command(
-            "podman",
-            stub() + "if sys.argv[1] == 'run': print('test-container')\n"
-            "if sys.argv[1] == '--version': print('podman test stub')\n"
-            "if sys.argv[1] == 'pull':\n"
-            "    with open(os.environ['COMMAND_LOG']) as log:\n"
-            "        calls = [json.loads(line)[0] for line in log]\n"
-            "    attempts = calls.count('pull')\n"
-            "    if attempts <= int(os.environ.get('PULL_FAILURES', '0')):\n"
-            "        sys.exit(1)\n"
-            "    sys.exit(int(os.environ.get('FAIL_PULL', '0')))\n",
-        )
+        self.write_python_command("podman", FAKE_PODMAN.read_text())
 
     def write_command(self, name, content):
         path = self.bin / name
         path.write_text(content)
         path.chmod(0o755)
 
+    def write_python_command(self, name, body):
+        self.write_command(
+            name, f"#!{sys.executable} -IS\n" + dedent(body).lstrip("\n")
+        )
+
+    def write_recording_command(self, name, body):
+        self.write_python_command(
+            name,
+            dedent(
+                """\
+                import json
+                import os
+                import sys
+
+                def record_command(arguments):
+                    with open(os.environ["COMMAND_LOG"], "a") as log:
+                        log.write(json.dumps(arguments) + "\\n")
+
+                """
+            )
+            + dedent(body),
+        )
+
     def reset_log(self):
         if self.log.exists():
             self.log.unlink()
 
-    def calls(self, kind=None):
+    def recorded_commands(self, kind=None):
         if not self.log.exists():
             return []
         calls = [
@@ -119,14 +140,14 @@ class SourceTests(unittest.TestCase):
         self.env["NMSTATE_SKIP_IMAGE_REBUILD"] = "1"
         result = self.shell("git() { return 99; }; rebuild_container_images")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls(), [["pull", INTERNAL_IMAGE]])
+        self.assertEqual(self.recorded_commands(), [["pull", INTERNAL_IMAGE]])
 
     def test_container_command_prefix(self):
         self.env["NMSTATE_SKIP_IMAGE_REBUILD"] = "1"
         self.env["CONTAINER_CMD"] = "env " + self.env["CONTAINER_CMD"]
         result = self.shell("rebuild_container_images")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls(), [["pull", INTERNAL_IMAGE]])
+        self.assertEqual(self.recorded_commands(), [["pull", INTERNAL_IMAGE]])
 
     def test_exhausted_pull_stops_before_container_creation(self):
         marker = self.directory / "container-created"
@@ -142,14 +163,37 @@ class SourceTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertFalse(marker.exists())
-        pulls = self.calls("pull")
+        pulls = self.recorded_commands("pull")
         self.assertEqual(len(pulls), 5)
 
     def test_transient_outer_pull_recovers(self):
         self.env.update(NMSTATE_SKIP_IMAGE_REBUILD="1", PULL_FAILURES="2")
         result = self.shell("rebuild_container_images")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls(), [["pull", INTERNAL_IMAGE]] * 3)
+        self.assertEqual(
+            self.recorded_commands(), [["pull", INTERNAL_IMAGE]] * 3
+        )
+
+    def test_explicit_images_do_not_use_mirror(self):
+        self.env.update(
+            NMSTATE_SKIP_IMAGE_REBUILD="1",
+            NMSTATE_IMAGE_MIRROR=MIRROR,
+            FAIL_PULL="1",
+        )
+        for image in (
+            INTERNAL_IMAGE,
+            MIRROR + "/c9s-nmstate-dev:latest",
+            "quay.io/another-project/dev:latest",
+            "quay.io/nmstate-other/dev:latest",
+        ):
+            with self.subTest(image=image):
+                self.reset_log()
+                self.env["CONTAINER_IMAGE"] = image
+                result = self.shell("rebuild_container_images")
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(
+                    self.recorded_commands(), [["pull", image]] * 5
+                )
 
     def local_baseline(self):
         repo = self.directory / "local mirror"
@@ -185,22 +229,25 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(self.shell(code, repo).returncode, 0)
         self.env["NMSTATE_REPO"] = str(self.directory / "missing")
         self.assertEqual(self.shell(code, repo).returncode, 2)
-        self.assertEqual(self.calls(), [])
+        self.assertEqual(self.recorded_commands(), [])
 
     def check_changed_packaging_build(self, build_exit):
         repo, fixture = self.local_baseline()
         fixture.write_text("changed\n")
         (repo / "packaging" / "Dockerfile.c9s-nmstate-dev").touch()
-        self.write_command(
+        self.write_recording_command(
             repo / "packaging" / "build-container.sh",
-            stub("['build', *sys.argv[1:]]")
-            + "sys.exit(int(os.environ['BUILD_EXIT']))\n",
+            """
+            record_command(["build", *sys.argv[1:]])
+            sys.exit(int(os.environ["BUILD_EXIT"]))
+            """,
         )
         marker = self.directory / "container-created"
         self.env.update(
             PROJECT_PATH=str(repo),
             CONTAINER_IMAGE="quay.io/nmstate/c9s-nmstate-dev",
             BUILD_EXIT=str(build_exit),
+            NMSTATE_IMAGE_MIRROR=MIRROR,
             CONTAINER_CREATED=str(marker),
             CI="true",
         )
@@ -212,7 +259,8 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(result.returncode, build_exit, result.stderr)
         self.assertEqual(marker.exists(), build_exit == 0)
         self.assertEqual(
-            self.calls(), [["--version"], ["build", "c9s-nmstate-dev"]]
+            self.recorded_commands(),
+            [["--version"], ["build", "c9s-nmstate-dev"]],
         )
 
     def test_changed_packaging_build_succeeds(self):
@@ -227,7 +275,7 @@ class SourceTests(unittest.TestCase):
         self.env["PROJECT_PATH"] = str(repo)
         for image in (
             INTERNAL_IMAGE,
-            "registry.example.org/nmstate/c9s-nmstate-dev",
+            MIRROR + "/c9s-nmstate-dev",
             "quay.io/nmstate/c9s-nmstate-dev@sha256:" + "d" * 64,
         ):
             with self.subTest(image=image):
@@ -238,7 +286,19 @@ class SourceTests(unittest.TestCase):
                     cwd=repo,
                 )
                 self.assertEqual(result.returncode, 2, result.stderr)
-                self.assertEqual(self.calls(), [])
+                self.assertEqual(self.recorded_commands(), [])
+
+    def test_upstream_mirror_is_not_retried(self):
+        primary = "quay.io/nmstate/c9s-nmstate-dev"
+        self.env.update(
+            NMSTATE_SKIP_IMAGE_REBUILD="1",
+            NMSTATE_IMAGE_MIRROR="quay.io/nmstate/",
+            CONTAINER_IMAGE=primary,
+            FAIL_PULL="1",
+        )
+        result = self.shell("rebuild_container_images")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(self.recorded_commands(), [["pull", primary]] * 5)
 
     def test_diff_error_is_not_treated_as_no_changes(self):
         result = self.shell(
@@ -247,10 +307,15 @@ class SourceTests(unittest.TestCase):
             "if rebuild_container_images; then exit 0; else exit $?; fi"
         )
         self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertEqual(self.calls(), [])
+        self.assertEqual(self.recorded_commands(), [])
 
     def test_packaging_fetch_defaults_and_overrides(self):
-        self.write_command("git", stub("['git', *sys.argv[1:]]"))
+        self.write_recording_command(
+            "git",
+            """
+            record_command(["git", *sys.argv[1:]])
+            """,
+        )
         self.env["PATH"] = str(self.bin) + os.pathsep + self.env["PATH"]
         for repo, branch in (
             (None, None),
@@ -263,7 +328,7 @@ class SourceTests(unittest.TestCase):
                 result = self.shell("rebuild_container_images")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(
-                    self.calls()[0],
+                    self.recorded_commands()[0],
                     [
                         "git",
                         "fetch",
@@ -272,9 +337,11 @@ class SourceTests(unittest.TestCase):
                         "refs/heads/" + (branch or "base"),
                     ],
                 )
-                self.assertEqual(self.calls()[1][3], "--name-only")
-                self.assertIn("FETCH_HEAD", self.calls()[1])
-                self.assertEqual(self.calls()[2], ["pull", INTERNAL_IMAGE])
+                self.assertEqual(self.recorded_commands()[1][3], "--name-only")
+                self.assertIn("FETCH_HEAD", self.recorded_commands()[1])
+                self.assertEqual(
+                    self.recorded_commands()[2], ["pull", INTERNAL_IMAGE]
+                )
 
     def configure_runner(self):
         self.write_command("lsmod", "#!/bin/sh\necho openvswitch\n")
@@ -307,6 +374,7 @@ class SourceTests(unittest.TestCase):
 
     def test_runner_image_selection_and_fixture_environment(self):
         self.configure_runner()
+        self.env["NMSTATE_IMAGE_MIRROR"] = MIRROR
         cases = [
             ([], "quay.io/nmstate/fed-nmstate-dev:latest"),
             (["--el8"], "quay.io/nmstate/c8s-nmstate-dev"),
@@ -329,13 +397,148 @@ class SourceTests(unittest.TestCase):
                     self.env["CONTAINER_IMAGE"] = INTERNAL_IMAGE
                 result = self.run_runner(*options)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                run = self.calls("run")[0]
+                run = self.recorded_commands("run")[0]
                 self.assertEqual(run[-1], default or INTERNAL_IMAGE)
                 self.assertEqual(
-                    self.calls("pull"), [["pull", default or INTERNAL_IMAGE]]
+                    self.recorded_commands("pull"),
+                    [["pull", default or INTERNAL_IMAGE]],
                 )
-        index = run.index("NMSTATE_IPSEC_IMAGE")
-        self.assertEqual(run[index - 1], "-e")
+        for name in ("NMSTATE_IPSEC_IMAGE", "NMSTATE_IMAGE_MIRROR"):
+            self.assertEqual(run[run.index(name) - 1], "-e")
+
+    def test_runner_uses_mirror_after_primary_pull_failure(self):
+        self.configure_runner()
+        self.env["NMSTATE_IMAGE_MIRROR"] = MIRROR + "/"
+        for suffix in (
+            "c9s-nmstate-dev:latest",
+            "c10s-nmstate-dev",
+            "c9s-nmstate-dev@sha256:" + "b" * 64,
+        ):
+            with self.subTest(suffix=suffix):
+                self.reset_log()
+                primary = "quay.io/nmstate/" + suffix
+                fallback = MIRROR + "/" + suffix
+                self.env.update(
+                    CONTAINER_IMAGE=primary,
+                    FAIL_PULL_IMAGES=json.dumps([primary]),
+                )
+                result = self.run_runner()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                pulls = self.recorded_commands("pull")
+                self.assertEqual(
+                    pulls, [["pull", primary], ["pull", fallback]]
+                )
+                run = self.recorded_commands("run")[0]
+                self.assertEqual(run[-1], fallback)
+
+    def test_runner_exhausts_both_sources_before_failing(self):
+        self.configure_runner()
+        primary = "quay.io/nmstate/c9s-nmstate-dev"
+        fallback = MIRROR + "/c9s-nmstate-dev"
+        self.env.update(
+            CONTAINER_IMAGE=primary,
+            NMSTATE_IMAGE_MIRROR=MIRROR,
+            FAIL_PULL="1",
+        )
+        result = self.run_runner()
+        self.assertNotEqual(result.returncode, 0)
+        pulls = self.recorded_commands("pull")
+        self.assertEqual(pulls, [["pull", primary], ["pull", fallback]] * 5)
+        self.assertFalse(self.recorded_commands("run"))
+
+    def test_failed_container_start_does_not_use_mirror(self):
+        self.configure_runner()
+        primary = "quay.io/nmstate/c9s-nmstate-dev"
+        self.env.update(
+            CONTAINER_IMAGE=primary,
+            NMSTATE_IMAGE_MIRROR=MIRROR,
+            FAIL_RUN="42",
+        )
+        result = self.run_runner()
+        self.assertEqual(result.returncode, 42, result.stderr)
+        pulls = self.recorded_commands("pull")
+        self.assertEqual(pulls, [["pull", primary]])
+        runs = self.recorded_commands("run")
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0][-1], primary)
+
+    def test_local_images_are_preserved_and_missing_images_use_mirror(self):
+        self.configure_runner()
+        primary = "quay.io/nmstate/c9s-nmstate-dev"
+        fallback = MIRROR + "/c9s-nmstate-dev"
+        self.env.update(
+            CI="false",
+            CONTAINER_IMAGE=primary,
+            FAIL_PULL_IMAGES=json.dumps([primary]),
+        )
+        for mirror, present in (("", False), (MIRROR, True), (MIRROR, False)):
+            with self.subTest(mirror=mirror, present=present):
+                self.reset_log()
+                self.env.update(
+                    NMSTATE_IMAGE_MIRROR=mirror,
+                    IMAGE_INSPECT_RC="0" if present else "1",
+                )
+                result = self.run_runner()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                pulls = self.recorded_commands("pull")
+                needs_pull = bool(mirror and not present)
+                self.assertEqual(
+                    pulls,
+                    (
+                        [["pull", primary], ["pull", fallback]]
+                        if needs_pull
+                        else []
+                    ),
+                )
+                inspections = [
+                    c
+                    for c in self.recorded_commands()
+                    if c[:2] == ["image", "inspect"]
+                ]
+                self.assertEqual(len(inspections), bool(mirror))
+                if inspections:
+                    self.assertEqual(inspections[0][-1], primary)
+                run = self.recorded_commands("run")[0]
+                self.assertEqual(run[-1], fallback if needs_pull else primary)
+
+    def test_nmci_wrapper_preserves_container_command(self):
+        automation = self.directory / "automation"
+        automation.mkdir()
+        wrapper = automation / "run-tests-in-nmci.sh"
+        wrapper.write_text(
+            (ROOT / "automation/run-tests-in-nmci.sh").read_text()
+        )
+        self.write_recording_command(
+            automation / "run-tests.sh",
+            """
+            record_command([
+                os.environ["CONTAINER_CMD"], os.environ["CI"], *sys.argv[1:]
+            ])
+            """,
+        )
+        for command in (None, "env " + str(self.bin / "podman")):
+            with self.subTest(command=command):
+                self.reset_log()
+                self.env.pop("CONTAINER_CMD", None)
+                if command:
+                    self.env["CONTAINER_CMD"] = command
+                result = self.execute(
+                    ["bash", str(wrapper), "--el10"], self.directory
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(
+                    self.recorded_commands(),
+                    [
+                        [
+                            command or "podman",
+                            "true",
+                            "--test-type",
+                            "integ_tier1",
+                            "--nolog",
+                            "--el10",
+                        ]
+                    ],
+                )
 
     def ipsec_module(self, override=None):
         env = {} if override is None else {"NMSTATE_IPSEC_IMAGE": override}
@@ -394,6 +597,90 @@ class SourceTests(unittest.TestCase):
         for args, kwargs in module.exec_cmd.call_args_list:
             self.assertEqual(args, (["podman", "pull", INTERNAL_IMAGE],))
             self.assertEqual(kwargs, {"check": True})
+
+    def test_fixture_fallback_preserves_identity_and_resets_selection(self):
+        for suffix in (
+            "test-env:libreswan-srv-c10s",
+            "test-env@sha256:" + "c" * 64,
+        ):
+            with self.subTest(suffix=suffix):
+                primary = "quay.io/nmstate/" + suffix
+                fallback = MIRROR + "/" + suffix
+                module = self.ipsec_module(primary)
+
+                def pull(command, **kwargs):
+                    if command == ["podman", "pull", primary]:
+                        raise subprocess.SubprocessError("primary unavailable")
+                    return (0, "", "")
+
+                module.exec_cmd.side_effect = pull
+                with patch.dict(
+                    os.environ, {"NMSTATE_IMAGE_MIRROR": MIRROR + "/"}
+                ):
+                    module.IpsecTestEnv.prepare()
+                self.assertEqual(
+                    exec_commands(module),
+                    [
+                        ["podman", "pull", primary],
+                        ["podman", "pull", fallback],
+                    ],
+                )
+                module.exec_cmd.reset_mock()
+                module.start_ipsec_srv_container()
+                startup = module.exec_cmd.call_args_list[0][0][0]
+                self.assertEqual(startup[-1], fallback)
+                self.assertIn("--pull=never", startup)
+
+                module.exec_cmd.reset_mock()
+                module.exec_cmd.side_effect = None
+                with patch.dict(os.environ, {"NMSTATE_IMAGE_MIRROR": MIRROR}):
+                    module.IpsecTestEnv.prepare()
+                module.exec_cmd.assert_called_once_with(
+                    ["podman", "pull", primary], check=True
+                )
+                module.exec_cmd.reset_mock()
+                module.start_ipsec_srv_container()
+                self.assertEqual(
+                    module.exec_cmd.call_args_list[0][0][0][-1], primary
+                )
+
+    def test_fixture_exhausted_fallback_remains_nonfatal(self):
+        primary = "quay.io/nmstate/test-env:libreswan-srv-c10s"
+        fallback = MIRROR + "/test-env:libreswan-srv-c10s"
+        module = self.ipsec_module(primary)
+        module.exec_cmd.side_effect = subprocess.SubprocessError("unavailable")
+        with patch.dict(os.environ, {"NMSTATE_IMAGE_MIRROR": MIRROR}):
+            module.IpsecTestEnv.prepare()
+        self.assertEqual(
+            exec_commands(module),
+            [["podman", "pull", primary], ["podman", "pull", fallback]] * 5,
+        )
+        module.exec_cmd.reset_mock()
+        with self.assertRaises(subprocess.SubprocessError):
+            module.start_ipsec_srv_container()
+        self.assertEqual(module.exec_cmd.call_args[0][0][-1], primary)
+
+    def test_fixture_explicit_image_does_not_use_mirror(self):
+        module = self.ipsec_module(INTERNAL_IMAGE)
+        module.exec_cmd.side_effect = subprocess.SubprocessError("unavailable")
+        with patch.dict(os.environ, {"NMSTATE_IMAGE_MIRROR": MIRROR}):
+            module.IpsecTestEnv.prepare()
+        self.assertEqual(
+            exec_commands(module),
+            [["podman", "pull", INTERNAL_IMAGE]] * 5,
+        )
+
+    def test_fixture_upstream_mirror_is_not_retried(self):
+        module = self.ipsec_module()
+        module.exec_cmd.side_effect = subprocess.SubprocessError("unavailable")
+        with patch.dict(
+            os.environ, {"NMSTATE_IMAGE_MIRROR": "quay.io/nmstate"}
+        ):
+            module.IpsecTestEnv.prepare()
+        self.assertEqual(
+            exec_commands(module),
+            [["podman", "pull", module.SRV_CONTAINER_IMG]] * 5,
+        )
 
 
 if __name__ == "__main__":

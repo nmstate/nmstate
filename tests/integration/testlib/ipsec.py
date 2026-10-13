@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import glob
+import logging
 import os
 import time
 from subprocess import SubprocessError
@@ -52,6 +53,8 @@ class IpsecTestEnv:
         4. `IpsecTestEnv.cleanup()`
     """
 
+    container_image = SRV_CONTAINER_IMG
+
     SRV_ADDR_V4 = "192.0.2.1"
     CLI_ADDR_V4 = "192.0.2.2"
     SRV_ADDR_V6 = "2001:db8:a::1"
@@ -97,13 +100,26 @@ class IpsecTestEnv:
         """
         Pull the container image while its registry is reachable.
         """
-        i = 0
-        while i < 5:
-            try:
-                exec_cmd(["podman", "pull", SRV_CONTAINER_IMG], check=True)
-                break
-            except SubprocessError:
-                i += 1
+        IpsecTestEnv.container_image = SRV_CONTAINER_IMG
+        images = [SRV_CONTAINER_IMG]
+        mirror = os.environ.get("NMSTATE_IMAGE_MIRROR", "").rstrip("/")
+        prefix = "quay.io/nmstate/"
+        if (
+            mirror
+            and mirror != "quay.io/nmstate"
+            and SRV_CONTAINER_IMG.startswith(prefix)
+        ):
+            images.append(f"{mirror}/{SRV_CONTAINER_IMG[len(prefix):]}")
+        for _ in range(5):
+            for image in images:
+                try:
+                    exec_cmd(["podman", "pull", image], check=True)
+                except SubprocessError:
+                    continue
+                if image != SRV_CONTAINER_IMG:
+                    logging.info("Using mirror image %s", image)
+                IpsecTestEnv.container_image = image
+                return
 
     def setup():
         try:
@@ -340,7 +356,7 @@ def start_ipsec_srv_container():
         f"--name {SRV_CONTAINER_NAME} "
         "--hostname ipsec-srv.example.org "
         f"--network ns:/run/netns/{SRV_NAMESPACE}".split()
-        + [SRV_CONTAINER_IMG],
+        + [IpsecTestEnv.container_image],
         check=True,
     )
     exec_cmd(
