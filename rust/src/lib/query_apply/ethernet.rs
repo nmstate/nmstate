@@ -121,7 +121,7 @@ impl NetworkState {
         false
     }
 
-    fn has_missing_eth(&self, current: &Self) -> bool {
+    pub(crate) fn has_missing_eth(&self, current: &Self) -> bool {
         self.interfaces
             .kernel_ifaces
             .values()

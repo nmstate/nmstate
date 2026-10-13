@@ -303,8 +303,30 @@ impl NetworkState {
                     timeout,
                 )
                 .await?;
-                // Refresh current state
+                // Phase one wrote `total-vfs`, which creates the VFs. On some
+                // drivers (notably mlx5) the VF netdevs are created/renamed
+                // asynchronously and may not exist yet. The main apply below
+                // configures the VF interfaces and whatever is stacked on them
+                // (bonds/VLANs); if we build its merged state while a desired
+                // VF netdev is still missing, `process_veth_peer_changes()`
+                // hard-rejects it ("Ethernet interface <vf> does not exists"),
+                // a non-retryable error that unwinds the checkpoint and rolls
+                // `total-vfs` back to 0. Wait (bounded by the SR-IOV verify
+                // budget, extending the checkpoint each round) for the desired
+                // VF netdevs to appear before building the merged state.
                 cur_net_state.retrieve_async().await?;
+                let mut vf_wait = 0;
+                while self.has_missing_eth(&cur_net_state)
+                    && vf_wait < VERIFY_RETRY_COUNT_SRIOV_MAX
+                {
+                    nm_checkpoint_timeout_extend(&checkpoint, timeout).await?;
+                    tokio::time::sleep(std::time::Duration::from_millis(
+                        VERIFY_RETRY_INTERVAL_MILLISECONDS,
+                    ))
+                    .await;
+                    cur_net_state.retrieve_async().await?;
+                    vf_wait += 1;
+                }
                 merged_state = Some(MergedNetworkState::new(
                     self.clone(),
                     cur_net_state.clone(),
