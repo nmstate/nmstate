@@ -16,7 +16,8 @@ black \
     rust/src/python/setup.py \
     rust/src/python/libnmstate \
     tests/integration \
-    automation/test_container_sources.py
+    automation/test_container_sources.py \
+    automation/test_fixtures
 
 flake8 --version
 
@@ -25,7 +26,8 @@ flake8 \
     rust/src/python/setup.py \
     rust/src/python/libnmstate \
     tests/integration \
-    automation/test_container_sources.py
+    automation/test_container_sources.py \
+    automation/test_fixtures
 
 python3 -m unittest automation/test_container_sources.py
 

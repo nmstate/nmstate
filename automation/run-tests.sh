@@ -72,6 +72,7 @@ function print_help() {
     echo "  NMSTATE_SKIP_IMAGE_REBUILD=1  With CI=true, pull the selected image"
     echo "                           without checking Git"
     echo "  NMSTATE_IPSEC_IMAGE      Override the IPsec server image"
+    echo "  NMSTATE_IMAGE_MIRROR     Fallback registry/namespace for quay.io/nmstate images"
 }
 
 function pyclean {
