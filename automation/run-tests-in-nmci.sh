@@ -79,4 +79,4 @@ else
 fi
 
 cd $PROJECT_DIR
-env CONTAINER_CMD="podman" CI="true" $TEST_CMD $ARGS
+env CONTAINER_CMD="${CONTAINER_CMD:-podman}" CI="true" "$TEST_CMD" $ARGS
