@@ -255,26 +255,33 @@ def test_external_rules_unchanged_on_unsupported_nm(
         assert _kernel_rules(rule_family) == original_rules
 
 
+@pytest.mark.parametrize("priority", [RULE_PRIORITY, 0])
 def test_remove_exact_external_route_rule(
-    rule_family, nm_with_routing_rule_checkpoints
+    rule_family, priority, nm_with_routing_rule_checkpoints
 ):
     rules = [
         _rule(rule_family, 16),
         _rule(rule_family, 18),
         _rule(rule_family, 20, UNRELATED_RULE_TABLE),
     ]
+    for rule in rules:
+        rule["priority"] = priority
     desired = {"route-rules": {"config": [dict(rules[0], state="absent")]}}
     with _external_rules(rule_family, rules):
         _assert_kernel_rules(rule_family, rules)
         remaining_rules = [
             rule
-            for rule in _kernel_rules(rule_family)
-            if str(ip_network(rule["src"])) != rules[0]["ip-from"]
+            for rule in _kernel_rules(rule_family, include_defaults=True)
+            if rule["src"] == "all"
+            or str(ip_network(rule["src"])) != rules[0]["ip-from"]
         ]
         for _ in range(2):
             libnmstate.apply(desired)
             _assert_kernel_rules(rule_family, rules[1:])
-            assert _kernel_rules(rule_family) == remaining_rules
+            assert (
+                _kernel_rules(rule_family, include_defaults=True)
+                == remaining_rules
+            )
 
 
 def test_remove_zero_fwmark_external_route_rule(
@@ -310,6 +317,43 @@ def test_external_route_rules_preserve_tunnel_id(
         assert any(rule.get("tun_id") == 0x100000001 for rule in expected)
         with _external_rules(rule_family, [selected]):
             _assert_kernel_rules(rule_family, [survivor, selected])
+            for _ in range(2):
+                libnmstate.apply(desired)
+                assert (
+                    _kernel_rules(rule_family, include_defaults=True)
+                    == expected
+                )
+
+
+def test_external_route_rules_preserve_inverted_rule(
+    rule_family, nm_with_routing_rule_checkpoints
+):
+    selected = _rule(rule_family, 16)
+    survivor = _rule(rule_family, 18, UNRELATED_RULE_TABLE)
+    desired = {"route-rules": {"config": [dict(selected, state="absent")]}}
+    extra_args = [
+        "not",
+        "tun_id",
+        "0x100000001",
+        "ipproto",
+        "tcp",
+        "sport",
+        "1000-2000",
+        "dport",
+        "443",
+        "uidrange",
+        "1000-2000",
+    ]
+    with _external_rules(rule_family, [survivor], extra_args):
+        expected = _kernel_rules(rule_family, include_defaults=True)
+        inverted = next(rule for rule in expected if "not" in rule)
+        assert inverted["tun_id"] == 0x100000001
+        assert inverted["uid_start"] == 1000
+        assert inverted["uid_end"] == 2000
+        assert inverted["sport_start"] == 1000
+        assert inverted["sport_end"] == 2000
+        assert inverted["dport"] == 443
+        with _external_rules(rule_family, [selected]):
             for _ in range(2):
                 libnmstate.apply(desired)
                 assert (
