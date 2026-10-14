@@ -188,6 +188,17 @@ tar xf %{SOURCE3}
 %cargo_prep
 %endif
 
+%if 0%{?rhel} || %{is_snapshot}
+if [ -f vendor-config.toml ]; then
+    awk '
+        /^\[/ { source_section = ($0 ~ /^\[source(\.|\])/) }
+        !source_section { print }
+    ' .cargo/config.toml > .cargo/config.toml.new
+    cat vendor-config.toml >> .cargo/config.toml.new
+    mv .cargo/config.toml.new .cargo/config.toml
+fi
+%endif
+
 popd
 
 %build
