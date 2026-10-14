@@ -29,14 +29,55 @@ use crate::{
 
 /// The `current_state` is NetworkState retrieved by nispor, and will be used
 /// for matching NmConnection to real network interface.
+///
+/// When `iface_names` is set, only these NetworkManager devices are queried
+/// and DNS is not retrieved. Saved and active connections are still
+/// retrieved in full. If these devices cannot be reliably found by name,
+/// all devices are queried instead.
 pub(crate) async fn nm_retrieve(
     running_config_only: bool,
     current_state: &NetworkState,
+    iface_names: Option<&[String]>,
 ) -> Result<NetworkState, NmstateError> {
-    let mut net_state = NetworkState::new();
     let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
+    let mut iface_names = iface_names;
+    let (nm_dev_obj_paths, nm_devs) = loop {
+        let obj_paths = match iface_names {
+            Some(names) => nm_api
+                .device_obj_paths_get_by_ifaces(names)
+                .await
+                .map_err(nm_error_to_nmstate)?,
+            None => Some(
+                nm_api
+                    .device_obj_paths_get()
+                    .await
+                    .map_err(nm_error_to_nmstate)?,
+            ),
+        };
+        let Some(obj_paths) = obj_paths else {
+            iface_names = None;
+            continue;
+        };
+        let nm_devs = nm_api
+            .devices_get_by_obj_paths(&obj_paths)
+            .await
+            .map_err(nm_error_to_nmstate)?;
+        if let Some(names) = iface_names
+            && !nm_devs_match_iface_names(&nm_devs, names)
+        {
+            log::debug!(
+                "NetworkManager devices do not match interfaces {names:?}, \
+                 querying all devices"
+            );
+            iface_names = None;
+            continue;
+        }
+        break (obj_paths, nm_devs);
+    };
+
+    let mut net_state = NetworkState::new();
     let nm_applied_conns = nm_api
-        .applied_connections_get()
+        .applied_connections_get_by_obj_paths(&nm_dev_obj_paths)
         .await
         .map_err(nm_error_to_nmstate)?;
 
@@ -61,8 +102,6 @@ pub(crate) async fn nm_retrieve(
         )?
         .interfaces,
     );
-
-    let nm_devs = nm_api.devices_get().await.map_err(nm_error_to_nmstate)?;
 
     // Include disconnected interface as state:down
     // This is used for verify on `state: absent`
@@ -173,13 +212,15 @@ pub(crate) async fn nm_retrieve(
         }
     }
 
-    let mut dns_config =
-        retrieve_dns_state(&mut nm_api, &net_state.interfaces).await?;
-    dns_config.sanitize().ok();
-    if running_config_only {
-        dns_config.running = None;
+    if iface_names.is_none() {
+        let mut dns_config =
+            retrieve_dns_state(&mut nm_api, &net_state.interfaces).await?;
+        dns_config.sanitize().ok();
+        if running_config_only {
+            dns_config.running = None;
+        }
+        net_state.dns = Some(dns_config);
     }
-    net_state.dns = Some(dns_config);
 
     for (iface_name, conf) in get_dispatches().drain() {
         if let Some(iface) =
@@ -192,6 +233,18 @@ pub(crate) async fn nm_retrieve(
     merge_ovs_netdev_tun_iface(&mut net_state, &conn_matcher);
 
     Ok(net_state)
+}
+
+// Every requested interface must be resolved to a device with the same
+// interface name, otherwise the filtered query would differ from the full one.
+fn nm_devs_match_iface_names(
+    nm_devs: &[NmDevice],
+    iface_names: &[String],
+) -> bool {
+    nm_devs.len() == iface_names.len()
+        && iface_names
+            .iter()
+            .all(|name| nm_devs.iter().any(|dev| &dev.name == name))
 }
 
 fn fill_ip_settings(base_iface: &mut BaseInterface, nm_conn: &NmConnection) {

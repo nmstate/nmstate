@@ -17,7 +17,7 @@ use super::{
     dbus::NmDbus,
     device::{NmDevice, NmDeviceState, NmDeviceStateReason},
     dns::{NmDnsEntry, NmGlobalDnsConfig},
-    error::{ErrorKind, NmError},
+    error::{ErrorKind, NmError, NmManagerError},
     lldp::NmLldpNeighbor,
     query_apply::device::{
         nm_dev_delete, nm_dev_disconnect, nm_dev_from_obj_path, nm_dev_get_llpd,
@@ -185,12 +185,62 @@ impl NmApi<'_> {
         debug!("applied_connections_get");
         self.extend_timeout_if_required().await?;
         let nm_dev_obj_paths = self.dbus.nm_dev_obj_paths_get().await?;
+        self.applied_connections_get_by_obj_paths(&nm_dev_obj_paths)
+            .await
+    }
+
+    /// Get object paths of all NetworkManager devices.
+    pub(crate) async fn device_obj_paths_get(
+        &mut self,
+    ) -> Result<Vec<String>, NmError> {
+        debug!("device_obj_paths_get");
+        self.extend_timeout_if_required().await?;
+        self.dbus.nm_dev_obj_paths_get().await
+    }
+
+    /// Get object paths of NetworkManager devices for specified interface
+    /// names using `GetDeviceByIpIface`.
+    ///
+    /// Return `None` if NetworkManager has no device for any of the names,
+    /// because `GetDeviceByIpIface` matches the IP interface which might
+    /// differ from the device interface name (e.g. PPPoE), so the caller
+    /// should query all devices instead.
+    pub(crate) async fn device_obj_paths_get_by_ifaces(
+        &mut self,
+        iface_names: &[String],
+    ) -> Result<Option<Vec<String>>, NmError> {
+        debug!("device_obj_paths_get_by_ifaces {iface_names:?}");
+        let mut ret = Vec::new();
+        for iface_name in iface_names {
+            self.extend_timeout_if_required().await?;
+            match self.dbus.nm_dev_obj_path_get_by_iface(iface_name).await {
+                Ok(obj_path) => ret.push(obj_path),
+                Err(e)
+                    if e.kind
+                        == ErrorKind::Manager(
+                            NmManagerError::UnknownDevice,
+                        ) =>
+                {
+                    debug!("No NetworkManager device for {iface_name}: {e}");
+                    return Ok(None);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(Some(ret))
+    }
+
+    /// Get applied connections of specified NetworkManager devices.
+    pub(crate) async fn applied_connections_get_by_obj_paths(
+        &mut self,
+        nm_dev_obj_paths: &[String],
+    ) -> Result<Vec<NmConnection>, NmError> {
         let mut nm_conns: Vec<NmConnection> = Vec::new();
         for nm_dev_obj_path in nm_dev_obj_paths {
             self.extend_timeout_if_required().await?;
             match self
                 .dbus
-                .nm_dev_applied_connection_get(&nm_dev_obj_path)
+                .nm_dev_applied_connection_get(nm_dev_obj_path)
                 .await
             {
                 Ok(mut nm_conn) => {
@@ -203,7 +253,7 @@ impl NmApi<'_> {
                         && let (Ok(nm_dev), Some(nm_set)) = (
                             nm_dev_from_obj_path(
                                 &self.dbus.connection,
-                                &nm_dev_obj_path,
+                                nm_dev_obj_path,
                             )
                             .await,
                             nm_conn.connection.as_mut(),
@@ -307,8 +357,17 @@ impl NmApi<'_> {
     pub async fn devices_get(&mut self) -> Result<Vec<NmDevice>, NmError> {
         debug!("devices_get");
         self.extend_timeout_if_required().await?;
+        let nm_dev_obj_paths = self.dbus.nm_dev_obj_paths_get().await?;
+        self.devices_get_by_obj_paths(&nm_dev_obj_paths).await
+    }
+
+    /// Get specified NetworkManager devices.
+    pub(crate) async fn devices_get_by_obj_paths(
+        &mut self,
+        nm_dev_obj_paths: &[String],
+    ) -> Result<Vec<NmDevice>, NmError> {
         let mut ret = Vec::new();
-        for nm_dev_obj_path in &self.dbus.nm_dev_obj_paths_get().await? {
+        for nm_dev_obj_path in nm_dev_obj_paths {
             match nm_dev_from_obj_path(&self.dbus.connection, nm_dev_obj_path)
                 .await
             {

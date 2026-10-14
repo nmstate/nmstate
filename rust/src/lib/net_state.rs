@@ -126,6 +126,8 @@ pub struct NetworkState {
     pub(crate) memory_only: bool,
     #[serde(skip)]
     pub(crate) override_iface: bool,
+    #[serde(skip)]
+    pub(crate) iface_filter: Option<String>,
 }
 
 impl NetworkState {
@@ -204,6 +206,22 @@ impl NetworkState {
     /// * LLDP neighbor information.
     pub fn set_running_config_only(&mut self, value: bool) -> &mut Self {
         self.running_config_only = value;
+        self
+    }
+
+    /// Internal, used by nmstatectl, might change without notice.
+    ///
+    /// Hint for the next [NetworkState::retrieve()] that only the specified
+    /// interface will be used from the result, allowing it to skip querying
+    /// NetworkManager for unrelated interfaces and for DNS. Information of
+    /// other interfaces and DNS in that result is incomplete. The hint is
+    /// cleared by the retrieve.
+    #[doc(hidden)]
+    pub fn set_iface_filter(
+        &mut self,
+        iface_name: Option<String>,
+    ) -> &mut Self {
+        self.iface_filter = iface_name;
         self
     }
 

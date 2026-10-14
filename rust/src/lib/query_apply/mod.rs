@@ -9,6 +9,7 @@ mod ethernet;
 mod hostname;
 mod hsr;
 mod iface;
+pub(crate) mod iface_filter;
 mod infiniband;
 mod inter_ifaces;
 mod ip;

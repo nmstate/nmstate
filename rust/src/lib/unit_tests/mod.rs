@@ -24,6 +24,8 @@ mod gen_revert;
 mod hsr;
 #[cfg(test)]
 mod identifier;
+#[cfg(all(test, feature = "query_apply"))]
+mod iface_filter;
 #[cfg(test)]
 mod ifaces;
 #[cfg(test)]
