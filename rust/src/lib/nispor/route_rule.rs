@@ -67,7 +67,7 @@ pub(crate) fn get_route_rules(
         rule.ip_from.clone_from(&np_rule.src);
         rule.table_id = np_rule.table;
         rule.priority = np_rule.priority.map(i64::from);
-        rule.fwmark = np_rule.fw_mark;
+        rule.fwmark = np_rule.fw_mark.or(np_rule.fw_mask.map(|_| 0));
         rule.fwmask = np_rule.fw_mask;
         rule.suppress_prefix_length = np_rule.suppress_prefix_len;
         rule.family = match np_rule.address_family {
@@ -86,4 +86,24 @@ pub(crate) fn get_route_rules(
     ret.config = Some(rules);
 
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mask_only_rule_has_zero_fwmark() {
+        let mut np_rule = nispor::RouteRule::default();
+        np_rule.action = nispor::RuleAction::Table;
+        np_rule.address_family = nispor::AddressFamily::Ipv4;
+        np_rule.table = Some(500);
+        np_rule.fw_mask = Some(0xff);
+
+        let mut rule =
+            get_route_rules(&[np_rule], false).config.unwrap()[0].clone();
+        assert_eq!(rule.fwmark, Some(0));
+        assert_eq!(rule.fwmask, Some(0xff));
+        rule.sanitize().unwrap();
+    }
 }
