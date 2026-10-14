@@ -31,6 +31,24 @@ pub struct RouteRules {
     ///     - state: absent
     ///       route-table: 500
     /// ```
+    ///
+    /// Absent entries are applied before explicitly desired rules, regardless
+    /// of their order in `config`. A desired rule therefore takes precedence
+    /// over a matching absent entry. Assuming a route already uses table 500,
+    /// this replaces the rules stored in NetworkManager profiles for that
+    /// table with the two specified rules:
+    /// ```yml
+    /// route-rules:
+    ///   config:
+    ///     - ip-from: 192.0.2.16/32
+    ///       priority: 100
+    ///       route-table: 500
+    ///     - ip-from: 192.0.2.18/32
+    ///       priority: 100
+    ///       route-table: 500
+    ///     - route-table: 500
+    ///       state: absent
+    /// ```
     pub config: Option<Vec<RouteRuleEntry>>,
 }
 
