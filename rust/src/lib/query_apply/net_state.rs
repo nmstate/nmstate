@@ -106,8 +106,12 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub async fn retrieve_async(&mut self) -> Result<&mut Self, NmstateError> {
-        let state =
-            nispor_retrieve(self.running_config_only, self.kernel_only).await?;
+        let state = nispor_retrieve(
+            self.running_config_only,
+            self.kernel_only,
+            self.route_rules_for_apply,
+        )
+        .await?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;
@@ -220,6 +224,7 @@ impl NetworkState {
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
+        cur_net_state.route_rules_for_apply = true;
         if let Err(e) = cur_net_state.retrieve_async().await {
             if e.kind().can_retry() {
                 log::info!("Retrying on: {e}");

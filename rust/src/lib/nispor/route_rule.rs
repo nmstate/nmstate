@@ -34,14 +34,7 @@ pub(crate) fn kernel_rule_is_absent(
     rule: &nispor::RouteRule,
     merged_rules: &MergedRouteRules,
 ) -> bool {
-    // nmstate cannot express inverted selectors, so an absent entry must not
-    // match the negation of what it names.
-    if rule.flags.contains(&nispor::RouteRuleFlag::Invert) {
-        return false;
-    }
-    // Rules from DHCP, RA or routing daemons belong to their owners, which
-    // would re-add them; only statically configured rules are deleted.
-    let rules = get_route_rules(std::slice::from_ref(rule), true);
+    let rules = get_route_rules_for_apply(std::slice::from_ref(rule));
     rules.config.unwrap_or_default().iter().any(|current| {
         if current
             .iif
@@ -81,6 +74,26 @@ const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 8] = [
 
 pub(crate) fn get_route_rules(
     np_rules: &[nispor::RouteRule],
+    running_config_only: bool,
+) -> RouteRules {
+    get_route_rules_from_iter(np_rules.iter(), running_config_only)
+}
+
+pub(crate) fn get_route_rules_for_apply(
+    np_rules: &[nispor::RouteRule],
+) -> RouteRules {
+    // Dynamic rules belong to their owners, and nmstate cannot express
+    // inverted selectors. Neither should enter absent-rule verification.
+    get_route_rules_from_iter(
+        np_rules.iter().filter(|rule| {
+            !rule.flags.contains(&nispor::RouteRuleFlag::Invert)
+        }),
+        true,
+    )
+}
+
+fn get_route_rules_from_iter<'a>(
+    np_rules: impl Iterator<Item = &'a nispor::RouteRule>,
     running_config_only: bool,
 ) -> RouteRules {
     let mut ret = RouteRules::new();
