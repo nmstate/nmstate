@@ -235,6 +235,52 @@ def test_remove_external_route_rules(
             _assert_kernel_rules(rule_family, [rules[2]])
 
 
+def test_external_route_rules_preserve_dynamic_protocols(
+    rule_family, nm_with_routing_rule_checkpoints
+):
+    protocols = [
+        "boot",
+        "static",
+        "unspec",
+        "dhcp",
+        "ra",
+        "keepalived",
+        "babel",
+        "17",
+        "bgp",
+    ]
+    rules = [_rule(rule_family, host) for host in range(16, 25)]
+    desired = {
+        "route-rules": {
+            "config": [{"route-table": EXTERNAL_RULE_TABLE, "state": "absent"}]
+        }
+    }
+    try:
+        for rule, protocol in zip(rules, protocols):
+            exec_cmd(
+                _ip_rule_command(rule_family, "add", rule)
+                + ["protocol", protocol],
+                check=True,
+            )
+        original = _kernel_rules(rule_family, include_defaults=True)
+        expected = [
+            rule
+            for rule in original
+            if str(rule.get("table")) != str(EXTERNAL_RULE_TABLE)
+            or rule.get("protocol", "unspec") not in protocols[:3]
+        ]
+        assert len(original) - len(expected) == 3
+        assert len(_kernel_rules(rule_family)) == len(protocols)
+        for _ in range(2):
+            libnmstate.apply(desired)
+            assert (
+                _kernel_rules(rule_family, include_defaults=True) == expected
+            )
+    finally:
+        for rule in rules:
+            exec_cmd(_ip_rule_command(rule_family, "del", rule))
+
+
 def test_external_rules_unchanged_on_unsupported_nm(
     rule_family, nm_without_routing_rule_checkpoints
 ):
@@ -329,8 +375,12 @@ def test_external_route_rules_preserve_inverted_rule(
     rule_family, nm_with_routing_rule_checkpoints
 ):
     selected = _rule(rule_family, 16)
-    survivor = _rule(rule_family, 18, UNRELATED_RULE_TABLE)
-    desired = {"route-rules": {"config": [dict(selected, state="absent")]}}
+    survivor = _rule(rule_family, 18)
+    desired = {
+        "route-rules": {
+            "config": [{"route-table": EXTERNAL_RULE_TABLE, "state": "absent"}]
+        }
+    }
     extra_args = [
         "not",
         "tun_id",
