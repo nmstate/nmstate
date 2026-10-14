@@ -29,6 +29,9 @@ mod vxlan;
 
 pub(crate) use apply::nispor_apply;
 pub(crate) use hostname::set_running_hostname;
+#[cfg(test)]
+pub(crate) use route_rule::kernel_rule_is_absent;
+pub(crate) use route_rule::remove_kernel_route_rules;
 pub(crate) use show::nispor_retrieve;
 
 pub(crate) use self::alt_name::{

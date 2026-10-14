@@ -49,6 +49,12 @@ pub struct RouteRules {
     ///     - route-table: 500
     ///       state: absent
     /// ```
+    ///
+    /// Statically configured rules added outside NetworkManager are deleted
+    /// too when NetworkManager checkpoints can track routing rules and
+    /// nmstate has CAP_NET_ADMIN. Otherwise, only rules stored in
+    /// NetworkManager profiles are deleted. Rules changed by other tools
+    /// during apply are not covered by the checkpoint.
     pub config: Option<Vec<RouteRuleEntry>>,
 }
 
@@ -527,6 +533,7 @@ pub(crate) struct MergedRouteRules {
     // The `for_verify` hold the same data as `for_apply` except the
     // auto set priority.
     pub(crate) for_verify: Vec<RouteRuleEntry>,
+    pub(crate) ignored_ifaces: Vec<String>,
 }
 
 impl MergedRouteRules {
@@ -583,6 +590,7 @@ impl MergedRouteRules {
             current,
             for_apply,
             for_verify,
+            ignored_ifaces: Vec::new(),
         })
     }
 
@@ -590,15 +598,15 @@ impl MergedRouteRules {
         &mut self,
         ignored_ifaces: &[(String, InterfaceType)],
     ) {
-        let ignored_ifaces: Vec<&str> = ignored_ifaces
+        self.ignored_ifaces = ignored_ifaces
             .iter()
             .filter(|(_, t)| !t.is_userspace())
-            .map(|(n, _)| n.as_str())
+            .map(|(n, _)| n.clone())
             .collect();
 
         self.for_apply.retain(|rule| {
             if let Some(iif) = rule.iif.as_ref() {
-                !ignored_ifaces.contains(&iif.as_str())
+                !self.ignored_ifaces.contains(iif)
             } else {
                 true
             }

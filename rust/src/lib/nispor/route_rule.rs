@@ -2,7 +2,62 @@
 
 use log::warn;
 
-use crate::{AddressFamily, RouteRuleAction, RouteRuleEntry, RouteRules};
+use crate::{
+    AddressFamily, ErrorKind, MergedRouteRules, NmstateError, RouteRuleAction,
+    RouteRuleEntry, RouteRules,
+};
+
+// The caller must hold a NetworkManager checkpoint that snapshots kernel rules.
+pub(crate) async fn remove_kernel_route_rules(
+    merged_rules: &MergedRouteRules,
+) -> Result<(), NmstateError> {
+    match nispor::remove_route_rules(|rule| {
+        kernel_rule_is_absent(rule, merged_rules)
+    })
+    .await
+    {
+        Ok(()) => Ok(()),
+        Err(nispor::RouteRuleRemoveError::PermissionDeniedBeforeChange(e)) => {
+            warn!(
+                "Cannot delete kernel route rules directly: {e}; applying \
+                 NetworkManager profile rules only"
+            );
+            Ok(())
+        }
+        Err(e) => {
+            Err(NmstateError::new(ErrorKind::PluginFailure, e.to_string()))
+        }
+    }
+}
+
+pub(crate) fn kernel_rule_is_absent(
+    rule: &nispor::RouteRule,
+    merged_rules: &MergedRouteRules,
+) -> bool {
+    // nmstate cannot express inverted selectors, so an absent entry must not
+    // match the negation of what it names.
+    if rule.flags.contains(&nispor::RouteRuleFlag::Invert) {
+        return false;
+    }
+    // Rules from DHCP, RA or routing daemons belong to their owners, which
+    // would re-add them; only statically configured rules are deleted.
+    let rules = get_route_rules(std::slice::from_ref(rule), true);
+    rules.config.unwrap_or_default().iter().any(|current| {
+        if current
+            .iif
+            .as_ref()
+            .is_some_and(|name| merged_rules.ignored_ifaces.contains(name))
+        {
+            return false;
+        }
+        merged_rules
+            .desired
+            .config
+            .iter()
+            .flatten()
+            .any(|rule| rule.is_absent() && rule.is_match(current))
+    })
+}
 
 // Due to a bug in NetworkManager all route rules added using NetworkManager are
 // using RTM_PROTOCOL Unspec. Therefore, we need to support it until it is
