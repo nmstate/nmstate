@@ -234,9 +234,8 @@ impl NmDbus<'_> {
             &[DNS]
         };
 
-        // Probe flags to support backports. Errors are not inspected: NM
-        // reports unsupported flags and checkpoint conflicts alike as
-        // InvalidArguments, and the final attempt surfaces real failures.
+        // Probe flags for backports: NM reports both unsupported flags and
+        // checkpoint conflicts as InvalidArguments.
         for &flags in optional_flags {
             if let Ok(checkpoint) = self
                 ._checkpoint_create(timeout, default_flags | flags)

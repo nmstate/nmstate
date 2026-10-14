@@ -361,9 +361,7 @@ impl NetworkState {
         timeout: u32,
         track_route_rules: bool,
     ) -> Result<(), NmstateError> {
-        // Outside the retry loop: a failed removal may leave the rules
-        // partially changed, so the checkpoint rollback must restore them
-        // rather than a retry selecting from that state.
+        // Roll back partial rule removals instead of retrying from that state.
         if track_route_rules {
             with_checkpoint_refresh(
                 remove_kernel_route_rules(&merged_state.rules),
