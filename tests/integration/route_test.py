@@ -1222,6 +1222,73 @@ def test_remove_route_rule_with_wildcard(route_rule_test_env):
     assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
 
 
+@pytest.mark.tier1
+@pytest.mark.parametrize(
+    "family, sources, table_id, other_table_id",
+    [
+        (
+            RouteRule.FAMILY_IPV4,
+            [
+                "192.0.2.16/32",
+                "192.0.2.18/32",
+                "192.0.2.20/32",
+                "192.0.2.22/32",
+            ],
+            IPV4_ROUTE_TABLE_ID1,
+            IPV4_ROUTE_TABLE_ID2,
+        ),
+        (
+            RouteRule.FAMILY_IPV6,
+            [
+                "2001:db8:1::16/128",
+                "2001:db8:1::18/128",
+                "2001:db8:1::20/128",
+                "2001:db8:1::22/128",
+            ],
+            IPV6_ROUTE_TABLE_ID1,
+            IPV6_ROUTE_TABLE_ID2,
+        ),
+    ],
+    ids=["ipv4", "ipv6"],
+)
+def test_route_rule_wildcard_absent_with_present(
+    route_rule_test_env, family, sources, table_id, other_table_id
+):
+    kept, added, stale, unrelated = [
+        {
+            RouteRule.FAMILY: family,
+            RouteRule.IP_FROM: source,
+            RouteRule.PRIORITY: 100,
+            RouteRule.ROUTE_TABLE: rule_table,
+        }
+        for source, rule_table in zip(
+            sources, (table_id, table_id, table_id, other_table_id)
+        )
+    ]
+    state = route_rule_test_env
+    state[RouteRule.KEY] = {RouteRule.CONFIG: [kept, stale, unrelated]}
+    libnmstate.apply(state)
+    state[RouteRule.KEY] = {
+        RouteRule.CONFIG: [
+            kept,
+            added,
+            {
+                RouteRule.ROUTE_TABLE: table_id,
+                RouteRule.STATE: RouteRule.STATE_ABSENT,
+            },
+        ]
+    }
+    expected_rules = [kept, added, unrelated]
+
+    for _ in range(2):
+        libnmstate.apply(state)
+        _check_ip_rules(expected_rules)
+        current_rules = libnmstate.show()[RouteRule.KEY][RouteRule.CONFIG]
+        assert sorted(
+            current_rules, key=lambda rule: rule[RouteRule.IP_FROM]
+        ) == sorted(expected_rules, key=lambda rule: rule[RouteRule.IP_FROM])
+
+
 def test_route_rule_remove_specific_rule(route_rule_test_env):
     state = route_rule_test_env
     rules = [

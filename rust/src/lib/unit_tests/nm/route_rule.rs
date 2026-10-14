@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    Interface, InterfaceType, Interfaces, MergedNetworkState, NetworkState,
-    RouteRuleEntry,
+    AddressFamily, Interface, InterfaceType, Interfaces, MergedNetworkState,
+    NetworkState, RouteRuleEntry, RouteRuleState,
     nm::route_rule::store_route_rule_config,
     unit_tests::testlib::{
         TEST_NIC, TEST_RULE_IPV4_FROM, TEST_RULE_IPV4_TO, TEST_RULE_IPV6_FROM,
@@ -401,6 +401,98 @@ fn test_route_rule_add_twice() {
     let ipv4_rules = get_routing_rules(iface, false);
 
     assert_eq!(ipv4_rules, expected_rules);
+}
+
+#[test]
+fn test_route_rule_replace_with_wildcard_ipv4() {
+    assert_route_rule_replace_with_wildcard(false);
+}
+
+#[test]
+fn test_route_rule_replace_with_wildcard_ipv6() {
+    assert_route_rule_replace_with_wildcard(true);
+}
+
+fn assert_route_rule_replace_with_wildcard(ipv6: bool) {
+    let (family, sources) = if ipv6 {
+        (
+            AddressFamily::IPv6,
+            [
+                "2001:db8::16/128",
+                "2001:db8::18/128",
+                "2001:db8::17/128",
+                "2001:db8::20/128",
+            ],
+        )
+    } else {
+        (
+            AddressFamily::IPv4,
+            [
+                "192.0.2.16/32",
+                "192.0.2.18/32",
+                "192.0.2.17/32",
+                "192.0.2.20/32",
+            ],
+        )
+    };
+    let rules: Vec<RouteRuleEntry> = sources
+        .iter()
+        .enumerate()
+        .map(|(index, source)| RouteRuleEntry {
+            family: Some(family),
+            ip_from: Some(source.to_string()),
+            priority: Some(100),
+            table_id: Some(if index == 3 { 20 } else { 10 }),
+            ..Default::default()
+        })
+        .collect();
+    let initial_rules =
+        vec![rules[0].clone(), rules[2].clone(), rules[3].clone()];
+    let mut expected_rules =
+        vec![rules[0].clone(), rules[1].clone(), rules[3].clone()];
+    expected_rules.sort();
+
+    let mut current = NetworkState::new();
+    current.rules.config = Some(initial_rules.clone());
+    let mut iface = new_test_nic_with_static_ip();
+    let ip_rules = Some(initial_rules.iter().cloned().collect());
+    if ipv6 {
+        iface.base_iface_mut().ipv6.as_mut().unwrap().rules = ip_rules;
+    } else {
+        iface.base_iface_mut().ipv4.as_mut().unwrap().rules = ip_rules;
+    }
+    current.interfaces.push(iface);
+
+    let mut desired = NetworkState::new();
+    desired.interfaces.push(new_eth_iface(TEST_NIC));
+    desired.rules.config = Some(vec![
+        rules[0].clone(),
+        rules[1].clone(),
+        RouteRuleEntry {
+            table_id: Some(10),
+            state: Some(RouteRuleState::Absent),
+            ..Default::default()
+        },
+    ]);
+
+    for _ in 0..2 {
+        let mut merged_state = MergedNetworkState::new(
+            desired.clone(),
+            current,
+            Default::default(),
+            false,
+        )
+        .unwrap();
+        store_route_rule_config(&mut merged_state).unwrap();
+
+        let iface = get_iface(&merged_state, TEST_NIC, InterfaceType::Ethernet);
+        let applied_rules = get_routing_rules(iface, ipv6);
+        assert_eq!(applied_rules, expected_rules);
+
+        current = NetworkState::new();
+        current.interfaces.push(iface.clone());
+        current.rules.config = Some(applied_rules);
+    }
 }
 
 #[test]
