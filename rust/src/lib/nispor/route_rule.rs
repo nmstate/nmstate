@@ -2,7 +2,55 @@
 
 use log::warn;
 
-use crate::{AddressFamily, RouteRuleAction, RouteRuleEntry, RouteRules};
+use crate::{
+    AddressFamily, ErrorKind, MergedRouteRules, NmstateError, RouteRuleAction,
+    RouteRuleEntry, RouteRules,
+};
+
+// The caller must hold a NetworkManager checkpoint that snapshots kernel rules.
+pub(crate) async fn remove_kernel_route_rules(
+    merged_rules: &MergedRouteRules,
+) -> Result<(), NmstateError> {
+    match nispor::remove_route_rules(|rule| {
+        kernel_rule_is_absent(rule, merged_rules)
+    })
+    .await
+    {
+        Ok(()) => Ok(()),
+        Err(nispor::RouteRuleRemoveError::PermissionDeniedBeforeChange(e)) => {
+            warn!(
+                "Cannot delete kernel route rules directly: {e}; applying \
+                 NetworkManager profile rules only"
+            );
+            Ok(())
+        }
+        Err(e) => {
+            Err(NmstateError::new(ErrorKind::PluginFailure, e.to_string()))
+        }
+    }
+}
+
+pub(crate) fn kernel_rule_is_absent(
+    rule: &nispor::RouteRule,
+    merged_rules: &MergedRouteRules,
+) -> bool {
+    let rules = get_route_rules_for_apply(std::slice::from_ref(rule));
+    rules.config.unwrap_or_default().iter().any(|current| {
+        if current
+            .iif
+            .as_ref()
+            .is_some_and(|name| merged_rules.ignored_ifaces.contains(name))
+        {
+            return false;
+        }
+        merged_rules
+            .desired
+            .config
+            .iter()
+            .flatten()
+            .any(|rule| rule.is_absent() && rule.is_match(current))
+    })
+}
 
 // Due to a bug in NetworkManager all route rules added using NetworkManager are
 // using RTM_PROTOCOL Unspec. Therefore, we need to support it until it is
@@ -26,6 +74,26 @@ const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 8] = [
 
 pub(crate) fn get_route_rules(
     np_rules: &[nispor::RouteRule],
+    running_config_only: bool,
+) -> RouteRules {
+    get_route_rules_from_iter(np_rules.iter(), running_config_only)
+}
+
+pub(crate) fn get_route_rules_for_apply(
+    np_rules: &[nispor::RouteRule],
+) -> RouteRules {
+    // Dynamic rules belong to their owners, and nmstate cannot express
+    // inverted selectors. Neither should enter absent-rule verification.
+    get_route_rules_from_iter(
+        np_rules.iter().filter(|rule| {
+            !rule.flags.contains(&nispor::RouteRuleFlag::Invert)
+        }),
+        true,
+    )
+}
+
+fn get_route_rules_from_iter<'a>(
+    np_rules: impl Iterator<Item = &'a nispor::RouteRule>,
     running_config_only: bool,
 ) -> RouteRules {
     let mut ret = RouteRules::new();
@@ -67,7 +135,7 @@ pub(crate) fn get_route_rules(
         rule.ip_from.clone_from(&np_rule.src);
         rule.table_id = np_rule.table;
         rule.priority = np_rule.priority.map(i64::from);
-        rule.fwmark = np_rule.fw_mark;
+        rule.fwmark = np_rule.fw_mark.or(np_rule.fw_mask.map(|_| 0));
         rule.fwmask = np_rule.fw_mask;
         rule.suppress_prefix_length = np_rule.suppress_prefix_len;
         rule.family = match np_rule.address_family {
@@ -86,4 +154,24 @@ pub(crate) fn get_route_rules(
     ret.config = Some(rules);
 
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mask_only_rule_has_zero_fwmark() {
+        let mut np_rule = nispor::RouteRule::default();
+        np_rule.action = nispor::RuleAction::Table;
+        np_rule.address_family = nispor::AddressFamily::Ipv4;
+        np_rule.table = Some(500);
+        np_rule.fw_mask = Some(0xff);
+
+        let mut rule =
+            get_route_rules(&[np_rule], false).config.unwrap()[0].clone();
+        assert_eq!(rule.fwmark, Some(0));
+        assert_eq!(rule.fwmask, Some(0xff));
+        rule.sanitize().unwrap();
+    }
 }

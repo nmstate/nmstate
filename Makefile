@@ -140,21 +140,18 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	cp $(SPEC_FILE) $(TMPDIR)/nmstate-$(VERSION)/packaging/
 	cp $(CLIB_HEADER) $(TMPDIR)/nmstate-$(VERSION)/rust/src/clib/
 	cp $(SYSTEMD_SERVICE_FILE) $(TMPDIR)/nmstate-$(VERSION)/
-	cd $(TMPDIR) && tar cfz $(TARBALL) nmstate-$(VERSION)/
-	mv $(TMPDIR)/$(TARBALL) ./
-	if [ $(RELEASE) == 1 ];then \
-		cd rust; \
-		cargo vendor-filterer $(TMPDIR)/vendor || \
-		(echo -en "\nNot cargo-vendor-filterer, Please install via "; \
-		 echo -e "'cargo install cargo-vendor-filterer'\n";); \
-		cd $(TMPDIR); \
-		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
+	cd $(TMPDIR)/nmstate-$(VERSION)/rust && \
+	if [ $(RELEASE) = 1 ]; then \
+		cargo vendor-filterer vendor > vendor-config.toml; \
 	else \
-		cd rust; \
-		cargo vendor $(TMPDIR)/vendor; \
-		cd $(TMPDIR); \
-		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
+		cargo vendor vendor > vendor-config.toml; \
 	fi
+	mv $(TMPDIR)/nmstate-$(VERSION)/rust/vendor $(TMPDIR)/vendor
+	cp $(TMPDIR)/nmstate-$(VERSION)/rust/Cargo.lock $(TMPDIR)/
+	cp $(TMPDIR)/nmstate-$(VERSION)/rust/vendor-config.toml $(TMPDIR)/
+	cd $(TMPDIR) && tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) \
+		vendor Cargo.lock vendor-config.toml
+	cd $(TMPDIR) && tar cfz $(ROOT_DIR)/$(TARBALL) nmstate-$(VERSION)/
 	rm -rf $(TMPDIR)
 	echo $(TARBALL)
 

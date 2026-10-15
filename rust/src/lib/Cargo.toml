@@ -22,6 +22,10 @@ serde_yaml = { workspace = true }
 workspace = true
 optional = true
 
+[dependencies.futures-util]
+workspace = true
+optional = true
+
 [dependencies.zvariant]
 workspace = true
 
@@ -56,6 +60,6 @@ serde_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
-query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio"]
+query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio", "dep:futures-util"]
 gen_conf = []
 gen_revert = []

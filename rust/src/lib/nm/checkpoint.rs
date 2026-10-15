@@ -12,10 +12,11 @@ pub(crate) const CHECKPOINT_ROLLBACK_TIMEOUT: u32 = 60;
 
 pub(crate) async fn nm_checkpoint_create(
     timeout: u32,
-) -> Result<String, NmstateError> {
+    track_route_rules: bool,
+) -> Result<(String, bool), NmstateError> {
     let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
     nm_api
-        .checkpoint_create(timeout)
+        .checkpoint_create(timeout, track_route_rules)
         .await
         .map_err(nm_error_to_nmstate)
 }

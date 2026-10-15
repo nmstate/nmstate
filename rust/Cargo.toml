@@ -16,7 +16,8 @@ serde_yaml = "0.9"
 serde = {version = "1.0.137", default-features = false, features = ["derive"]}
 serde_json = { version = "1.0.75", default-features = false }
 nmstate = { path = "src/lib", version = "2.2", default-features = false }
-nispor = "2.0.3"
+nispor = "2.0.4"
+futures-util = "0.3"
 uuid = { version = ">=1.1, <1.27", default-features = false, features = ["v4"] }
 nix = { version = "0.31", default-features = false, features = ["feature", "hostname"] }
 zbus = { version = "5.1.0", default-features = false, features = ["tokio"] }
@@ -33,3 +34,7 @@ tokio = { version = "1.30", features = ["rt", "net", "time"] }
 platforms = ["*-unknown-linux-gnu"]
 tier = "2"
 all-features = true
+
+[patch.crates-io]
+nispor = { git = "https://github.com/pfeifferj/nispor", rev = "96f674a6de8ea096276fdfdd2a6fcaabd1b05dff" }
+netlink-packet-route = { git = "https://github.com/pfeifferj/netlink-packet-route", rev = "27d7a2be693cdbacaf2f856ee1fdbd6feea09a68" }

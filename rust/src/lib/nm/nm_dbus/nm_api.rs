@@ -79,14 +79,18 @@ impl NmApi<'_> {
     pub async fn checkpoint_create(
         &mut self,
         timeout: u32,
-    ) -> Result<String, NmError> {
+        track_route_rules: bool,
+    ) -> Result<(String, bool), NmError> {
         debug!("checkpoint_create");
-        let cp = self.dbus.checkpoint_create(timeout).await?;
+        let (cp, track_route_rules) = self
+            .dbus
+            .checkpoint_create(timeout, track_route_rules)
+            .await?;
         debug!("checkpoint created: {}", cp);
         self.checkpoint = Some(cp.clone());
         self.cp_refresh_time = Some(std::time::Instant::now());
         self.cp_timeout = timeout;
-        Ok(cp)
+        Ok((cp, track_route_rules))
     }
 
     pub async fn checkpoint_destroy(

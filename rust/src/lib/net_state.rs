@@ -123,6 +123,8 @@ pub struct NetworkState {
     #[serde(skip)]
     pub(crate) running_config_only: bool,
     #[serde(skip)]
+    pub(crate) route_rules_for_apply: bool,
+    #[serde(skip)]
     pub(crate) memory_only: bool,
     #[serde(skip)]
     pub(crate) override_iface: bool,

@@ -13,6 +13,7 @@ use super::{
 const NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS: u32 = 0x02;
 const NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES: u32 = 0x04;
 const NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS: u32 = 0x20;
+const NM_CHECKPOINT_CREATE_FLAG_TRACK_ROUTING_RULES: u32 = 0x40;
 
 const OBJ_PATH_NULL_STR: &str = "/";
 
@@ -221,27 +222,31 @@ impl NmDbus<'_> {
     pub(crate) async fn checkpoint_create(
         &self,
         timeout: u32,
-    ) -> Result<String, NmError> {
+        track_route_rules: bool,
+    ) -> Result<(String, bool), NmError> {
         let default_flags = NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
             | NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES;
-        match self
-            ._checkpoint_create(
-                timeout,
-                default_flags
-                    | NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS,
-            )
-            .await
-        {
-            Ok(s) => Ok(s),
-            Err(_) => {
-                // The NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS is
-                // supported by NM 1.47+ and might be backported to other
-                // versions. There is no way to know whether it is supported or
-                // not by checking the NM version. Hence we try to create
-                // the checkpoint without this flag on second try.
-                self._checkpoint_create(timeout, default_flags).await
+        const RULES: u32 = NM_CHECKPOINT_CREATE_FLAG_TRACK_ROUTING_RULES;
+        const DNS: u32 = NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS;
+        let optional_flags: &[u32] = if track_route_rules {
+            &[RULES | DNS, RULES, DNS]
+        } else {
+            &[DNS]
+        };
+
+        // Probe flags for backports: NM reports both unsupported flags and
+        // checkpoint conflicts as InvalidArguments.
+        for &flags in optional_flags {
+            if let Ok(checkpoint) = self
+                ._checkpoint_create(timeout, default_flags | flags)
+                .await
+            {
+                return Ok((checkpoint, flags & RULES != 0));
             }
         }
+        self._checkpoint_create(timeout, default_flags)
+            .await
+            .map(|checkpoint| (checkpoint, false))
     }
 
     pub(crate) async fn checkpoint_destroy(
