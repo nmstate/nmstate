@@ -150,9 +150,8 @@ impl NmApi<'_> {
     ) -> Result<(), NmError> {
         debug!("connection_deactivate: {uuid}");
         self.extend_timeout_if_required().await?;
-        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid).await
-            && !nm_ac.is_empty()
-        {
+        let nm_ac = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid).await?;
+        if !nm_ac.is_empty() {
             self.dbus.connection_deactivate(&nm_ac).await?;
         }
         Ok(())
@@ -601,9 +600,26 @@ async fn get_nm_ac_obj_path_by_uuid(
     let nm_ac_obj_paths = dbus.active_connections().await?;
 
     for nm_ac_obj_path in nm_ac_obj_paths {
-        if nm_ac_obj_path_uuid_get(&dbus.connection, &nm_ac_obj_path).await?
-            == uuid
-        {
+        let ac_uuid =
+            match nm_ac_obj_path_uuid_get(&dbus.connection, &nm_ac_obj_path)
+                .await
+            {
+                Ok(ac_uuid) => ac_uuid,
+                Err(e) => {
+                    // Earlier deactivation requests can remove an active
+                    // connection after the list was retrieved. Ignore the UUID
+                    // read failure only if the connection is no longer listed.
+                    if dbus
+                        .active_connections()
+                        .await?
+                        .contains(&nm_ac_obj_path)
+                    {
+                        return Err(e);
+                    }
+                    continue;
+                }
+            };
+        if ac_uuid == uuid {
             return Ok(nm_ac_obj_path);
         }
     }
