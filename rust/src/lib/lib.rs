@@ -123,6 +123,8 @@ mod unit_tests;
 mod validate;
 
 #[cfg(feature = "query_apply")]
+pub(crate) use crate::ifaces::parse_sriov_vf_naming;
+#[cfg(feature = "query_apply")]
 pub use crate::policy::{
     NetworkCaptureRules, NetworkPolicy, NetworkStateTemplate,
 };
