@@ -71,6 +71,31 @@ To specify a different container image for the tests, specify it with the
 
 `CONTAINER_IMAGE=local/c8s-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
+`CONTAINER_IMAGE` overrides OS options such as `--el9`. `NMSTATE_IPSEC_IMAGE`
+sets the IPsec server image. Both accept tags or digests.
+
+With `CI=true`, set `NMSTATE_SKIP_IMAGE_REBUILD=1` to pull a prebuilt image
+without the Git check or rebuild. Otherwise, setup compares `packaging/`
+against `BRANCH_NAME` in `NMSTATE_REPO` (defaults: `base` and
+`https://github.com/nmstate/nmstate.git`) and rebuilds the image when it
+differs. Only `quay.io/nmstate/` images without a digest can be rebuilt; for
+any other `CONTAINER_IMAGE`, a `packaging/` difference fails setup unless
+`NMSTATE_SKIP_IMAGE_REBUILD=1` is set.
+
+Set `NMSTATE_IMAGE_MIRROR` to retry failed `quay.io/nmstate/` pulls through
+another registry namespace, keeping the tag or digest. This applies to both
+the test image and the IPsec image:
+
+```shell
+CI=true NMSTATE_SKIP_IMAGE_REBUILD=1 \
+    NMSTATE_IMAGE_MIRROR=registry.example.org/mirror \
+    ./automation/run-tests.sh --el9 --test-type integ_tier1
+```
+
+Private registries need network access, CA trust and credentials on the host
+and inside the test container. Package and source downloads still use their
+configured repositories.
+
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
 option, for example:

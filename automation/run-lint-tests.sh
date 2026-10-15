@@ -15,7 +15,8 @@ black \
     --diff \
     rust/src/python/setup.py \
     rust/src/python/libnmstate \
-    tests/integration
+    tests/integration \
+    automation/test_container_sources.py
 
 flake8 --version
 
@@ -23,7 +24,10 @@ flake8 \
     --statistics \
     rust/src/python/setup.py \
     rust/src/python/libnmstate \
-    tests/integration
+    tests/integration \
+    automation/test_container_sources.py
+
+python3 -m unittest automation/test_container_sources.py
 
 yamllint --version
 
