@@ -234,7 +234,16 @@ impl NetworkState {
         // hence when user want `enable-and-use` single-transaction for SR-IOV,
         // they need define the interface type. It is overkill to do resolve at
         // this point for this corner use case.
-        let pf_state = if self.has_sriov_and_missing_eth(&cur_net_state) {
+        // Trigger the SR-IOV PF-first pre-apply either when a (future) VF
+        // interface is referenced (`has_sriov_and_missing_eth`) or when a PF
+        // simply requests more VFs than currently exist
+        // (`has_sriov_vf_count_increase`). The latter covers PF-only desired
+        // states (`total-vfs` + `vfs[]`, no VF interface referenced), which
+        // otherwise skip VF creation and fail applying per-VF config to
+        // not-yet-existent VFs.
+        let pf_state = if self.has_sriov_and_missing_eth(&cur_net_state)
+            || self.has_sriov_vf_count_increase(&cur_net_state)
+        {
             self.get_sriov_pf_conf_state()
         } else {
             None
@@ -294,8 +303,30 @@ impl NetworkState {
                     timeout,
                 )
                 .await?;
-                // Refresh current state
+                // Phase one wrote `total-vfs`, which creates the VFs. On some
+                // drivers (notably mlx5) the VF netdevs are created/renamed
+                // asynchronously and may not exist yet. The main apply below
+                // configures the VF interfaces and whatever is stacked on them
+                // (bonds/VLANs); if we build its merged state while a desired
+                // VF netdev is still missing, `process_veth_peer_changes()`
+                // hard-rejects it ("Ethernet interface <vf> does not exists"),
+                // a non-retryable error that unwinds the checkpoint and rolls
+                // `total-vfs` back to 0. Wait (bounded by the SR-IOV verify
+                // budget, extending the checkpoint each round) for the desired
+                // VF netdevs to appear before building the merged state.
                 cur_net_state.retrieve_async().await?;
+                let mut vf_wait = 0;
+                while self.has_missing_eth(&cur_net_state)
+                    && vf_wait < VERIFY_RETRY_COUNT_SRIOV_MAX
+                {
+                    nm_checkpoint_timeout_extend(&checkpoint, timeout).await?;
+                    tokio::time::sleep(std::time::Duration::from_millis(
+                        VERIFY_RETRY_INTERVAL_MILLISECONDS,
+                    ))
+                    .await;
+                    cur_net_state.retrieve_async().await?;
+                    vf_wait += 1;
+                }
                 merged_state = Some(MergedNetworkState::new(
                     self.clone(),
                     cur_net_state.clone(),
