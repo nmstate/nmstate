@@ -25,12 +25,12 @@ pub(crate) fn store_route_rule_config(
 
     let rules = merged_state.rules.for_apply.clone();
 
-    for rule in rules.as_slice() {
-        if rule.is_absent() {
-            apply_absent_rule(&mut merged_state.interfaces, rule);
-        } else {
-            append_route_rule(merged_state, rule)?;
-        }
+    // Explicitly desired rules take precedence over matching absent rules.
+    for rule in rules.iter().filter(|rule| rule.is_absent()) {
+        apply_absent_rule(&mut merged_state.interfaces, rule);
+    }
+    for rule in rules.iter().filter(|rule| !rule.is_absent()) {
+        append_route_rule(merged_state, rule)?;
     }
 
     Ok(())
