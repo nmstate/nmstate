@@ -112,6 +112,8 @@ mod policy;
 mod query_apply;
 #[cfg(feature = "gen_revert")]
 mod revert;
+#[cfg(feature = "query_apply")]
+mod rollback;
 mod route;
 mod route_rule;
 mod serializer;
@@ -195,3 +197,10 @@ pub(crate) use crate::{
     route::MergedRoutes,
     route_rule::MergedRouteRules,
 };
+
+/// Run the supervised external routing-rule transaction service.
+#[doc(hidden)]
+#[cfg(feature = "query_apply")]
+pub async fn run_rollback_service() -> Result<(), NmstateError> {
+    rollback::run_service().await
+}

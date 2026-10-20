@@ -1,0 +1,16 @@
+[package]
+name = "nmstate-rollback"
+version = "2.2.63"
+description = "Recovery service for nmstate external routing rules"
+license = "Apache-2.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "nmstate-rollback"
+path = "main.rs"
+
+[dependencies]
+nmstate = { workspace = true, features = ["query_apply"] }
+tokio = { workspace = true }
+env_logger = { workspace = true }

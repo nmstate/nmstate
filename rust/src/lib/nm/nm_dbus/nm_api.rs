@@ -298,6 +298,12 @@ impl NmApi<'_> {
         added_time_sec: u32,
     ) -> Result<(), NmError> {
         debug!("checkpoint_timeout_extend: {checkpoint} {added_time_sec}");
+        if crate::rollback::refresh_owned(checkpoint, added_time_sec)
+            .await
+            .map_err(|e| NmError::new(ErrorKind::Bug, e.to_string()))?
+        {
+            return Ok(());
+        }
         self.dbus
             .checkpoint_timeout_extend(checkpoint, added_time_sec)
             .await
