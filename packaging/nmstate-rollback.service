@@ -1,0 +1,20 @@
+[Unit]
+Description=Nmstate routing rule rollback
+After=NetworkManager.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/nmstate-rollback
+RuntimeDirectory=nmstate/rollback
+RuntimeDirectoryMode=0711
+RuntimeDirectoryPreserve=yes
+UMask=0077
+Restart=on-failure
+RestartSec=2s
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+SystemCallArchitectures=native

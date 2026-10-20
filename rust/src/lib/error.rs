@@ -2,7 +2,9 @@
 
 use std::error::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize,
+)]
 #[non_exhaustive]
 #[allow(dead_code)]
 #[derive(Default)]
@@ -63,7 +65,9 @@ impl std::fmt::Display for NmstateError {
 
 impl Error for NmstateError {}
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize,
+)]
 #[non_exhaustive]
 pub struct NmstateError {
     kind: ErrorKind,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
+    collections::HashMap,
     convert::TryFrom,
     str::FromStr,
     time::{Duration, Instant},
@@ -25,7 +26,7 @@ use super::{
 };
 
 pub struct NmApi<'a> {
-    pub(crate) dbus: NmDbus<'a>,
+    dbus: NmDbus<'a>,
     checkpoint: Option<String>,
     cp_refresh_time: Option<std::time::Instant>,
     cp_timeout: u32,
@@ -53,6 +54,10 @@ impl NmApi<'_> {
             cp_timeout: 0,
             auto_cp_refresh: false,
         })
+    }
+
+    pub(crate) async fn name_owner(&self) -> Result<String, NmError> {
+        self.dbus.name_owner().await
     }
 
     pub fn set_checkpoint(&mut self, checkpoint: &str, timeout: u32) {
@@ -108,7 +113,7 @@ impl NmApi<'_> {
     pub async fn checkpoint_rollback(
         &mut self,
         checkpoint: &str,
-    ) -> Result<(), NmError> {
+    ) -> Result<HashMap<String, u32>, NmError> {
         let mut checkpoint_to_rollback: String = checkpoint.to_string();
         if checkpoint_to_rollback.is_empty() {
             checkpoint_to_rollback = self.last_active_checkpoint().await?
@@ -119,6 +124,27 @@ impl NmApi<'_> {
         self.dbus
             .checkpoint_rollback(checkpoint_to_rollback.as_str())
             .await
+    }
+
+    pub(crate) async fn checkpoint_exists(
+        &self,
+        checkpoint: &str,
+    ) -> Result<bool, NmError> {
+        Ok(self
+            .dbus
+            .checkpoints()
+            .await?
+            .iter()
+            .any(|cp| cp == checkpoint))
+    }
+
+    // Skips refresh_owned(), which would deadlock: Context::begin() calls
+    // this while holding the journal lock that refresh_owned() takes.
+    pub(crate) async fn checkpoint_timeout_disable(
+        &self,
+        checkpoint: &str,
+    ) -> Result<(), NmError> {
+        self.dbus.checkpoint_timeout_extend(checkpoint, 0).await
     }
 
     async fn last_active_checkpoint(&self) -> Result<String, NmError> {
@@ -298,6 +324,12 @@ impl NmApi<'_> {
         added_time_sec: u32,
     ) -> Result<(), NmError> {
         debug!("checkpoint_timeout_extend: {checkpoint} {added_time_sec}");
+        if crate::rollback::refresh_owned(checkpoint, added_time_sec)
+            .await
+            .map_err(|e| NmError::new(ErrorKind::Bug, e.to_string()))?
+        {
+            return Ok(());
+        }
         self.dbus
             .checkpoint_timeout_extend(checkpoint, added_time_sec)
             .await

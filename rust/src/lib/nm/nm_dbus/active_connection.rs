@@ -40,6 +40,29 @@ impl From<u32> for NmActiveConnectionState {
     }
 }
 
+impl From<NmActiveConnectionState> for u32 {
+    fn from(state: NmActiveConnectionState) -> Self {
+        match state {
+            NmActiveConnectionState::Unknown => {
+                NM_ACTIVE_CONNECTION_STATE_UNKNOWN
+            }
+            NmActiveConnectionState::Activating => {
+                NM_ACTIVE_CONNECTION_STATE_ACTIVATING
+            }
+            NmActiveConnectionState::Activated => {
+                NM_ACTIVE_CONNECTION_STATE_ACTIVATED
+            }
+            NmActiveConnectionState::Deactivating => {
+                NM_ACTIVE_CONNECTION_STATE_DEACTIVATING
+            }
+            NmActiveConnectionState::Deactivated => {
+                NM_ACTIVE_CONNECTION_STATE_DEACTIVATED
+            }
+            NmActiveConnectionState::Other(i) => i,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmActiveConnection {
     pub uuid: String,

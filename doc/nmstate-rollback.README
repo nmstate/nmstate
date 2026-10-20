@@ -1,0 +1,75 @@
+External routing rule rollback
+==============================
+
+When an apply removes routing rules created outside NetworkManager, nmstate
+runs the removal through nmstate-rollback.service. The helper ships in
+nmstate-libs, so the Rust, C and Python APIs behave like nmstatectl. It
+selects, journals and restores rules over netlink itself and does not need
+routing rule checkpoint support in NetworkManager. Applies that remove no
+external rules do not use it.
+
+The service starts on demand and is not enabled at boot. It owns the apply,
+the rollback deadline and a journal under /run/nmstate/rollback. An apply
+commits immediately unless the caller asks for no-commit; finish an
+uncommitted one from any process with the usual nmstate commit and rollback
+APIs, or nmstatectl commit and nmstatectl rollback.
+
+systemd restarts the helper two seconds after a crash, with no rate limit,
+since a pending transaction still needs recovery. The runtime directory
+survives a stop so the next start can recover the journal. It does not
+survive a reboot, and neither do NetworkManager checkpoints. Finish pending
+transactions before stopping, masking or removing the service: a stopped
+service cannot enforce its deadline.
+
+Requirements:
+
+- root in the service's user and network namespaces
+- the caller and helper share mount and UTS namespaces, filesystem root,
+  and NetworkManager dispatcher directory (including any
+  NMSTATE_NM_DISPATCH_DIR override). The caller must hold all effective
+  capabilities held by the helper: it delegates the whole apply, including
+  hostname changes and file writes. A different execution context is
+  rejected before creating a checkpoint
+- the caller, NetworkManager and the helper share one system bus and one
+  NetworkManager instance for the whole transaction. Restarting
+  NetworkManager destroys its checkpoint; nmstate then keeps the journal
+  unresolved, since restoring rules alone would not restore the lost
+  NetworkManager state
+- commit and roll back through nmstate. Calling the NetworkManager
+  checkpoint methods directly does not reach the helper
+
+Other tools must not modify affected routing rule priority groups during
+apply or rollback. Recovery preserves distinct rules added while a
+transaction is pending, but identical rules have no instance identifiers:
+an identical replacement cannot be distinguished from an original rule.
+
+An apply that needs the helper is rejected before creating a checkpoint if
+an active connection is already deactivating or deactivated; retry once it
+settles. If the helper cannot start or prepare recovery, the apply fails
+before removing anything. Removing external rules requires CAP_NET_ADMIN;
+an apply that needs it fails before creating a checkpoint if the caller
+lacks that capability. Applies that only change profile rules do not
+require this delegation or capability.
+
+The control socket (/run/nmstate/rollback/control.sock) and the journal are
+root-only. The directory itself is traversable so unprivileged callers can
+check for a pending transaction before using the NetworkManager checkpoint
+API; they cannot list or read it. Do not edit an active recovery journal.
+
+If the journal reports an unresolved transaction, automatic recovery and
+new external-rule applies stop. This happens when the NetworkManager
+instance changes, its checkpoint disappears without a recorded decision,
+or its rollback fails after consuming the checkpoint. If NetworkManager
+rollback does not settle, the helper leaves external rules unrestored:
+replaying them while NetworkManager is still changing rules is unsafe.
+Restoring rules alone cannot recover the missing NetworkManager state.
+An administrator must stop the helper, restore or accept the network state
+manually, and resolve any remaining NetworkManager checkpoint. Preserve the
+journal for diagnosis, then move transaction.json out of the runtime
+directory before restarting the helper. Restarting without retiring the
+unresolved journal leaves the transaction blocked.
+
+Inspect recovery failures with:
+
+    systemctl status nmstate-rollback.service
+    journalctl -u nmstate-rollback.service
