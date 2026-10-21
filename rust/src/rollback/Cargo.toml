@@ -9,8 +9,13 @@ rust-version.workspace = true
 [[bin]]
 name = "nmstate-rollback"
 path = "main.rs"
+required-features = ["query_apply"]
 
 [dependencies]
-nmstate = { workspace = true, features = ["query_apply"] }
+nmstate = { workspace = true }
 tokio = { workspace = true }
 env_logger = { workspace = true }
+
+[features]
+default = ["query_apply"]
+query_apply = ["nmstate/query_apply"]
