@@ -156,7 +156,9 @@ jobs:
       - name: Install extra kernel modules(e.g. vrf)
         run: |
           sudo apt-get update;
-          sudo apt-get -y install "linux-modules-extra-$(uname -r)"
+          sudo apt-get -y install "linux-modules-extra-$(uname -r)" || \
+            echo "WARNING: linux-modules-extra-$(uname -r) failed to install so some operations may fail"
+
 
       - name: Run tests
         env:
