@@ -51,6 +51,7 @@ pub(crate) async fn rollback_precreated_xfrm() {
                 "failed to delete xfrm interface {name} on checkpoint \
                  rollback: {err}"
             );
+            remember_precreated_xfrm(&name);
         } else {
             log::info!("Deleted xfrm interface {name} on checkpoint rollback");
         }
@@ -222,6 +223,19 @@ async fn prepare(
                     target.name,
                     target.if_id
                 );
+            } else {
+                // The name appeared between the snapshot and create.
+                // `EEXIST` does not say the link is the requested xfrm.
+                let state = kernel_state().await?;
+                if !link_is_ready(&state, target) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "interface {} is not an xfrm link with if_id {}",
+                            target.name, target.if_id
+                        ),
+                    ));
+                }
             }
         }
     }

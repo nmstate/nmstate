@@ -22,8 +22,8 @@ mod show;
 
 #[cfg(feature = "query_apply")]
 pub(crate) use checkpoint::{
-    nm_checkpoint_create, nm_checkpoint_destroy, nm_checkpoint_rollback,
-    nm_checkpoint_timeout_extend,
+    nm_apply_lock, nm_checkpoint_create, nm_checkpoint_destroy,
+    nm_checkpoint_rollback, nm_checkpoint_timeout_extend,
 };
 #[cfg(feature = "gen_conf")]
 pub(crate) use gen_conf::nm_gen_conf;
