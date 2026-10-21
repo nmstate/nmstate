@@ -2,26 +2,21 @@
 
 #[cfg(test)]
 use std::collections::HashMap;
-use std::net::IpAddr;
-#[cfg(target_os = "linux")]
-use std::{num::NonZeroI32, time::Duration};
+use std::{net::IpAddr, num::NonZeroI32, sync::Mutex, time::Duration};
 
-#[cfg(target_os = "linux")]
-use crate::ErrorKind;
 #[cfg(test)]
 use crate::nm::nm_dbus::{NmIfaceType, NmSettingConnection, NmSettingIp};
 use crate::{
-    NmstateError,
+    ErrorKind, NmstateError,
     nm::nm_dbus::{NmApi, NmConnection, NmSettingIpMethod, NmSettingVpn},
 };
 
-#[cfg(target_os = "linux")]
 const NM_DEVICE_WAIT_ATTEMPTS: usize = 20;
-#[cfg(target_os = "linux")]
 const NM_DEVICE_WAIT_INTERVAL: Duration = Duration::from_millis(50);
 // Linux `EEXIST`.
-#[cfg(target_os = "linux")]
 const EEXIST: i32 = 17;
+
+static PRECREATED_XFRM: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
 struct XfrmPrecreate {
     if_id: u32,
@@ -29,27 +24,49 @@ struct XfrmPrecreate {
     left: IpAddr,
 }
 
-/// Create the libreswan XFRM interface and wait until NetworkManager has a
-/// device for it.
+fn precreated_xfrm() -> std::sync::MutexGuard<'static, Vec<String>> {
+    PRECREATED_XFRM
+        .lock()
+        .unwrap_or_else(|err| err.into_inner())
+}
+
+fn remember_precreated_xfrm(name: &str) {
+    let mut created = precreated_xfrm();
+    if !created.iter().any(|existing| existing == name) {
+        created.push(name.to_string());
+    }
+}
+
+/// Drop interfaces created for a committed checkpoint. They stay in the kernel.
+pub(crate) fn discard_precreated_xfrm() {
+    precreated_xfrm().clear();
+}
+
+/// Delete xfrm interfaces this apply created. Checkpoint rollback does not.
+pub(crate) async fn rollback_precreated_xfrm() {
+    for name in std::mem::take(&mut *precreated_xfrm()) {
+        if let Err(err) = crate::nispor::delete_kernel_iface(&name).await {
+            log::warn!(
+                "failed to delete xfrm interface {name} on checkpoint \
+                 rollback: {err}"
+            );
+        } else {
+            log::info!("Deleted xfrm interface {name} on checkpoint rollback");
+        }
+    }
+}
+
+/// Create the libreswan xfrm interface and wait until NetworkManager has
+/// registered it.
 ///
-/// NetworkManager main hits `nm_assert(device)` in
-/// `nm_vpn_connection_check_complete()` when `ipv4.method` is not `auto`.
-/// The generic config callback schedules the device-added idle, then the
-/// following IPv4 config callback calls the same function again while the
-/// device is still missing and aborts. That restart drops the checkpoint.
-/// Realizing `ipsecN` before activation closes that window. An error here
-/// must skip activation; continuing would take the same assertion path.
+/// Needed when `ipsec-interface` is a non-zero id and IPv4 is not auto.
+/// Interfaces created here are removed if the checkpoint rolls back.
 pub(crate) async fn prepare_ipsec_xfrm_for_nm(
     nm_api: &mut NmApi<'_>,
     nm_conn: &NmConnection,
 ) -> Result<(), NmstateError> {
-    #[cfg(target_os = "linux")]
     if let Some(target) = xfrm_precreate_target(nm_conn) {
-        prepare_linux(nm_api, &target).await?;
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = (nm_api, nm_conn);
+        prepare(nm_api, &target).await?;
     }
     Ok(())
 }
@@ -57,11 +74,10 @@ pub(crate) async fn prepare_ipsec_xfrm_for_nm(
 /// Non-controller connections, with IPSec profiles that need an XFRM parent
 /// placed after every profile that does not.
 ///
-/// Activation is otherwise ordered by priority and name
-/// (`nm/connection.rs`). A combined apply can therefore reach the VPN
-/// before the interface that will own `left` has its address. Pre-creation
-/// needs that ifindex, so those profiles run first and the VPN is retried
-/// if the address is not visible yet.
+/// Activation is otherwise ordered by priority and name. A combined apply
+/// can therefore reach the VPN before the interface that will own `left`
+/// has its address. Preparation needs that ifindex, so those profiles run
+/// first and the VPN is retried if the address is not visible yet.
 pub(super) fn order_ipsec_parents_first(
     nm_conns: &[NmConnection],
 ) -> Vec<&NmConnection> {
@@ -108,8 +124,7 @@ fn xfrm_precreate_target(nm_conn: &NmConnection) -> Option<XfrmPrecreate> {
     {
         return None;
     }
-    // `method_auto` is set only for ipv4.method=auto. That path waits for
-    // IP config before the first check-complete, so it does not double-call.
+    // ipv4.method=auto does not need the interface before activation.
     if nm_conn.ipv4.as_ref().and_then(|ip| ip.method.as_ref())
         == Some(&NmSettingIpMethod::Auto)
     {
@@ -145,58 +160,104 @@ fn conn_has_address(nm_conn: &NmConnection, left: IpAddr) -> bool {
         })
 }
 
-#[cfg(target_os = "linux")]
-async fn prepare_linux(
+async fn prepare(
     nm_api: &mut NmApi<'_>,
     target: &XfrmPrecreate,
 ) -> Result<(), NmstateError> {
     let mut state = kernel_state().await?;
-    if !state.ifaces.contains_key(&target.name)
-        && parent_index_for_left(&state, target.left).is_none()
+    if !link_is_ready(&state, target)
+        && parent_for_left(&state, target.left).is_none()
     {
         for _ in 1..NM_DEVICE_WAIT_ATTEMPTS {
             tokio::time::sleep(NM_DEVICE_WAIT_INTERVAL).await;
             state = kernel_state().await?;
-            if state.ifaces.contains_key(&target.name)
-                || parent_index_for_left(&state, target.left).is_some()
+            if link_is_ready(&state, target)
+                || parent_for_left(&state, target.left).is_some()
             {
                 break;
             }
         }
     }
-    if !state.ifaces.contains_key(&target.name) {
-        let parent_index = parent_index_for_left(&state, target.left)
-            .ok_or_else(|| {
-                NmstateError::new(
-                    ErrorKind::Bug,
-                    format!(
-                        "no interface holds left address {} for {}",
-                        target.left, target.name
-                    ),
-                )
-            })?;
-        create_xfrm_iface(&target.name, parent_index, target.if_id)
-            .await
-            .map_err(|err| {
-                NmstateError::new(
-                    ErrorKind::Bug,
-                    format!(
-                        "failed to create XFRM interface {}: {err}",
-                        target.name
-                    ),
-                )
-            })?;
-        log::info!(
-            "Created XFRM interface {} (if_id {}) on ifindex {parent_index} \
-             before IPSec activation",
-            target.name,
-            target.if_id
-        );
+    let parent = parent_for_left(&state, target.left);
+    match state.ifaces.get(&target.name) {
+        Some(iface) if xfrm_link_ok(iface, target, parent) => {}
+        Some(_) => {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "interface {} is not an xfrm link with if_id {}",
+                    target.name, target.if_id
+                ),
+            ));
+        }
+        None => {
+            let parent_index =
+                parent.map(|iface| iface.index).ok_or_else(|| {
+                    NmstateError::new(
+                        ErrorKind::Bug,
+                        format!(
+                            "no interface holds left address {} for {}",
+                            target.left, target.name
+                        ),
+                    )
+                })?;
+            let created =
+                create_xfrm_iface(&target.name, parent_index, target.if_id)
+                    .await
+                    .map_err(|err| {
+                        NmstateError::new(
+                            ErrorKind::Bug,
+                            format!(
+                                "failed to create XFRM interface {}: {err}",
+                                target.name
+                            ),
+                        )
+                    })?;
+            if created {
+                remember_precreated_xfrm(&target.name);
+                log::info!(
+                    "Created XFRM interface {} (if_id {}) on ifindex \
+                     {parent_index} before IPSec activation",
+                    target.name,
+                    target.if_id
+                );
+            }
+        }
     }
     wait_for_nm_device(nm_api, &target.name).await
 }
 
-#[cfg(target_os = "linux")]
+fn link_is_ready(state: &nispor::NetState, target: &XfrmPrecreate) -> bool {
+    let parent = parent_for_left(state, target.left);
+    state
+        .ifaces
+        .get(&target.name)
+        .is_some_and(|iface| xfrm_link_ok(iface, target, parent))
+}
+
+fn xfrm_link_ok(
+    iface: &nispor::Iface,
+    target: &XfrmPrecreate,
+    parent: Option<&nispor::Iface>,
+) -> bool {
+    if iface.iface_type != nispor::IfaceType::Xfrm {
+        return false;
+    }
+    let Some(info) = iface.xfrm.as_ref() else {
+        return false;
+    };
+    if info.iface_id != target.if_id {
+        return false;
+    }
+    match parent {
+        Some(parent) => {
+            info.base_iface == parent.name
+                || info.base_iface == parent.index.to_string()
+        }
+        None => true,
+    }
+}
+
 async fn kernel_state() -> Result<nispor::NetState, NmstateError> {
     let mut iface_filter = nispor::NetStateIfaceFilter::minimum();
     iface_filter.include_ip_address = true;
@@ -214,18 +275,16 @@ async fn kernel_state() -> Result<nispor::NetState, NmstateError> {
         })
 }
 
-#[cfg(target_os = "linux")]
-fn parent_index_for_left(
+fn parent_for_left(
     state: &nispor::NetState,
     left: IpAddr,
-) -> Option<u32> {
-    state.ifaces.values().find_map(|iface| {
-        (iface.index != 0 && iface_has_address(iface, left))
-            .then_some(iface.index)
-    })
+) -> Option<&nispor::Iface> {
+    state
+        .ifaces
+        .values()
+        .find(|iface| iface.index != 0 && iface_has_address(iface, left))
 }
 
-#[cfg(target_os = "linux")]
 fn iface_has_address(iface: &nispor::Iface, left: IpAddr) -> bool {
     let ipv4_match = iface.ipv4.as_ref().is_some_and(|ipv4| {
         ipv4.addresses
@@ -240,12 +299,11 @@ fn iface_has_address(iface: &nispor::Iface, left: IpAddr) -> bool {
     ipv4_match || ipv6_match
 }
 
-#[cfg(target_os = "linux")]
 async fn create_xfrm_iface(
     name: &str,
     parent_index: u32,
     if_id: u32,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let (connection, handle, _) =
         rtnetlink::new_connection().map_err(|err| err.to_string())?;
     let task = tokio::spawn(connection);
@@ -260,13 +318,12 @@ async fn create_xfrm_iface(
         .await;
     task.abort();
     match result {
-        Ok(()) => Ok(()),
-        Err(err) if netlink_eexist(&err) => Ok(()),
+        Ok(()) => Ok(true),
+        Err(err) if netlink_eexist(&err) => Ok(false),
         Err(err) => Err(err.to_string()),
     }
 }
 
-#[cfg(target_os = "linux")]
 fn netlink_eexist(err: &rtnetlink::Error) -> bool {
     matches!(
         err,
@@ -275,7 +332,6 @@ fn netlink_eexist(err: &rtnetlink::Error) -> bool {
     )
 }
 
-#[cfg(target_os = "linux")]
 async fn wait_for_nm_device(
     nm_api: &mut NmApi<'_>,
     name: &str,
@@ -428,5 +484,40 @@ mod tests {
         let conns = [vpn, parent];
         let ordered = order_ipsec_parents_first(&conns);
         assert!(ordered[0].vpn.is_some());
+    }
+
+    #[test]
+    fn existing_xfrm_must_match_if_id_and_parent() {
+        let mut iface = nispor::Iface::default();
+        iface.iface_type = nispor::IfaceType::Xfrm;
+        let mut info = nispor::XfrmInfo::default();
+        info.base_iface = "eth0".to_string();
+        info.iface_id = 97;
+        iface.xfrm = Some(info);
+        let target = XfrmPrecreate {
+            if_id: 97,
+            name: "ipsec97".to_string(),
+            left: "192.0.2.2".parse().unwrap(),
+        };
+        let mut parent = nispor::Iface::default();
+        parent.name = "eth0".to_string();
+        parent.index = 2;
+
+        assert!(xfrm_link_ok(&iface, &target, Some(&parent)));
+        assert!(xfrm_link_ok(&iface, &target, None));
+
+        parent.name = "eth1".to_string();
+        assert!(!xfrm_link_ok(&iface, &target, Some(&parent)));
+
+        iface.xfrm.as_mut().unwrap().base_iface = "2".to_string();
+        parent.name = "eth0".to_string();
+        assert!(xfrm_link_ok(&iface, &target, Some(&parent)));
+
+        iface.xfrm.as_mut().unwrap().iface_id = 1;
+        assert!(!xfrm_link_ok(&iface, &target, Some(&parent)));
+
+        iface.iface_type = nispor::IfaceType::Dummy;
+        iface.xfrm.as_mut().unwrap().iface_id = 97;
+        assert!(!xfrm_link_ok(&iface, &target, None));
     }
 }

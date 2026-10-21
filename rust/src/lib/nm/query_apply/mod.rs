@@ -22,6 +22,8 @@ pub(crate) mod vpn;
 mod vrf;
 mod vxlan;
 
+pub(crate) use ipsec::{discard_precreated_xfrm, rollback_precreated_xfrm};
+
 pub(crate) use self::{
     apply::nm_apply,
     connection::{

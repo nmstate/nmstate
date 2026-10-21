@@ -51,8 +51,6 @@ optional = true
 workspace = true
 optional = true
 
-# Linux-only and optional. `query_apply` enables it. A target-specific
-# optional dependency is not built for macOS, or for Linux gen_conf builds.
 [target.'cfg(target_os = "linux")'.dependencies]
 rtnetlink = { version = "0.23.0", optional = true }
 

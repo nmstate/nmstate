@@ -24,17 +24,20 @@ pub(crate) async fn nm_checkpoint_rollback(
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let mut nm_api = NmApi::new().await.map_err(nm_error_to_nmstate)?;
-    nm_api
+    let rollback_result = nm_api
         .checkpoint_rollback(checkpoint)
         .await
-        .map_err(nm_error_to_nmstate)?;
+        .map_err(nm_error_to_nmstate);
     if let Err(e) = nm_api
         .wait_checkpoint_rollback(CHECKPOINT_ROLLBACK_TIMEOUT)
         .await
     {
         warn!("{e}");
     }
-    Ok(())
+    // Devices created for IPSec are outside the checkpoint. Remove them
+    // after NetworkManager finishes so a failed apply does not leave them.
+    super::query_apply::rollback_precreated_xfrm().await;
+    rollback_result
 }
 
 pub(crate) async fn nm_checkpoint_destroy(
@@ -44,7 +47,9 @@ pub(crate) async fn nm_checkpoint_destroy(
     nm_api
         .checkpoint_destroy(checkpoint)
         .await
-        .map_err(nm_error_to_nmstate)
+        .map_err(nm_error_to_nmstate)?;
+    super::query_apply::discard_precreated_xfrm();
+    Ok(())
 }
 
 pub(crate) async fn nm_checkpoint_timeout_extend(

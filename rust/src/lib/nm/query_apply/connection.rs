@@ -183,12 +183,11 @@ async fn _activate_nm_connections(
             }
         }
     }
-    // Profiles that own an IPSec `left` address are ordered first. Otherwise
-    // priority/name order can activate the VPN before that address exists,
-    // and pre-creation has no parent ifindex.
+    // Profiles that own an IPSec `left` address are ordered first so the
+    // xfrm parent ifindex exists before that VPN profile is activated.
     for nm_conn in super::ipsec::order_ipsec_parents_first(nm_conns) {
-        // NetworkManager main aborts if this profile is activated while its
-        // xfrm device is still missing. Leave it for a later attempt instead.
+        // Leave the profile for a later attempt when its xfrm interface
+        // is not ready yet.
         if let Err(e) =
             super::ipsec::prepare_ipsec_xfrm_for_nm(nm_api, nm_conn).await
         {
