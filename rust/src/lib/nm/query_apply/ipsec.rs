@@ -44,7 +44,8 @@ pub(crate) fn discard_precreated_xfrm() {
 
 /// Delete xfrm interfaces this apply created. Checkpoint rollback does not.
 pub(crate) async fn rollback_precreated_xfrm() {
-    for name in std::mem::take(&mut *precreated_xfrm()) {
+    let names = std::mem::take(&mut *precreated_xfrm());
+    for name in names {
         if let Err(err) = crate::nispor::delete_kernel_iface(&name).await {
             log::warn!(
                 "failed to delete xfrm interface {name} on checkpoint \
