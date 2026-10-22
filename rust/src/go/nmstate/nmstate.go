@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"time"
+	"unsafe"
 )
 
 type Nmstate struct {
@@ -129,7 +130,7 @@ func (n *Nmstate) ApplyNetState(state string) (string, error) {
 	rc := C.nmstate_net_state_apply(C.uint(n.flags), c_state, C.uint(n.timeout), &log, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_cstring_free(c_state)
+		C.free(unsafe.Pointer(c_state))
 		C.nmstate_cstring_free(err_msg)
 		C.nmstate_cstring_free(err_kind)
 		C.nmstate_cstring_free(log)
@@ -156,7 +157,7 @@ func (n *Nmstate) CommitCheckpoint(checkpoint string) (string, error) {
 	rc := C.nmstate_checkpoint_commit(c_checkpoint, &log, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_cstring_free(c_checkpoint)
+		C.free(unsafe.Pointer(c_checkpoint))
 		C.nmstate_cstring_free(err_msg)
 		C.nmstate_cstring_free(err_kind)
 		C.nmstate_cstring_free(log)
@@ -183,7 +184,7 @@ func (n *Nmstate) RollbackCheckpoint(checkpoint string) (string, error) {
 	rc := C.nmstate_checkpoint_rollback(c_checkpoint, &log, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_cstring_free(c_checkpoint)
+		C.free(unsafe.Pointer(c_checkpoint))
 		C.nmstate_cstring_free(err_msg)
 		C.nmstate_cstring_free(err_kind)
 		C.nmstate_cstring_free(log)
@@ -222,7 +223,7 @@ func (n *Nmstate) GenerateConfiguration(state string) (string, error) {
 	rc := C.nmstate_generate_configurations(c_state, &config, &log, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_cstring_free(c_state)
+		C.free(unsafe.Pointer(c_state))
 		C.nmstate_cstring_free(config)
 		C.nmstate_cstring_free(err_msg)
 		C.nmstate_cstring_free(err_kind)
@@ -250,8 +251,8 @@ func (n *Nmstate) Validate(state_or_policy string, current_state string) error {
 	rc := C.nmstate_validate(c_state_or_policy, c_cur_state, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_cstring_free(c_state_or_policy)
-		C.nmstate_cstring_free(c_cur_state)
+		C.free(unsafe.Pointer(c_state_or_policy))
+		C.free(unsafe.Pointer(c_cur_state))
 		C.nmstate_cstring_free(err_msg)
 		C.nmstate_cstring_free(err_kind)
 	}()
