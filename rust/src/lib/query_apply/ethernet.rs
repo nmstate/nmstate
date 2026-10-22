@@ -2,7 +2,8 @@
 
 use crate::{
     ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
-    Interfaces, MergedInterfaces, NetworkState, NmstateError, VethConfig,
+    Interfaces, MergedInterfaces, NetworkState, NmstateError, SrIovVfConfig,
+    VethConfig,
 };
 
 impl EthernetInterface {
@@ -120,7 +121,7 @@ impl NetworkState {
         false
     }
 
-    fn has_missing_eth(&self, current: &Self) -> bool {
+    pub(crate) fn has_missing_eth(&self, current: &Self) -> bool {
         self.interfaces
             .kernel_ifaces
             .values()
@@ -130,6 +131,43 @@ impl NetworkState {
                         || i.iface_type() == InterfaceType::Unknown)
             })
             .any(|i| !current.interfaces.kernel_ifaces.contains_key(i.name()))
+    }
+
+    // Returns true when any up ethernet PF asks for more VFs than currently
+    // exist (desired `total-vfs` > current `total-vfs`). Such a change needs
+    // the SR-IOV PF-first pre-apply even when no VF interface is referenced in
+    // the desired state, otherwise the per-VF `vfs[]` config is applied against
+    // VFs that do not exist yet (`No such file or directory`).
+    pub(crate) fn has_sriov_vf_count_increase(&self, current: &Self) -> bool {
+        for iface in
+            self.interfaces.kernel_ifaces.values().filter(|i| i.is_up())
+        {
+            if let Interface::Ethernet(des_iface) = iface {
+                let desired_vfs = des_iface
+                    .ethernet
+                    .as_ref()
+                    .and_then(|e| e.sr_iov.as_ref())
+                    .and_then(|s| s.total_vfs)
+                    .unwrap_or(0);
+                if desired_vfs == 0 {
+                    continue;
+                }
+                let current_vfs =
+                    match current.interfaces.kernel_ifaces.get(iface.name()) {
+                        Some(Interface::Ethernet(cur_iface)) => cur_iface
+                            .ethernet
+                            .as_ref()
+                            .and_then(|e| e.sr_iov.as_ref())
+                            .and_then(|s| s.total_vfs)
+                            .unwrap_or(0),
+                        _ => 0,
+                    };
+                if desired_vfs > current_vfs {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     // Return newly create NetworkState containing only ethernet section of
@@ -152,10 +190,29 @@ impl NetworkState {
                 iface.ethernet.as_ref().map(|e| e.sr_iov.is_some())
                 && let Some(eth_conf) = iface.ethernet.as_ref()
             {
+                // This is the first phase of the SR-IOV single-transaction
+                // apply: its only job is to create the VFs (apply `total-vfs`).
+                // The per-VF settings (`vfs[]`: mac-address/trust/spoof-check/
+                // tx-rate/vlan) operate on the VF netdevs which do not exist
+                // yet, so applying them here fails with
+                // `No such file or directory`. Defer them to the main apply by
+                // reducing `vfs[]` to id-only entries -- that still lets
+                // `verify_sriov()` wait for the VF netdevs to appear.
+                let mut pf_eth_conf = eth_conf.clone();
+                if let Some(sriov_conf) = pf_eth_conf.sr_iov.as_mut() {
+                    sriov_conf.vfs = sriov_conf.total_vfs.map(|total_vfs| {
+                        (0..total_vfs)
+                            .map(|id| SrIovVfConfig {
+                                id,
+                                ..Default::default()
+                            })
+                            .collect()
+                    });
+                }
                 pf_ifaces.push(Interface::Ethernet(Box::new(
                     EthernetInterface {
                         base: iface.base.clone_name_type_only(),
-                        ethernet: Some(eth_conf.clone()),
+                        ethernet: Some(pf_eth_conf),
                         ..Default::default()
                     },
                 )));

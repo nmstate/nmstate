@@ -193,6 +193,22 @@ impl MergedInterfaces {
                 veth_peers.push(v);
             }
         }
+        // When the desired state asks a PF to create VFs (`sr-iov.total-vfs`),
+        // the VF netdevs do not exist yet. A not-yet-existent up-ethernet
+        // interface is then almost certainly one of those VFs (e.g. mlx5 names
+        // them ens15f0v0), so it must not be hard-rejected here. The SR-IOV
+        // PF-first pre-apply creates the VFs and the verify stage still catches
+        // a VF that never appears. This also lets diff generation
+        // (`GenerateDiff`, used by `nmstatectl service`/NMPolicy) succeed for
+        // SR-IOV + VF-bond desired states.
+        let sriov_vf_pending = self.iter().any(|i| {
+            i.is_desired()
+                && matches!(&i.merged, Interface::Ethernet(e)
+                    if e.ethernet.as_ref()
+                        .and_then(|c| c.sr_iov.as_ref())
+                        .and_then(|s| s.total_vfs)
+                        .unwrap_or(0) > 0)
+        });
         for iface in self.iter().filter(|i| {
             i.merged.iface_type() == InterfaceType::Ethernet
                 && i.is_desired()
@@ -206,6 +222,8 @@ impl MergedInterfaces {
                     // The `resolve_sriov_reference()` will raise error if
                     // SRIOV VF not found, so we skip check on them here.
                     && !eth_iface.base.name.starts_with("sriov:")
+                    // Skip not-yet-created SR-IOV VF netdevs (see above).
+                    && !sriov_vf_pending
             {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
