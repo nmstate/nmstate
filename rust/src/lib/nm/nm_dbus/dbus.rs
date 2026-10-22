@@ -258,12 +258,12 @@ impl NmDbus<'_> {
     pub(crate) async fn checkpoint_rollback(
         &self,
         checkpoint: &str,
-    ) -> Result<(), NmError> {
+    ) -> Result<HashMap<String, u32>, NmError> {
         debug!("checkpoint_rollback: {checkpoint}");
-        self.proxy
+        Ok(self
+            .proxy
             .checkpoint_rollback(&str_to_obj_path(checkpoint)?)
-            .await?;
-        Ok(())
+            .await?)
     }
 
     pub(crate) async fn checkpoints(&self) -> Result<Vec<String>, NmError> {

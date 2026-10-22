@@ -183,10 +183,21 @@ async fn _activate_nm_connections(
             }
         }
     }
-    for nm_conn in nm_conns
-        .iter()
-        .filter(|c| c.iface_type().map(|t| t.is_controller()) != Some(true))
-    {
+    // Profiles that own an IPSec `left` address are ordered first so the
+    // xfrm parent ifindex exists before that VPN profile is activated.
+    for nm_conn in super::ipsec::order_ipsec_parents_first(nm_conns) {
+        // Leave the profile for a later attempt when its xfrm interface
+        // is not ready yet.
+        if let Err(e) =
+            super::ipsec::prepare_ipsec_xfrm_for_nm(nm_api, nm_conn).await
+        {
+            if e.kind().can_retry() {
+                failed_nm_conns.push((nm_conn.clone(), e));
+            } else {
+                return Err(e);
+            }
+            continue;
+        }
         if let Some(uuid) = nm_conn.uuid() {
             if let Some(nm_ac) = acs_by_uuid.get(uuid) {
                 if let Err(e) =

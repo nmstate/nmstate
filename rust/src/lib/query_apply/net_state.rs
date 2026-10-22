@@ -55,6 +55,7 @@ impl NetworkState {
     pub async fn checkpoint_rollback_async(
         checkpoint: &str,
     ) -> Result<(), NmstateError> {
+        let _nm_apply = crate::nm::nm_apply_lock().await;
         nm_checkpoint_rollback(checkpoint).await
     }
 
@@ -81,6 +82,7 @@ impl NetworkState {
     pub async fn checkpoint_commit_async(
         checkpoint: &str,
     ) -> Result<(), NmstateError> {
+        let _nm_apply = crate::nm::nm_apply_lock().await;
         nm_checkpoint_destroy(checkpoint).await
     }
 
@@ -258,6 +260,7 @@ impl NetworkState {
             DEFAULT_ROLLBACK_TIMEOUT
         };
 
+        let _nm_apply = crate::nm::nm_apply_lock().await;
         let checkpoint = match nm_checkpoint_create(timeout).await {
             Ok(c) => c,
             Err(e) => {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
+    collections::HashMap,
     convert::TryFrom,
     str::FromStr,
     time::{Duration, Instant},
@@ -108,7 +109,7 @@ impl NmApi<'_> {
     pub async fn checkpoint_rollback(
         &mut self,
         checkpoint: &str,
-    ) -> Result<(), NmError> {
+    ) -> Result<HashMap<String, u32>, NmError> {
         let mut checkpoint_to_rollback: String = checkpoint.to_string();
         if checkpoint_to_rollback.is_empty() {
             checkpoint_to_rollback = self.last_active_checkpoint().await?

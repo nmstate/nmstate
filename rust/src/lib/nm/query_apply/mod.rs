@@ -9,6 +9,7 @@ mod hsr;
 mod ieee8021x;
 mod ip;
 mod ip_tunnel;
+mod ipsec;
 mod ipvlan;
 mod lldp;
 mod mptcp;
@@ -20,6 +21,8 @@ mod vlan;
 pub(crate) mod vpn;
 mod vrf;
 mod vxlan;
+
+pub(crate) use ipsec::{discard_precreated_xfrm, rollback_precreated_xfrm};
 
 pub(crate) use self::{
     apply::nm_apply,
