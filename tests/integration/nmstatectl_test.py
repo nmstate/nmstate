@@ -3,6 +3,7 @@
 import json
 import os
 import pytest
+import re
 import time
 import yaml
 from tempfile import NamedTemporaryFile
@@ -20,11 +21,14 @@ from libnmstate.schema import RouteRule
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib.bondlib import bond_interface
+from .testlib.bridgelib import linux_bridge
 from .testlib.examplelib import example_state
 from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
 from .testlib.statelib import state_match
 from .testlib.statelib import show_only
+from .testlib.vlan import vlan_interface
 
 APPLY_CMD = ["nmstatectl", "apply"]
 SET_CMD = ["nmstatectl", "set"]
@@ -161,6 +165,48 @@ def test_show_command_json_only(eth1_up):
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 1
     assert state[Constants.INTERFACES][0]["name"] == "eth1"
+
+
+@pytest.fixture
+def bond99_vlan_in_br0(port0_up, port1_up):
+    port0 = port0_up[Interface.KEY][0][Interface.NAME]
+    port1 = port1_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface("bond99", [port0, port1]):
+        with vlan_interface("bond99.101", 101, "bond99"):
+            with linux_bridge(
+                "br0",
+                {"options": {"stp": {"enabled": False}}},
+                ports=["bond99.101"],
+            ):
+                yield
+
+
+def _show_json(args):
+    ret = cmdlib.exec_cmd(SHOW_CMD + ["--json"] + args)
+    rc, out, _ = ret
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    # Linux bridge timers are live kernel countdowns
+    out = re.sub(r'("[a-z-]*-timer": )[0-9]+', r"\g<1>0", out)
+    return json.loads(out)
+
+
+@pytest.mark.parametrize("extra_args", [[], ["-r"]], ids=["full", "running"])
+@pytest.mark.parametrize(
+    "iface_name", ["lo", "eth1", "bond99", "bond99.101", "br0"]
+)
+def test_show_iface_matches_full_show(
+    bond99_vlan_in_br0, iface_name, extra_args
+):
+    full_state = _show_json(extra_args)
+    iface_state = _show_json(extra_args + [iface_name])
+
+    expected = [
+        iface
+        for iface in full_state[Interface.KEY]
+        if iface[Interface.NAME] == iface_name
+    ]
+    assert iface_state[Interface.KEY] == expected
+    assert DNS.KEY not in iface_state
 
 
 def test_show_command_only_non_existing():

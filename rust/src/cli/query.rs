@@ -39,6 +39,7 @@ pub(crate) fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
         net_state.set_running_config_only(true);
     }
     net_state.set_include_secrets(matches.get_flag("SHOW_SECRETS"));
+    net_state.set_iface_filter(matches.get_one::<String>("IFNAME").cloned());
     net_state.retrieve()?;
     Ok(if let Some(ifname) = matches.get_one::<String>("IFNAME") {
         let mut new_net_state = filter_net_state_with_iface(&net_state, ifname);
