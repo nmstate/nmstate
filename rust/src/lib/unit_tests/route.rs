@@ -1303,3 +1303,105 @@ fn test_revert_restores_replaced_special_route() {
         "revert should remove the added prohibit route: {revert_routes:?}"
     );
 }
+
+fn gen_sriov_merged_ifaces() -> MergedInterfaces {
+    let mut current = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+              - id: 1
+        - name: sriov:eth1:0
+          type: ethernet
+          state: up
+          ipv4:
+            enabled: true
+            address:
+            - ip: 192.0.2.10
+              prefix-length: 24
+        - name: sriov:eth1:1
+          type: ethernet
+          state: up
+          ipv6:
+            enabled: true
+            address:
+            - ip: 2001:db8:1::11
+              prefix-length: 64
+        ",
+    )
+    .unwrap();
+    let Some(crate::Interface::Ethernet(eth)) =
+        current.kernel_ifaces.get_mut("eth1")
+    else {
+        panic!("eth1 not found or not Ethernet");
+    };
+    for vf in eth
+        .ethernet
+        .as_mut()
+        .unwrap()
+        .sr_iov
+        .as_mut()
+        .unwrap()
+        .vfs
+        .as_mut()
+        .unwrap()
+    {
+        vf.iface_name = format!("eth1v{}", vf.id);
+    }
+    MergedInterfaces::new(Interfaces::new(), current, Default::default(), false)
+        .unwrap()
+}
+
+#[test]
+fn test_route_resolve_sriov_next_hop() {
+    let routes = serde_yaml::from_str::<Routes>(
+        r"---
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-address: 192.0.2.1
+          next-hop-interface: sriov:eth1:0
+        - destination: 2001:db8:1::/64
+          next-hop-address: 2001:db8:1::1
+          next-hop-interface: sriov:eth1:1
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = gen_sriov_merged_ifaces();
+    let merged_routes =
+        MergedRoutes::new(routes, Routes::new(), &merged_ifaces).unwrap();
+
+    let eth1v0_routes = merged_routes.merged.get("eth1v0").unwrap();
+    assert_eq!(eth1v0_routes.len(), 1);
+    assert_eq!(eth1v0_routes[0].next_hop_iface, Some("eth1v0".to_string()));
+
+    let eth1v1_routes = merged_routes.merged.get("eth1v1").unwrap();
+    assert_eq!(eth1v1_routes.len(), 1);
+    assert_eq!(eth1v1_routes[0].next_hop_iface, Some("eth1v1".to_string()));
+}
+
+#[test]
+fn test_route_resolve_sriov_next_hop_invalid_vf() {
+    let routes = serde_yaml::from_str::<Routes>(
+        r"---
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-address: 192.0.2.1
+          next-hop-interface: sriov:eth1:5
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = gen_sriov_merged_ifaces();
+    let result = MergedRoutes::new(routes, Routes::new(), &merged_ifaces);
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    assert!(err.msg().contains("sriov:eth1:5"));
+}
