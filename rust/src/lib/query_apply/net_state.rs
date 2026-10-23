@@ -2,12 +2,15 @@
 
 use std::future::Future;
 
+use futures_util::future::{Either, select};
+
 use crate::{
-    ErrorKind, MergedInterfaces, MergedNetworkState, NetworkState,
-    NetworkStateMode, NmstateError,
+    ErrorKind, MergedInterfaces, MergedNetworkState, MergedRouteRules,
+    NetworkState, NetworkStateMode, NmstateError,
     nispor::{
         apply_ifaces_alt_names, nispor_apply, nispor_retrieve,
-        persist_alt_name_config, set_running_hostname,
+        persist_alt_name_config, route_rule_worker_needed,
+        set_running_hostname,
     },
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
@@ -55,6 +58,9 @@ impl NetworkState {
     pub async fn checkpoint_rollback_async(
         checkpoint: &str,
     ) -> Result<(), NmstateError> {
+        if crate::rollback::finish(checkpoint, false).await? {
+            return Ok(());
+        }
         nm_checkpoint_rollback(checkpoint).await
     }
 
@@ -81,6 +87,9 @@ impl NetworkState {
     pub async fn checkpoint_commit_async(
         checkpoint: &str,
     ) -> Result<(), NmstateError> {
+        if crate::rollback::finish(checkpoint, true).await? {
+            return Ok(());
+        }
         nm_checkpoint_destroy(checkpoint).await
     }
 
@@ -103,8 +112,12 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub async fn retrieve_async(&mut self) -> Result<&mut Self, NmstateError> {
-        let state =
-            nispor_retrieve(self.running_config_only, self.kernel_only).await?;
+        let state = nispor_retrieve(
+            self.running_config_only,
+            self.kernel_only,
+            self.route_rules_for_apply,
+        )
+        .await?;
         self.hostname = state.hostname;
         self.interfaces = state.interfaces;
         self.routes = state.routes;
@@ -213,10 +226,18 @@ impl NetworkState {
     }
 
     async fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
+        self.apply_with_nm_backend_context(None).await
+    }
+
+    pub(crate) async fn apply_with_nm_backend_context(
+        &self,
+        context: Option<crate::rollback::Context>,
+    ) -> Result<(), NmstateError> {
         let mut merged_state = None;
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
+        cur_net_state.route_rules_for_apply = true;
         if let Err(e) = cur_net_state.retrieve_async().await {
             if e.kind().can_retry() {
                 log::info!("Retrying on: {e}");
@@ -258,25 +279,47 @@ impl NetworkState {
             DEFAULT_ROLLBACK_TIMEOUT
         };
 
-        let checkpoint = match nm_checkpoint_create(timeout).await {
-            Ok(c) => c,
-            Err(e) => {
-                if e.kind().can_retry() {
-                    log::info!("Retrying on: {e}");
-                    tokio::time::sleep(std::time::Duration::from_millis(
-                        RETRY_NM_INTERVAL_MILLISECONDS,
-                    ))
-                    .await;
-                    nm_checkpoint_create(timeout).await?
-                } else {
-                    return Err(e);
+        if context.is_none() {
+            let rules = MergedRouteRules::new(
+                self.rules.clone(),
+                cur_net_state.rules.clone(),
+            )?;
+            let rules =
+                merged_state.as_ref().map(|m| &m.rules).unwrap_or(&rules);
+            if route_rule_worker_needed(rules, &cur_net_state).await? {
+                if crate::rollback::has_host_net_admin()? {
+                    return crate::rollback::apply(self).await;
+                }
+                return Err(NmstateError::new(
+                    ErrorKind::PermissionError,
+                    "Removing routing rules outside NetworkManager profiles \
+                     requires CAP_NET_ADMIN"
+                        .into(),
+                ));
+            }
+        }
+        let checkpoint = if let Some(context) = context.as_ref() {
+            context.begin(timeout).await?
+        } else {
+            match nm_checkpoint_create(timeout).await {
+                Ok(c) => c,
+                Err(e) => {
+                    if e.kind().can_retry() {
+                        log::info!("Retrying on: {e}");
+                        tokio::time::sleep(std::time::Duration::from_millis(
+                            RETRY_NM_INTERVAL_MILLISECONDS,
+                        ))
+                        .await;
+                        nm_checkpoint_create(timeout).await?
+                    } else {
+                        return Err(e);
+                    }
                 }
             }
         };
 
         log::info!("Created checkpoint {}", checkpoint);
-
-        with_nm_checkpoint(&checkpoint, self.no_commit, || async {
+        let apply = async {
             if let Some(pf_state) = pf_state {
                 let pf_merged_state = MergedNetworkState::new(
                     pf_state,
@@ -292,6 +335,7 @@ impl NetworkState {
                     &checkpoint,
                     verify_count,
                     timeout,
+                    context.as_ref(),
                 )
                 .await?;
                 // Refresh current state
@@ -326,12 +370,15 @@ impl NetworkState {
                 &checkpoint,
                 verify_count,
                 timeout,
+                context.as_ref(),
             )
             .await
-        })
-        .await?;
-
-        Ok(())
+        };
+        if context.is_some() {
+            apply.await
+        } else {
+            with_nm_checkpoint(&checkpoint, self.no_commit, || apply).await
+        }
     }
 
     async fn apply_with_nm_backend_and_under_checkpoint(
@@ -341,7 +388,17 @@ impl NetworkState {
         checkpoint: &str,
         retry_count: usize,
         timeout: u32,
+        context: Option<&crate::rollback::Context>,
     ) -> Result<(), NmstateError> {
+        // Roll back partial rule removals instead of retrying from that state.
+        if let Some(context) = context {
+            with_checkpoint_refresh(
+                context.remove_rules(&merged_state.rules),
+                timeout,
+                || nm_checkpoint_timeout_extend(checkpoint, timeout),
+            )
+            .await?;
+        }
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
         with_retry(
@@ -527,6 +584,33 @@ where
     }
 }
 
+async fn with_checkpoint_refresh<F, R, RF>(
+    operation: F,
+    timeout: u32,
+    mut refresh: R,
+) -> Result<(), NmstateError>
+where
+    F: Future<Output = Result<(), NmstateError>>,
+    R: FnMut() -> RF,
+    RF: Future<Output = Result<(), NmstateError>>,
+{
+    refresh().await?;
+    if timeout == 0 {
+        return operation.await;
+    }
+
+    let interval = std::time::Duration::from_secs(u64::from(timeout)) / 2;
+    let mut operation = std::pin::pin!(operation);
+    loop {
+        let timer = std::pin::pin!(tokio::time::sleep(interval));
+        // The removal sends no requests while the checkpoint is renewed.
+        match select(timer, operation.as_mut()).await {
+            Either::Left(_) => refresh().await?,
+            Either::Right((result, _)) => return result,
+        }
+    }
+}
+
 async fn with_retry<T, Fut>(
     interval_ms: u64,
     count: usize,
@@ -606,8 +690,138 @@ fn get_proper_verify_retry_count(merged_ifaces: &MergedInterfaces) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::Cell, time::Duration};
+
     use super::*;
     use crate::{Interfaces, unit_tests::testlib::new_eth_iface};
+
+    fn run_checkpoint_test(test: impl Future<Output = ()>) {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(test);
+    }
+
+    #[test]
+    fn test_checkpoint_refresh_during_cleanup() {
+        run_checkpoint_test(async {
+            let refreshes = Cell::new(0);
+            let starts = Cell::new(0);
+            let completed = Cell::new(false);
+            let (sender, receiver) = tokio::sync::oneshot::channel();
+            let sender = Cell::new(Some(sender));
+
+            with_checkpoint_refresh(
+                async {
+                    assert_eq!(refreshes.get(), 1);
+                    starts.set(starts.get() + 1);
+                    receiver.await.unwrap();
+                    completed.set(true);
+                    Ok(())
+                },
+                1,
+                || async {
+                    refreshes.set(refreshes.get() + 1);
+                    if refreshes.get() == 3 {
+                        sender.take().unwrap().send(()).unwrap();
+                        tokio::time::sleep(Duration::from_millis(10)).await;
+                        assert!(!completed.get());
+                    }
+                    Ok(())
+                },
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(refreshes.get(), 3);
+            assert_eq!(starts.get(), 1);
+            assert!(completed.get());
+        });
+    }
+
+    #[test]
+    fn test_checkpoint_refresh_failure_stops_cleanup() {
+        run_checkpoint_test(async {
+            for fail_on in [1, 2] {
+                let refreshes = Cell::new(0);
+                let started = Cell::new(false);
+                let (sender, receiver) = tokio::sync::oneshot::channel::<()>();
+
+                let error = with_checkpoint_refresh(
+                    async {
+                        let _sender = sender;
+                        started.set(true);
+                        std::future::pending().await
+                    },
+                    1,
+                    || async {
+                        refreshes.set(refreshes.get() + 1);
+                        if refreshes.get() == fail_on {
+                            Err(NmstateError::new(
+                                ErrorKind::Bug,
+                                "checkpoint lost".into(),
+                            ))
+                        } else {
+                            Ok(())
+                        }
+                    },
+                )
+                .await
+                .unwrap_err();
+
+                assert_eq!(error.kind(), ErrorKind::Bug);
+                assert_eq!(refreshes.get(), fail_on);
+                assert_eq!(started.get(), fail_on == 2);
+                assert!(receiver.await.is_err());
+            }
+        });
+    }
+
+    #[test]
+    fn test_checkpoint_refresh_with_zero_timeout() {
+        run_checkpoint_test(async {
+            let refreshes = Cell::new(0);
+            with_checkpoint_refresh(
+                async {
+                    assert_eq!(refreshes.get(), 1);
+                    Ok(())
+                },
+                0,
+                || async {
+                    refreshes.set(refreshes.get() + 1);
+                    Ok(())
+                },
+            )
+            .await
+            .unwrap();
+            assert_eq!(refreshes.get(), 1);
+        });
+    }
+
+    #[test]
+    fn test_checkpoint_refresh_propagates_cleanup_failure() {
+        run_checkpoint_test(async {
+            let refreshes = Cell::new(0);
+            let error = with_checkpoint_refresh(
+                async {
+                    Err(NmstateError::new(
+                        ErrorKind::PluginFailure,
+                        "rule update failed".into(),
+                    ))
+                },
+                1,
+                || async {
+                    refreshes.set(refreshes.get() + 1);
+                    Ok(())
+                },
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::PluginFailure);
+            assert_eq!(refreshes.get(), 1);
+        });
+    }
 
     fn merged_ifaces_with_vf_count(vfs: u32) -> MergedInterfaces {
         let desired = serde_yaml::from_str::<Interfaces>(&format!(

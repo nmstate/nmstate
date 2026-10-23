@@ -21,7 +21,10 @@ RUST_DEBUG_BIN_DIR=./target/debug
 RUST_RELEASE_BIN_DIR=./target/release
 CLI_EXEC=nmstatectl
 CLI_EXEC2=nmstate-autoconf
+ROLLBACK_EXEC=nmstate-rollback
+ROLLBACK_EXEC_RELEASE=rust/target/release/$(ROLLBACK_EXEC)
 SYSTEMD_SERVICE_FILE=$(ROOT_DIR)/packaging/nmstate.service
+ROLLBACK_SERVICE_FILE=$(ROOT_DIR)/packaging/nmstate-rollback.service
 CLIB_HEADER=rust/src/clib/nmstate.h
 CLIB_SO_DEV_RELEASE=rust/target/release/$(CLIB_SO_DEV)
 CLIB_SO_DEV_DEBUG=rust/target/debug/$(CLIB_SO_DEV)
@@ -31,6 +34,7 @@ PYTHON_MODULE_NAME=libnmstate
 PYTHON_MODULE_SRC=src/python/libnmstate
 CLI_EXEC_RELEASE=rust/target/release/$(CLI_EXEC)
 PREFIX ?= /usr/local
+LIBEXECDIR ?= $(PREFIX)/libexec
 SYSCONFDIR ?= $(PREFIX)/etc
 SYSTEMD_UNIT_DIR ?= $(PREFIX)/lib/systemd/system
 GO_MODULE_SRC ?= rust/src/go/nmstate
@@ -78,7 +82,7 @@ RELEASE ?=0
 PYTHON3_SITE_DIR ?=$(shell \
 	python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")
 
-$(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE): $(RUST_SOURCES)
+$(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE) $(ROLLBACK_EXEC_RELEASE): $(RUST_SOURCES)
 	cd rust; cargo build --all --release
 
 $(CLIB_SO_DEV_DEBUG):
@@ -140,21 +144,17 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	cp $(SPEC_FILE) $(TMPDIR)/nmstate-$(VERSION)/packaging/
 	cp $(CLIB_HEADER) $(TMPDIR)/nmstate-$(VERSION)/rust/src/clib/
 	cp $(SYSTEMD_SERVICE_FILE) $(TMPDIR)/nmstate-$(VERSION)/
-	cd $(TMPDIR) && tar cfz $(TARBALL) nmstate-$(VERSION)/
-	mv $(TMPDIR)/$(TARBALL) ./
-	if [ $(RELEASE) == 1 ];then \
-		cd rust; \
-		cargo vendor-filterer $(TMPDIR)/vendor || \
-		(echo -en "\nNot cargo-vendor-filterer, Please install via "; \
-		 echo -e "'cargo install cargo-vendor-filterer'\n";); \
-		cd $(TMPDIR); \
-		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
+	cd $(TMPDIR)/nmstate-$(VERSION)/rust && \
+	if [ $(RELEASE) = 1 ]; then \
+		cargo vendor-filterer vendor; \
 	else \
-		cd rust; \
-		cargo vendor $(TMPDIR)/vendor; \
-		cd $(TMPDIR); \
-		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
+		cargo vendor vendor; \
 	fi
+	mv $(TMPDIR)/nmstate-$(VERSION)/rust/vendor $(TMPDIR)/vendor
+	cp $(TMPDIR)/nmstate-$(VERSION)/rust/Cargo.lock $(TMPDIR)/
+	cd $(TMPDIR) && tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) \
+		vendor Cargo.lock
+	cd $(TMPDIR) && tar cfz $(ROOT_DIR)/$(TARBALL) nmstate-$(VERSION)/
 	rm -rf $(TMPDIR)
 	echo $(TARBALL)
 
@@ -281,9 +281,11 @@ clean:
 	rm -f nmstate-*.tar.gz.asc
 	rm -f *nmstate-*.rpm
 
-install: $(CLI_EXEC_RELEASE) manpage clib
+install: $(CLI_EXEC_RELEASE) $(ROLLBACK_EXEC_RELEASE) manpage clib
 	install -p -v -D -m755 $(CLI_EXEC_RELEASE) \
 		$(DESTDIR)$(PREFIX)/bin/$(CLI_EXEC)
+	install -p -v -D -m755 $(ROLLBACK_EXEC_RELEASE) \
+		$(DESTDIR)$(LIBEXECDIR)/$(ROLLBACK_EXEC)
 	ln -sfv $(CLI_EXEC) $(DESTDIR)$(PREFIX)/bin/$(CLI_EXEC2)
 	install -p -D -m755 $(CLIB_SO_DEV_RELEASE) \
 		$(DESTDIR)$(LIBDIR)/$(CLIB_SO_FULL)
@@ -309,6 +311,10 @@ install: $(CLI_EXEC_RELEASE) manpage clib
 	gzip $(DESTDIR)$(MAN_DIR)/man8/$(shell basename $(SYSTEMD_UNIT_MANPAGE))
 	install -p -v -D -m644 $(SYSTEMD_SERVICE_FILE) \
 		$(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(SYSTEMD_SERVICE_FILE))
+	install -p -v -D -m644 $(ROLLBACK_SERVICE_FILE) \
+		$(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(ROLLBACK_SERVICE_FILE))
+	sed -i 's|/usr/libexec/$(ROLLBACK_EXEC)|$(LIBEXECDIR)/$(ROLLBACK_EXEC)|' \
+		$(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(ROLLBACK_SERVICE_FILE))
 	install -p -v -D -m644 $(ETC_README) \
 		$(DESTDIR)$(SYSCONFDIR)/nmstate/README
 
@@ -316,6 +322,7 @@ install: $(CLI_EXEC_RELEASE) manpage clib
 uninstall:
 	- rm -fv $(DESTDIR)$(PREFIX)/bin/$(CLI_EXEC)
 	- rm -fv $(DESTDIR)$(PREFIX)/bin/$(CLI_EXEC2)
+	- rm -fv $(DESTDIR)$(LIBEXECDIR)/$(ROLLBACK_EXEC)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_DEV)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_MAN)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_FULL)
@@ -328,4 +335,5 @@ uninstall:
 		rm -rfv $(DESTDIR)$(PYTHON3_SITE_DIR)/$(PYTHON_MODULE_NAME); \
 	fi
 	- rm -fv $(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(SYSTEMD_SERVICE_FILE))
+	- rm -fv $(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(ROLLBACK_SERVICE_FILE))
 	- rm -rf $(DESTDIR)$(SYSCONFDIR)/nmstate

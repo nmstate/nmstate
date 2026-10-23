@@ -13,6 +13,11 @@ const DEFAULT_DISPATCH_DIR: &str = "/etc/NetworkManager/dispatcher.d";
 const SCRIPT_START_COMMENT: &str = "## NMSTATE DISPATCH SCRIPT START";
 const SCRIPT_END_COMMENT: &str = "## NMSTATE DISPATCH SCRIPT END";
 
+pub(crate) fn dispatch_dir() -> String {
+    std::env::var("NMSTATE_NM_DISPATCH_DIR")
+        .unwrap_or_else(|_| DEFAULT_DISPATCH_DIR.to_string())
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum NmAction {
     Up,
@@ -121,8 +126,7 @@ fn write_execute_file(file_path: &str, content: &str) -> std::io::Result<()> {
 
 pub(crate) fn get_dispatches() -> HashMap<String, DispatchConfig> {
     let mut ret: HashMap<String, DispatchConfig> = HashMap::new();
-    let dir = std::env::var("NMSTATE_NM_DISPATCH_DIR")
-        .unwrap_or(DEFAULT_DISPATCH_DIR.to_string());
+    let dir = dispatch_dir();
 
     if let Ok(fd) = std::fs::read_dir(&dir) {
         for entry in fd.filter_map(Result::ok) {
@@ -208,8 +212,7 @@ fn delete_dispatch_script(
 }
 
 fn gen_file_path(iface_name: &str, nm_action: NmAction) -> String {
-    let dir = std::env::var("NMSTATE_NM_DISPATCH_DIR")
-        .unwrap_or(DEFAULT_DISPATCH_DIR.to_string());
+    let dir = dispatch_dir();
 
     format!("{dir}/nmstate-{iface_name}-{nm_action}.sh")
 }

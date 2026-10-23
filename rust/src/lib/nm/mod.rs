@@ -22,13 +22,15 @@ mod show;
 
 #[cfg(feature = "query_apply")]
 pub(crate) use checkpoint::{
-    nm_checkpoint_create, nm_checkpoint_destroy, nm_checkpoint_rollback,
-    nm_checkpoint_timeout_extend,
+    RuleCheckpointConnections, nm_checkpoint_create, nm_checkpoint_destroy,
+    nm_checkpoint_exists, nm_checkpoint_owner, nm_checkpoint_rollback,
+    nm_checkpoint_rollback_for_rules, nm_checkpoint_rule_connections,
+    nm_checkpoint_timeout_disable, nm_checkpoint_timeout_extend,
 };
 #[cfg(feature = "gen_conf")]
 pub(crate) use gen_conf::nm_gen_conf;
 #[cfg(feature = "query_apply")]
-pub(crate) use query_apply::nm_apply;
+pub(crate) use query_apply::{dispatch::dispatch_dir, nm_apply};
 #[cfg(feature = "query_apply")]
 pub(crate) use show::nm_retrieve;
 

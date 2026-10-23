@@ -224,24 +224,13 @@ impl NmDbus<'_> {
     ) -> Result<String, NmError> {
         let default_flags = NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
             | NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES;
-        match self
-            ._checkpoint_create(
-                timeout,
-                default_flags
-                    | NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS,
-            )
-            .await
+        const DNS: u32 = NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS;
+        if let Ok(checkpoint) =
+            self._checkpoint_create(timeout, default_flags | DNS).await
         {
-            Ok(s) => Ok(s),
-            Err(_) => {
-                // The NM_CHECKPOINT_CREATE_FLAG_TRACK_INTERNAL_GLOBAL_DNS is
-                // supported by NM 1.47+ and might be backported to other
-                // versions. There is no way to know whether it is supported or
-                // not by checking the NM version. Hence we try to create
-                // the checkpoint without this flag on second try.
-                self._checkpoint_create(timeout, default_flags).await
-            }
+            return Ok(checkpoint);
         }
+        self._checkpoint_create(timeout, default_flags).await
     }
 
     pub(crate) async fn checkpoint_destroy(
@@ -260,10 +249,18 @@ impl NmDbus<'_> {
         checkpoint: &str,
     ) -> Result<(), NmError> {
         debug!("checkpoint_rollback: {checkpoint}");
-        self.proxy
-            .checkpoint_rollback(&str_to_obj_path(checkpoint)?)
-            .await?;
+        self.checkpoint_rollback_results(checkpoint).await?;
         Ok(())
+    }
+
+    pub(crate) async fn checkpoint_rollback_results(
+        &self,
+        checkpoint: &str,
+    ) -> Result<HashMap<String, u32>, NmError> {
+        Ok(self
+            .proxy
+            .checkpoint_rollback(&str_to_obj_path(checkpoint)?)
+            .await?)
     }
 
     pub(crate) async fn checkpoints(&self) -> Result<Vec<String>, NmError> {
