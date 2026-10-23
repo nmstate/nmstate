@@ -1,11 +1,63 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     BridgePortVlanMode, ErrorKind, EthernetConfig, EthernetDuplex, Interface,
     InterfaceType, Interfaces, MergedInterfaces, NetworkState, SrIovConfig,
     SrIovVfConfig, state::get_json_value_difference,
     unit_tests::testlib::new_eth_iface,
 };
+
+// Build a current state where PF `eth1` exposes two VFs. `vf0_name` and
+// `vf1_name` set the kernel interface name of each VF (empty string simulates a
+// VF rebound to vfio-pci or moved to another namespace). Only the VFs with a
+// non-empty name are pushed as kernel interfaces.
+fn gen_sriov_current_with_vf_names(
+    vf0_name: &str,
+    vf1_name: &str,
+) -> Interfaces {
+    let mut cur_ifaces = Interfaces::new();
+    let mut cur_iface = new_eth_iface("eth1");
+    if let Interface::Ethernet(eth_iface) = &mut cur_iface {
+        let mut eth_conf = EthernetConfig::new();
+        let mut sriov_conf = SrIovConfig::new();
+        let mut vf0 = SrIovVfConfig::new();
+        vf0.id = 0;
+        vf0.iface_name = vf0_name.to_string();
+        let mut vf1 = SrIovVfConfig::new();
+        vf1.id = 1;
+        vf1.iface_name = vf1_name.to_string();
+        sriov_conf.vfs = Some(vec![vf0, vf1]);
+        sriov_conf.total_vfs = Some(2);
+        eth_conf.sr_iov = Some(sriov_conf);
+        eth_iface.ethernet = Some(eth_conf);
+    } else {
+        panic!("Should be ethernet interface");
+    }
+    if !vf0_name.is_empty() {
+        cur_ifaces.push(new_eth_iface(vf0_name));
+    }
+    if !vf1_name.is_empty() {
+        cur_ifaces.push(new_eth_iface(vf1_name));
+    }
+    cur_ifaces.push(cur_iface);
+    cur_ifaces
+}
+
+fn gen_sriov_pf_desired() -> Interfaces {
+    serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        ",
+    )
+    .unwrap()
+}
 
 #[test]
 fn test_sriov_vf_mac_mix_case() {
@@ -56,6 +108,216 @@ fn test_sriov_vf_mac_mix_case() {
     .unwrap();
 
     merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// A VF that is not referenced anywhere in the desired state must not be
+// verified, even when its netdev is gone (e.g. rebound to vfio-pci). The PF is
+// only configured with a VF count.
+#[test]
+fn test_verify_sriov_skip_unreferenced_vfs() {
+    let mut pre_apply_cur_ifaces = Interfaces::new();
+    pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
+
+    // vf1 has no netdev, simulating a VF rebound to vfio-pci.
+    let cur_ifaces = gen_sriov_current_with_vf_names("eth1v0", "");
+
+    let merged_ifaces = MergedInterfaces::new(
+        gen_sriov_pf_desired(),
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// A VF referenced by (PF, VF id) must be waited for even when its netdev name
+// is not populated yet. This is the enable-and-use first apply phase, where the
+// VF references cannot be resolved to real names until the netdevs appear.
+#[test]
+fn test_verify_sriov_referenced_vf_missing_by_id() {
+    let mut pre_apply_cur_ifaces = Interfaces::new();
+    pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
+
+    // vf1 netdev has not appeared yet.
+    let cur_ifaces = gen_sriov_current_with_vf_names("eth1v0", "");
+
+    let merged_ifaces = MergedInterfaces::new(
+        gen_sriov_pf_desired(),
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let referenced_vfs = HashSet::from([("eth1".to_string(), 1u32)]);
+    let result =
+        merged_ifaces.verify_with_referenced_vfs(&cur_ifaces, &referenced_vfs);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::SrIovVfNotFound);
+    }
+}
+
+// A VF referenced by (PF, VF id) whose netdev is present passes verification.
+#[test]
+fn test_verify_sriov_referenced_vf_present_by_id() {
+    let mut pre_apply_cur_ifaces = Interfaces::new();
+    pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
+
+    let cur_ifaces = gen_sriov_current_with_vf_names("eth1v0", "eth1v1");
+
+    let merged_ifaces = MergedInterfaces::new(
+        gen_sriov_pf_desired(),
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let referenced_vfs = HashSet::from([("eth1".to_string(), 1u32)]);
+    merged_ifaces
+        .verify_with_referenced_vfs(&cur_ifaces, &referenced_vfs)
+        .unwrap();
+}
+
+// With two VFs where only one is referenced, an unreferenced VF without a
+// netdev must not fail verification while the referenced one is still checked.
+#[test]
+fn test_verify_sriov_two_vfs_only_one_referenced() {
+    let mut pre_apply_cur_ifaces = Interfaces::new();
+    pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
+
+    // vf0 is referenced and present, vf1 is unreferenced and gone.
+    let cur_ifaces = gen_sriov_current_with_vf_names("eth1v0", "");
+
+    let merged_ifaces = MergedInterfaces::new(
+        gen_sriov_pf_desired(),
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let referenced_vfs = HashSet::from([("eth1".to_string(), 0u32)]);
+    merged_ifaces
+        .verify_with_referenced_vfs(&cur_ifaces, &referenced_vfs)
+        .unwrap();
+}
+
+// A VF pulled in as a bond port (changed but not desired) must still be
+// verified. The referenced VF is present, so verification succeeds.
+#[test]
+fn test_verify_sriov_referenced_vf_as_bond_port() {
+    let pre_apply_cur_ifaces = gen_sriov_current_ifaces();
+
+    let mut cur_ifaces = gen_sriov_current_ifaces();
+    cur_ifaces.push(
+        serde_yaml::from_str::<Interface>(
+            r"---
+            name: bond0
+            type: bond
+            state: up
+            link-aggregation:
+              mode: balance-rr
+              port:
+              - eth1v0
+            ",
+        )
+        .unwrap(),
+    );
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        - name: bond0
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - sriov:eth1:0
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// A VF pulled in as a bond port whose netdev is missing must fail verification
+// so the apply keeps retrying.
+#[test]
+fn test_verify_sriov_referenced_bond_port_missing_netdev() {
+    let pre_apply_cur_ifaces = gen_sriov_current_ifaces();
+
+    // Drop the eth1v0 netdev while keeping it referenced by bond0.
+    let mut cur_ifaces = gen_sriov_current_ifaces();
+    cur_ifaces.kernel_ifaces.remove("eth1v0");
+    cur_ifaces.push(
+        serde_yaml::from_str::<Interface>(
+            r"---
+            name: bond0
+            type: bond
+            state: up
+            link-aggregation:
+              mode: balance-rr
+              port:
+              - eth1v0
+            ",
+        )
+        .unwrap(),
+    );
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        - name: bond0
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - sriov:eth1:0
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let result = merged_ifaces.verify(&cur_ifaces);
+    // The missing VF netdev must fail verification and be retriable so the
+    // apply keeps waiting. Depending on interface iteration order this
+    // surfaces either as verify_sriov's SrIovVfNotFound or as the bond port
+    // list mismatch; both are retriable.
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert!(e.kind().can_retry());
+    }
 }
 
 #[test]
