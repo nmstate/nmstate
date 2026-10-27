@@ -471,6 +471,18 @@ fn test_verify_sriov_port_name_ovs_bridge() {
             bridge:
               port:
               - name: eth1v1
+              - name: ovs-br0
+            ",
+        )
+        .unwrap(),
+    );
+    current.push(
+        serde_yaml::from_str::<Interface>(
+            r"---
+            name: ovs-br0
+            type: ovs-interface
+            state: up
+            controller: ovs-br0
             ",
         )
         .unwrap(),
@@ -520,7 +532,19 @@ fn test_verify_sriov_port_name_ovs_bond() {
                   port:
                     - name: eth1v0
                     - name: eth1v1
+              - name: ovs-br0
               ",
+        )
+        .unwrap(),
+    );
+    current.push(
+        serde_yaml::from_str::<Interface>(
+            r"---
+            name: ovs-br0
+            type: ovs-interface
+            state: up
+            controller: ovs-br0
+            ",
         )
         .unwrap(),
     );
