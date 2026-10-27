@@ -2,7 +2,8 @@
 
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
-    MergedInterfaces, OvsBridgeBondMode, OvsBridgeInterface, OvsInterface,
+    MergedInterfaces, NetworkState, OvsBridgeBondMode, OvsBridgeInterface,
+    OvsInterface,
 };
 
 #[test]
@@ -71,7 +72,7 @@ fn test_ovs_bridge_ignore_port() {
         .as_ref()
         .unwrap();
 
-    assert_eq!(br0_iface.ports(), Some(vec!["eth2"]));
+    assert_eq!(br0_iface.ports(), Some(vec!["br0", "eth2"]));
 
     // eth2 should hold no changes to controller
     assert_eq!(eth2_iface.base_iface().controller, None);
@@ -111,6 +112,11 @@ fn test_ovs_bridge_verify_ignore_port() {
     port:
     - name: eth1
     - name: eth2
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
 ",
     )
     .unwrap();
@@ -136,6 +142,70 @@ fn test_ovs_bridge_verify_ignore_port() {
     .unwrap();
 
     merged_iface.verify(&cur_ifaces).unwrap();
+}
+
+#[test]
+fn test_ovs_local_port_respects_ignore_in_desired() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+- name: eth1
+  type: ethernet
+  controller: br0
+",
+    )
+    .unwrap();
+
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-interface
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port:
+    - name: eth1
+",
+    )
+    .unwrap();
+
+    let merged = MergedInterfaces::new(
+        desired,
+        current.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(
+        merged.ignored_ifaces,
+        vec![("br0".to_string(), InterfaceType::OvsInterface)]
+    );
+    assert!(
+        merged
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .is_none()
+    );
+    let bridge = merged.get_iface("br0", InterfaceType::OvsBridge).unwrap();
+    for iface in [
+        &bridge.merged,
+        bridge.desired.as_ref().unwrap(),
+        bridge.for_apply.as_ref().unwrap(),
+        bridge.for_verify.as_ref().unwrap(),
+    ] {
+        assert_eq!(iface.ports(), Some(vec!["eth1"]));
+    }
+    merged.verify(&current).unwrap();
 }
 
 #[test]
@@ -346,6 +416,873 @@ bridge:
     } else {
         panic!("Expecting a OvsBridge but got {:?}", merged_iface.merged);
     }
+}
+
+#[test]
+fn test_ovs_local_port_preserves_ports_on_partial_update() {
+    let current: Interfaces = serde_yaml::from_str(
+        r#"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port:
+    - name: eth1
+      vlan:
+        mode: access
+        tag: 100
+      ovs-db:
+        other_config:
+          stp-path-cost: "2"
+    - name: bond0
+      link-aggregation:
+        mode: active-backup
+        port:
+        - name: eth2
+        - name: eth3
+- name: eth1
+  type: ethernet
+  controller: br0
+- name: eth2
+  type: ethernet
+  controller: br0
+- name: eth3
+  type: ethernet
+  controller: br0
+"#,
+    )
+    .unwrap();
+    let Interface::OvsBridge(current_bridge) =
+        current.get_iface("br0", InterfaceType::OvsBridge).unwrap()
+    else {
+        panic!("Expected an OVS bridge");
+    };
+
+    for desired in [
+        r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    options:
+      stp: true
+",
+        r"
+- name: br0
+  type: ovs-bridge
+",
+    ] {
+        let merged = MergedInterfaces::new(
+            serde_yaml::from_str(desired).unwrap(),
+            current.clone(),
+            Default::default(),
+            false,
+        )
+        .unwrap();
+
+        for port_name in ["eth1", "eth2", "eth3"] {
+            let port = merged
+                .get_iface(port_name, InterfaceType::Ethernet)
+                .unwrap();
+            assert_eq!(
+                port.merged.base_iface().controller.as_deref(),
+                Some("br0")
+            );
+            assert!(port.for_apply.is_none());
+        }
+
+        let bridge = merged.get_iface("br0", InterfaceType::OvsBridge).unwrap();
+        for iface in [
+            &bridge.merged,
+            bridge.desired.as_ref().unwrap(),
+            bridge.for_apply.as_ref().unwrap(),
+        ] {
+            let Interface::OvsBridge(iface) = iface else {
+                panic!("Expected an OVS bridge");
+            };
+            let ports = iface.port_confs();
+            assert_eq!(ports.len(), 3);
+            assert!(ports.iter().any(|p| p.name == "br0"));
+            for current_port in current_bridge.port_confs() {
+                assert_eq!(
+                    ports.iter().find(|p| p.name == current_port.name).copied(),
+                    Some(current_port)
+                );
+            }
+        }
+        assert!(bridge.for_verify.as_ref().unwrap().ports().is_none());
+
+        let local_port = merged
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap()
+            .for_apply
+            .as_ref()
+            .unwrap();
+        assert_eq!(local_port.base_iface().controller.as_deref(), Some("br0"));
+    }
+}
+
+#[test]
+fn test_ovs_local_port_honors_explicit_port_list() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port:
+    - name: eth1
+    - name: eth2
+- name: eth1
+  type: ethernet
+  controller: br0
+- name: eth2
+  type: ethernet
+  controller: br0
+",
+    )
+    .unwrap();
+
+    for (desired, expected_ports) in [
+        (
+            r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port: []
+",
+            vec!["br0"],
+        ),
+        (
+            r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port:
+    - name: eth1
+",
+            vec!["br0", "eth1"],
+        ),
+    ] {
+        let merged = MergedInterfaces::new(
+            serde_yaml::from_str(desired).unwrap(),
+            current.clone(),
+            Default::default(),
+            false,
+        )
+        .unwrap();
+        let bridge = merged
+            .get_iface("br0", InterfaceType::OvsBridge)
+            .unwrap()
+            .for_apply
+            .as_ref()
+            .unwrap();
+        assert_eq!(bridge.ports(), Some(expected_ports.clone()));
+
+        for port_name in ["eth1", "eth2"] {
+            let port = merged
+                .get_iface(port_name, InterfaceType::Ethernet)
+                .unwrap();
+            if expected_ports.contains(&port_name) {
+                assert!(port.for_apply.is_none());
+            } else {
+                assert_eq!(
+                    port.for_apply
+                        .as_ref()
+                        .unwrap()
+                        .base_iface()
+                        .controller
+                        .as_deref(),
+                    Some("")
+                );
+            }
+        }
+    }
+}
+
+// Ports can be attached using the `controller` property, without being in
+// the port list. They must be kept when the omitted port list is filled in.
+#[test]
+fn test_ovs_local_port_with_ports_attached_via_controller_prop() {
+    let existing_bridge: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+- name: eth2
+  type: ethernet
+  state: up
+- name: eth3
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+    let no_bridge: Interfaces = serde_yaml::from_str(
+        r"
+- name: eth2
+  type: ethernet
+  state: up
+- name: eth3
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    options:
+      stp: true
+- name: eth2
+  type: ethernet
+  state: up
+  controller: br0
+- name: eth3
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+
+    for (current, expected_ports) in [
+        (existing_bridge, vec!["br0", "eth1", "eth2"]),
+        (no_bridge, vec!["br0", "eth2"]),
+    ] {
+        let merged = MergedInterfaces::new(
+            desired.clone(),
+            current,
+            Default::default(),
+            false,
+        )
+        .unwrap();
+
+        let bridge = merged.get_iface("br0", InterfaceType::OvsBridge).unwrap();
+        for iface in [
+            &bridge.merged,
+            bridge.desired.as_ref().unwrap(),
+            bridge.for_apply.as_ref().unwrap(),
+        ] {
+            let mut ports = iface.ports().unwrap();
+            ports.sort_unstable();
+            assert_eq!(ports, expected_ports);
+        }
+        assert!(bridge.for_verify.as_ref().unwrap().ports().is_none());
+
+        for (iface_name, iface_type, controller) in [
+            ("br0", InterfaceType::OvsInterface, Some("br0")),
+            ("eth2", InterfaceType::Ethernet, Some("br0")),
+            ("eth3", InterfaceType::Ethernet, None),
+        ] {
+            assert_eq!(
+                merged
+                    .get_iface(iface_name, iface_type)
+                    .unwrap()
+                    .for_apply
+                    .as_ref()
+                    .unwrap()
+                    .base_iface()
+                    .controller
+                    .as_deref(),
+                controller
+            );
+        }
+    }
+}
+
+#[test]
+fn test_ovs_local_port_name_is_not_resolved_as_profile() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: eth1
+  type: ethernet
+- name: eth2
+  type: ethernet
+",
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port:
+    - name: eth1
+",
+    )
+    .unwrap();
+
+    for profile_holders in [vec!["eth1"], vec!["eth2"], vec!["eth1", "eth2"]] {
+        let mut current = current.clone();
+        for iface_name in profile_holders {
+            current
+                .get_iface_mut(iface_name, InterfaceType::Ethernet)
+                .unwrap()
+                .base_iface_mut()
+                .profile_name = Some("br0".to_string());
+        }
+        let merged = MergedInterfaces::new(
+            desired.clone(),
+            current,
+            Default::default(),
+            false,
+        )
+        .unwrap();
+
+        let bridge = merged.get_iface("br0", InterfaceType::OvsBridge).unwrap();
+        for iface in [
+            &bridge.merged,
+            bridge.desired.as_ref().unwrap(),
+            bridge.for_apply.as_ref().unwrap(),
+            bridge.for_verify.as_ref().unwrap(),
+        ] {
+            let mut ports = iface.ports().unwrap();
+            ports.sort_unstable();
+            assert_eq!(ports, vec!["br0", "eth1"]);
+        }
+        let local_port = merged
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap()
+            .for_apply
+            .as_ref()
+            .unwrap();
+        assert_eq!(local_port.iface_type(), InterfaceType::OvsInterface);
+        assert_eq!(local_port.base_iface().controller.as_deref(), Some("br0"));
+        assert_eq!(
+            merged
+                .get_iface("eth1", InterfaceType::Ethernet)
+                .unwrap()
+                .merged
+                .base_iface()
+                .controller
+                .as_deref(),
+            Some("br0")
+        );
+        assert!(
+            merged
+                .get_iface("eth2", InterfaceType::Ethernet)
+                .unwrap()
+                .for_apply
+                .is_none()
+        );
+    }
+}
+
+fn verify_local_port_referenced_by_other_name(
+    local_port_name_conf: &str,
+    port_ref: &str,
+) {
+    let current: Interfaces = serde_yaml::from_str(&format!(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+  {local_port_name_conf}
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+"
+    ))
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(&format!(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: {port_ref}
+"
+    ))
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let bridge = merged.get_iface("br0", InterfaceType::OvsBridge).unwrap();
+    for iface in [
+        &bridge.merged,
+        bridge.for_apply.as_ref().unwrap(),
+        bridge.for_verify.as_ref().unwrap(),
+    ] {
+        let mut ports = iface.ports().unwrap();
+        ports.sort_unstable();
+        assert_eq!(ports, vec!["br0", "eth1"]);
+    }
+}
+
+#[test]
+fn test_ovs_local_port_referenced_by_profile_name() {
+    verify_local_port_referenced_by_other_name(
+        "profile-name: br0-if",
+        "br0-if",
+    );
+}
+
+#[test]
+fn test_ovs_local_port_referenced_by_alt_name() {
+    verify_local_port_referenced_by_other_name(
+        "alt-names:\n  - name: br0-alt",
+        "br0-alt",
+    );
+}
+
+#[test]
+fn test_ovs_local_port_absent_or_down_is_honored() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+",
+    )
+    .unwrap();
+
+    // Memory-only mode turns absent into down
+    for state in ["absent", "down"] {
+        for memory_only in [false, true] {
+            let desired: Interfaces = serde_yaml::from_str(&format!(
+                r"
+- name: br0
+  type: ovs-interface
+  state: {state}
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+"
+            ))
+            .unwrap();
+
+            let merged = MergedInterfaces::new(
+                desired,
+                current.clone(),
+                Default::default(),
+                memory_only,
+            )
+            .unwrap();
+
+            let bridge =
+                merged.get_iface("br0", InterfaceType::OvsBridge).unwrap();
+            for iface in [
+                bridge.for_apply.as_ref().unwrap(),
+                bridge.for_verify.as_ref().unwrap(),
+            ] {
+                assert_eq!(iface.ports(), Some(vec!["eth1"]));
+            }
+            // A detached OVS interface cannot live without controller, so it
+            // is removed even when marked as down
+            let local_port = merged
+                .get_iface("br0", InterfaceType::OvsInterface)
+                .unwrap()
+                .for_apply
+                .as_ref()
+                .unwrap();
+            assert!(local_port.is_absent());
+        }
+    }
+}
+
+#[test]
+fn test_ovs_local_port_absent_or_down_without_other_ports() {
+    let only_local_port: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+",
+    )
+    .unwrap();
+
+    for (current, bridge_conf) in [
+        (Interfaces::new(), ""),
+        (Interfaces::new(), "bridge:\n    port: []"),
+        (only_local_port, "bridge:\n    port: []"),
+    ] {
+        for state in ["absent", "down"] {
+            for memory_only in [false, true] {
+                let desired: Interfaces = serde_yaml::from_str(&format!(
+                    r"
+- name: br0
+  type: ovs-interface
+  state: {state}
+- name: br0
+  type: ovs-bridge
+  state: up
+  {bridge_conf}
+"
+                ))
+                .unwrap();
+
+                let e = MergedInterfaces::new(
+                    desired,
+                    current.clone(),
+                    Default::default(),
+                    memory_only,
+                )
+                .unwrap_err();
+
+                assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+                assert!(e.msg().contains("has no ports"));
+            }
+        }
+    }
+}
+
+#[test]
+fn test_ovs_local_port_name_attached_to_other_bridge() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: eth1
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br1
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    assert_eq!(
+        merged
+            .get_iface("br0", InterfaceType::OvsBridge)
+            .unwrap()
+            .for_apply
+            .as_ref()
+            .unwrap()
+            .ports(),
+        Some(vec!["eth1"])
+    );
+    assert_eq!(
+        merged
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap()
+            .for_apply
+            .as_ref()
+            .unwrap()
+            .base_iface()
+            .controller
+            .as_deref(),
+        Some("br1")
+    );
+}
+
+// Same as above, but the OVS interface with the bridge name does not exist
+// and is not defined in the desired state. It will be created as port of
+// the other bridge.
+#[test]
+fn test_ovs_local_port_name_listed_as_port_of_other_bridge() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: eth1
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: br0
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    for (br_name, expected_ports) in
+        [("br0", vec!["eth1"]), ("br1", vec!["br0", "br1"])]
+    {
+        assert_eq!(
+            merged
+                .get_iface(br_name, InterfaceType::OvsBridge)
+                .unwrap()
+                .for_apply
+                .as_ref()
+                .unwrap()
+                .ports(),
+            Some(expected_ports)
+        );
+    }
+    for (iface_name, controller) in [("br0", "br1"), ("br1", "br1")] {
+        assert_eq!(
+            merged
+                .get_iface(iface_name, InterfaceType::OvsInterface)
+                .unwrap()
+                .for_apply
+                .as_ref()
+                .unwrap()
+                .base_iface()
+                .controller
+                .as_deref(),
+            Some(controller)
+        );
+    }
+}
+
+#[test]
+fn test_ovs_local_port_name_detached() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+",
+    )
+    .unwrap();
+    let desired = |state: &str| -> Interfaces {
+        serde_yaml::from_str(&format!(
+            r#"
+- name: br0
+  type: ovs-interface
+  state: {state}
+  controller: ""
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+"#
+        ))
+        .unwrap()
+    };
+
+    // An OVS interface cannot be up without a controller. This is the error
+    // reported when the bridge does not get the local port added.
+    let e = MergedInterfaces::new(
+        desired("up"),
+        current.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap_err();
+    assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    assert!(e.msg().contains("cannot live without controller"));
+
+    let merged = MergedInterfaces::new(
+        desired("down"),
+        current,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(
+        merged
+            .get_iface("br0", InterfaceType::OvsBridge)
+            .unwrap()
+            .for_apply
+            .as_ref()
+            .unwrap()
+            .ports(),
+        Some(vec!["eth1"])
+    );
+    assert!(
+        merged
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap()
+            .for_apply
+            .as_ref()
+            .unwrap()
+            .is_absent()
+    );
+}
+
+#[test]
+fn test_ovs_local_port_skipped_for_long_bridge_name() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: eth1
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+    // The local port is a kernel interface and its name is limited to 15
+    // characters
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br-provider-vln1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let bridge = merged
+        .get_iface("br-provider-vln1", InterfaceType::OvsBridge)
+        .unwrap();
+    for iface in [
+        &bridge.merged,
+        bridge.for_apply.as_ref().unwrap(),
+        bridge.for_verify.as_ref().unwrap(),
+    ] {
+        assert_eq!(iface.ports(), Some(vec!["eth1"]));
+    }
+    assert!(
+        merged
+            .get_iface("br-provider-vln1", InterfaceType::OvsInterface)
+            .is_none()
+    );
+}
+
+#[test]
+fn test_ovs_local_port_long_bridge_name_without_ports() {
+    for bridge_conf in ["", "bridge:\n    port: []"] {
+        let desired: Interfaces = serde_yaml::from_str(&format!(
+            r"
+- name: br-provider-vln1
+  type: ovs-bridge
+  state: up
+  {bridge_conf}
+"
+        ))
+        .unwrap();
+
+        let e = MergedInterfaces::new(
+            desired,
+            Interfaces::new(),
+            Default::default(),
+            false,
+        )
+        .unwrap_err();
+
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("has no ports"));
+    }
+}
+
+#[test]
+fn test_ovs_local_port_max_length_bridge_name() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: eth1
+  type: ethernet
+  state: up
+",
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br-provider-vln
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let bridge = merged
+        .get_iface("br-provider-vln", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert_eq!(bridge.ports(), Some(vec!["br-provider-vln", "eth1"]));
+    assert!(
+        merged
+            .get_iface("br-provider-vln", InterfaceType::OvsInterface)
+            .is_some()
+    );
 }
 
 #[test]
@@ -850,6 +1787,7 @@ fn test_ignore_patch_ports_for_verify() {
     port:
     - name: eth1
     - name: patch0
+    - name: br0
 - name: patch0
   type: ovs-interface
   state: up
@@ -865,6 +1803,7 @@ fn test_ignore_patch_ports_for_verify() {
     port:
     - name: eth2
     - name: patch1
+    - name: br1
 - name: patch1
   type: ovs-interface
   state: up
@@ -873,6 +1812,14 @@ fn test_ignore_patch_ports_for_verify() {
     enabled: false
   patch:
     peer: patch0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+- name: br1
+  type: ovs-interface
+  state: up
+  controller: br1
 ",
     )
     .unwrap();
@@ -1200,6 +2147,11 @@ fn test_ovs_bridge_ignore_extra_ports_for_verify() {
             - name: eth1
             - name: eth2
             - name: eth3
+            - name: br0
+        - name: br0
+          type: ovs-interface
+          state: up
+          controller: br0
         ",
     )
     .unwrap();
@@ -1277,8 +2229,76 @@ fn test_ovs_bridge_ignore_extra_ports_for_apply() {
         .for_apply
         .as_ref();
 
-    assert_eq!(for_apply_bridge.ports(), Some(vec!["eth1", "eth2"]));
+    assert_eq!(for_apply_bridge.ports(), Some(vec!["br0", "eth1", "eth2"]));
     assert_eq!(for_apply_eth3, None);
+}
+
+#[test]
+fn test_ovs_local_port_unchanged_with_allow_extra_ports() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    port:
+    - name: br0
+    - name: eth1
+    - name: eth2
+- name: br0
+  type: ovs-interface
+  controller: br0
+- name: eth1
+  type: ethernet
+  controller: br0
+- name: eth2
+  type: ethernet
+  controller: br0
+",
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  bridge:
+    allow-extra-ports: true
+    port:
+    - name: eth1
+",
+    )
+    .unwrap();
+
+    let merged = MergedInterfaces::new(
+        desired,
+        current.clone(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let bridge = merged
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert_eq!(bridge.ports(), Some(vec!["br0", "eth1"]));
+    for (port_name, port_type) in [
+        ("br0", InterfaceType::OvsInterface),
+        ("eth1", InterfaceType::Ethernet),
+        ("eth2", InterfaceType::Ethernet),
+    ] {
+        assert!(
+            merged
+                .get_iface(port_name, port_type)
+                .unwrap()
+                .for_apply
+                .is_none(),
+            "{port_name} should not be changed"
+        );
+    }
+
+    merged.verify(&current).unwrap();
 }
 
 #[test]
@@ -1393,5 +2413,73 @@ fn test_ovs_port_db_verify_clear() {
         false,
     )
     .unwrap();
+    // The local port br0 is created during the apply
+    current.push(
+        serde_yaml::from_str::<Interface>(
+            r"
+name: br0
+type: ovs-interface
+state: up
+controller: br0
+",
+        )
+        .unwrap(),
+    );
+    if let Some(Interface::OvsBridge(iface)) =
+        current.get_iface_mut("br0", InterfaceType::OvsBridge)
+    {
+        iface.bridge.as_mut().unwrap().ports.as_mut().unwrap().push(
+            crate::OvsBridgePortConfig {
+                name: "br0".to_string(),
+                ..Default::default()
+            },
+        );
+    }
     merged.verify(&current).unwrap();
+}
+
+// The local port is added to the desired state automatically, so gen_diff()
+// reports it even when desired and current states are identical. This is
+// intended: the diff reflects what nmstate is going to apply, and it is also
+// used for the output of policies and `nmstatectl apply`.
+#[test]
+fn test_ovs_local_port_in_gen_diff_of_identical_states() {
+    let state: NetworkState = serde_yaml::from_str(
+        r"
+interfaces:
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+",
+    )
+    .unwrap();
+
+    let diff = state.gen_diff(&state).unwrap();
+
+    assert!(!diff.interfaces.is_empty());
+    let bridge = diff
+        .interfaces
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap();
+    let mut ports = bridge.ports().unwrap();
+    ports.sort_unstable();
+    assert_eq!(ports, vec!["br0", "eth1"]);
+    let local_port = diff
+        .interfaces
+        .get_iface("br0", InterfaceType::OvsInterface)
+        .unwrap();
+    assert!(local_port.is_up());
+    assert_eq!(local_port.base_iface().controller.as_deref(), Some("br0"));
+    assert!(
+        diff.interfaces
+            .get_iface("eth1", InterfaceType::Ethernet)
+            .is_none()
+    );
 }

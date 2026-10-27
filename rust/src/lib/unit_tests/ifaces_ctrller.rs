@@ -856,10 +856,18 @@ fn test_auto_manage_ovs_bond_ports() {
         .as_ref()
         .unwrap();
 
-    assert_eq!(br_iface.ports(), Some(vec!["eth1", "eth2"]));
+    let ovs_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsInterface)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(br_iface.ports(), Some(vec!["eth1", "eth2", "br0"]));
     assert!(eth1_iface.is_up());
     assert_eq!(eth1_iface.base_iface().controller.as_deref(), Some("br0"));
     assert_eq!(eth2_iface.base_iface().controller.as_deref(), Some("br0"));
+    assert_eq!(ovs_iface.base_iface().controller.as_deref(), Some("br0"));
 }
 
 #[test]

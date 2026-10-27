@@ -12,6 +12,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import InfiniBand
 from libnmstate.schema import IpTunnel
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge
@@ -96,6 +97,7 @@ def _prepare_state_for_verify(desired_state_data, kernel_only=False):
 
     current_state = statelib.State(current_state_data)
     current_state.filter(desired_state_data)
+    _hide_implicit_ovs_local_ports(current_state, desired_state_data)
     current_state.normalize()
 
     full_desired_state = statelib.State(current_state.state)
@@ -121,6 +123,60 @@ def _prepare_state_for_verify(desired_state_data, kernel_only=False):
     _remove_cap_flags_from_ip_tunnel(current_state)
 
     return full_desired_state, current_state
+
+
+def _hide_implicit_ovs_local_ports(current_state, desired_state_data):
+    """
+    Nmstate adds the local port, an OVS internal interface named like its
+    bridge, to every OVS bridge. Remove it from the current state when the
+    desired state does not mention it, so that the desired bridge can match.
+    """
+    desired_ifaces = desired_state_data.get(Interface.KEY, [])
+    for desired_iface in desired_ifaces:
+        if (
+            desired_iface.get(Interface.TYPE) != InterfaceType.OVS_BRIDGE
+            or desired_iface.get(Interface.STATE, InterfaceState.UP)
+            != InterfaceState.UP
+        ):
+            continue
+        br_name = desired_iface[Interface.NAME]
+        desired_ports = desired_iface.get(OVSBridge.CONFIG_SUBTREE, {}).get(
+            OVSBridge.PORT_SUBTREE
+        )
+        if any(
+            port[OVSBridge.Port.NAME] == br_name
+            for port in desired_ports or []
+        ) or any(
+            iface[Interface.NAME] == br_name
+            and iface.get(Interface.TYPE) == InterfaceType.OVS_INTERFACE
+            for iface in desired_ifaces
+        ):
+            continue
+
+        current_ifaces = current_state.state[Interface.KEY]
+        current_ifaces[:] = [
+            iface
+            for iface in current_ifaces
+            if not (
+                iface[Interface.NAME] == br_name
+                and iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE
+            )
+        ]
+        if desired_ports is None:
+            continue
+        for iface in current_ifaces:
+            if (
+                iface[Interface.NAME] == br_name
+                and iface[Interface.TYPE] == InterfaceType.OVS_BRIDGE
+            ):
+                current_ports = iface.get(OVSBridge.CONFIG_SUBTREE, {}).get(
+                    OVSBridge.PORT_SUBTREE, []
+                )
+                current_ports[:] = [
+                    port
+                    for port in current_ports
+                    if port[OVSBridge.Port.NAME] != br_name
+                ]
 
 
 def assert_no_config_route_to_iface(iface_name):

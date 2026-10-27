@@ -228,8 +228,9 @@ class TestAltNames:
 
         with ovs_br.create():
             iface = show_only((TEST_BRIDGE_NIC,))[Interface.KEY][0]
+            # The local port is added to the bridge
             assert state_match(
-                [{"name": "eth1"}],
+                [{"name": TEST_BRIDGE_NIC}, {"name": "eth1"}],
                 iface[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE],
             )
 

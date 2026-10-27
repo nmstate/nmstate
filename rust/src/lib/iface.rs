@@ -924,7 +924,6 @@ impl MergedInterface {
     fn pre_inter_ifaces_process(&mut self) {
         if self.merged.is_up() && self.is_desired() {
             self.special_merge();
-            self.create_ovs_iface_for_empty_ports();
         }
     }
 

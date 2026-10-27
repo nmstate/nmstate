@@ -729,6 +729,9 @@ def down_br0(eth1_up):
         - name: br0
           type: ovs-bridge
           state: down
+        - name: br0
+          type: ovs-interface
+          state: down
         - name: ovs0
           type: ovs-interface
           state: down
