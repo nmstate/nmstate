@@ -476,6 +476,62 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 }
 
 #[test]
+fn test_ifaces_ignore_kernel_iface_sharing_name_with_desired_user_iface() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: ignore
+  controller: br0
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+",
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+",
+    )
+    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    assert_eq!(
+        merged_ifaces.ignored_ifaces,
+        vec![("br0".to_string(), InterfaceType::OvsInterface)]
+    );
+    assert!(
+        merged_ifaces
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .is_none()
+    );
+    let br_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap();
+    assert!(br_iface.is_desired());
+    assert_eq!(
+        br_iface.for_apply.as_ref().unwrap().ports(),
+        Some(vec!["eth1"])
+    );
+}
+
+#[test]
 fn test_ifaces_iter() {
     let ifaces = serde_yaml::from_str::<Interfaces>(
         r"---
