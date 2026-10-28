@@ -368,6 +368,13 @@ impl Interfaces {
                         resolved_ifaces.push(new_iface);
                     }
                     _ => {
+                        if let Some(found) = find_ovs_bridge_for_untyped_iface(
+                            iface_name, &founds, self, cur_ifaces,
+                        ) {
+                            resolved_ifaces
+                                .push(Interface::deserialize(found)?);
+                            continue;
+                        }
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
@@ -1191,6 +1198,54 @@ impl MergedInterfaces {
         }
         Ok(())
     }
+}
+
+// An OVS bridge and its local port share the same name. `bridge` is not a
+// property of OVS interfaces, so an untyped interface holding it can only
+// refer to the OVS bridge. An untyped interface only setting the state also
+// refers to the bridge when the other match is its local port, as it did
+// before the local port was added automatically. Neither applies when the
+// bridge is already in the desired state.
+fn find_ovs_bridge_for_untyped_iface<'a>(
+    iface_name: &str,
+    candidates: &'a [serde_json::Value],
+    des_ifaces: &Interfaces,
+    cur_ifaces: &Interfaces,
+) -> Option<&'a serde_json::Value> {
+    let is_type = |c: &serde_json::Value, iface_type: InterfaceType| {
+        c.get("type").and_then(|t| t.as_str())
+            == Some(iface_type.to_string().as_str())
+    };
+    let mut br_candidates = candidates
+        .iter()
+        .filter(|c| is_type(c, InterfaceType::OvsBridge));
+    let br_candidate = br_candidates.next()?;
+    if br_candidates.next().is_some()
+        || !candidates.iter().all(|c| {
+            is_type(c, InterfaceType::OvsBridge)
+                || is_type(c, InterfaceType::OvsInterface)
+        })
+    {
+        return None;
+    }
+    if des_ifaces
+        .get_iface(iface_name, InterfaceType::OvsBridge)
+        .is_some()
+    {
+        return None;
+    }
+    if br_candidate.get("bridge").is_some() {
+        return Some(br_candidate);
+    }
+    let is_state_only = br_candidate.as_object().is_some_and(|o| {
+        o.keys()
+            .all(|k| matches!(k.as_str(), "name" | "type" | "state"))
+    });
+    let has_local_port = cur_ifaces
+        .get_iface(iface_name, InterfaceType::OvsBridge)
+        .and_then(|i| i.ports())
+        .is_some_and(|ports| ports.contains(&iface_name));
+    (is_state_only && has_local_port).then_some(br_candidate)
 }
 
 // Special cases:

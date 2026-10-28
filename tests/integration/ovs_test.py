@@ -24,6 +24,7 @@ from libnmstate.schema import VXLAN
 from libnmstate.schema import Veth
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -2852,6 +2853,53 @@ def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
             ] = f"longlonglonglonglonglonglonglonglonglong{j}"
         desired_state[Interface.KEY].append(iface_state)
     libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def ovs_bridge_with_local_port(eth1_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(ETH1)
+    bridge.add_internal_port(BRIDGE1)
+    with bridge.create() as state:
+        yield state
+
+
+# An OVS bridge and its local port share the same name. An interface without
+# type that only sets the state refers to the bridge.
+@pytest.mark.tier1
+def test_ovs_bridge_state_up_without_type(ovs_bridge_with_local_port):
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+            - name: {BRIDGE1}
+              state: up
+            """
+        )
+    )
+    assertlib.assert_state_match(ovs_bridge_with_local_port)
+
+
+# NetworkManager brings the OVS bridge back up via its ports when only the
+# bridge is deactivated.
+@pytest.mark.xfail(
+    raises=NmstateVerificationError,
+    reason="https://issues.redhat.com/browse/RHEL-149781",
+)
+def test_ovs_bridge_state_down_without_type(ovs_bridge_with_local_port):
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+            - name: {BRIDGE1}
+              state: down
+            """
+        )
+    )
+    assert not any(
+        iface[Interface.TYPE] == InterfaceType.OVS_BRIDGE
+        for iface in statelib.show_only((BRIDGE1,))[Interface.KEY]
+    )
 
 
 @pytest.fixture
