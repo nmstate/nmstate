@@ -1237,8 +1237,9 @@ fn get_ignored_ifaces(
 
     for iface_name in ignored_kernel_ifaces {
         if let Some(iface) = desired
-            .get_iface(&iface_name, InterfaceType::Unknown)
-            .or_else(|| current.get_iface(&iface_name, InterfaceType::Unknown))
+            .kernel_ifaces
+            .get(&iface_name)
+            .or_else(|| current.kernel_ifaces.get(&iface_name))
         {
             let iface_type = match iface.iface_type() {
                 InterfaceType::Veth => InterfaceType::Ethernet,
