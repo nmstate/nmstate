@@ -298,6 +298,226 @@ fn test_ifaces_resolve_unknown_bond_iface() {
     }
 }
 
+const OVS_BR0_WITH_LOCAL_PORT_CURRENT: &str = r"---
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+";
+
+// An OVS bridge and its local port share the same name. The `bridge` section
+// can only belong to the bridge.
+#[test]
+fn test_ifaces_resolve_unknown_iface_with_bridge_conf_to_ovs_bridge() {
+    let current =
+        serde_yaml::from_str::<Interfaces>(OVS_BR0_WITH_LOCAL_PORT_CURRENT)
+            .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: br0
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let br_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap();
+    assert!(br_iface.is_desired());
+    assert_eq!(
+        br_iface.for_apply.as_ref().unwrap().ports(),
+        Some(vec!["br0", "eth1"])
+    );
+    assert!(
+        !merged_ifaces
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap()
+            .is_desired()
+    );
+}
+
+// An untyped interface only setting the state refers to the bridge, as it did
+// before the local port was added.
+#[test]
+fn test_ifaces_resolve_unknown_state_only_iface_to_ovs_bridge() {
+    for (desired_yaml, expected_state) in [
+        ("- name: br0", InterfaceState::Up),
+        ("- name: br0\n  state: up", InterfaceState::Up),
+        ("- name: br0\n  state: down", InterfaceState::Down),
+    ] {
+        let current =
+            serde_yaml::from_str::<Interfaces>(OVS_BR0_WITH_LOCAL_PORT_CURRENT)
+                .unwrap();
+        let desired = serde_yaml::from_str::<Interfaces>(desired_yaml).unwrap();
+
+        let merged_ifaces =
+            MergedInterfaces::new(desired, current, Default::default(), false)
+                .unwrap();
+
+        let br_iface = merged_ifaces
+            .get_iface("br0", InterfaceType::OvsBridge)
+            .unwrap();
+        assert!(br_iface.is_desired());
+        assert_eq!(
+            br_iface.for_apply.as_ref().unwrap().base_iface().state,
+            expected_state
+        );
+        let local_port = merged_ifaces
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap();
+        assert!(!local_port.is_desired());
+        assert!(local_port.for_apply.is_none());
+    }
+}
+
+fn assert_resolve_unknown_iface_is_ambiguous(
+    current_yaml: &str,
+    desired_yaml: &str,
+) {
+    let current = serde_yaml::from_str::<Interfaces>(current_yaml).unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(desired_yaml).unwrap();
+
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
+
+    let e = result.unwrap_err();
+    assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    assert!(
+        e.msg()
+            .contains("Found 2+ interface matching desired unknown type")
+    );
+}
+
+#[test]
+fn test_ifaces_resolve_unknown_iface_with_other_props_is_ambiguous() {
+    for desired_yaml in [
+        "- name: br0\n  mtu: 1500",
+        "- name: br0\n  state: up\n  ipv4:\n    enabled: false",
+    ] {
+        assert_resolve_unknown_iface_is_ambiguous(
+            OVS_BR0_WITH_LOCAL_PORT_CURRENT,
+            desired_yaml,
+        );
+    }
+}
+
+#[test]
+fn test_ifaces_resolve_unknown_state_only_iface_without_local_port() {
+    assert_resolve_unknown_iface_is_ambiguous(
+        r"---
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br1
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+",
+        "- name: br0\n  state: up",
+    );
+}
+
+#[test]
+fn test_ifaces_resolve_unknown_state_only_iface_with_desired_ovs_bridge() {
+    assert_resolve_unknown_iface_is_ambiguous(
+        OVS_BR0_WITH_LOCAL_PORT_CURRENT,
+        r"---
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  state: up
+",
+    );
+}
+
+// The untyped interface must not silently override the OVS bridge already
+// in the desired state
+#[test]
+fn test_ifaces_resolve_unknown_iface_with_bridge_conf_and_desired_ovs_bridge() {
+    assert_resolve_unknown_iface_is_ambiguous(
+        OVS_BR0_WITH_LOCAL_PORT_CURRENT,
+        r"---
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  bridge:
+    port:
+    - name: br0
+",
+    );
+}
+
+#[test]
+fn test_ifaces_resolve_unknown_absent_iface_with_local_port() {
+    let current =
+        serde_yaml::from_str::<Interfaces>(OVS_BR0_WITH_LOCAL_PORT_CURRENT)
+            .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+- name: br0
+  state: absent
+",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    for iface_type in [InterfaceType::OvsBridge, InterfaceType::OvsInterface] {
+        assert!(
+            merged_ifaces
+                .get_iface("br0", iface_type)
+                .unwrap()
+                .for_apply
+                .as_ref()
+                .unwrap()
+                .is_absent()
+        );
+    }
+}
+
 #[test]
 fn test_ifaces_ignore_iface_in_desire() {
     let current = serde_yaml::from_str::<Interfaces>(
