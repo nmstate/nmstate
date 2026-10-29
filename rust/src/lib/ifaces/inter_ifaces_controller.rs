@@ -426,7 +426,8 @@ impl MergedInterfaces {
     pub(crate) fn set_ifaces_up_priority(&mut self) -> bool {
         // Return true when all interface has correct priority.
         let mut ret = true;
-        let mut pending_changes: HashMap<String, u32> = HashMap::new();
+        let mut pending_changes: HashMap<(String, InterfaceType), u32> =
+            HashMap::new();
         // Use the push order to allow user providing help on dependency order
 
         for (iface_name, iface_type) in &self.insert_order {
@@ -462,14 +463,16 @@ impl MergedInterfaces {
                 );
                 continue;
             };
+            let iface_key = (iface_name.to_string(), iface.iface_type());
+            let ctrl_key =
+                (ctrl_name.to_string(), ctrl_iface.merged.iface_type());
             if let Some(ctrl_iface) = ctrl_iface.for_apply.as_ref() {
-                if let Some(ctrl_pri) = pending_changes.remove(ctrl_name) {
-                    pending_changes.insert(ctrl_name.to_string(), ctrl_pri);
-                    pending_changes
-                        .insert(iface_name.to_string(), ctrl_pri + 1);
+                if let Some(ctrl_pri) = pending_changes.remove(&ctrl_key) {
+                    pending_changes.insert(ctrl_key, ctrl_pri);
+                    pending_changes.insert(iface_key, ctrl_pri + 1);
                 } else if ctrl_iface.base_iface().is_up_priority_valid() {
                     pending_changes.insert(
-                        iface_name.to_string(),
+                        iface_key,
                         ctrl_iface.base_iface().up_priority + 1,
                     );
                 } else {
@@ -484,7 +487,7 @@ impl MergedInterfaces {
                 // Controller interface already exists in current state but not
                 // mentioned in desired, just activate with top priority.
                 if iface.parent().is_none() {
-                    pending_changes.insert(iface_name.to_string(), 1);
+                    pending_changes.insert(iface_key, 1);
                 }
             } else {
                 log::error!(
@@ -513,35 +516,51 @@ impl MergedInterfaces {
                 if !iface.is_up() {
                     continue;
                 }
-                if let Some(parent) = iface.parent() {
-                    let parent_priority = pending_changes.get(parent).cloned();
-                    if let Some(parent_priority) = parent_priority {
-                        pending_changes.insert(
-                            iface_name.to_string(),
-                            parent_priority + 1,
-                        );
-                    } else if let Some(parent_iface) = self
-                        .kernel_ifaces
-                        .get(parent)
-                        .and_then(|i| i.for_apply.as_ref())
-                        && parent_iface.base_iface().is_up_priority_valid()
-                    {
-                        pending_changes.insert(
-                            iface_name.to_string(),
-                            parent_iface.base_iface().up_priority + 1,
-                        );
-                    }
+                // An OVS interface is the only kind of interface for which the
+                // parent is also the controller, and that relationship was
+                // already processed by the controller pass above. Also, the
+                // parent lookup below only searches kernel_ifaces, while the
+                // OVS bridge is a userspace interface.
+                if iface.iface_type() == InterfaceType::OvsInterface {
+                    continue;
+                }
+                let Some(parent) = iface.parent() else {
+                    continue;
+                };
+                let Some(parent_iface) = self.kernel_ifaces.get(parent) else {
+                    continue;
+                };
+                let parent_key =
+                    (parent.to_string(), parent_iface.merged.iface_type());
+                if let Some(parent_priority) =
+                    pending_changes.get(&parent_key).cloned()
+                {
+                    pending_changes.insert(
+                        (iface_name.to_string(), iface.iface_type()),
+                        parent_priority + 1,
+                    );
+                } else if let Some(parent_apply) =
+                    parent_iface.for_apply.as_ref()
+                    && parent_apply.base_iface().is_up_priority_valid()
+                {
+                    pending_changes.insert(
+                        (iface_name.to_string(), iface.iface_type()),
+                        parent_apply.base_iface().up_priority + 1,
+                    );
                 }
             }
         }
 
         log::debug!("Pending kernel up priority changes {pending_changes:?}");
-        for (iface_name, priority) in pending_changes.iter() {
-            if let Some(iface) = self
-                .kernel_ifaces
-                .get_mut(iface_name)
-                .and_then(|i| i.for_apply.as_mut())
-            {
+        for ((iface_name, iface_type), priority) in pending_changes.iter() {
+            let iface = if iface_type.is_userspace() {
+                self.user_ifaces
+                    .get_mut(&(iface_name.clone(), iface_type.clone()))
+            } else {
+                self.kernel_ifaces.get_mut(iface_name)
+            }
+            .and_then(|i| i.for_apply.as_mut());
+            if let Some(iface) = iface {
                 iface.base_iface_mut().up_priority = *priority;
             }
         }
