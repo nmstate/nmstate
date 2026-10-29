@@ -308,6 +308,47 @@ fn test_auto_include_ovs_interface() {
     assert_eq!(br0_iface.base_iface().up_priority, 0);
 }
 
+// Verify that up_priority is assigned correctly when an OVS interface
+// has the same name of its bridge.
+#[test]
+fn test_ovs_bridge_same_name_port_up_priority() {
+    let mut ifaces = Interfaces::new();
+    ifaces.push(new_ovs_br_iface("br0", &["p1", "br0"]));
+    ifaces.push(new_ovs_iface("p1", "br0"));
+    ifaces.push(new_ovs_iface("br0", "br0"));
+
+    let merged_ifaces = MergedInterfaces::new(
+        ifaces,
+        Interfaces::new(),
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let br0_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    let p1_iface = merged_ifaces
+        .get_iface("p1", InterfaceType::OvsInterface)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    let local_port_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsInterface)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(br0_iface.base_iface().up_priority, 0);
+    assert_eq!(p1_iface.base_iface().up_priority, 1);
+    assert_eq!(local_port_iface.base_iface().up_priority, 1);
+}
+
 #[test]
 fn test_auto_absent_ovs_interface() {
     let mut cur_ifaces = Interfaces::new();
