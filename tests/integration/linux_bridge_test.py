@@ -12,6 +12,7 @@ import json
 import libnmstate
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
@@ -27,10 +28,12 @@ from .testlib.assertlib import assert_mac_address
 from .testlib.assertlib import assert_state
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
+from .testlib.bridgelib import bridge_state_with_default_neigh_suppress
 from .testlib.bridgelib import generate_vlan_filtering_config
 from .testlib.bridgelib import generate_vlan_id_config
 from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
+from .testlib.bridgelib import neigh_suppress_sysfs_value
 from .testlib.cmdlib import exec_cmd
 from .testlib.dummy import dummy_interface
 from .testlib.ifacelib import get_mac_address
@@ -158,7 +161,9 @@ def test_create_and_remove_linux_bridge_with_one_port(port0_up):
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
     with linux_bridge(bridge_name, bridge_state) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state(
+            bridge_state_with_default_neigh_suppress(desired_state)
+        )
 
     assertlib.assert_absent(bridge_name)
 
@@ -175,7 +180,9 @@ def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
     bridge_state = _create_bridge_subtree_config((port0_name, port1_name))
 
     with linux_bridge(bridge_name, bridge_state) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state(
+            bridge_state_with_default_neigh_suppress(desired_state)
+        )
 
     assertlib.assert_absent(bridge_name)
 
@@ -223,7 +230,9 @@ def test_create_vlan_as_port_of_linux_bridge(port0_vlan101):
     port_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
     with linux_bridge(bridge_name, bridge_state) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state(
+            bridge_state_with_default_neigh_suppress(desired_state)
+        )
 
 
 @pytest.mark.tier1
@@ -253,7 +262,9 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
         desired_state,
     )
 
-    assertlib.assert_state(desired_state)
+    assertlib.assert_state(
+        bridge_state_with_default_neigh_suppress(desired_state)
+    )
 
 
 @pytest.mark.tier1
@@ -342,7 +353,9 @@ def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
     with linux_bridge(
         bridge_name, bridge_state, extra_iface_state
     ) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state(
+            bridge_state_with_default_neigh_suppress(desired_state)
+        )
 
     assertlib.assert_absent(bridge_name)
 
@@ -364,7 +377,9 @@ def test_add_linux_bridge_with_empty_ipv6_static_address_with_stp(port0_up):
     with linux_bridge(
         bridge_name, bridge_state, extra_iface_state
     ) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state(
+            bridge_state_with_default_neigh_suppress(desired_state)
+        )
 
     assertlib.assert_absent(bridge_name)
 
@@ -655,7 +670,9 @@ class TestVlanFiltering:
         with linux_bridge(
             TEST_BRIDGE0, bridge_config_subtree
         ) as desired_state:
-            assertlib.assert_state(desired_state)
+            assertlib.assert_state(
+                bridge_state_with_default_neigh_suppress(desired_state)
+            )
             assert not _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_partially_disable_vlan_filtering_on_bridge(
@@ -670,7 +687,9 @@ class TestVlanFiltering:
         with linux_bridge(
             TEST_BRIDGE0, bridge_config_subtree
         ) as desired_state:
-            assertlib.assert_state(desired_state)
+            assertlib.assert_state(
+                bridge_state_with_default_neigh_suppress(desired_state)
+            )
             assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_keep_vlan_filtering_on_bridge_when_not_set(
@@ -1430,6 +1449,36 @@ def test_change_mtu_with_stable_link_up(bridge0_with_port0):
     )
 
     assertlib.assert_state(desired_state)
+
+
+@pytest.mark.parametrize("neigh_suppress", [False, True])
+def test_omitted_neigh_suppress_keeps_kernel_state(
+    bridge0_with_port0, neigh_suppress
+):
+    desired_state = deepcopy(bridge0_with_port0)
+
+    bridge_config = desired_state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
+
+    port_config = bridge_config[LinuxBridge.PORT_SUBTREE][0]
+    port_name = port_config[LinuxBridge.Port.NAME]
+    port_config[LinuxBridge.Port.NEIGH_SUPPRESS] = neigh_suppress
+
+    try:
+        libnmstate.apply(desired_state)
+    except NmstateNotSupportedError as err:
+        assert "neigh-suppress" in str(err)
+        pytest.skip(str(err))
+
+    expected_flag = str(int(neigh_suppress))
+    assert neigh_suppress_sysfs_value(port_name) == expected_flag
+
+    port_config.pop(LinuxBridge.Port.NEIGH_SUPPRESS)
+    port_config[LinuxBridge.Port.STP_HAIRPIN_MODE] = True
+
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state_match(desired_state)
+    assert neigh_suppress_sysfs_value(port_name) == expected_flag
 
 
 @pytest.fixture

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from contextlib import contextmanager
+from copy import deepcopy
 
 import libnmstate
 from libnmstate.schema import Interface
@@ -60,6 +61,26 @@ def linux_bridge(
             },
             kernel_only=kernel_mode,
         )
+
+
+def neigh_suppress_sysfs_value(port_name):
+    with open(f"/sys/class/net/{port_name}/brport/neigh_suppress") as flag:
+        return flag.read().strip()
+
+
+def bridge_state_with_default_neigh_suppress(state):
+    expected = deepcopy(state)
+
+    for iface in expected[Interface.KEY]:
+        if iface.get(Interface.TYPE) != InterfaceType.LINUX_BRIDGE:
+            continue
+
+        for port in iface.get(LinuxBridge.CONFIG_SUBTREE, {}).get(
+            LinuxBridge.PORT_SUBTREE, []
+        ):
+            port.setdefault(LinuxBridge.Port.NEIGH_SUPPRESS, False)
+
+    return expected
 
 
 def add_port_to_bridge(bridge_subtree_state, port_name, port_state=None):

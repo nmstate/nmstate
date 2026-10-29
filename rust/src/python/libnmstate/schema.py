@@ -296,6 +296,7 @@ class LinuxBridge(Bridge):
         # Read only properties end
 
     class Port(Bridge.Port):
+        NEIGH_SUPPRESS = "neigh-suppress"
         STP_HAIRPIN_MODE = "stp-hairpin-mode"
         STP_PATH_COST = "stp-path-cost"
         STP_PRIORITY = "stp-priority"

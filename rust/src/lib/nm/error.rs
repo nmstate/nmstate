@@ -13,6 +13,7 @@ pub(crate) fn nm_error_to_nmstate(nm_error: NmError) -> NmstateError {
         NmErrorKind::Manager(NmManagerError::MissingPlugin) => {
             NmstateError::new(ErrorKind::DependencyError, nm_error.to_string())
         }
+
         NmErrorKind::Manager(NmManagerError::PermissionDenied) => {
             if nm_error.msg.starts_with("Not authorized") {
                 NmstateError::new(
@@ -26,9 +27,11 @@ pub(crate) fn nm_error_to_nmstate(nm_error: NmError) -> NmstateError {
                 )
             }
         }
+
         NmErrorKind::Setting(NmSettingError::PermissionDenied) => {
             NmstateError::new(ErrorKind::PermissionError, nm_error.to_string())
         }
+
         NmErrorKind::Connection(NmConnectionError::InvalidSetting) => {
             NmstateError::new(
                 ErrorKind::DependencyError,
@@ -38,9 +41,24 @@ pub(crate) fn nm_error_to_nmstate(nm_error: NmError) -> NmstateError {
                 ),
             )
         }
+
+        NmErrorKind::Connection(NmConnectionError::InvalidProperty)
+            if nm_error.msg.starts_with("bridge-port.neighbor-suppress:")
+                && nm_error.msg.contains("unknown property") =>
+        {
+            NmstateError::new(
+                ErrorKind::NotSupportedError,
+                format!(
+                    "Bridge port neigh-suppress is not supported by the \
+                     current version of NetworkManager: {nm_error}"
+                ),
+            )
+        }
+
         NmErrorKind::Connection(_) => {
             NmstateError::new(ErrorKind::InvalidArgument, nm_error.to_string())
         }
+
         _ => NmstateError::new(
             ErrorKind::Bug,
             format!("{}: {}", nm_error.kind, nm_error.msg),

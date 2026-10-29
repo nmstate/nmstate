@@ -9,15 +9,21 @@ import libnmstate
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
+from libnmstate.schema import LinuxBridge
 from libnmstate.schema import VXLAN
 
 from .testlib import assertlib
 from .testlib.apply import apply_with_description
 from .testlib.assertlib import assert_state
 from .testlib.bondlib import bond_interface
+from .testlib.bridgelib import linux_bridge
+from .testlib.bridgelib import neigh_suppress_sysfs_value
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.cmdlib import exec_cmd
 from .testlib.cmdlib import format_exec_cmd_result
+from .testlib.env import nm_version_int
+from .testlib.env import version_str_to_int
+from .testlib.statelib import show_only
 from .testlib.vxlan import VxlanState
 from .testlib.vxlan import vxlan_interfaces
 from .testlib.vxlan import vxlans_absent
@@ -74,6 +80,111 @@ def test_add_and_remove_vxlan_nolearning():
 
     vxlan1_ifname = desired_state[Interface.KEY][0][Interface.NAME]
     assertlib.assert_absent(vxlan1_ifname)
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize("neigh_suppress", [False, True])
+def test_show_bridge_vxlan_neigh_suppress(eth1_up, neigh_suppress):
+    base_iface = eth1_up[Interface.KEY][0][Interface.NAME]
+
+    vxlan = VxlanState(
+        id=75101,
+        base_if=base_iface,
+        remote="192.0.2.1",
+        learning=False,
+    )
+
+    bridge_name = "br-evpn"
+
+    bridge_config = {
+        LinuxBridge.PORT_SUBTREE: [{LinuxBridge.Port.NAME: vxlan.name}],
+        LinuxBridge.OPTIONS_SUBTREE: {
+            LinuxBridge.STP_SUBTREE: {LinuxBridge.STP.ENABLED: False}
+        },
+    }
+
+    with vxlan_interfaces(vxlan):
+        with linux_bridge(bridge_name, bridge_config):
+            exec_cmd(
+                (
+                    "bridge",
+                    "link",
+                    "set",
+                    "dev",
+                    vxlan.name,
+                    "neigh_suppress",
+                    "on" if neigh_suppress else "off",
+                ),
+                check=True,
+            )
+
+            assert neigh_suppress_sysfs_value(vxlan.name) == str(
+                int(neigh_suppress)
+            )
+
+            bridge = show_only((bridge_name,))[Interface.KEY][0]
+
+            port = bridge[LinuxBridge.CONFIG_SUBTREE][
+                LinuxBridge.PORT_SUBTREE
+            ][0]
+
+            assert port[LinuxBridge.Port.NAME] == vxlan.name
+            assert port[LinuxBridge.Port.NEIGH_SUPPRESS] is neigh_suppress
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize("neigh_suppress", [False, True])
+@pytest.mark.xfail(
+    nm_version_int() <= version_str_to_int("1.58.1"),
+    reason="neighbor-suppress requires NetworkManager > 1.58.1",
+    strict=True,
+)
+def test_apply_bridge_vxlan_neigh_suppress(eth1_up, neigh_suppress):
+    base_iface = eth1_up[Interface.KEY][0][Interface.NAME]
+
+    vxlan = VxlanState(
+        id=75101,
+        base_if=base_iface,
+        remote="192.0.2.1",
+        learning=False,
+    )
+
+    bridge_name = "br-evpn"
+
+    bridge_config = {
+        LinuxBridge.PORT_SUBTREE: [
+            {
+                LinuxBridge.Port.NAME: vxlan.name,
+                LinuxBridge.Port.NEIGH_SUPPRESS: not neigh_suppress,
+            }
+        ],
+        LinuxBridge.OPTIONS_SUBTREE: {
+            LinuxBridge.STP_SUBTREE: {LinuxBridge.STP.ENABLED: False}
+        },
+    }
+
+    with vxlan_interfaces(vxlan):
+        with linux_bridge(bridge_name, bridge_config) as desired_state:
+            assert neigh_suppress_sysfs_value(vxlan.name) == str(
+                int(not neigh_suppress)
+            )
+
+            port_config = bridge_config[LinuxBridge.PORT_SUBTREE][0]
+            port_config[LinuxBridge.Port.NEIGH_SUPPRESS] = neigh_suppress
+            libnmstate.apply(desired_state)
+
+            assert neigh_suppress_sysfs_value(vxlan.name) == str(
+                int(neigh_suppress)
+            )
+
+            bridge = show_only((bridge_name,))[Interface.KEY][0]
+
+            port = bridge[LinuxBridge.CONFIG_SUBTREE][
+                LinuxBridge.PORT_SUBTREE
+            ][0]
+
+            assert port[LinuxBridge.Port.NAME] == vxlan.name
+            assert port[LinuxBridge.Port.NEIGH_SUPPRESS] is neigh_suppress
 
 
 @pytest.mark.tier1
