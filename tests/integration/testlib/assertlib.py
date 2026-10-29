@@ -102,6 +102,7 @@ def _prepare_state_for_verify(desired_state_data, kernel_only=False):
 
     full_desired_state = statelib.State(current_state.state)
     full_desired_state.update(desired_state_data)
+    _complete_linux_bridge_port_config(full_desired_state, current_state)
     full_desired_state.remove_absent_entries()
     full_desired_state.normalize()
     _fix_bond_state(current_state)
@@ -123,6 +124,42 @@ def _prepare_state_for_verify(desired_state_data, kernel_only=False):
     _remove_cap_flags_from_ip_tunnel(current_state)
 
     return full_desired_state, current_state
+
+
+def _complete_linux_bridge_port_config(desired_state, current_state):
+    """Fill omitted port properties without changing the desired port list."""
+    current_bridges = {}
+
+    for iface in current_state.state[Interface.KEY]:
+        if iface.get(Interface.TYPE) == InterfaceType.LINUX_BRIDGE:
+            current_bridges[iface[Interface.NAME]] = iface
+
+    for iface in desired_state.state[Interface.KEY]:
+        if iface.get(Interface.TYPE) != InterfaceType.LINUX_BRIDGE:
+            continue
+
+        current_ports = (
+            current_bridges.get(iface[Interface.NAME], {})
+            .get(LB.CONFIG_SUBTREE, {})
+            .get(LB.PORT_SUBTREE, [])
+        )
+
+        current_ports_by_name = {
+            port[LB.Port.NAME]: port for port in current_ports
+        }
+
+        desired_ports = iface.get(LB.CONFIG_SUBTREE, {}).get(
+            LB.PORT_SUBTREE, []
+        )
+
+        for desired_port in desired_ports:
+            current_port = current_ports_by_name.get(
+                desired_port[LB.Port.NAME], {}
+            )
+
+            for key, value in current_port.items():
+                if key not in desired_port:
+                    desired_port[key] = copy.deepcopy(value)
 
 
 def _hide_implicit_ovs_local_ports(current_state, desired_state_data):

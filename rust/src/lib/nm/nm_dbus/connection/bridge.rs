@@ -343,6 +343,7 @@ impl NmSettingBridgeVlanRange {
 #[non_exhaustive]
 pub struct NmSettingBridgePort {
     pub hairpin_mode: Option<bool>,
+    pub neighbor_suppress: Option<bool>,
     pub path_cost: Option<u32>,
     pub priority: Option<u32>,
     pub vlans: Option<Vec<NmSettingBridgeVlanRange>>,
@@ -351,9 +352,15 @@ pub struct NmSettingBridgePort {
 
 impl TryFrom<DbusDictionary> for NmSettingBridgePort {
     type Error = NmError;
+
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
-            hairpin_mode: _from_map!(v, "hairpin_mode", bool::try_from)?,
+            hairpin_mode: _from_map!(v, "hairpin-mode", bool::try_from)?,
+            neighbor_suppress: _from_map!(
+                v,
+                "neighbor-suppress",
+                bool::try_from
+            )?,
             path_cost: _from_map!(v, "path-cost", u32::try_from)?,
             priority: _from_map!(v, "priority", u32::try_from)?,
             vlans: _from_map!(v, "vlans", own_value_to_vlan_ranges)?,
@@ -368,6 +375,8 @@ impl ToDbusValue for NmSettingBridgePort {
 
         self.hairpin_mode
             .map(|v| ret.insert("hairpin-mode", zvariant::Value::new(v)));
+        self.neighbor_suppress
+            .map(|v| ret.insert("neighbor-suppress", zvariant::Value::new(v)));
         self.path_cost
             .map(|v| ret.insert("path-cost", zvariant::Value::new(v)));
         self.priority
@@ -375,14 +384,18 @@ impl ToDbusValue for NmSettingBridgePort {
 
         if let Some(vlans) = self.vlans.as_ref() {
             let mut vlan_values = zvariant::Array::new(DBUS_ASV_SIGNATURE);
+
             for vlan in vlans {
                 vlan_values.append(vlan.to_value()?)?;
             }
+
             ret.insert("vlans", zvariant::Value::Array(vlan_values));
         }
+
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
         }));
+
         Ok(ret)
     }
 }

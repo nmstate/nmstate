@@ -38,6 +38,14 @@ pub(crate) fn nm_error_to_nmstate(nm_error: NmError) -> NmstateError {
                 ),
             )
         }
+        NmErrorKind::Connection(NmConnectionError::InvalidProperty)
+            if nm_error.msg.ends_with(": unknown property") =>
+        {
+            NmstateError::new(
+                ErrorKind::NotSupportedError,
+                nm_error.to_string(),
+            )
+        }
         NmErrorKind::Connection(_) => {
             NmstateError::new(ErrorKind::InvalidArgument, nm_error.to_string())
         }

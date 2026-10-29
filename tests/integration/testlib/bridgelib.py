@@ -2,7 +2,10 @@
 
 from contextlib import contextmanager
 
+import pytest
+
 import libnmstate
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -60,6 +63,21 @@ def linux_bridge(
             },
             kernel_only=kernel_mode,
         )
+
+
+def neigh_suppress_sysfs_value(port_name):
+    with open(f"/sys/class/net/{port_name}/brport/neigh_suppress") as flag:
+        return flag.read().strip()
+
+
+def apply_with_neigh_suppress_or_skip(desired_state):
+    try:
+        libnmstate.apply(desired_state)
+    except NmstateNotSupportedError as err:
+        if "bridge-port.neighbor-suppress: unknown property" in str(err):
+            pytest.skip(str(err))
+
+        raise
 
 
 def add_port_to_bridge(bridge_subtree_state, port_name, port_state=None):

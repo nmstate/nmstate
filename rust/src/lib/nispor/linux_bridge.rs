@@ -40,30 +40,32 @@ pub(crate) fn append_bridge_port_config(
     port_np_ifaces: Vec<&nispor::Iface>,
 ) {
     let mut port_confs: Vec<LinuxBridgePortConfig> = Vec::new();
+
     for port_np_iface in port_np_ifaces {
         let mut port_conf = LinuxBridgePortConfig::new();
         port_conf.name = port_np_iface.name.to_string();
-        if let Some(np_port_info) = &port_np_iface.bridge_port {
-            port_conf.stp_hairpin_mode = Some(np_port_info.hairpin_mode);
-            port_conf.stp_path_cost = Some(np_port_info.stp_path_cost);
-            port_conf.stp_priority = Some(np_port_info.stp_priority);
-            if np_iface
-                .bridge
-                .as_ref()
-                .and_then(|br_info| br_info.vlan_filtering)
-                == Some(true)
-            {
-                port_conf.vlan = np_port_info.vlans.as_ref().and_then(|v| {
-                    parse_port_vlan_conf(
-                        v.as_slice(),
-                        np_iface
-                            .bridge
-                            .as_ref()
-                            .and_then(|br_info| br_info.default_pvid),
-                    )
-                });
-            }
+
+        let Some(np_port_info) = &port_np_iface.bridge_port else {
+            port_confs.push(port_conf);
+            continue;
+        };
+
+        port_conf.stp_hairpin_mode = Some(np_port_info.hairpin_mode);
+        port_conf.stp_path_cost = Some(np_port_info.stp_path_cost);
+        port_conf.stp_priority = Some(np_port_info.stp_priority);
+        port_conf.neigh_suppress = Some(np_port_info.neigh_suppress);
+
+        let br_info = np_iface.bridge.as_ref();
+
+        if br_info.and_then(|b| b.vlan_filtering) == Some(true) {
+            port_conf.vlan = np_port_info.vlans.as_ref().and_then(|v| {
+                parse_port_vlan_conf(
+                    v.as_slice(),
+                    br_info.and_then(|b| b.default_pvid),
+                )
+            });
         }
+
         port_confs.push(port_conf);
     }
 
