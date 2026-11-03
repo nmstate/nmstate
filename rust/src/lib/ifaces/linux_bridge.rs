@@ -127,6 +127,19 @@ impl LinuxBridgeInterface {
         {
             for port_conf in port_confs {
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
+                    if is_desired
+                        && let Some(mode) = vlan_conf.mode
+                        && mode.is_ovs_native()
+                    {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "VLAN mode {mode} is only supported on OVS \
+                                 bridge ports, not Linux bridge port {}",
+                                port_conf.name
+                            ),
+                        ));
+                    }
                     vlan_conf.sanitize(is_desired)?;
                 }
             }

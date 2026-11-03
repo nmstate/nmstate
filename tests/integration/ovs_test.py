@@ -568,6 +568,66 @@ def test_ovs_balance_slb_with_patch_ports(port0_up, port1_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.parametrize(
+    "vlan_mode",
+    [
+        OVSBridge.Port.Vlan.Mode.NATIVE_TAGGED,
+        OVSBridge.Port.Vlan.Mode.NATIVE_UNTAGGED,
+    ],
+    ids=["native-tagged", "native-untagged"],
+)
+def test_ovs_vlan_native_modes(vlan_mode):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    bridge.set_port_option(
+        PORT1,
+        {
+            OVSBridge.Port.NAME: PORT1,
+            OVSBridge.Port.VLAN_SUBTREE: {
+                OVSBridge.Port.Vlan.MODE: vlan_mode,
+                OVSBridge.Port.Vlan.TAG: 100,
+                OVSBridge.Port.Vlan.ENABLE_NATIVE: True,
+                OVSBridge.Port.Vlan.TRUNK_TAGS: [
+                    {OVSBridge.Port.Vlan.TrunkTags.ID: 200},
+                    {OVSBridge.Port.Vlan.TrunkTags.ID: 300},
+                ],
+            },
+        },
+    )
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+        assert (
+            cmdlib.exec_cmd(
+                ["ovs-vsctl", "get", "Port", PORT1, "vlan_mode"],
+                check=True,
+            )[1]
+            .strip()
+            .strip('"')
+            == vlan_mode
+        )
+        assert (
+            cmdlib.exec_cmd(
+                ["ovs-vsctl", "get", "Port", PORT1, "tag"], check=True
+            )[1].strip()
+            == "100"
+        )
+        assert (
+            cmdlib.exec_cmd(
+                ["ovs-vsctl", "get", "Port", PORT1, "trunks"], check=True
+            )[1]
+            .strip()
+            .replace(" ", "")
+            == "[200,300]"
+        )
+        shown = statelib.show_only((BRIDGE1,))[Interface.KEY][0]
+        port_state = shown[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE][0]
+        vlan_state = port_state[OVSBridge.Port.VLAN_SUBTREE]
+        assert vlan_state[OVSBridge.Port.Vlan.MODE] == vlan_mode
+        assert vlan_state[OVSBridge.Port.Vlan.TAG] == 100
+        assert vlan_state[OVSBridge.Port.Vlan.ENABLE_NATIVE] is True
+
+
+@pytest.mark.tier1
 def test_ovs_vlan_access_tag():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})

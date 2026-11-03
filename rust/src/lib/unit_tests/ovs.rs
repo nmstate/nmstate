@@ -519,6 +519,121 @@ fn test_ovs_bridge_vlan_filter_trunk_tags_with_access_mode() {
 }
 
 #[test]
+fn test_ovs_bridge_vlan_native_modes() {
+    for mode in ["native-tagged", "native-untagged"] {
+        let mut desired: OvsBridgeInterface = serde_yaml::from_str(&format!(
+            r"
+            name: br0
+            type: ovs-bridge
+            state: up
+            bridge:
+              port:
+                - name: eth1
+                  vlan:
+                    mode: {mode}
+                    tag: 100
+                    enable-native: true
+                    trunk-tags:
+                      - id: 200
+                      - id: 300
+            "
+        ))
+        .unwrap();
+
+        desired.sanitize(true).unwrap();
+        let port = &desired.bridge.unwrap().ports.unwrap()[0];
+        let vlan = port.vlan.as_ref().unwrap();
+        assert_eq!(vlan.mode.unwrap().to_string(), mode);
+        assert_eq!(vlan.tag, Some(100));
+        assert_eq!(vlan.enable_native, Some(true));
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_native_mode_without_explicit_enable_native() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: native-untagged
+                tag: 100
+        ",
+    )
+    .unwrap();
+
+    desired.sanitize(true).unwrap();
+}
+
+#[test]
+fn test_ovs_bridge_vlan_native_mode_rejects_disabled_native() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: native-tagged
+                tag: 100
+                enable-native: false
+        ",
+    )
+    .unwrap();
+
+    let result = desired.sanitize(true);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("enable-native"));
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_native_mode_requires_tag() {
+    for yaml in [
+        r"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: native-untagged
+                enable-native: true
+        ",
+        r"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: native-tagged
+                tag: 0
+                enable-native: true
+        ",
+    ] {
+        let mut desired: OvsBridgeInterface =
+            serde_yaml::from_str(yaml).unwrap();
+        let result = desired.sanitize(true);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+            assert!(e.msg().contains("tag"));
+        }
+    }
+}
+
+#[test]
 fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
         r"
