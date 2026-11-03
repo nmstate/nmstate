@@ -626,6 +626,34 @@ fn test_bridge_vlan_filter_trunk_tags_with_access_mode() {
 }
 
 #[test]
+fn test_linux_bridge_rejects_ovs_native_vlan_modes() {
+    for mode in ["native-tagged", "native-untagged"] {
+        let mut desired: LinuxBridgeInterface = serde_yaml::from_str(&format!(
+            r"
+            name: br0
+            type: linux-bridge
+            state: up
+            bridge:
+              port:
+                - name: eth1
+                  vlan:
+                    mode: {mode}
+                    tag: 100
+                    enable-native: true
+            "
+        ))
+        .unwrap();
+
+        let result = desired.sanitize(true);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+            assert!(e.msg().contains("only supported on OVS"));
+        }
+    }
+}
+
+#[test]
 fn test_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
     let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
         r"

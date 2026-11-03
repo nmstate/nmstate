@@ -244,6 +244,8 @@ class Bridge:
             class Mode:
                 ACCESS = "access"
                 TRUNK = "trunk"
+                NATIVE_TAGGED = "native-tagged"
+                NATIVE_UNTAGGED = "native-untagged"
                 UNKNOWN = "unknown"
 
             class TrunkTags:

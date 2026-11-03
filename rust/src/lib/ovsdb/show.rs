@@ -226,6 +226,8 @@ fn parse_ovs_vlan_conf(
         let mode = match mode.as_str() {
             "access" => BridgePortVlanMode::Access,
             "trunk" => BridgePortVlanMode::Trunk,
+            "native-tagged" => BridgePortVlanMode::NativeTagged,
+            "native-untagged" => BridgePortVlanMode::NativeUntagged,
             _ => {
                 log::warn!("Unknown OVS VLAN mode {mode}");
                 return None;
@@ -238,10 +240,13 @@ fn parse_ovs_vlan_conf(
                 ret.enable_native = Some(true);
             }
         }
+        if mode.is_ovs_native() {
+            ret.enable_native = Some(true);
+        }
         if ret.tag.is_none() {
             ret.tag = Some(0);
         }
-        if mode == BridgePortVlanMode::Trunk {
+        if mode == BridgePortVlanMode::Trunk || mode.is_ovs_native() {
             if let Some(Value::Array(trunk_tags)) =
                 ovsdb_port.options.get("trunks")
             {
@@ -465,5 +470,58 @@ mod tests {
             conf
         );
         assert!(parse_ovs_port_db_conf(&OvsDbEntry::default()).is_none());
+    }
+
+    #[test]
+    fn test_parse_ovs_native_vlan_modes() {
+        for (mode_name, mode) in [
+            ("native-tagged", BridgePortVlanMode::NativeTagged),
+            ("native-untagged", BridgePortVlanMode::NativeUntagged),
+        ] {
+            let mut entry = OvsDbEntry::default();
+            entry.options.insert(
+                "vlan_mode".into(),
+                Value::String(mode_name.to_string()),
+            );
+            entry.options.insert("tag".into(), serde_json::json!(100));
+            entry.options.insert(
+                "trunks".into(),
+                serde_json::json!(["set", [200, 201, 300]]),
+            );
+
+            let vlan = parse_ovs_vlan_conf(&entry).unwrap();
+            assert_eq!(vlan.mode, Some(mode));
+            assert_eq!(vlan.tag, Some(100));
+            assert_eq!(vlan.enable_native, Some(true));
+            assert_eq!(
+                vlan.trunk_tags,
+                Some(vec![
+                    BridgePortTrunkTag::IdRange(BridgePortVlanRange {
+                        min: 200,
+                        max: 201,
+                    }),
+                    BridgePortTrunkTag::Id(300),
+                ])
+            );
+        }
+
+        let mut single = OvsDbEntry::default();
+        single.options.insert(
+            "vlan_mode".into(),
+            Value::String("native-untagged".into()),
+        );
+        single.options.insert("tag".into(), serde_json::json!(10));
+        single
+            .options
+            .insert("trunks".into(), serde_json::json!(20));
+        let vlan = parse_ovs_vlan_conf(&single).unwrap();
+        assert_eq!(vlan.mode, Some(BridgePortVlanMode::NativeUntagged));
+        assert_eq!(vlan.trunk_tags, Some(vec![BridgePortTrunkTag::Id(20)]));
+
+        let mut unknown = OvsDbEntry::default();
+        unknown
+            .options
+            .insert("vlan_mode".into(), Value::String("dot1q-tunnel".into()));
+        assert!(parse_ovs_vlan_conf(&unknown).is_none());
     }
 }

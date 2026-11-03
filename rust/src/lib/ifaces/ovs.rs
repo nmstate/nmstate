@@ -168,6 +168,31 @@ impl OvsBridgeInterface {
                     bond_conf.ovsdb = Some(ovsdb);
                 }
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
+                    if is_desired
+                        && let Some(mode) = vlan_conf.mode
+                        && mode.is_ovs_native()
+                    {
+                        if vlan_conf.enable_native == Some(false) {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "OVS VLAN mode {mode} cannot set \
+                                     `enable-native: false`"
+                                ),
+                            ));
+                        }
+                        // NetworkManager omits tag 0, which clears the native
+                        // VLAN.
+                        if vlan_conf.tag.unwrap_or(0) == 0 {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "OVS VLAN mode {mode} requires a native \
+                                     VLAN `tag`"
+                                ),
+                            ));
+                        }
+                    }
                     vlan_conf.sanitize(is_desired)?;
                 }
             }

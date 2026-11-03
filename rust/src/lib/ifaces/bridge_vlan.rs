@@ -167,6 +167,20 @@ pub enum BridgePortVlanMode {
     /// Access mode
     #[default]
     Access,
+    /// OVS native VLAN with tagged egress. Requires `tag`. OVS ports only.
+    NativeTagged,
+    /// OVS native VLAN with untagged egress. Requires `tag`. OVS ports only.
+    NativeUntagged,
+}
+
+impl BridgePortVlanMode {
+    /// `native-tagged` and `native-untagged` are OVS `vlan_mode` values.
+    /// The `tag` is the native VLAN: ingress without an 802.1Q header is
+    /// classified into that VLAN. `native-tagged` egresses it with the
+    /// header; `native-untagged` egresses it without the header.
+    pub(crate) fn is_ovs_native(self) -> bool {
+        matches!(self, Self::NativeTagged | Self::NativeUntagged)
+    }
 }
 
 impl std::fmt::Display for BridgePortVlanMode {
@@ -177,6 +191,8 @@ impl std::fmt::Display for BridgePortVlanMode {
             match self {
                 Self::Trunk => "trunk",
                 Self::Access => "access",
+                Self::NativeTagged => "native-tagged",
+                Self::NativeUntagged => "native-untagged",
             }
         )
     }
