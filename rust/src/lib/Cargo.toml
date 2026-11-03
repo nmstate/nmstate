@@ -22,6 +22,10 @@ serde_yaml = { workspace = true }
 workspace = true
 optional = true
 
+[dependencies.genetlink]
+workspace = true
+optional = true
+
 [dependencies.zvariant]
 workspace = true
 
@@ -56,6 +60,12 @@ serde_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
-query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio"]
+query_apply = [
+    "dep:nispor",
+    "dep:nix",
+    "dep:zbus",
+    "dep:tokio",
+    "dep:genetlink",
+]
 gen_conf = []
 gen_revert = []
