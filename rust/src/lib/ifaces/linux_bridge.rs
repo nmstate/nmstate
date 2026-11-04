@@ -235,8 +235,7 @@ impl LinuxBridgeInterface {
 
     // Port name list change is not this function's responsibility, top level
     // code will take care of it.
-    // This function only find out those port which has changed vlan or stp
-    // configuration.
+    // This function only find out those port which has changed.
     pub(crate) fn get_config_changed_ports(&self, current: &Self) -> Vec<&str> {
         let mut ret: Vec<&str> = Vec::new();
         let mut des_ports_index: HashMap<&str, &LinuxBridgePortConfig> =
@@ -375,6 +374,13 @@ pub struct LinuxBridgePortConfig {
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Whether ARP/ND proxy and suppression is enabled on this port.
+    pub neigh_suppress: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     /// Controls whether traffic may be send back out of the port on which it
     /// was received.
     pub stp_hairpin_mode: Option<bool>,
@@ -405,21 +411,43 @@ impl LinuxBridgePortConfig {
         Self::default()
     }
 
-    fn is_changed(&self, current: &Self) -> bool {
-        (self.stp_hairpin_mode.is_some()
-            && self.stp_hairpin_mode != current.stp_hairpin_mode)
-            || (self.stp_path_cost.is_some()
-                && self.stp_path_cost != current.stp_path_cost)
-            || (self.stp_priority.is_some()
-                && self.stp_priority != current.stp_priority)
-            || match (self.vlan.as_ref(), current.vlan.as_ref()) {
-                (Some(des_vlan_conf), Some(cur_vlan_conf)) => {
-                    (des_vlan_conf.is_empty() && !cur_vlan_conf.is_empty())
-                        || des_vlan_conf.is_changed(cur_vlan_conf)
-                }
-                (Some(_), None) => true,
-                _ => false,
-            }
+    fn stp_hairpin_mode_changed(&self, curr: &Self) -> bool {
+        self.stp_hairpin_mode.is_some()
+            && self.stp_hairpin_mode != curr.stp_hairpin_mode
+    }
+
+    fn stp_path_cost_changed(&self, curr: &Self) -> bool {
+        self.stp_path_cost.is_some() && self.stp_path_cost != curr.stp_path_cost
+    }
+
+    fn stp_priority_changed(&self, curr: &Self) -> bool {
+        self.stp_priority.is_some() && self.stp_priority != curr.stp_priority
+    }
+
+    fn vlan_config_changed(&self, curr: &Self) -> bool {
+        let Some(des_vlan) = self.vlan.as_ref() else {
+            return false;
+        };
+
+        let Some(cur_vlan) = curr.vlan.as_ref() else {
+            return true;
+        };
+
+        des_vlan.is_empty() && !cur_vlan.is_empty()
+            || des_vlan.is_changed(cur_vlan)
+    }
+
+    fn neigh_suppress_changed(&self, curr: &Self) -> bool {
+        self.neigh_suppress.is_some()
+            && self.neigh_suppress != curr.neigh_suppress
+    }
+
+    fn is_changed(&self, curr: &Self) -> bool {
+        self.stp_hairpin_mode_changed(curr)
+            || self.stp_path_cost_changed(curr)
+            || self.stp_priority_changed(curr)
+            || self.vlan_config_changed(curr)
+            || self.neigh_suppress_changed(curr)
     }
 }
 

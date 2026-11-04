@@ -62,6 +62,11 @@ def linux_bridge(
         )
 
 
+def neigh_suppress_sysfs_value(port_name):
+    with open(f"/sys/class/net/{port_name}/brport/neigh_suppress") as flag:
+        return flag.read().strip()
+
+
 def add_port_to_bridge(bridge_subtree_state, port_name, port_state=None):
     if LinuxBridge.PORT_SUBTREE not in bridge_subtree_state:
         bridge_subtree_state[LinuxBridge.PORT_SUBTREE] = []

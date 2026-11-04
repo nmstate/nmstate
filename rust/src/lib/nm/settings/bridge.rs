@@ -151,8 +151,13 @@ pub(crate) fn gen_nm_br_port_setting(
     if let Some(v) = br_port_conf.stp_priority {
         nm_set.priority = Some(v.into());
     }
+
     if let Some(v) = br_port_conf.vlan.as_ref() {
         nm_set.vlans = Some(nmstate_port_vlans_to_nm_vlan_range(v));
+    }
+
+    if let Some(v) = br_port_conf.neigh_suppress {
+        nm_set.neighbor_suppress = Some(v);
     }
 
     nm_conn.bridge_port = Some(nm_set);
