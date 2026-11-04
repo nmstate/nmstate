@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use super::super::{
     NmConnectionMatcher,
-    nm_dbus::{NmActiveConnection, NmIfaceType, NmSettingVpn},
+    nm_dbus::{NmActiveConnectionState, NmIfaceType, NmSettingVpn},
     show::fill_iface_by_nm_conn_data,
 };
 use crate::{
@@ -48,7 +48,7 @@ pub(crate) fn get_supported_vpn_ifaces(
             // connection status, hence use NmActiveConnection.state
             // for interface.state
             iface.base.state =
-                if nm_ac.state == NmActiveConnection::STATE_ACTIVATED {
+                if nm_ac.state == NmActiveConnectionState::Activated {
                     InterfaceState::Up
                 } else {
                     InterfaceState::Down
