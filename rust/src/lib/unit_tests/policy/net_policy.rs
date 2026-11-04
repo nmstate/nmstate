@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::{NetworkPolicy, NetworkState, RouteState};
+use crate::{ErrorKind, NetworkPolicy, NetworkState, RouteState};
 
 #[test]
 fn test_policy_move_dhcp_gw_eth_to_bridge() {
@@ -329,4 +329,99 @@ desiredState:
     assert_eq!(ifaces.len(), 1);
     assert_eq!(ifaces[0].name(), "br1");
     assert_eq!(ifaces[0].ports(), Some(vec!["eth0"]));
+}
+
+const SRIOV_POLICY_CURRENT: &str = r"---
+interfaces:
+- name: ens15f0
+  type: ethernet
+  state: up
+  mac-address: 11:22:33:44:55:66
+  ethernet:
+    sr-iov:
+      total-vfs: 0
+      max-vfs: 8
+";
+
+fn sriov_policy(extra_ifaces: &str) -> NetworkPolicy {
+    let mut policy: NetworkPolicy = serde_yaml::from_str(&format!(
+        r#"
+capture:
+  pf: interfaces.mac-address=="11:22:33:44:55:66"
+desiredState:
+  interfaces:
+  - name: "{{{{ capture.pf.interfaces.0.name }}}}"
+    type: ethernet
+    state: up
+    ethernet:
+      sr-iov:
+        total-vfs: 2
+{extra_ifaces}
+"#
+    ))
+    .unwrap();
+    policy.current = Some(serde_yaml::from_str(SRIOV_POLICY_CURRENT).unwrap());
+    policy
+}
+
+const SRIOV_POLICY_VF_BOND: &str = r"
+  - name: ens15f0v0
+    type: ethernet
+    state: up
+  - name: ens15f0v1
+    type: ethernet
+    state: up
+  - name: bond0
+    type: bond
+    state: up
+    link-aggregation:
+      mode: active-backup
+      port:
+      - ens15f0v0
+      - ens15f0v1
+";
+
+#[test]
+// Captured PF creating VFs plus literal VF names and a bond over them (the
+// `nmstatectl service`/assisted-installer shape) must convert, as the VFs do
+// not exist before the apply.
+fn test_policy_sriov_pf_with_pending_vf_bond() {
+    let state =
+        NetworkState::try_from(sriov_policy(SRIOV_POLICY_VF_BOND)).unwrap();
+    let mut names: Vec<&str> = state
+        .interfaces
+        .kernel_ifaces
+        .keys()
+        .map(|n| n.as_str())
+        .collect();
+    names.sort_unstable();
+    assert_eq!(names, vec!["bond0", "ens15f0", "ens15f0v0", "ens15f0v1"]);
+}
+
+#[test]
+// Without SR-IOV config in desired state, missing ethernet interface should
+// still fail.
+fn test_policy_rejects_missing_eth_without_sriov() {
+    let mut policy: NetworkPolicy = serde_yaml::from_str(
+        r#"
+capture:
+  pf: interfaces.mac-address=="11:22:33:44:55:66"
+desiredState:
+  interfaces:
+  - name: "{{ capture.pf.interfaces.0.name }}"
+    type: ethernet
+    state: up
+  - name: ens15f0v0
+    type: ethernet
+    state: up
+"#,
+    )
+    .unwrap();
+    policy.current = Some(serde_yaml::from_str(SRIOV_POLICY_CURRENT).unwrap());
+    let result = NetworkState::try_from(policy);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("ens15f0v0"));
+    }
 }
