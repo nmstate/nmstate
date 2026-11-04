@@ -193,6 +193,22 @@ impl MergedInterfaces {
                 veth_peers.push(v);
             }
         }
+        // When generating a diff (e.g. `NetworkState::try_from(NetworkPolicy)`
+        // used by `nmstatectl service`), a desired state which configures
+        // SR-IOV might also reference VFs which do not exist yet as they will
+        // only be created by the apply. Hence, we only warn about missing
+        // ethernet interfaces in this case instead of failing.
+        let gen_diff_with_sriov = self.mode == NetworkStateMode::GenerateDiff
+            && self.iter().any(|i| {
+                if let Some(Interface::Ethernet(eth_iface)) = &i.desired {
+                    eth_iface
+                        .ethernet
+                        .as_ref()
+                        .is_some_and(|e| e.sr_iov.is_some())
+                } else {
+                    false
+                }
+            });
         for iface in self.iter().filter(|i| {
             i.merged.iface_type() == InterfaceType::Ethernet
                 && i.is_desired()
@@ -207,6 +223,14 @@ impl MergedInterfaces {
                     // SRIOV VF not found, so we skip check on them here.
                     && !eth_iface.base.name.starts_with("sriov:")
             {
+                if gen_diff_with_sriov {
+                    log::warn!(
+                        "Ethernet interface {} does not exist, assuming it is \
+                         a SR-IOV VF which will be created on apply",
+                        eth_iface.base.name.as_str()
+                    );
+                    continue;
+                }
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
