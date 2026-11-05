@@ -35,8 +35,7 @@ pub struct RouteRules {
     /// Absent entries are applied before explicitly desired rules, regardless
     /// of their order in `config`. A desired rule therefore takes precedence
     /// over a matching absent entry. Assuming a route already uses table 500,
-    /// this replaces the rules stored in NetworkManager profiles for that
-    /// table with the two specified rules:
+    /// this replaces the rules for that table with the two specified rules:
     /// ```yml
     /// route-rules:
     ///   config:
@@ -49,6 +48,21 @@ pub struct RouteRules {
     ///     - route-table: 500
     ///       state: absent
     /// ```
+    ///
+    /// Static rules outside NetworkManager profiles are deleted through
+    /// nmstate-rollback.service, which needs root in the host namespaces.
+    /// Removing external rules requires CAP_NET_ADMIN; profile-only changes
+    /// do not. Dynamic and inverted-selector rules are left alone. If the
+    /// required privilege or service is unavailable, apply fails before any
+    /// change.
+    /// Delegated applies require the service's effective capabilities and
+    /// the same mount/UTS namespaces, filesystem root and dispatcher
+    /// directory.
+    ///
+    /// Commit or roll back these transactions through nmstate. Recovery
+    /// survives caller exit and service crashes within the same boot and
+    /// NetworkManager instance. Other tools must not modify affected
+    /// priority groups during apply or rollback.
     pub config: Option<Vec<RouteRuleEntry>>,
 }
 
@@ -527,6 +541,7 @@ pub(crate) struct MergedRouteRules {
     // The `for_verify` hold the same data as `for_apply` except the
     // auto set priority.
     pub(crate) for_verify: Vec<RouteRuleEntry>,
+    pub(crate) ignored_ifaces: Vec<String>,
 }
 
 impl MergedRouteRules {
@@ -583,6 +598,7 @@ impl MergedRouteRules {
             current,
             for_apply,
             for_verify,
+            ignored_ifaces: Vec::new(),
         })
     }
 
@@ -590,15 +606,15 @@ impl MergedRouteRules {
         &mut self,
         ignored_ifaces: &[(String, InterfaceType)],
     ) {
-        let ignored_ifaces: Vec<&str> = ignored_ifaces
+        self.ignored_ifaces = ignored_ifaces
             .iter()
             .filter(|(_, t)| !t.is_userspace())
-            .map(|(n, _)| n.as_str())
+            .map(|(n, _)| n.clone())
             .collect();
 
         self.for_apply.retain(|rule| {
             if let Some(iif) = rule.iif.as_ref() {
-                !ignored_ifaces.contains(&iif.as_str())
+                !self.ignored_ifaces.contains(iif)
             } else {
                 true
             }

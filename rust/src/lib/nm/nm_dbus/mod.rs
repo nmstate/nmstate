@@ -33,7 +33,7 @@ pub use self::lldp::{
 #[cfg(feature = "query_apply")]
 pub use self::nm_api::{NmApi, NmVersion, NmVersionInfo};
 pub use self::{
-    active_connection::NmActiveConnection,
+    active_connection::{NmActiveConnection, NmActiveConnectionState},
     connection::{
         NmConnection, NmConnectionMultiConnect, NmIfaceType, NmIpRoute,
         NmIpRouteRule, NmIpRouteRuleAction, NmRange, NmSetting8021X,

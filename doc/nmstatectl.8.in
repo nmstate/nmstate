@@ -186,6 +186,15 @@ will treat it as disabled regardless current network status.
 displays nmstate version.
 .SH LIMITATIONS
 *\fR Maximum supported number of interfaces in a single desire state is 1000.
+.PP
+Removing static routing rules outside NetworkManager profiles requires root,
+the effective capabilities and execution context of the on-demand
+\fBnmstate-rollback.service\fR, and a matching dispatcher directory.
+Use \fBnmstatectl commit\fR or \fBnmstatectl rollback\fR to finish these
+transactions. Automatic recovery survives caller exit and helper crashes
+within the same boot and NetworkManager instance. Other tools must not change
+affected routing rule priority groups during apply or rollback.
+See \fBnmstate-rollback.README\fR for service requirements and diagnostics.
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
 .SH COPYRIGHT

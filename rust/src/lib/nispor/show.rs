@@ -20,7 +20,7 @@ use crate::{
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
         macsec::np_macsec_to_nmstate,
         route::get_routes,
-        route_rule::get_route_rules,
+        route_rule::{get_route_rules, get_route_rules_for_apply},
         veth::np_veth_to_nmstate,
         vlan::np_vlan_to_nmstate,
         vrf::np_vrf_to_nmstate,
@@ -32,6 +32,7 @@ use crate::{
 pub(crate) async fn nispor_retrieve(
     running_config_only: bool,
     kernel_only: bool,
+    route_rules_for_apply: bool,
 ) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState {
         hostname: get_hostname_state(),
@@ -172,7 +173,11 @@ pub(crate) async fn nispor_retrieve(
     set_controller_type(&mut net_state.interfaces);
     net_state.routes =
         get_routes(running_config_only, &net_state.interfaces).await;
-    net_state.rules = get_route_rules(&np_state.rules, running_config_only);
+    net_state.rules = if route_rules_for_apply {
+        get_route_rules_for_apply(&np_state.rules)
+    } else {
+        get_route_rules(&np_state.rules, running_config_only)
+    };
     if kernel_only {
         net_state.dns = get_dns();
     }

@@ -9,12 +9,66 @@ use super::{
     query_apply::device::nm_dev_from_obj_path,
 };
 
+const NM_ACTIVE_CONNECTION_STATE_UNKNOWN: u32 = 0;
+const NM_ACTIVE_CONNECTION_STATE_ACTIVATING: u32 = 1;
+const NM_ACTIVE_CONNECTION_STATE_ACTIVATED: u32 = 2;
+const NM_ACTIVE_CONNECTION_STATE_DEACTIVATING: u32 = 3;
+const NM_ACTIVE_CONNECTION_STATE_DEACTIVATED: u32 = 4;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum NmActiveConnectionState {
+    #[default]
+    Unknown,
+    Activating,
+    Activated,
+    Deactivating,
+    Deactivated,
+    Other(u32),
+}
+
+impl From<u32> for NmActiveConnectionState {
+    fn from(i: u32) -> Self {
+        match i {
+            NM_ACTIVE_CONNECTION_STATE_UNKNOWN => Self::Unknown,
+            NM_ACTIVE_CONNECTION_STATE_ACTIVATING => Self::Activating,
+            NM_ACTIVE_CONNECTION_STATE_ACTIVATED => Self::Activated,
+            NM_ACTIVE_CONNECTION_STATE_DEACTIVATING => Self::Deactivating,
+            NM_ACTIVE_CONNECTION_STATE_DEACTIVATED => Self::Deactivated,
+            _ => Self::Other(i),
+        }
+    }
+}
+
+impl From<NmActiveConnectionState> for u32 {
+    fn from(state: NmActiveConnectionState) -> Self {
+        match state {
+            NmActiveConnectionState::Unknown => {
+                NM_ACTIVE_CONNECTION_STATE_UNKNOWN
+            }
+            NmActiveConnectionState::Activating => {
+                NM_ACTIVE_CONNECTION_STATE_ACTIVATING
+            }
+            NmActiveConnectionState::Activated => {
+                NM_ACTIVE_CONNECTION_STATE_ACTIVATED
+            }
+            NmActiveConnectionState::Deactivating => {
+                NM_ACTIVE_CONNECTION_STATE_DEACTIVATING
+            }
+            NmActiveConnectionState::Deactivated => {
+                NM_ACTIVE_CONNECTION_STATE_DEACTIVATED
+            }
+            NmActiveConnectionState::Other(i) => i,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmActiveConnection {
     pub uuid: String,
     pub iface_type: NmIfaceType,
     pub iface_name: String,
-    pub state: u32,
+    pub state: NmActiveConnectionState,
     pub state_flags: u32,
     pub dev_obj_path: Option<String>,
 }
@@ -23,9 +77,6 @@ pub struct NmActiveConnection {
 impl NmActiveConnection {
     // NM_ACTIVATION_STATE_FLAG_EXTERNAL
     pub const STATE_FLAG_EXTERNAL: u32 = 0x80;
-
-    // NM_ACTIVE_CONNECTION_STATE_ACTIVATED
-    pub const STATE_ACTIVATED: u32 = 2;
 }
 
 #[cfg(feature = "query_apply")]
@@ -132,7 +183,7 @@ pub(crate) async fn get_nm_ac_by_obj_path(
             uuid: nm_ac_obj_path_uuid_get(connection, obj_path).await?,
             iface_name,
             iface_type,
-            state: nm_ac_obj_path_state_get(connection, obj_path).await?,
+            state: nm_ac_obj_path_state_get(connection, obj_path).await?.into(),
             state_flags: nm_ac_obj_path_state_flags_get(connection, obj_path)
                 .await?,
             dev_obj_path: nm_dev_obj_path,

@@ -26,6 +26,14 @@ optional = true
 workspace = true
 optional = true
 
+[dependencies.rtnetlink]
+workspace = true
+optional = true
+
+[dependencies.futures-util]
+workspace = true
+optional = true
+
 [dependencies.zvariant]
 workspace = true
 
@@ -62,10 +70,12 @@ serde_yaml = { workspace = true }
 default = ["query_apply", "gen_conf", "gen_revert"]
 query_apply = [
     "dep:nispor",
+    "dep:rtnetlink",
     "dep:nix",
     "dep:zbus",
     "dep:tokio",
     "dep:genetlink",
+    "dep:futures-util",
 ]
 gen_conf = []
 gen_revert = []

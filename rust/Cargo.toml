@@ -4,6 +4,7 @@ members = [
     "src/cli",
     "src/clib",
     "src/lib",
+    "src/rollback",
 ]
 
 [workspace.package]
@@ -20,8 +21,10 @@ nispor = "2.0.3"
 # genetlink 0.3.1 requires netlink-proto 0.14, while nl-wireguard 0.2
 # still uses 0.13. Both copies break the nl-wireguard build.
 genetlink = "=0.3.0"
+rtnetlink = "0.23"
+futures-util = "0.3"
 uuid = { version = ">=1.1, <1.27", default-features = false, features = ["v4"] }
-nix = { version = "0.31", default-features = false, features = ["feature", "hostname"] }
+nix = { version = "0.31", default-features = false, features = ["feature", "hostname", "fs"] }
 zbus = { version = "5.1.0", default-features = false, features = ["tokio"] }
 zvariant = {version = "5.1.0", default-features = false}
 libc = "0.2.74"
@@ -29,7 +32,7 @@ env_logger = "0.11.6"
 clap = { version = "4.6", features = ["cargo"] }
 time = { version = "0.3", default-features = false, features = ["std", "formatting", "parsing"] }
 toml = "1.0.3"
-tokio = { version = "1.30", features = ["rt", "net", "time"] }
+tokio = { version = "1.30", features = ["rt", "net", "time", "macros", "io-util", "sync"] }
 
 [workspace.metadata.vendor-filter]
 # For now we only care about tier 1+2 Linux
