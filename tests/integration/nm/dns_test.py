@@ -411,3 +411,67 @@ def test_use_global_dns_even_for_with_static_ip(
         cmdlib.exec_cmd("nmcli -g ipv4.dns c show eth1".split())[1].strip()
         == "192.0.2.1,192.0.2.2"
     )
+
+
+@pytest.fixture
+def eth1_auto_ipv6_iface_dns(eth1_up):
+    cmdlib.exec_cmd("nmcli c del eth1".split(), check=False)
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet ifname eth1 "
+        "connection.id eth1 ipv4.method manual "
+        "ipv4.address 192.0.2.251/24 "
+        "ipv6.method auto ipv6.dns 2001:db8::53 "
+        "ipv6.dns-search example.org".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd("nmcli c up eth1".split(), check=True)
+    yield
+    cmdlib.exec_cmd("nmcli c del eth1".split())
+
+
+# https://github.com/nmstate/nmstate/issues/3251
+@pytest.mark.parametrize(
+    "ipv6_state,nm_method",
+    [
+        ({InterfaceIPv6.ENABLED: False}, "disabled"),
+        (
+            {
+                InterfaceIPv6.ENABLED: True,
+                InterfaceIPv6.DHCP: False,
+                InterfaceIPv6.AUTOCONF: False,
+            },
+            "link-local",
+        ),
+    ],
+    ids=["disabled", "link-local"],
+)
+def test_remove_iface_dns_when_ipv6_cannot_hold_dns(
+    eth1_auto_ipv6_iface_dns, ipv6_state, nm_method
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV6: ipv6_state,
+                }
+            ]
+        }
+    )
+
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv6.method c show eth1".split())[1].strip()
+        == nm_method
+    )
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv6.dns c show eth1".split())[1].strip()
+        == ""
+    )
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv6.dns-search c show eth1".split())[
+            1
+        ].strip()
+        == ""
+    )
