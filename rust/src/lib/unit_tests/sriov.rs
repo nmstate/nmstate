@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::{
     BridgePortVlanMode, ErrorKind, EthernetConfig, EthernetDuplex, Interface,
     InterfaceType, Interfaces, MergedInterfaces, NetworkState, SrIovConfig,
-    SrIovVfConfig, state::get_json_value_difference,
+    SrIovVfConfig, SrIovVfRef, state::get_json_value_difference,
     unit_tests::testlib::new_eth_iface,
 };
 
@@ -56,6 +58,604 @@ fn test_sriov_vf_mac_mix_case() {
     .unwrap();
 
     merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// A VF that is not referenced anywhere in the desired state must not be
+// verified, even when its netdev is gone (e.g. rebound to vfio-pci). The PF is
+// only configured with a VF count.
+#[test]
+fn test_verify_sriov_skip_unreferenced_vfs() {
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    // vf1 has no netdev, simulating a VF rebound to vfio-pci.
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                iface-name: eth1v0
+              - id: 1
+                iface-name: ""
+        - name: eth1v0
+          type: ethernet
+          state: up
+        "#,
+    )
+    .unwrap();
+
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              wait-vfs: desired
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// With the default `wait-vfs: all`, every VF is waited for, even ones not
+// referenced anywhere in the desired state.
+#[test]
+fn test_verify_sriov_default_wait_vfs_all() {
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    // vf1 has no netdev, simulating a VF rebound to vfio-pci.
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                iface-name: eth1v0
+              - id: 1
+                iface-name: ""
+        - name: eth1v0
+          type: ethernet
+          state: up
+        "#,
+    )
+    .unwrap();
+
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let result = merged_ifaces.verify(&cur_ifaces);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::SrIovVfNotFound);
+    }
+}
+
+// In the desired policy, a VF referenced by its plain netdev name is not
+// waited for, as it cannot be mapped back to a (PF, VF ID) pair: the missing
+// unreferenced vf1 must not fail verification.
+#[test]
+fn test_verify_sriov_desired_ignores_plain_name_reference() {
+    // Both VF netdevs exist pre-apply.
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                iface-name: eth1v0
+              - id: 1
+                iface-name: eth1v1
+        - name: eth1v0
+          type: ethernet
+          state: up
+        - name: eth1v1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    // vf1 has no netdev.
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                iface-name: eth1v0
+              - id: 1
+                iface-name: ""
+        - name: eth1v0
+          type: ethernet
+          state: up
+        "#,
+    )
+    .unwrap();
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              wait-vfs: desired
+        - name: eth1v0
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let result = merged_ifaces.verify(&cur_ifaces);
+    assert!(result.is_ok());
+}
+
+// A VF referenced by (PF, VF id) must be waited for even when its netdev name
+// is not populated yet. This is the enable-and-use first apply phase, where the
+// VF references cannot be resolved to real names until the netdevs appear.
+#[test]
+fn test_verify_sriov_referenced_vf_missing_by_id() {
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    // vf1 netdev has not appeared yet.
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                iface-name: eth1v0
+              - id: 1
+                iface-name: ""
+        - name: eth1v0
+          type: ethernet
+          state: up
+        "#,
+    )
+    .unwrap();
+
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              wait-vfs: desired
+        ",
+    )
+    .unwrap();
+
+    let mut merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    // Simulate the phase-1 hand-off where references captured from the
+    // original desired state are injected into the PF-only merged state.
+    merged_ifaces.sriov_vf_references = HashSet::from([SrIovVfRef {
+        pf_name: "eth1".to_string(),
+        vf_id: 1,
+    }]);
+    let result = merged_ifaces.verify(&cur_ifaces);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::SrIovVfNotFound);
+    }
+}
+
+// A VF referenced by (PF, VF id) must be within the current total-vfs of
+// the PF, otherwise verification fails.
+#[test]
+fn test_verify_sriov_referenced_vf_beyond_total_vfs() {
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              wait-vfs: desired
+        - name: sriov:eth1:67
+        ",
+    )
+    .unwrap();
+
+    let result = MergedInterfaces::new(
+        desired,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    );
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+// A VF reference beyond the PF's total-vfs must fail at merge time, before
+// anything is applied. The reference itself resolves against the pre-apply
+// current state, but the desired state shrinks total-vfs below the
+// referenced VF ID.
+#[test]
+fn test_sriov_vf_reference_beyond_total_vfs_merge_error() {
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 8
+              vfs:
+              - id: 5
+                iface-name: eth1v5
+        - name: eth1v5
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        - name: sriov:eth1:5
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    let result = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    );
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("beyond the total-vfs"), "got: {e}");
+    }
+}
+
+// A VF referenced by (PF, VF id) whose netdev is present passes verification.
+#[test]
+fn test_verify_sriov_referenced_vf_present_by_id() {
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                iface-name: eth1v0
+              - id: 1
+                iface-name: eth1v1
+        - name: eth1v0
+          type: ethernet
+          state: up
+        - name: eth1v1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              wait-vfs: desired
+        ",
+    )
+    .unwrap();
+
+    let mut merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.sriov_vf_references = HashSet::from([SrIovVfRef {
+        pf_name: "eth1".to_string(),
+        vf_id: 1,
+    }]);
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// With two VFs where only one is referenced, an unreferenced VF without a
+// netdev must not fail verification while the referenced one is still checked.
+#[test]
+fn test_verify_sriov_two_vfs_only_one_referenced() {
+    let pre_apply_cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+        ",
+    )
+    .unwrap();
+
+    // vf0 is referenced and present, vf1 is unreferenced and gone.
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                iface-name: eth1v0
+              - id: 1
+                iface-name: ""
+        - name: eth1v0
+          type: ethernet
+          state: up
+        "#,
+    )
+    .unwrap();
+
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              wait-vfs: desired
+        ",
+    )
+    .unwrap();
+
+    let mut merged_ifaces = MergedInterfaces::new(
+        desired,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.sriov_vf_references = HashSet::from([SrIovVfRef {
+        pf_name: "eth1".to_string(),
+        vf_id: 0,
+    }]);
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// A VF pulled in as a bond port (changed but not desired) must still be
+// verified. The referenced VF is present, so verification succeeds.
+#[test]
+fn test_verify_sriov_referenced_vf_as_bond_port() {
+    let pre_apply_cur_ifaces = gen_sriov_current_ifaces();
+
+    let mut cur_ifaces = gen_sriov_current_ifaces();
+    cur_ifaces.push(
+        serde_yaml::from_str::<Interface>(
+            r"---
+            name: bond0
+            type: bond
+            state: up
+            link-aggregation:
+              mode: balance-rr
+              port:
+              - eth1v0
+            ",
+        )
+        .unwrap(),
+    );
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        - name: bond0
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - sriov:eth1:0
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+}
+
+// A VF pulled in as a bond port whose netdev is missing must fail verification
+// so the apply keeps retrying.
+#[test]
+fn test_verify_sriov_referenced_bond_port_missing_netdev() {
+    let pre_apply_cur_ifaces = gen_sriov_current_ifaces();
+
+    // Drop the eth1v0 netdev while keeping it referenced by bond0.
+    let mut cur_ifaces = gen_sriov_current_ifaces();
+    cur_ifaces.kernel_ifaces.remove("eth1v0");
+    cur_ifaces.push(
+        serde_yaml::from_str::<Interface>(
+            r"---
+            name: bond0
+            type: bond
+            state: up
+            link-aggregation:
+              mode: balance-rr
+              port:
+              - eth1v0
+            ",
+        )
+        .unwrap(),
+    );
+
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        - name: bond0
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - sriov:eth1:0
+        ",
+    )
+    .unwrap();
+
+    let merged_ifaces = MergedInterfaces::new(
+        des_ifaces,
+        pre_apply_cur_ifaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let result = merged_ifaces.verify(&cur_ifaces);
+    // The missing VF netdev must fail verification and be retriable so the
+    // apply keeps waiting. Depending on interface iteration order this
+    // surfaces either as verify_sriov's SrIovVfNotFound or as the bond port
+    // list mismatch; both are retriable.
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert!(e.kind().can_retry());
+    }
 }
 
 #[test]

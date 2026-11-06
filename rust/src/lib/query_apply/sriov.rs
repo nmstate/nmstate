@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::hash_map::Entry;
+use std::collections::{HashSet, hash_map::Entry};
 
 use crate::{
     BaseInterface, ErrorKind, EthernetConfig, EthernetInterface, Interface,
     InterfaceType, Interfaces, NmstateError, SrIovConfig, SrIovVfConfig,
+    SrIovVfRef, WaitVfs,
 };
 
 impl SrIovConfig {
     // * Set 'vfs: []' to None which is just reverting all VF config to default.
     // * Set `vf.iface_name` empty string,
     // * Set `max_vfs` as None because it is query only
+    // * Set `wait_vfs` as None because it is apply only
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
         if let Some(vfs) = self.vfs.as_mut() {
             for vf in vfs.iter_mut() {
@@ -21,6 +23,7 @@ impl SrIovConfig {
             }
         }
         self.max_vfs = None;
+        self.wait_vfs = None;
     }
 
     pub(crate) fn update(&mut self, other: Option<&SrIovConfig>) {
@@ -43,10 +46,17 @@ impl SrIovConfig {
     // This function does not handle the decrease of SRIOV count(interface been
     // removed from kernel) as our test showed kernel does not require extra
     // time on deleting interface.
+    //
+    // The `wait-vfs` property of [SrIovConfig] controls which VFs are waited
+    // for: [WaitVfs::All] (the default) waits for every VF of the PF, while
+    // [WaitVfs::Desired] only waits for VFs referenced in the desired state
+    // through a `sriov:<pf>:<vf_id>` reference.
     pub(crate) fn verify_sriov(
         &self,
         pf_name: &str,
         cur_ifaces: &Interfaces,
+        referenced_vfs: &HashSet<SrIovVfRef>,
+        wait_vfs: WaitVfs,
     ) -> Result<(), NmstateError> {
         let cur_pf_iface =
             match cur_ifaces.get_iface(pf_name, InterfaceType::Ethernet) {
@@ -86,6 +96,14 @@ impl SrIovConfig {
             return Ok(());
         };
         for vf in vfs {
+            if wait_vfs == WaitVfs::Desired
+                && !referenced_vfs.contains(&SrIovVfRef {
+                    pf_name: pf_name.to_string(),
+                    vf_id: vf.id,
+                })
+            {
+                continue;
+            }
             if vf.iface_name.is_empty() {
                 return Err(NmstateError::new(
                     ErrorKind::SrIovVfNotFound,
@@ -107,6 +125,9 @@ impl SrIovConfig {
                     ),
                 ));
             }
+            // At this point, we have confirmed the VF has been created.
+            // I wonder if it is conscious and thinks about who created it...
+            // IT'S ALIVE!!
         }
         Ok(())
     }
