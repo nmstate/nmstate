@@ -9,7 +9,7 @@ use serde::{
 use crate::{
     ErrorKind, EthernetInterface, Interface, InterfaceIdentifier,
     InterfaceState, InterfaceType, MergedInterface, NetworkStateMode,
-    NmstateError,
+    NmstateError, ifaces::parse_sriov_vf_naming,
 };
 
 // The max loop count for Interfaces.set_ifaces_up_priority()
@@ -1008,6 +1008,20 @@ impl MergedInterfaces {
             if let Some(src_iface_name) =
                 &merged_iface.merged.base_iface().copy_mac_from
             {
+                let resolved_name = if let Some((pf_name, vf_id)) =
+                    parse_sriov_vf_naming(src_iface_name)?
+                {
+                    resolve_sriov_vf_name(
+                        &self.kernel_ifaces,
+                        src_iface_name,
+                        pf_name,
+                        vf_id,
+                        iface_name,
+                    )?
+                } else {
+                    src_iface_name.clone()
+                };
+                let src_iface_name = &resolved_name;
                 let kernel_names = self.iface_name_search.get(src_iface_name);
                 if kernel_names.len() > 1 {
                     let e = NmstateError::new(
@@ -1081,7 +1095,43 @@ impl MergedInterfaces {
         }
         Ok(())
     }
+}
 
+fn resolve_sriov_vf_name(
+    kernel_ifaces: &HashMap<String, MergedInterface>,
+    src_iface_name: &str,
+    pf_name: &str,
+    vf_id: u32,
+    iface_name: &str,
+) -> Result<String, NmstateError> {
+    if let Some(mi) = kernel_ifaces.get(pf_name)
+        && let Some(Interface::Ethernet(eth)) = mi.current.as_ref()
+        && let Some(eth_config) = eth.ethernet.as_ref()
+        && let Some(sriov) = eth_config.sr_iov.as_ref()
+        && let Some(vfs) = sriov.vfs.as_ref()
+        && let Some(vf) = vfs.iter().find(|vf| vf.id == vf_id)
+        && !vf.iface_name.is_empty()
+    {
+        log::info!(
+            "SR-IOV VF copy-mac-from {} resolved to {}",
+            src_iface_name,
+            vf.iface_name
+        );
+        Ok(vf.iface_name.clone())
+    } else {
+        let e = NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Failed to resolve SR-IOV VF interface name {src_iface_name} \
+                 for copy-mac-from of iface {iface_name}"
+            ),
+        );
+        log::error!("{e}");
+        Err(e)
+    }
+}
+
+impl MergedInterfaces {
     // Unlike orphan check in `apply_ctrller_change()`, this function is for
     // orphan interface without controller.
     fn mark_orphan_interface_as_absent(&mut self) -> Result<(), NmstateError> {

@@ -1071,3 +1071,106 @@ fn test_error_when_merge_two_different_type_ifaces() {
     assert_eq!(error.kind(), ErrorKind::InvalidArgument);
     assert!(error.msg().contains("different interface type"));
 }
+
+fn gen_sriov_current_ifaces_with_mac() -> Interfaces {
+    let mut current = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+              - id: 0
+                mac-address: '00:11:22:33:44:55'
+              - id: 1
+                mac-address: '00:11:22:33:44:66'
+        - name: eth1v0
+          type: ethernet
+          state: up
+          mac-address: '00:11:22:33:44:55'
+        - name: eth1v1
+          type: ethernet
+          state: up
+          mac-address: '00:11:22:33:44:66'
+        ",
+    )
+    .unwrap();
+    let Some(Interface::Ethernet(eth)) = current.kernel_ifaces.get_mut("eth1")
+    else {
+        panic!("eth1 not found or not Ethernet");
+    };
+    for vf in eth
+        .ethernet
+        .as_mut()
+        .expect("ethernet config")
+        .sr_iov
+        .as_mut()
+        .expect("sr-iov config")
+        .vfs
+        .as_mut()
+        .expect("vfs list")
+    {
+        vf.iface_name = format!("eth1v{}", vf.id);
+    }
+    current
+}
+
+#[test]
+fn test_copy_mac_from_sriov_vf() {
+    let current = gen_sriov_current_ifaces_with_mac();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: bond0
+          type: bond
+          state: up
+          copy-mac-from: sriov:eth1:0
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - eth1v0
+        ",
+    )
+    .unwrap();
+
+    let merged =
+        MergedInterfaces::new(desired, current, Default::default(), false)
+            .unwrap();
+
+    let bond = merged.kernel_ifaces.get("bond0").unwrap();
+    let mac = bond
+        .for_apply
+        .as_ref()
+        .unwrap()
+        .base_iface()
+        .mac_address
+        .as_deref();
+    assert_eq!(mac, Some("00:11:22:33:44:55"));
+}
+
+#[test]
+fn test_copy_mac_from_sriov_vf_invalid() {
+    let current = gen_sriov_current_ifaces_with_mac();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r"---
+        - name: bond0
+          type: bond
+          state: up
+          copy-mac-from: sriov:eth1:5
+          link-aggregation:
+            mode: balance-rr
+            port:
+            - eth1v0
+        ",
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(desired, current, Default::default(), false);
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    assert!(err.msg().contains("sriov:eth1:5"));
+}
