@@ -9,7 +9,7 @@ use serde::{
 use crate::{
     ErrorKind, EthernetInterface, Interface, InterfaceIdentifier,
     InterfaceState, InterfaceType, MergedInterface, NetworkStateMode,
-    NmstateError,
+    NmstateError, SrIovVfRef,
 };
 
 // The max loop count for Interfaces.set_ifaces_up_priority()
@@ -791,6 +791,7 @@ pub(crate) struct MergedInterfaces {
     pub(crate) user_ifaces: HashMap<(String, InterfaceType), MergedInterface>,
     pub(crate) insert_order: Vec<(String, InterfaceType)>,
     pub(crate) ignored_ifaces: Vec<(String, InterfaceType)>,
+    pub(crate) sriov_vf_references: HashSet<SrIovVfRef>,
     pub(crate) memory_only: bool,
     pub(crate) mode: NetworkStateMode,
     pub(crate) iface_name_search: InterfaceNameSearch,
@@ -812,6 +813,8 @@ impl MergedInterfaces {
             (String, InterfaceType),
             MergedInterface,
         > = HashMap::new();
+
+        let referenced_vfs = desired.referenced_sriov_vfs();
 
         desired.unify_veth_and_eth();
         current.unify_veth_and_eth();
@@ -905,6 +908,7 @@ impl MergedInterfaces {
             kernel_ifaces: merged_kernel_ifaces,
             user_ifaces: merged_user_ifaces,
             insert_order: desired.insert_order,
+            sriov_vf_references: referenced_vfs,
             ignored_ifaces,
             memory_only,
             mode,
@@ -957,6 +961,7 @@ impl MergedInterfaces {
         self.validate_hsr_mac()?;
         self.copy_hsr_mac()?;
         self.validate_controller_and_port_list_confliction()?;
+        self.validate_sriov_vf_references()?;
         self.resolve_port_name_ref()?;
         self.resolve_parent_name_ref()?;
         self.handle_changed_ports()?;

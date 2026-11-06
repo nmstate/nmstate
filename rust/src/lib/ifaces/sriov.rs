@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
-    NmstateError, VlanProtocol,
+    MergedInterfaces, NmstateError, VlanProtocol,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -71,11 +73,46 @@ pub struct SrIovConfig {
     /// Deserialize and serialize from/to `max-vfs`.
     pub max_vfs: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Policy to choose which SR-IOV VFs to wait for in verify stage
+    /// Deserialize and serialize from/to `wait-vfs`.
+    /// If not mentioned, the default policy is [WaitVfs::All].
+    pub wait_vfs: Option<WaitVfs>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// VF specific configurations.
     /// * Setting to `Some(Vec::new())` will revert all VF configurations back
     ///   to defaults.
     /// * If not empty, missing [SrIovVfConfig] will use current configuration.
     pub vfs: Option<Vec<SrIovVfConfig>>,
+}
+
+/// Policy to choose which SR-IOV VFs to wait for in verify stage
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize,
+)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[non_exhaustive]
+pub enum WaitVfs {
+    #[default]
+    /// Wait for all VFs
+    /// Serialize and deserialize to/from `all`.
+    All,
+    /// Wait for only VFs in desired state referenced by PF name and VF ID,
+    /// e.g. `sriov:<pf_name>:<vf_id>` reference syntax.
+    /// Serialize and deserialize to/from `desired`.
+    Desired,
+}
+
+impl std::fmt::Display for WaitVfs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::All => "all",
+                Self::Desired => "desired",
+            }
+        )
+    }
 }
 
 impl SrIovConfig {
@@ -227,7 +264,38 @@ impl SrIovVfConfig {
     }
 }
 
+/// A SR-IOV VF referenced by the desired state via `sriov:<pf>:<vf_id>`
+/// naming, which identifies a VF by it's Physical Interface name and
+/// the VF id even before the VF netdev exists.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct SrIovVfRef {
+    pub(crate) pf_name: String,
+    pub(crate) vf_id: u32,
+}
+
 impl Interfaces {
+    pub(crate) fn referenced_sriov_vfs(&self) -> HashSet<SrIovVfRef> {
+        let mut refs = HashSet::new();
+        for iface in self
+            .kernel_ifaces
+            .values()
+            .chain(self.user_ifaces.values())
+            .filter(|i| i.is_up())
+        {
+            if let Ok(Some(vf_ref)) = parse_sriov_vf_naming(iface.name()) {
+                refs.insert(vf_ref);
+            }
+            if let Some(ports) = iface.ports() {
+                for port in ports {
+                    if let Ok(Some(vf_ref)) = parse_sriov_vf_naming(port) {
+                        refs.insert(vf_ref);
+                    }
+                }
+            }
+        }
+        refs
+    }
+
     pub(crate) fn resolve_sriov_reference(
         &mut self,
         current: &Self,
@@ -243,10 +311,9 @@ impl Interfaces {
     ) -> Result<(), NmstateError> {
         let mut changed_iface_names: Vec<String> = Vec::new();
         for iface in self.kernel_ifaces.values_mut() {
-            if let Some((pf_name, vf_id)) = parse_sriov_vf_naming(iface.name())?
-            {
+            if let Some(vf_ref) = parse_sriov_vf_naming(iface.name())? {
                 if let Some(vf_iface_name) =
-                    get_sriov_vf_iface_name(current, pf_name, vf_id)
+                    get_sriov_vf_iface_name(current, &vf_ref)
                 {
                     changed_iface_names.push(iface.name().to_string());
                     log::info!(
@@ -308,9 +375,9 @@ impl Interfaces {
                 None => continue,
             };
             for port in ports {
-                if let Some((pf_name, vf_id)) = parse_sriov_vf_naming(port)? {
+                if let Some(vf_ref) = parse_sriov_vf_naming(port)? {
                     if let Some(vf_iface_name) =
-                        get_sriov_vf_iface_name(current, pf_name, vf_id)
+                        get_sriov_vf_iface_name(current, &vf_ref)
                     {
                         log::info!(
                             "SR-IOV VF {port} resolved to interface name \
@@ -344,15 +411,18 @@ impl Interfaces {
     }
 }
 
-fn parse_sriov_vf_naming(
+pub(crate) fn parse_sriov_vf_naming(
     iface_name: &str,
-) -> Result<Option<(&str, u32)>, NmstateError> {
+) -> Result<Option<SrIovVfRef>, NmstateError> {
     if iface_name.starts_with(SrIovConfig::VF_NAMING_PREFIX) {
         let names: Vec<&str> =
             iface_name.split(SrIovConfig::VF_NAMING_SEPERATOR).collect();
         if names.len() == 3 {
             match names[2].parse::<u32>() {
-                Ok(vf_id) => Ok(Some((names[1], vf_id))),
+                Ok(vf_id) => Ok(Some(SrIovVfRef {
+                    pf_name: names[1].to_string(),
+                    vf_id,
+                })),
                 Err(e) => {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
@@ -383,11 +453,10 @@ fn parse_sriov_vf_naming(
 
 fn get_sriov_vf_iface_name(
     current: &Interfaces,
-    pf_name: &str,
-    vf_id: u32,
+    vf_ref: &SrIovVfRef,
 ) -> Option<String> {
     if let Some(Interface::Ethernet(pf_iface)) =
-        current.get_iface(pf_name, InterfaceType::Ethernet)
+        current.get_iface(vf_ref.pf_name.as_str(), InterfaceType::Ethernet)
         && let Some(vfs) = pf_iface
             .ethernet
             .as_ref()
@@ -395,7 +464,7 @@ fn get_sriov_vf_iface_name(
             .and_then(|s| s.vfs.as_ref())
     {
         for vf in vfs {
-            if vf.id == vf_id {
+            if vf.id == vf_ref.vf_id {
                 if !vf.iface_name.is_empty() {
                     return Some(vf.iface_name.clone());
                 }
@@ -455,6 +524,43 @@ impl MergedInterface {
             ) {
                 apply_conf.auto_fill_unmentioned_vf_id(cur_conf);
                 verify_conf.auto_fill_unmentioned_vf_id(cur_conf);
+            }
+        }
+        Ok(())
+    }
+}
+
+impl MergedInterfaces {
+    // The SR-IOV VF references in the desired state must be within the
+    // total-vfs of the referenced PF.
+    pub fn validate_sriov_vf_references(&self) -> Result<(), NmstateError> {
+        for vf_ref in &self.sriov_vf_references {
+            let total_vfs = self
+                .kernel_ifaces
+                .get(vf_ref.pf_name.as_str())
+                .and_then(|merged_iface| {
+                    if let Interface::Ethernet(eth_iface) = &merged_iface.merged
+                    {
+                        eth_iface
+                            .ethernet
+                            .as_ref()
+                            .and_then(|eth_conf| eth_conf.sr_iov.as_ref())
+                            .and_then(|sriov_conf| sriov_conf.total_vfs)
+                    } else {
+                        None
+                    }
+                });
+            if let Some(total_vfs) = total_vfs
+                && vf_ref.vf_id >= total_vfs
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Referenced SR-IOV VF {} is beyond the total-vfs \
+                         {total_vfs} of PF {}",
+                        vf_ref.vf_id, vf_ref.pf_name
+                    ),
+                ));
             }
         }
         Ok(())

@@ -230,6 +230,13 @@ impl NetworkState {
             }
         }
 
+        // Collect the desired SR-IOV VF references from the original state so
+        // that both apply phases can wait for the referenced VF netdevs. The
+        // first (PF-only) phase of the enable-and-use path applies a state
+        // stripped of VF interfaces, so these references would otherwise be
+        // lost and the VFs never waited for before their names are resolved.
+        let referenced_vfs = self.interfaces.referenced_sriov_vfs();
+
         // At this point, the `unknown` interface type is not resolved yet,
         // hence when user want `enable-and-use` single-transaction for SR-IOV,
         // they need define the interface type. It is overkill to do resolve at
@@ -278,12 +285,16 @@ impl NetworkState {
 
         with_nm_checkpoint(&checkpoint, self.no_commit, || async {
             if let Some(pf_state) = pf_state {
-                let pf_merged_state = MergedNetworkState::new(
+                let mut pf_merged_state = MergedNetworkState::new(
                     pf_state,
                     cur_net_state.clone(),
                     NetworkStateMode::Apply,
                     self.memory_only,
                 )?;
+
+                // the references were captured before VFs were stripped from
+                // desired state, and are put back in.
+                pf_merged_state.interfaces.sriov_vf_references = referenced_vfs;
                 let verify_count =
                     get_proper_verify_retry_count(&pf_merged_state.interfaces);
                 self.apply_with_nm_backend_and_under_checkpoint(

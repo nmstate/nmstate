@@ -320,6 +320,7 @@ class Ethernet:
         DRIVERS_AUTOPROBE = "drivers-autoprobe"
         TOTAL_VFS = "total-vfs"
         MAX_VFS = "max-vfs"
+        WAIT_VFS = "wait-vfs"
         VFS_SUBTREE = "vfs"
 
         class VFS:
@@ -332,6 +333,10 @@ class Ethernet:
             VLAN_ID = "vlan-id"
             QOS = "qos"
             VLAN_PROTO = "vlan-proto"
+
+        class WAIT_VFS_POLICY:
+            ALL = "all"
+            DESIRED = "desired"
 
 
 class Veth:
