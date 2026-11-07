@@ -15,9 +15,20 @@ def get_sriov_vf_names(pf_name):
     return ret
 
 
+def read_sriov_totalvfs(pf_name):
+    try:
+        with open(f"/sys/class/net/{pf_name}/device/sriov_totalvfs") as fd:
+            return int(fd.read())
+    except OSError:
+        return 0
+
+
 def read_sriov_numvfs(pf_name):
-    with open(f"/sys/class/net/{pf_name}/device/sriov_numvfs") as fd:
-        return int(fd.read())
+    try:
+        with open(f"/sys/class/net/{pf_name}/device/sriov_numvfs") as fd:
+            return int(fd.read())
+    except OSError:
+        return 0
 
 
 def write_sriov_numvfs(pf_name, count):

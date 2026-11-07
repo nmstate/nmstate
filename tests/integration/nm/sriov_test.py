@@ -10,10 +10,23 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 
 from ..testlib import cmdlib
+from ..testlib.sriov import read_sriov_totalvfs
 
 
 def _test_nic_name():
     return os.environ.get("TEST_REAL_NIC")
+
+
+def _skip_if_not_enough_vfs(count):
+    pf_name = _test_nic_name()
+    max_vfs = read_sriov_totalvfs(pf_name) if pf_name else 0
+    return pytest.mark.skipif(
+        max_vfs < count,
+        reason=(
+            f"TEST_REAL_NIC only supports {max_vfs} VFs, "
+            f"but this test requires {count}"
+        ),
+    )
 
 
 @pytest.fixture
@@ -63,6 +76,7 @@ def sriov_interface(disable_sriov):
     not os.environ.get("TEST_REAL_NIC"),
     reason="Need to define TEST_REAL_NIC for SR-IOV test",
 )
+@_skip_if_not_enough_vfs(5)
 def test_create_new_vfs_does_not_generate_a_profile(sriov_interface):
     desired_state = sriov_interface
     pf_name = sriov_interface[Interface.KEY][0][Interface.NAME]
