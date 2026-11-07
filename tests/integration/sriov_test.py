@@ -29,6 +29,7 @@ from .testlib.sriov import (
     get_sriov_vf_names,
     learn_vf_names,
     read_sriov_numvfs,
+    read_sriov_totalvfs,
 )
 from .testlib.statelib import show_only
 from .testlib.yaml import load_yaml
@@ -60,15 +61,28 @@ def _test_nic_name():
     return os.environ.get("TEST_REAL_NIC")
 
 
+def _max_vfs():
+    pf_name = _test_nic_name()
+    if not pf_name:
+        return 0
+    return read_sriov_totalvfs(pf_name)
+
+
+def _skip_if_not_enough_vfs(count):
+    max_vfs = _max_vfs()
+    return pytest.mark.skipif(
+        max_vfs < count,
+        reason=(
+            f"TEST_REAL_NIC only supports {max_vfs} VFs, "
+            f"but this test requires {count}"
+        ),
+    )
+
+
 def find_vf_iface_name(pf_name, vf_id):
     return os.listdir(
         f"/sys/class/net/{pf_name}/device/virtfn{vf_id}/net"
     ).pop()
-
-
-def get_max_vfs_count(pf_name):
-    with open(f"/sys/class/net/{pf_name}/device/sriov_totalvfs", "r") as fd:
-        return int(fd.read())
 
 
 @pytest.fixture
@@ -137,6 +151,12 @@ def sriov_iface_vf(disable_sriov):
 @pytest.fixture
 def sriov_with_62_vfs():
     pf_name = _test_nic_name()
+    total_vfs = read_sriov_totalvfs(pf_name)
+    if total_vfs < 62:
+        pytest.skip(
+            f"TEST_REAL_NIC only supports {total_vfs} VFs, "
+            "but this test requires 62"
+        )
     iface_info = {
         Interface.NAME: pf_name,
         Interface.STATE: InterfaceState.UP,
@@ -167,6 +187,7 @@ class TestSrIov:
     def test_sriov_with_no_vfs_config(self, sriov_interface):
         assertlib.assert_state_match(sriov_interface)
 
+    @_skip_if_not_enough_vfs(5)
     def test_sriov_increase_vfs(self, sriov_interface):
         desired_state = sriov_interface
         eth_config = desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
@@ -538,6 +559,7 @@ class TestSrIov:
         vf_ifaces = get_sriov_vf_names(pf_name)
         assert len(vf_ifaces) == 62
 
+    @_skip_if_not_enough_vfs(32)
     def test_drivers_autoprobe_false(self, disable_sriov):
         pf_name = _test_nic_name()
         desired_state = {
@@ -575,7 +597,7 @@ class TestSrIov:
 
     def test_raise_error_if_exceeded_maximum_supported_vfs_count(self):
         pf_name = _test_nic_name()
-        max_vfs = get_max_vfs_count(pf_name)
+        max_vfs = read_sriov_totalvfs(pf_name)
 
         desired_state = {
             Interface.KEY: [
