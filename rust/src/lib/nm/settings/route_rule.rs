@@ -4,10 +4,38 @@ use super::super::nm_dbus::NmIpRouteRule;
 use crate::{
     ErrorKind, InterfaceIpAddr, NmstateError, RouteRuleEntry,
     ip::{AddressFamily, is_ipv6_addr},
+    nm::route_rule::nm_rule_to_nmstate,
 };
 
 const AF_INET6: i32 = 10;
 const AF_INET: i32 = 2;
+
+pub(crate) fn merge_nm_ip_rules<'a>(
+    rules: impl IntoIterator<Item = &'a RouteRuleEntry>,
+    is_ipv6: bool,
+    current: &[NmIpRouteRule],
+) -> Result<Vec<NmIpRouteRule>, NmstateError> {
+    let mut pending = gen_nm_ip_rules(rules, is_ipv6)?;
+    if !current.iter().any(NmIpRouteRule::is_inverted) {
+        return Ok(pending);
+    }
+
+    let mut ret = Vec::new();
+    for nm_rule in current {
+        if nm_rule.is_inverted() {
+            ret.push(nm_rule.clone());
+        } else if let Some(rule) = nm_rule_to_nmstate(is_ipv6, nm_rule) {
+            let canonical = gen_nm_ip_rules([&rule], is_ipv6)?;
+            if let Some(rule) = canonical.first()
+                && let Some(index) = pending.iter().position(|r| r == rule)
+            {
+                ret.push(pending.remove(index));
+            }
+        }
+    }
+    ret.extend(pending);
+    Ok(ret)
+}
 
 pub(crate) fn gen_nm_ip_rules<'a>(
     rules: impl IntoIterator<Item = &'a RouteRuleEntry>,
