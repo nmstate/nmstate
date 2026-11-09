@@ -75,6 +75,20 @@ By default, if the network state after state applied is not identical to the
 desired state, \fBnmstatectl\fR rollbacks to the state before \fBset\fR
 command. Use the \fB--no-verify\fR argument to skip the verification.
 \fBnmstatectl a\fR is an aliased command for \fBnmstatectl apply\fR.
+.PP
+With the NetworkManager backend, absent routing rules also remove matching
+static rules outside NetworkManager profiles. Static means protocol unspec,
+boot or static, or no protocol attribute. This includes eligible rules added
+by other tools or automatically by NetworkManager, such as WireGuard suppress
+rules outside profiles. Dynamic, kernel and inverted rules, and rules on
+ignored input interfaces, are preserved. External rule deletion requires
+CAP_NET_ADMIN only when matching rules remain after NetworkManager applies
+the profile changes.
+Deleted external rules are not restored after apply failure, explicit rollback
+or checkpoint expiry. If a selected rule cannot be encoded safely, or its
+deletion could remove a rule that must remain, apply fails before any external
+rule is deleted. This includes unsupported VRF l3mdev rules. Other tools must
+not modify routing rules during apply.
 .RE
 .PP
 .B edit

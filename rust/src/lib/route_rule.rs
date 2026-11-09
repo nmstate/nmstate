@@ -22,8 +22,8 @@ pub struct RouteRules {
     /// desired route rules only append to existing instead of overriding.
     /// To delete any route rule, please set [crate::RouteRuleEntry.state] to
     /// [RouteRuleState::Absent]. Any property set to None in absent route rule
-    /// means wildcard. For example, this [crate::NetworkState] will delete all
-    /// route rule looking up route table 500:
+    /// means wildcard. For example, this [crate::NetworkState] deletes
+    /// eligible rules looking up route table 500:
     /// ```yml
     /// ---
     /// route-rules:
@@ -32,11 +32,10 @@ pub struct RouteRules {
     ///       route-table: 500
     /// ```
     ///
-    /// Absent entries are applied before explicitly desired rules, regardless
-    /// of their order in `config`. A desired rule therefore takes precedence
-    /// over a matching absent entry. Assuming a route already uses table 500,
-    /// this replaces the rules stored in NetworkManager profiles for that
-    /// table with the two specified rules:
+    /// Explicitly desired rules take precedence over matching absent entries,
+    /// regardless of their order in `config`. Assuming a route already uses
+    /// table 500, this keeps the two specified rules and deletes other
+    /// eligible rules looking up that table:
     /// ```yml
     /// route-rules:
     ///   config:
@@ -49,6 +48,23 @@ pub struct RouteRules {
     ///     - route-table: 500
     ///       state: absent
     /// ```
+    ///
+    /// With the NetworkManager backend, absent entries also delete matching
+    /// static rules outside NetworkManager profiles. Static means protocol
+    /// unspec, boot or static, or no protocol attribute. This includes
+    /// matching rules added by other tools or automatically by
+    /// NetworkManager, such as WireGuard suppress rules outside profiles.
+    /// Dynamic, kernel and inverted rules, and rules on ignored input
+    /// interfaces, are preserved. Direct deletion requires CAP_NET_ADMIN
+    /// only when matching external rules remain after NetworkManager
+    /// applies the profile changes.
+    ///
+    /// Deleted external rules are not restored after apply failure, explicit
+    /// rollback or checkpoint expiry. If a selected rule cannot be encoded
+    /// safely, including unsupported VRF l3mdev rules, or deletion could
+    /// remove a rule that must remain, apply fails before deleting
+    /// external rules. Other tools must not modify routing rules during
+    /// apply.
     pub config: Option<Vec<RouteRuleEntry>>,
 }
 
@@ -143,6 +159,8 @@ pub struct RouteRuleEntry {
         alias = "suppress_prefixlength"
     )]
     pub suppress_prefix_length: Option<u32>,
+    #[serde(skip)]
+    pub(crate) apply_ignored: bool,
 }
 
 impl RouteRuleEntry {
@@ -323,11 +341,9 @@ impl RouteRuleEntry {
         true
     }
 
-    // Return tuple of (no_absent, is_ipv4, table_id, ip_from,
-    // ip_to, priority, fwmark, fwmask, action, suppress_prefix_length)
     fn sort_key(
         &self,
-    ) -> (bool, bool, u32, &str, &str, i64, u32, u32, u8, u32) {
+    ) -> (bool, bool, u32, &str, &str, i64, u32, u32, u8, u32, &str) {
         (
             !matches!(self.state, Some(RouteRuleState::Absent)),
             {
@@ -355,6 +371,7 @@ impl RouteRuleEntry {
             self.fwmask.unwrap_or(0),
             self.action.map(u8::from).unwrap_or(0),
             self.suppress_prefix_length.unwrap_or_default(),
+            self.iif.as_deref().unwrap_or_default(),
         )
     }
 
@@ -395,6 +412,20 @@ impl RouteRuleEntry {
         }
         self.validate_ip_from_to()?;
         self.validate_fwmark_and_fwmask()?;
+
+        if let Some(priority) = self.priority
+            && priority != Self::USE_DEFAULT_PRIORITY
+            && u32::try_from(priority).is_err()
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Routing rule priority {priority} must be between 0 and \
+                     {} or -1 for automatic assignment",
+                    u32::MAX
+                ),
+            ));
+        }
 
         if self.action.is_none() && self.table_id.is_none() {
             log::info!(
@@ -527,19 +558,21 @@ pub(crate) struct MergedRouteRules {
     // The `for_verify` hold the same data as `for_apply` except the
     // auto set priority.
     pub(crate) for_verify: Vec<RouteRuleEntry>,
+    pub(crate) ignored_ifaces: Vec<String>,
 }
 
 impl MergedRouteRules {
     pub(crate) fn new(
-        desired: RouteRules,
+        mut desired: RouteRules,
         current: RouteRules,
     ) -> Result<Self, NmstateError> {
         let mut for_apply: Vec<RouteRuleEntry> = Vec::new();
         let mut merged_rules: Vec<RouteRuleEntry> = Vec::new();
 
         let mut des_absent_rules: Vec<&RouteRuleEntry> = Vec::new();
-        if let Some(rules) = desired.config.as_ref() {
-            for rule in rules.iter() {
+        if let Some(rules) = desired.config.as_mut() {
+            for rule in rules.iter_mut() {
+                rule.apply_ignored = false;
                 if !rule.is_absent() {
                     let mut new_rule = rule.clone();
                     new_rule.sanitize()?;
@@ -551,7 +584,7 @@ impl MergedRouteRules {
         }
 
         if let Some(cur_rules) = current.config.as_ref() {
-            for rule in cur_rules {
+            for rule in cur_rules.iter().filter(|r| !r.apply_ignored) {
                 if des_absent_rules
                     .iter()
                     .any(|absent_rule| absent_rule.is_match(rule))
@@ -576,13 +609,26 @@ impl MergedRouteRules {
 
         let for_verify = for_apply.clone();
 
-        set_auto_priority(for_apply.as_mut_slice(), merged_rules.as_slice());
+        let reserved_priority = current
+            .config
+            .iter()
+            .flatten()
+            .filter(|r| r.apply_ignored)
+            .filter_map(|r| r.priority)
+            .max()
+            .unwrap_or_default();
+        set_auto_priority(
+            for_apply.as_mut_slice(),
+            merged_rules.as_slice(),
+            reserved_priority,
+        )?;
 
         Ok(Self {
             desired,
             current,
             for_apply,
             for_verify,
+            ignored_ifaces: Vec::new(),
         })
     }
 
@@ -590,25 +636,19 @@ impl MergedRouteRules {
         &mut self,
         ignored_ifaces: &[(String, InterfaceType)],
     ) {
-        let ignored_ifaces: Vec<&str> = ignored_ifaces
+        self.ignored_ifaces = ignored_ifaces
             .iter()
             .filter(|(_, t)| !t.is_userspace())
-            .map(|(n, _)| n.as_str())
+            .map(|(n, _)| n.clone())
             .collect();
 
         self.for_apply.retain(|rule| {
             if let Some(iif) = rule.iif.as_ref() {
-                !ignored_ifaces.contains(&iif.as_str())
+                !self.ignored_ifaces.contains(iif)
             } else {
                 true
             }
         })
-    }
-
-    pub(crate) fn is_changed(&self) -> bool {
-        (!self.desired.is_empty())
-            && (self.for_apply
-                != self.current.config.clone().unwrap_or_default())
     }
 }
 
@@ -619,8 +659,9 @@ impl MergedRouteRules {
 fn set_auto_priority(
     for_apply: &mut [RouteRuleEntry],
     merged: &[RouteRuleEntry],
-) {
-    let mut max_priority = get_max_rule_priority(merged);
+    reserved_priority: i64,
+) -> Result<(), NmstateError> {
+    let mut max_priority = get_max_rule_priority(merged).max(reserved_priority);
     if max_priority < ROUTE_RULE_DEFAULT_PRIORIRY - 1 {
         max_priority = ROUTE_RULE_DEFAULT_PRIORIRY - 1;
     }
@@ -639,10 +680,23 @@ fn set_auto_priority(
         if cur_prio.is_some() {
             rule.priority = cur_prio;
         } else {
-            max_priority += 1;
+            max_priority = max_priority
+                .checked_add(1)
+                .filter(|priority| *priority <= i64::from(u32::MAX))
+                .ok_or_else(|| {
+                    NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Cannot automatically assign a routing rule \
+                             priority above {}",
+                            u32::MAX
+                        ),
+                    )
+                })?;
             rule.priority = Some(max_priority);
         }
     }
+    Ok(())
 }
 
 fn get_max_rule_priority(rules: &[RouteRuleEntry]) -> i64 {

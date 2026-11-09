@@ -70,6 +70,13 @@ impl TryFrom<DbusDictionary> for NmIpRouteRule {
 }
 
 impl NmIpRouteRule {
+    pub(crate) fn is_inverted(&self) -> bool {
+        self._other
+            .get("invert")
+            .and_then(|v| bool::try_from(v).ok())
+            .unwrap_or(false)
+    }
+
     pub(crate) fn to_value(&self) -> Result<zvariant::Value<'_>, NmError> {
         let mut ret = zvariant::Dict::new(
             &zvariant::Signature::Str,
@@ -151,7 +158,7 @@ impl NmIpRouteRule {
         for (key, value) in self._other.iter() {
             ret.append(
                 zvariant::Value::new(key.as_str()),
-                zvariant::Value::from(value.clone()),
+                zvariant::Value::new(zvariant::Value::from(value.clone())),
             )?;
         }
         Ok(zvariant::Value::Dict(ret))

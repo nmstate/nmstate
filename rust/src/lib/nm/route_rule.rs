@@ -2,13 +2,123 @@
 
 use std::collections::HashSet;
 
+use super::nm_dbus::{NmIpRouteRule, NmIpRouteRuleAction};
 use crate::{
-    ErrorKind, MergedInterfaces, MergedNetworkState, NmstateError, RouteEntry,
-    RouteRuleEntry,
+    AddressFamily, ErrorKind, MergedInterfaces, MergedNetworkState,
+    NmstateError, RouteEntry, RouteRuleAction, RouteRuleEntry,
+    ip::sanitize_ip_network,
 };
 
 const DEFAULT_TABLE_ID: u32 = 254; // main route table ID
 const LOOPBACK_IFACE_NAME: &str = "lo";
+
+pub(crate) fn nm_rule_to_nmstate(
+    is_ipv6: bool,
+    nm_rule: &NmIpRouteRule,
+) -> Option<RouteRuleEntry> {
+    if nm_rule.is_inverted() {
+        return None;
+    }
+    let mut rule = RouteRuleEntry::new();
+    if is_ipv6 {
+        rule.family = Some(AddressFamily::IPv6);
+    } else {
+        rule.family = Some(AddressFamily::IPv4);
+    }
+    if let Some(v) = nm_rule.priority.as_ref() {
+        rule.priority = Some(*v as i64);
+    }
+    if let (Some(from), Some(from_len)) =
+        (nm_rule.from.as_ref(), nm_rule.from_len.as_ref())
+    {
+        rule.ip_from = Some(format!("{from}/{from_len}"));
+    }
+    if let (Some(to), Some(to_len)) =
+        (nm_rule.to.as_ref(), nm_rule.to_len.as_ref())
+    {
+        rule.ip_to = Some(format!("{to}/{to_len}"));
+    }
+    if let Some(v) = nm_rule.table.as_ref() {
+        rule.table_id = Some(*v);
+    }
+    if let Some(v) = nm_rule.fw_mark.as_ref() {
+        rule.fwmark = Some(*v);
+    }
+    if let Some(v) = nm_rule.fw_mask.as_ref() {
+        rule.fwmask = Some(*v);
+    }
+    if let Some(v) = nm_rule.iifname.as_ref() {
+        rule.iif = Some(v.to_string());
+    }
+    if let Some(v) = nm_rule.suppress_prefixlength {
+        match u32::try_from(v) {
+            Ok(i) => rule.suppress_prefix_length = Some(i),
+            Err(e) => {
+                log::warn!(
+                    "BUG: Failed to convert `suppress_prefixlength` got from \
+                     NM: {v} to u32: {e}"
+                );
+            }
+        }
+    }
+    if let Some(v) = nm_rule.action.as_ref() {
+        rule.action = Some(match v {
+            NmIpRouteRuleAction::Blackhole => RouteRuleAction::Blackhole,
+            NmIpRouteRuleAction::Unreachable => RouteRuleAction::Unreachable,
+            NmIpRouteRuleAction::Prohibit => RouteRuleAction::Prohibit,
+            _ => {
+                log::warn!("Unknown NM IP route rule action {v:?}");
+                return None;
+            }
+        });
+    }
+    Some(rule)
+}
+
+pub(crate) fn route_rule_matches(
+    left: &RouteRuleEntry,
+    right: &RouteRuleEntry,
+) -> bool {
+    let default_table = if left.action.is_some() {
+        0
+    } else {
+        DEFAULT_TABLE_ID
+    };
+    left.is_ipv6() == right.is_ipv6()
+        && left.priority.unwrap_or(0) == right.priority.unwrap_or(0)
+        && left.action == right.action
+        && left
+            .table_id
+            .filter(|table| *table != 0)
+            .unwrap_or(default_table)
+            == right
+                .table_id
+                .filter(|table| *table != 0)
+                .unwrap_or(default_table)
+        && normalized_rule_prefix(left.ip_from.as_deref())
+            == normalized_rule_prefix(right.ip_from.as_deref())
+        && normalized_rule_prefix(left.ip_to.as_deref())
+            == normalized_rule_prefix(right.ip_to.as_deref())
+        && left.fwmark.unwrap_or(0) == right.fwmark.unwrap_or(0)
+        && left.fwmask.unwrap_or(0) == right.fwmask.unwrap_or(0)
+        && left.iif.as_deref().filter(|iif| !iif.is_empty())
+            == right.iif.as_deref().filter(|iif| !iif.is_empty())
+        && left
+            .suppress_prefix_length
+            .filter(|prefix| *prefix != u32::MAX)
+            == right
+                .suppress_prefix_length
+                .filter(|prefix| *prefix != u32::MAX)
+}
+
+fn normalized_rule_prefix(value: Option<&str>) -> Option<String> {
+    value
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            sanitize_ip_network(value).unwrap_or_else(|_| value.to_string())
+        })
+        .filter(|value| !value.ends_with("/0"))
+}
 
 // General work flow:
 //  * The `current` NetworkState returned by NM plugin has route rules
@@ -19,10 +129,6 @@ const LOOPBACK_IFACE_NAME: &str = "lo";
 pub(crate) fn store_route_rule_config(
     merged_state: &mut MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    if !merged_state.rules.is_changed() {
-        return Ok(());
-    }
-
     let rules = merged_state.rules.for_apply.clone();
 
     // Explicitly desired rules take precedence over matching absent rules.
@@ -82,13 +188,15 @@ fn apply_absent_rule(
         };
 
         if let Some(apply_iface) = iface.for_apply.as_mut() {
-            if apply_iface.base_iface_mut().ipv4.is_none() {
+            if !absent_rule.is_ipv6() && apply_iface.base_iface().ipv4.is_none()
+            {
                 apply_iface
                     .base_iface_mut()
                     .ipv4
                     .clone_from(&cur_iface.base_iface().ipv4);
             }
-            if apply_iface.base_iface_mut().ipv6.is_none() {
+            if absent_rule.is_ipv6() && apply_iface.base_iface().ipv6.is_none()
+            {
                 apply_iface
                     .base_iface_mut()
                     .ipv6
@@ -198,7 +306,9 @@ fn append_route_rule(
                             .and_then(|ipv6| ipv6.rules.clone())
                             .unwrap_or_default()
                     });
-                    rules.insert(rule.clone());
+                    if !rules.iter().any(|old| route_rule_matches(old, rule)) {
+                        rules.insert(rule.clone());
+                    }
                 }
             } else {
                 if apply_iface.base_iface().ipv4.is_none() {
@@ -221,7 +331,9 @@ fn append_route_rule(
                             .and_then(|ipv4| ipv4.rules.clone())
                             .unwrap_or_default()
                     });
-                    rules.insert(rule.clone());
+                    if !rules.iter().any(|old| route_rule_matches(old, rule)) {
+                        rules.insert(rule.clone());
+                    }
                 }
             }
         }
@@ -251,6 +363,12 @@ fn find_interface_for_rule<'a>(
                 ),
             ));
         }
+    }
+
+    if let Some(iface_name) =
+        find_existing_rule_owner(&merged_state.interfaces, rule)
+    {
+        return Ok(iface_name);
     }
 
     let table_id = rule.table_id.unwrap_or(DEFAULT_TABLE_ID);
@@ -318,6 +436,60 @@ fn find_interface_for_rule<'a>(
 
     log::info!("Using loopback interface to store route rule {rule}");
     Ok(LOOPBACK_IFACE_NAME)
+}
+
+fn find_existing_rule_owner<'a>(
+    interfaces: &'a MergedInterfaces,
+    rule: &RouteRuleEntry,
+) -> Option<&'a str> {
+    interfaces
+        .kernel_ifaces
+        .iter()
+        .filter_map(|(name, iface)| {
+            let current = iface.current.as_ref()?;
+            if !current.is_up() || !iface.merged.is_up() {
+                return None;
+            }
+            let (enabled, current_rules) = if rule.is_ipv6() {
+                (
+                    iface
+                        .merged
+                        .base_iface()
+                        .ipv6
+                        .as_ref()
+                        .is_some_and(|ip| ip.enabled),
+                    current
+                        .base_iface()
+                        .ipv6
+                        .as_ref()
+                        .filter(|ip| ip.enabled)
+                        .and_then(|ip| ip.rules.as_ref()),
+                )
+            } else {
+                (
+                    iface
+                        .merged
+                        .base_iface()
+                        .ipv4
+                        .as_ref()
+                        .is_some_and(|ip| ip.enabled),
+                    current
+                        .base_iface()
+                        .ipv4
+                        .as_ref()
+                        .filter(|ip| ip.enabled)
+                        .and_then(|ip| ip.rules.as_ref()),
+                )
+            };
+            if !enabled {
+                return None;
+            }
+            current_rules?
+                .iter()
+                .any(|current_rule| route_rule_matches(rule, current_rule))
+                .then_some(name.as_str())
+        })
+        .min()
 }
 
 fn iface_has_route_for_table_id(
