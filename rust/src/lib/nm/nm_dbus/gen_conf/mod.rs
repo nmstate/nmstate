@@ -4,6 +4,7 @@ mod bond;
 mod bridge;
 mod conn;
 mod ethtool;
+mod hsr;
 mod ieee8021x;
 mod iface_match;
 mod infiniband;
