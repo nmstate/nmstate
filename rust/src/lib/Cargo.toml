@@ -4,7 +4,6 @@ version = "2.2.63"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Library for networking management in a declarative manner"
 license = "Apache-2.0"
-homepage = "https://nmstate.io"
 documentation = "https://nmstate.io"
 repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
