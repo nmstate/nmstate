@@ -19,6 +19,7 @@ mod linux_bridge_port_vlan;
 mod mac_vlan;
 mod macsec;
 mod mptcp;
+pub(crate) mod qeth;
 mod route;
 mod route_rule;
 mod show;
