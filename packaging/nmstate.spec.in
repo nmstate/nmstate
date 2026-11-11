@@ -177,13 +177,10 @@ gpgv2 --keyring ./gpgkey-mantainers.gpg %{SOURCE1} %{SOURCE0}
 
 pushd rust
 
-%if 0%{?rhel}
-# Source3 is vendored dependencies
-%cargo_prep -V 3
-%elif %{?is_snapshot}
+%if 0%{?rhel} || %{is_snapshot}
+%cargo_prep -N
 tar xf %{SOURCE3}
-# Source3 is vendored dependencies
-%cargo_prep -v vendor
+cat cargo-vendor.toml >> .cargo/config.toml
 %else
 %cargo_prep
 %endif
