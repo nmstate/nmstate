@@ -20,6 +20,7 @@ path = "ncl.rs"
 nmstate = { workspace = true }
 serde_yaml = { workspace = true }
 clap = { workspace = true }
+clap_complete = { workspace = true }
 serde = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }

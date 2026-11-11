@@ -32,6 +32,7 @@ SHOW_CMD = ["nmstatectl", "show"]
 CONFIRM_CMD = ["nmstatectl", "commit"]
 ROLLBACK_CMD = ["nmstatectl", "rollback"]
 VALIDATE_CMD = ["nmstatectl", "validate"]
+COMPLETIONS_CMD = ["nmstatectl", "completions"]
 
 LOOPBACK_CONFIG = {
     "name": "lo",
@@ -275,6 +276,28 @@ def test_validate_command_with_stdin_bad_state():
 
 def test_validate_command_with_stdin_bad_policy():
     ret = cmdlib.exec_cmd(VALIDATE_CMD, stdin=BAD_YAML_POLICY_CONFIG)
+    rc, out, err = ret
+
+    assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+
+
+@pytest.mark.parametrize(
+    "shell",
+    ["bash", "elvish", "fish", "powershell", "zsh"],
+)
+def test_completions_generate_script(shell):
+    ret = cmdlib.exec_cmd(COMPLETIONS_CMD + [shell])
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert "nmstatectl" in out
+    assert "validate" in out
+    # The script is meant to be sourced, no log message is allowed.
+    assert err == "", cmdlib.format_exec_cmd_result(ret)
+
+
+def test_completions_with_unsupported_shell():
+    ret = cmdlib.exec_cmd(COMPLETIONS_CMD + ["unknown-shell"])
     rc, out, err = ret
 
     assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
