@@ -24,6 +24,8 @@ nmstatectl \- A nmstate command line tool
 .B nmstatectl statistic \fISTATE_FILE_PATH\fR [\fI-c, --current
 <CURRENT_STATE_FILE>\fR]
 .br
+.B nmstatectl completions \fISHELL\fR
+.br
 .B nmstatectl version
 .br
 .SH DESCRIPTION
@@ -114,6 +116,15 @@ by themselves after referring to the network backend.
 commit the current network state. \fBnmstatectl\fR will take the latest
 checkpoint if not defined as argument.
 .RE
+.B completions
+.RS
+Print the shell completion script of \fBnmstatectl\fR to standard output.
+The supported values of \fISHELL\fR are \fBbash\fR, \fBelvish\fR,
+\fBfish\fR, \fBpowershell\fR and \fBzsh\fR. For example, bash users can
+enable the completion in the current session by
+\fBsource <(nmstatectl completions bash)\fR.
+.RE
+
 .B version
 .RS
 displays nmstate version.

@@ -4,6 +4,7 @@
 mod apply;
 #[cfg(feature = "query_apply")]
 mod autoconf;
+mod completions;
 mod error;
 mod format;
 #[cfg(feature = "gen_conf")]
@@ -25,6 +26,7 @@ mod statistic;
 #[cfg(feature = "query_apply")]
 mod validate;
 
+use clap_complete::Shell;
 use env_logger::Builder;
 use log::LevelFilter;
 #[cfg(feature = "query_apply")]
@@ -36,6 +38,7 @@ use crate::apply::{
 };
 #[cfg(feature = "query_apply")]
 use crate::autoconf::autoconf;
+use crate::completions::completions;
 #[cfg(feature = "gen_conf")]
 use crate::gen_conf::gen_conf;
 #[cfg(feature = "gen_revert")]
@@ -70,6 +73,7 @@ const SUB_CMD_FORMAT: &str = "format";
 const SUB_CMD_GEN_REVERT: &str = "gr";
 const SUB_CMD_STATISTIC: &str = "statistic";
 const SUB_CMD_VALIDATE: &str = "validate";
+const SUB_CMD_COMPLETIONS: &str = "completions";
 
 fn main() {
     let argv: Vec<String> = std::env::args().collect();
@@ -407,7 +411,21 @@ fn main() {
                         .help("Read current network state from file"),
                 ),
         )
-        .subcommand(clap::Command::new(SUB_CMD_VERSION).about("Show version"));
+        .subcommand(clap::Command::new(SUB_CMD_VERSION).about("Show version"))
+        .subcommand(
+            clap::Command::new(SUB_CMD_COMPLETIONS)
+                .about("Generate shell completion script")
+                .arg(
+                    clap::Arg::new("SHELL")
+                        .required(true)
+                        .index(1)
+                        .value_parser(clap::value_parser!(Shell))
+                        .help("Shell to generate the completion script for"),
+                ),
+        );
+    // The clap_complete does not honor the hidden subcommands, hence the
+    // completion script is generated from the command without them.
+    let mut completions_app = app.clone();
     if cfg!(feature = "query_apply") {
         app = app.subcommand(
             clap::Command::new(SUB_CMD_PERSIST_NIC_NAMES)
@@ -460,6 +478,17 @@ fn main() {
         );
     };
     let matches = app.get_matches_mut();
+
+    // The completion script is meant to be sourced by shells, hence it should
+    // be generated before the logger gets initialized to keep stderr clean.
+    if let Some(matches) = matches.subcommand_matches(SUB_CMD_COMPLETIONS) {
+        // The `required(true)` has ensured the unwrap() will never fail
+        print_result_and_exit(completions(
+            *matches.get_one::<Shell>("SHELL").unwrap(),
+            &mut completions_app,
+        ));
+    }
+
     let (log_module_filters, log_level) = match matches.get_count("verbose") {
         0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
         1 => (vec!["nmstate", "nm_dbus"], LevelFilter::Debug),
