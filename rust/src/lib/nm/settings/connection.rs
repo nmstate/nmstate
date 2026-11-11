@@ -266,9 +266,24 @@ pub(crate) fn iface_to_nm_connections(
             Interface::Bond(bond_iface) => {
                 gen_nm_bond_port_setting(bond_iface, &mut nm_conn);
             }
+
             Interface::LinuxBridge(br_iface) => {
-                gen_nm_br_port_setting(br_iface, &mut nm_conn);
+                let desired_neigh_suppress =
+                    ctrl_iface.for_apply.as_ref().and_then(|ctrl| match ctrl {
+                        Interface::LinuxBridge(bridge) => bridge
+                            .get_port_conf(iface.name())
+                            .and_then(|port| port.neigh_suppress),
+                        _ => None,
+                    });
+
+                gen_nm_br_port_setting(
+                    br_iface,
+                    iface.name(),
+                    desired_neigh_suppress,
+                    &mut nm_conn,
+                );
             }
+
             Interface::OvsBridge(ovs_br_iface) => {
                 fix_ovs_iface_controller_setting(
                     iface,

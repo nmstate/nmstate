@@ -128,15 +128,13 @@ fn apply_stp_setting(
 
 pub(crate) fn gen_nm_br_port_setting(
     br_iface: &LinuxBridgeInterface,
+    port_name: &str,
+    desired_neigh_suppress: Option<bool>,
     nm_conn: &mut NmConnection,
 ) {
     let mut nm_set = nm_conn.bridge_port.as_ref().cloned().unwrap_or_default();
-    let br_port_conf = if let Some(i) = nm_conn
-        .iface_name()
-        .and_then(|iface_name| br_iface.get_port_conf(iface_name))
-    {
-        i
-    } else {
+
+    let Some(br_port_conf) = br_iface.get_port_conf(port_name) else {
         return;
     };
 
@@ -151,8 +149,15 @@ pub(crate) fn gen_nm_br_port_setting(
     if let Some(v) = br_port_conf.stp_priority {
         nm_set.priority = Some(v.into());
     }
+
     if let Some(v) = br_port_conf.vlan.as_ref() {
         nm_set.vlans = Some(nmstate_port_vlans_to_nm_vlan_range(v));
+    }
+
+    // Query reports the kernel flag, but it must not overwrite the saved
+    // profile unless the desired state explicitly requests this property.
+    if let Some(v) = desired_neigh_suppress {
+        nm_set.neighbor_suppress = Some(v);
     }
 
     nm_conn.bridge_port = Some(nm_set);

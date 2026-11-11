@@ -3,7 +3,8 @@
 use crate::{
     BridgePortTrunkTag, BridgePortVlanRange, ErrorKind, Interface,
     InterfaceType, Interfaces, LinuxBridgeInterface,
-    LinuxBridgeMulticastRouterType, MergedInterface, MergedInterfaces,
+    LinuxBridgeMulticastRouterType, LinuxBridgePortConfig, MergedInterface,
+    MergedInterfaces, NetworkState,
 };
 
 #[test]
@@ -153,6 +154,7 @@ bridge:
       priority: "32768"
   port:
   - name: eth1
+    neigh-suppress: "true"
     stp-hairpin-mode: "false"
     stp-path-cost: "100"
     stp-priority: "101"
@@ -174,6 +176,7 @@ bridge:
     let opts = br_conf.options.as_ref().unwrap();
     let stp_opts = opts.stp.as_ref().unwrap();
 
+    assert_eq!(port_conf.neigh_suppress, Some(true));
     assert_eq!(port_conf.stp_hairpin_mode, Some(false));
     assert_eq!(port_conf.stp_path_cost, Some(100));
     assert_eq!(port_conf.stp_priority, Some(101));
@@ -939,4 +942,164 @@ fn test_linux_bridge_ignore_extra_ports_for_apply() {
 
     assert_eq!(for_apply_bridge.ports(), Some(vec!["eth1", "eth2"]));
     assert_eq!(for_apply_eth3, None);
+}
+
+#[test]
+fn test_linux_bridge_neigh_suppress_mixed_port_types_is_changed() {
+    let current = bridge_mixed_port_neigh_suppress_state(false);
+    let desired = bridge_mixed_port_neigh_suppress_state(true);
+
+    let vxlan_port =
+        get_bridge_port(&desired.interfaces, "br0", "vxlan101").unwrap();
+    let vlan_port =
+        get_bridge_port(&desired.interfaces, "br0", "eth1.101").unwrap();
+
+    assert_eq!(vxlan_port.neigh_suppress, Some(true));
+    assert_eq!(vlan_port.neigh_suppress, None);
+
+    let mut bridge_only = desired.interfaces.clone();
+
+    bridge_only.remove_iface("vxlan101", InterfaceType::Vxlan);
+    bridge_only.remove_iface("eth1.101", InterfaceType::Vlan);
+
+    let merged = MergedInterfaces::new(
+        bridge_only,
+        current.interfaces,
+        Default::default(),
+        false,
+    )
+    .unwrap();
+
+    let vxlan_iface =
+        merged.get_iface("vxlan101", InterfaceType::Vxlan).unwrap();
+    assert!(vxlan_iface.is_changed());
+
+    let vlan_iface = merged.get_iface("eth1.101", InterfaceType::Vlan).unwrap();
+    assert!(!vlan_iface.is_changed());
+}
+
+#[test]
+fn test_linux_bridge_neigh_suppress_mixed_port_types_gen_diff() {
+    let desired = bridge_mixed_port_neigh_suppress_state(true);
+    let current = bridge_mixed_port_neigh_suppress_state(false);
+
+    let diff =
+        serde_json::to_value(desired.gen_diff(&current).unwrap()).unwrap();
+    let diff_ports = &diff["interfaces"][0]["bridge"]["port"];
+
+    let diff_vxlan_port = diff_ports
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["name"] == "vxlan101")
+        .unwrap();
+
+    let diff_vlan_port = diff_ports
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["name"] == "eth1.101")
+        .unwrap();
+
+    assert_eq!(diff_vxlan_port["neigh-suppress"], true);
+    assert!(diff_vlan_port.get("neigh-suppress").is_none());
+}
+
+#[test]
+#[cfg(feature = "gen_conf")]
+fn test_linux_bridge_neigh_suppress_gen_conf_identifiers() {
+    for identification in [
+        "  identifier: name",
+        "  identifier: mac-address\n  mac-address: 00:00:5E:00:53:01",
+        "  identifier: pci-address\n  pci-address: '0000:00:01.0'",
+    ] {
+        for neigh_suppress in [None, Some(false), Some(true)] {
+            let property = neigh_suppress
+                .map(|v| format!("      neigh-suppress: {v}"))
+                .unwrap_or_default();
+            let desired: NetworkState = serde_yaml::from_str(&format!(
+                r"interfaces:
+- name: port1
+  type: ethernet
+{identification}
+- name: br0
+  type: linux-bridge
+  bridge:
+    port:
+    - name: port1
+{property}
+"
+            ))
+            .unwrap();
+
+            let configs = desired.gen_conf().unwrap();
+            let port_config = &configs["NetworkManager"]
+                .iter()
+                .find(|(name, _)| name == "port1.nmconnection")
+                .unwrap()
+                .1;
+
+            if let Some(value) = neigh_suppress {
+                assert!(port_config.contains("[bridge-port]\n"));
+                assert!(
+                    port_config
+                        .contains(&format!("neighbor-suppress={value}\n"))
+                );
+            } else {
+                assert!(!port_config.contains("neighbor-suppress="));
+            }
+        }
+    }
+}
+
+fn get_bridge_port<'a>(
+    ifaces: &'a Interfaces,
+    br_name: &str,
+    port_name: &str,
+) -> Option<&'a LinuxBridgePortConfig> {
+    match ifaces.get_iface(br_name, InterfaceType::LinuxBridge)? {
+        Interface::LinuxBridge(br_iface) => br_iface
+            .bridge
+            .as_ref()?
+            .port
+            .as_ref()?
+            .iter()
+            .find(|p| p.name == port_name),
+
+        _ => None,
+    }
+}
+
+fn bridge_mixed_port_neigh_suppress_state(
+    vxlan_neigh_suppress: bool,
+) -> NetworkState {
+    serde_yaml::from_str(&format!(
+        r"interfaces:
+- name: br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: vxlan101
+      neigh-suppress: {vxlan_neigh_suppress}
+    - name: eth1.101
+- name: vxlan101
+  type: vxlan
+  state: up
+  controller: br0
+  vxlan:
+    id: 75101
+    remote: 192.0.2.1
+    destination-port: 4789
+    learning: false
+- name: eth1.101
+  type: vlan
+  state: up
+  controller: br0
+  vlan:
+    base-iface: eth1
+    id: 101
+"
+    ))
+    .unwrap()
 }

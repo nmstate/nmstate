@@ -6,6 +6,7 @@ import pytest
 
 from .testlib import assertlib
 from .testlib import iprule
+from .testlib.bridgelib import bridge_state_with_default_neigh_suppress
 from .testlib.examplelib import example_state
 from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
@@ -83,7 +84,9 @@ def test_add_remove_linux_bridge(eth1_up):
     with example_state(
         "linuxbrige_eth1_up.yml", cleanup="linuxbrige_eth1_absent.yml"
     ) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state(
+            bridge_state_with_default_neigh_suppress(desired_state)
+        )
 
     assertlib.assert_absent("linux-br0")
 
@@ -169,7 +172,9 @@ def test_port_vlan(eth1_up):
         "linuxbrige_eth1_up_port_vlan.yml",
         cleanup="linuxbrige_eth1_absent.yml",
     ) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state(
+            bridge_state_with_default_neigh_suppress(desired_state)
+        )
 
     assertlib.assert_absent("linux-br0")
 
