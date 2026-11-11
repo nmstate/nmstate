@@ -174,6 +174,9 @@ pub(crate) async fn nispor_retrieve(
         get_routes(running_config_only, &net_state.interfaces).await;
     net_state.rules = get_route_rules(&np_state.rules, running_config_only);
     if kernel_only {
+        for rule in net_state.rules.config.iter_mut().flatten() {
+            rule.apply_ignored = false;
+        }
         net_state.dns = get_dns();
     }
     Ok(net_state)

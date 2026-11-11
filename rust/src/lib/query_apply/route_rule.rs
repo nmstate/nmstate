@@ -8,15 +8,11 @@ use crate::{
 
 impl MergedRouteRules {
     pub(crate) fn gen_diff(&self) -> RouteRules {
-        if self.desired == self.current {
-            return RouteRules::default();
-        }
-
         let mut changed_rules: Vec<RouteRuleEntry> = Vec::new();
         let mut cur_rules: HashSet<&RouteRuleEntry> = HashSet::new();
 
         if let Some(rules) = self.current.config.as_ref() {
-            for rule in rules {
+            for rule in rules.iter().filter(|r| !r.apply_ignored) {
                 cur_rules.insert(rule);
             }
         }
@@ -43,7 +39,7 @@ impl MergedRouteRules {
     ) -> Result<(), NmstateError> {
         let mut cur_rules: Vec<&RouteRuleEntry> = Vec::new();
         if let Some(rules) = current.config.as_ref() {
-            for cur_rule in rules {
+            for cur_rule in rules.iter().filter(|r| !r.apply_ignored) {
                 if let Some(iif) = cur_rule.iif.as_ref()
                     && ignored_ifaces.contains(&iif.as_str())
                 {

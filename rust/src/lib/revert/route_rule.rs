@@ -17,7 +17,7 @@ impl MergedRouteRules {
                     .as_ref()
                     .unwrap_or(&empty_vec)
                     .iter()
-                    .filter(|r| des_rule.is_match(r))
+                    .filter(|r| !r.apply_ignored && des_rule.is_match(r))
                 {
                     revert_rules.push(cur_rule.clone());
                 }
