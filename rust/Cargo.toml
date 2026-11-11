@@ -33,3 +33,7 @@ tokio = { version = "1.30", features = ["rt", "net", "time"] }
 platforms = ["*-unknown-linux-gnu"]
 tier = "2"
 all-features = true
+
+[patch.crates-io]
+# Remove before merge once https://github.com/nispor/nispor/pull/412 is released.
+nispor = { git = "https://github.com/nispor/nispor", rev = "8412e8fd99cb04be92264329f4a2255766aa2fcd" }
