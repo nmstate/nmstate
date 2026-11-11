@@ -326,7 +326,7 @@ impl Interfaces {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Failed to find SR-IOV VF interface name for {}",
+                            "Failed to resolve SR-IOV VF interface name for {}",
                             iface.name()
                         ),
                     );
@@ -379,9 +379,10 @@ impl Interfaces {
                     if let Some(vf_iface_name) =
                         get_sriov_vf_iface_name(current, &vf_ref)
                     {
+                        let ctrl_name = iface.name();
                         log::info!(
                             "SR-IOV VF {port} resolved to interface name \
-                             {vf_iface_name}"
+                             {vf_iface_name} for controller {ctrl_name}"
                         );
                         pending_changes.push((
                             iface.name().to_string(),
@@ -393,8 +394,9 @@ impl Interfaces {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find SR-IOV VF interface name for \
-                                 {}",
+                                "Failed to resolve SR-IOV VF {} to interface \
+                                 name for controller {}",
+                                port,
                                 iface.name()
                             ),
                         ));
