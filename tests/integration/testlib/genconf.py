@@ -21,6 +21,10 @@ _OVS_IFACE_TYPES = (
     InterfaceType.OVS_INTERFACE,
 )
 
+# Nmstate does not add the local port to the bridge with a longer name, as it
+# is not a valid kernel interface name.
+_KERNEL_IFACE_NAME_MAX_LEN = 15
+
 
 def _cleanup_iface(iface, state):
     cleanup_iface = {
@@ -55,6 +59,39 @@ def _ovs_bridge_port_names(desire_state):
     return port_names
 
 
+def _ovs_implicit_local_port_names(desire_state):
+    """
+    Names of the OVS bridges which get the local port added by nmstate,
+    because the desired state does not mention it.
+    """
+    ifaces = desire_state.get(Interface.KEY, [])
+    names = set()
+    for iface in ifaces:
+        if (
+            iface.get(Interface.TYPE) != InterfaceType.OVS_BRIDGE
+            or iface.get(Interface.STATE, InterfaceState.UP)
+            != InterfaceState.UP
+        ):
+            continue
+        name = iface[Interface.NAME]
+        ports = (
+            iface.get(OVSBridge.CONFIG_SUBTREE, {}).get(OVSBridge.PORT_SUBTREE)
+            or []
+        )
+        if (
+            len(name) > _KERNEL_IFACE_NAME_MAX_LEN
+            or any(port.get(OVSBridge.Port.NAME) == name for port in ports)
+            or any(
+                i[Interface.NAME] == name
+                and i.get(Interface.TYPE) == InterfaceType.OVS_INTERFACE
+                for i in ifaces
+            )
+        ):
+            continue
+        names.add(name)
+    return names
+
+
 def _ovs_down_ifaces(desire_state):
     """OVS bridge/interfaces and their system ports need DOWN before ABSENT."""
     port_names = _ovs_bridge_port_names(desire_state)
@@ -65,6 +102,16 @@ def _ovs_down_ifaces(desire_state):
             or iface[Interface.NAME] in port_names
         ):
             down_ifaces.append(_cleanup_iface(iface, InterfaceState.DOWN))
+    for name in sorted(_ovs_implicit_local_port_names(desire_state)):
+        down_ifaces.append(
+            _cleanup_iface(
+                {
+                    Interface.NAME: name,
+                    Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                },
+                InterfaceState.DOWN,
+            )
+        )
     return down_ifaces
 
 

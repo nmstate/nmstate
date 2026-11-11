@@ -4,7 +4,6 @@ version = "2.2.63"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Library for networking management in a declarative manner"
 license = "Apache-2.0"
-homepage = "https://nmstate.io"
 documentation = "https://nmstate.io"
 repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
@@ -19,6 +18,10 @@ path = "lib.rs"
 serde_yaml = { workspace = true }
 
 [dependencies.nispor]
+workspace = true
+optional = true
+
+[dependencies.genetlink]
 workspace = true
 optional = true
 
@@ -56,6 +59,12 @@ serde_yaml = { workspace = true }
 
 [features]
 default = ["query_apply", "gen_conf", "gen_revert"]
-query_apply = ["dep:nispor", "dep:nix", "dep:zbus", "dep:tokio"]
+query_apply = [
+    "dep:nispor",
+    "dep:nix",
+    "dep:zbus",
+    "dep:tokio",
+    "dep:genetlink",
+]
 gen_conf = []
 gen_revert = []

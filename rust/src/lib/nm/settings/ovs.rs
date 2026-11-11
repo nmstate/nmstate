@@ -319,4 +319,34 @@ ovs-db:
             assert!(cleared.ovs_ext_ids.unwrap().data.unwrap().is_empty());
         }
     }
+
+    #[test]
+    fn test_ovs_port_native_vlan_mode_is_sent_to_nm() {
+        for mode in ["native-tagged", "native-untagged"] {
+            let port: OvsBridgePortConfig = serde_yaml::from_str(&format!(
+                r#"
+name: eth1
+vlan:
+  mode: {mode}
+  tag: 100
+  enable-native: true
+  trunk-tags:
+    - id: 200
+    - id: 300
+"#
+            ))
+            .unwrap();
+            let conn =
+                create_ovs_port_nm_conn("br0", &port, None, false).unwrap();
+            let ovs_port = conn.ovs_port.as_ref().unwrap();
+            assert_eq!(ovs_port.vlan_mode.as_deref(), Some(mode));
+            assert_eq!(ovs_port.tag, Some(100));
+            let trunks = ovs_port.trunks.as_ref().unwrap();
+            assert_eq!(trunks.len(), 2);
+            assert_eq!(trunks[0].start, 200);
+            assert_eq!(trunks[0].end, 200);
+            assert_eq!(trunks[1].start, 300);
+            assert_eq!(trunks[1].end, 300);
+        }
+    }
 }

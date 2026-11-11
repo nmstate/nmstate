@@ -1,0 +1,16 @@
+---
+interfaces:
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    options:
+      stp:
+        enabled: true
+    port:
+    - name: br0
+    - name: eth1
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0

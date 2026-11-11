@@ -15,6 +15,7 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
 from libnmstate.schema import Mptcp
 from libnmstate.schema import OVSBridge
@@ -86,9 +87,8 @@ class State:
         other_interfaces_state = other_state.get(Interface.KEY, [])
 
         for base_iface_state in self._state[Interface.KEY]:
-            ifname = base_iface_state[Interface.NAME]
-            other_iface_state = _lookup_iface_state_by_name(
-                other_interfaces_state, ifname
+            other_iface_state = _lookup_iface_state(
+                other_interfaces_state, base_iface_state
             )
             if other_iface_state is not None:
                 iface_state = _dict_update(base_iface_state, other_iface_state)
@@ -120,7 +120,9 @@ class State:
         return state_match(self.state, other.state)
 
     def _sort_interfaces_by_name(self):
-        self._state[Interface.KEY].sort(key=lambda d: d[Interface.NAME])
+        self._state[Interface.KEY].sort(
+            key=lambda d: (d[Interface.NAME], d.get(Interface.TYPE) or "")
+        )
 
     def _canonicalize_iface_ipv6_addresses(self):
         for iface_state in self.state[Interface.KEY]:
@@ -316,11 +318,39 @@ class State:
         self._state.pop(Description.KEY, None)
 
 
-def _lookup_iface_state_by_name(interfaces_state, ifname):
-    for iface_state in interfaces_state:
-        if iface_state[Interface.NAME] == ifname:
+def _lookup_iface_state(interfaces_state, base_iface_state):
+    """
+    Find the interface to be updated with the data of base_iface_state.
+    Interfaces are matched by name and type, because several interfaces can
+    share a name, for example an OVS bridge and its local port. An interface
+    without a type, on either side, matches by name only.
+    """
+    ifname = base_iface_state[Interface.NAME]
+    iftype = _comparable_iface_type(base_iface_state.get(Interface.TYPE))
+    candidates = [
+        iface_state
+        for iface_state in interfaces_state
+        if iface_state[Interface.NAME] == ifname
+    ]
+    if iftype is None:
+        return next(iter(candidates), None)
+    for iface_state in candidates:
+        if (
+            iface_state.get(Interface.TYPE) is not None
+            and _comparable_iface_type(iface_state[Interface.TYPE]) == iftype
+        ):
+            return iface_state
+    for iface_state in candidates:
+        if iface_state.get(Interface.TYPE) is None:
             return iface_state
     return None
+
+
+def _comparable_iface_type(iface_type):
+    # Nmstate shows veth as ethernet
+    if iface_type == InterfaceType.VETH:
+        return InterfaceType.ETHERNET
+    return iface_type
 
 
 def _dict_update(origin_data, to_merge_data):

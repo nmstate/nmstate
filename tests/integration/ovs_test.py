@@ -24,6 +24,7 @@ from libnmstate.schema import VXLAN
 from libnmstate.schema import Veth
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -87,6 +88,50 @@ RETRY_TIMEOUT = 15
 
 def _test_pci_path():
     return os.environ.get("TEST_PCI_PATH")
+
+
+def _show_ovs_bridge(br_name):
+    return next(
+        iface
+        for iface in statelib.show_only((br_name,))[Interface.KEY]
+        if iface[Interface.TYPE] == InterfaceType.OVS_BRIDGE
+    )
+
+
+def _get_bridge_ports(br_state):
+    return br_state[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE]
+
+
+def _get_bridge_port(br_state, port_name):
+    return next(
+        port
+        for port in _get_bridge_ports(br_state)
+        if port[OVSBridge.Port.NAME] == port_name
+    )
+
+
+def _get_bridge_port_names(br_name):
+    return sorted(
+        port[OVSBridge.Port.NAME]
+        for port in _get_bridge_ports(_show_ovs_bridge(br_name))
+    )
+
+
+def _has_ovs_local_port_iface(br_name):
+    return any(
+        iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE
+        for iface in statelib.show_only((br_name,))[Interface.KEY]
+    )
+
+
+def _assert_ovs_local_port(br_name):
+    assert br_name in _get_bridge_port_names(br_name)
+    assert _has_ovs_local_port_iface(br_name)
+
+
+def _assert_no_ovs_local_port(br_name):
+    assert br_name not in _get_bridge_port_names(br_name)
+    assert not _has_ovs_local_port_iface(br_name)
 
 
 @pytest.fixture
@@ -357,6 +402,8 @@ class TestOvsLinkAggregation:
             bridge.add_link_aggregation_port(BOND1, (port1_name, port0_name))
             libnmstate.apply(bridge.state)
             assertlib.assert_state_match(bridge.state)
+            # The local port created with the bridge is kept
+            _assert_ovs_local_port(BRIDGE1)
 
     @pytest.mark.tier1
     def test_add_ovs_lag_with_updelay_and_downdelay(self, port0_up, port1_up):
@@ -568,6 +615,66 @@ def test_ovs_balance_slb_with_patch_ports(port0_up, port1_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.parametrize(
+    "vlan_mode",
+    [
+        OVSBridge.Port.Vlan.Mode.NATIVE_TAGGED,
+        OVSBridge.Port.Vlan.Mode.NATIVE_UNTAGGED,
+    ],
+    ids=["native-tagged", "native-untagged"],
+)
+def test_ovs_vlan_native_modes(vlan_mode):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    bridge.set_port_option(
+        PORT1,
+        {
+            OVSBridge.Port.NAME: PORT1,
+            OVSBridge.Port.VLAN_SUBTREE: {
+                OVSBridge.Port.Vlan.MODE: vlan_mode,
+                OVSBridge.Port.Vlan.TAG: 100,
+                OVSBridge.Port.Vlan.ENABLE_NATIVE: True,
+                OVSBridge.Port.Vlan.TRUNK_TAGS: [
+                    {OVSBridge.Port.Vlan.TrunkTags.ID: 200},
+                    {OVSBridge.Port.Vlan.TrunkTags.ID: 300},
+                ],
+            },
+        },
+    )
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+        assert (
+            cmdlib.exec_cmd(
+                ["ovs-vsctl", "get", "Port", PORT1, "vlan_mode"],
+                check=True,
+            )[1]
+            .strip()
+            .strip('"')
+            == vlan_mode
+        )
+        assert (
+            cmdlib.exec_cmd(
+                ["ovs-vsctl", "get", "Port", PORT1, "tag"], check=True
+            )[1].strip()
+            == "100"
+        )
+        assert (
+            cmdlib.exec_cmd(
+                ["ovs-vsctl", "get", "Port", PORT1, "trunks"], check=True
+            )[1]
+            .strip()
+            .replace(" ", "")
+            == "[200,300]"
+        )
+        shown = _show_ovs_bridge(BRIDGE1)
+        port_state = _get_bridge_port(shown, PORT1)
+        vlan_state = port_state[OVSBridge.Port.VLAN_SUBTREE]
+        assert vlan_state[OVSBridge.Port.Vlan.MODE] == vlan_mode
+        assert vlan_state[OVSBridge.Port.Vlan.TAG] == 100
+        assert vlan_state[OVSBridge.Port.Vlan.ENABLE_NATIVE] is True
+
+
+@pytest.mark.tier1
 def test_ovs_vlan_access_tag():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
@@ -625,8 +732,8 @@ def test_ovs_vlan_trunks(bridge_port_with_trunks):
 
 @pytest.mark.tier1
 def test_remove_ovs_vlan_trunks(bridge_port_with_trunks):
-    br1_state = statelib.show_only((BRIDGE1,))[Interface.KEY][0]
-    port_state = br1_state[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE][0]
+    br1_state = _show_ovs_bridge(BRIDGE1)
+    port_state = _get_bridge_port(br1_state, PORT1)
     trunks = port_state[OVSBridge.Port.VLAN_SUBTREE][
         OVSBridge.Port.Vlan.TRUNK_TAGS
     ]
@@ -648,8 +755,8 @@ def test_remove_ovs_vlan_trunks(bridge_port_with_trunks):
     libnmstate.apply(bridge_port_with_trunks)
     assertlib.assert_state(bridge_port_with_trunks)
 
-    br1_state = statelib.show_only((BRIDGE1,))[Interface.KEY][0]
-    port_state = br1_state[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE][0]
+    br1_state = _show_ovs_bridge(BRIDGE1)
+    port_state = _get_bridge_port(br1_state, PORT1)
     trunks = port_state[OVSBridge.Port.VLAN_SUBTREE][
         OVSBridge.Port.Vlan.TRUNK_TAGS
     ]
@@ -2401,6 +2508,109 @@ def test_ovs_sys_iface_other_config_and_remove(
     assertlib.assert_state_match(desired_state)
 
 
+@pytest.mark.tier1
+def test_ovs_bridge_gets_local_port(port0_up):
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(port0_name)
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+        _assert_ovs_local_port(BRIDGE1)
+        assert _get_bridge_port_names(BRIDGE1) == [BRIDGE1, port0_name]
+
+    assertlib.assert_absent(BRIDGE1)
+
+
+@pytest.mark.tier1
+def test_ovs_local_port_added_on_options_only_update(eth1_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(ETH1)
+    bridge.set_port_option(
+        ETH1,
+        {
+            OVSBridge.Port.VLAN_SUBTREE: {
+                OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.ACCESS,
+                OVSBridge.Port.Vlan.TAG: 2,
+            },
+        },
+    )
+    desired_state = bridge.state
+    # The local port explicitly marked as absent is not added
+    desired_state[Interface.KEY].append(
+        {
+            Interface.NAME: BRIDGE1,
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            Interface.STATE: InterfaceState.ABSENT,
+        }
+    )
+    options_only_bridge = Bridge(BRIDGE1)
+    options_only_bridge.set_options(
+        {OVSBridge.STP_SUBTREE: {OVSBridge.STP.ENABLED: True}}
+    )
+
+    try:
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+        _assert_no_ovs_local_port(BRIDGE1)
+
+        # No port list is specified, the existing ports are kept with their
+        # settings and the missing local port is added
+        options_only_bridge.apply()
+
+        assertlib.assert_state_match(options_only_bridge.state)
+        _assert_ovs_local_port(BRIDGE1)
+        assert _get_bridge_port_names(BRIDGE1) == [BRIDGE1, ETH1]
+        assert _get_bridge_port(_show_ovs_bridge(BRIDGE1), ETH1)[
+            OVSBridge.Port.VLAN_SUBTREE
+        ] == {
+            OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.ACCESS,
+            OVSBridge.Port.Vlan.TAG: 2,
+        }
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BRIDGE1,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )
+    assertlib.assert_absent(BRIDGE1)
+
+
+# The name of a bridge local port is a kernel interface name, which can have
+# at most 15 characters. NetworkManager rejects a longer ovs-interface name.
+@pytest.mark.tier1
+def test_ovs_long_bridge_name_without_local_port(eth1_up):
+    long_bridge_name = "br-provider-vln1"
+    assert len(long_bridge_name) == 16
+    bridge = Bridge(long_bridge_name)
+    bridge.add_system_port(ETH1)
+
+    try:
+        bridge.apply()
+        assertlib.assert_state_match(bridge.state)
+        _assert_no_ovs_local_port(long_bridge_name)
+        assert _get_bridge_port_names(long_bridge_name) == [ETH1]
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: long_bridge_name,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )
+    assertlib.assert_absent(long_bridge_name)
+
+
 @pytest.fixture
 def ovs_bridge_with_auto_create_internal_iface():
     with Bridge(BRIDGE1).create():
@@ -2424,6 +2634,8 @@ def test_ovs_new_internal_iface_to_bridge_with_auto_create_iface(
     )
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+    # The local port created with the bridge is kept
+    _assert_ovs_local_port(BRIDGE1)
 
 
 def test_ovs_replace_internal_iface_to_bridge_with_auto_create_iface(
@@ -2534,12 +2746,7 @@ def test_allow_extra_ovs_bridge_ports(ovs_bridge_with_extra_ports):
 
     libnmstate.apply(desired_state)
 
-    br1_state = statelib.show_only((BRIDGE1,))
-    br_ports = br1_state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE][
-        OVSBridge.PORT_SUBTREE
-    ]
-    assert len(br_ports) == 3
-    assert any(port[OVSBridge.Port.NAME] == "dummy1" for port in br_ports)
+    assert _get_bridge_port_names(BRIDGE1) == [BRIDGE1, "dummy1", ETH1, ETH2]
 
 
 @pytest.mark.tier1
@@ -2553,13 +2760,7 @@ def test_create_ovs_bridge_with_allow_extra_ports(eth1_up, eth2_up):
     bridge.set_allow_extra_ports(True)
 
     with bridge.create():
-        br1_state = statelib.show_only((BRIDGE1,))
-        br_ports = br1_state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE][
-            OVSBridge.PORT_SUBTREE
-        ]
-        assert len(br_ports) == 2
-        assert any(port[OVSBridge.Port.NAME] == ETH1 for port in br_ports)
-        assert any(port[OVSBridge.Port.NAME] == ETH2 for port in br_ports)
+        assert _get_bridge_port_names(BRIDGE1) == [BRIDGE1, ETH1, ETH2]
 
 
 @pytest.fixture
@@ -2668,6 +2869,10 @@ def cleanup_test_bridge_afterwards():
 def test_ovsdb_recv_end_of_message(cleanup_test_bridge_afterwards):
     # This special cooked YAML just make the OVSDB query reply exactly 4096
     # bytes which fit exactly single recv/read buffer.
+    # The reply to the query of the Interface table is the one being tuned,
+    # it includes the local port br0 that nmstate always adds, so br0 is
+    # listed explicitly. The size can be checked with the `OVSDB: recv size`
+    # lines of the nmstate debug logs.
     desired_state = yaml.load(
         """---
         interfaces:
@@ -2680,12 +2885,16 @@ def test_ovsdb_recv_end_of_message(cleanup_test_bridge_afterwards):
               b: 2
               c: 3
               d: 4
-              f: 4
+              f: 400
+        - name: br0
+          type: ovs-interface
+          state: up
         - name: br0
           type: ovs-bridge
           state: up
           bridge:
             port:
+             - name: br0
              - name: ovs1
              - name: ovs2
              - name: ovs3
@@ -2702,7 +2911,6 @@ def test_ovsdb_recv_end_of_message(cleanup_test_bridge_afterwards):
              - name: ovs14
              - name: ovs15
              - name: ovs16
-             - name: ovs17
             """,
         Loader=yaml.SafeLoader,
     )
@@ -2795,6 +3003,53 @@ def test_ovs_20480_json_string_length(cleanup_20480_test_bridge):
 
 
 @pytest.fixture
+def ovs_bridge_with_local_port(eth1_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(ETH1)
+    bridge.add_internal_port(BRIDGE1)
+    with bridge.create() as state:
+        yield state
+
+
+# An OVS bridge and its local port share the same name. An interface without
+# type that only sets the state refers to the bridge.
+@pytest.mark.tier1
+def test_ovs_bridge_state_up_without_type(ovs_bridge_with_local_port):
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+            - name: {BRIDGE1}
+              state: up
+            """
+        )
+    )
+    assertlib.assert_state_match(ovs_bridge_with_local_port)
+
+
+# NetworkManager brings the OVS bridge back up via its ports when only the
+# bridge is deactivated.
+@pytest.mark.xfail(
+    raises=NmstateVerificationError,
+    reason="https://issues.redhat.com/browse/RHEL-149781",
+)
+def test_ovs_bridge_state_down_without_type(ovs_bridge_with_local_port):
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+            - name: {BRIDGE1}
+              state: down
+            """
+        )
+    )
+    assert not any(
+        iface[Interface.TYPE] == InterfaceType.OVS_BRIDGE
+        for iface in statelib.show_only((BRIDGE1,))[Interface.KEY]
+    )
+
+
+@pytest.fixture
 def down_bridge1(bridge_with_ports):
     # Due to NM bug https://issues.redhat.com/browse/RHEL-149781 ,
     # we have to explicitly mark OVS ports down also
@@ -2804,6 +3059,9 @@ def down_bridge1(bridge_with_ports):
         interfaces:
         - name: {BRIDGE1}
           type: ovs-bridge
+          state: down
+        - name: {BRIDGE1}
+          type: ovs-interface
           state: down
         - name: {PORT1}
           type: ovs-interface
@@ -2839,8 +3097,4 @@ def test_changed_port_list_of_down_ovs_bridge(down_bridge1, dummy1_up):
         )
     )
 
-    cur_state = statelib.show_only((BRIDGE1,))
-    br_iface = cur_state[Interface.KEY][0]
-    br_ports = br_iface[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE]
-    assert len(br_ports) == 1
-    assert br_ports[0][LinuxBridge.Port.NAME] == "dummy1"
+    assert _get_bridge_port_names(BRIDGE1) == [BRIDGE1, "dummy1"]

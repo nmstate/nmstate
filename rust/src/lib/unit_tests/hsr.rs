@@ -165,6 +165,144 @@ fn test_prp_interlink_is_forbidden() {
 }
 
 #[test]
+#[cfg(feature = "gen_conf")]
+fn test_gen_conf_prp_keyfile_includes_hsr_section() {
+    let state: crate::NetworkState = serde_yaml::from_str(
+        r#"
+interfaces:
+- name: eth0
+  type: ethernet
+  state: up
+  mac-address: "52:54:00:aa:aa:10"
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+- name: eth1
+  type: ethernet
+  state: up
+  mac-address: "52:54:00:aa:aa:10"
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+- name: prp0
+  type: hsr
+  state: up
+  hsr:
+    port1: eth0
+    port2: eth1
+    multicast-spec: 0
+    protocol: prp
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.168.140.50
+      prefix-length: 24
+"#,
+    )
+    .unwrap();
+
+    let prp = hsr_keyfile(&state, "prp0.nmconnection");
+    assert_eq!(hsr_section(&prp), ["port1=eth0", "port2=eth1", "prp=true"]);
+}
+
+#[test]
+#[cfg(feature = "gen_conf")]
+fn test_gen_conf_hsr_2012_keyfile_includes_protocol_and_interlink() {
+    let state: crate::NetworkState = serde_yaml::from_str(
+        r#"
+interfaces:
+- name: eth0
+  type: ethernet
+  state: up
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth2
+  type: ethernet
+  state: up
+- name: hsr0
+  type: hsr
+  state: up
+  hsr:
+    port1: eth0
+    port2: eth1
+    interlink: eth2
+    multicast-spec: 40
+    protocol: hsr-2012
+"#,
+    )
+    .unwrap();
+
+    let hsr = hsr_keyfile(&state, "hsr0.nmconnection");
+    assert_eq!(
+        hsr_section(&hsr),
+        [
+            "interlink=eth2",
+            "multicast-spec=40",
+            "port1=eth0",
+            "port2=eth1",
+            "protocol-version=1",
+            "prp=false",
+        ]
+    );
+}
+
+#[test]
+#[cfg(feature = "gen_conf")]
+fn test_gen_conf_hsr_2010_omits_protocol_version() {
+    let state: crate::NetworkState = serde_yaml::from_str(
+        r#"
+interfaces:
+- name: eth0
+  type: ethernet
+  state: up
+- name: eth1
+  type: ethernet
+  state: up
+- name: hsr0
+  type: hsr
+  state: up
+  hsr:
+    port1: eth0
+    port2: eth1
+    multicast-spec: 0
+    protocol: hsr
+"#,
+    )
+    .unwrap();
+
+    let hsr = hsr_keyfile(&state, "hsr0.nmconnection");
+    assert_eq!(hsr_section(&hsr), ["port1=eth0", "port2=eth1", "prp=false"]);
+}
+
+#[cfg(feature = "gen_conf")]
+fn hsr_keyfile(state: &crate::NetworkState, file_name: &str) -> String {
+    let configs = state.gen_conf().unwrap();
+    configs["NetworkManager"]
+        .iter()
+        .find(|(name, _)| name == file_name)
+        .unwrap_or_else(|| panic!("{file_name} was not generated"))
+        .1
+        .clone()
+}
+
+#[cfg(feature = "gen_conf")]
+fn hsr_section(keyfile: &str) -> Vec<&str> {
+    let section = keyfile
+        .split_once("[hsr]\n")
+        .unwrap_or_else(|| panic!("missing [hsr] section in {keyfile}"))
+        .1;
+    let section = section
+        .split_once("\n[")
+        .map(|(head, _)| head)
+        .unwrap_or(section);
+    section.lines().filter(|line| !line.is_empty()).collect()
+}
+
+#[test]
 fn test_hsr_deny_unknown_config_field() {
     let result = serde_yaml::from_str::<Interfaces>(
         r"---

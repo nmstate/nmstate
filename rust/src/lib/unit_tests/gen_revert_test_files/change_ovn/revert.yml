@@ -6,6 +6,9 @@ interfaces:
 - name: ovsbr3
   type: ovs-bridge
   state: absent
+- name: ovsbr3
+  type: ovs-interface
+  state: absent
 ovn:
   bridge-mappings:
     - localnet: green

@@ -25,8 +25,14 @@ from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.ovslib import ovs_bridge
 from .testlib.ovslib import ovs_bridge_bond
-from .testlib.sriov import get_sriov_vf_names
+from .testlib.sriov import (
+    get_sriov_vf_names,
+    learn_vf_names,
+    read_sriov_numvfs,
+    read_sriov_totalvfs,
+)
 from .testlib.statelib import show_only
+from .testlib.yaml import load_yaml
 
 MAC1 = "00:11:22:33:44:55"
 MAC2 = "00:11:22:33:44:66"
@@ -55,15 +61,28 @@ def _test_nic_name():
     return os.environ.get("TEST_REAL_NIC")
 
 
+def _max_vfs():
+    pf_name = _test_nic_name()
+    if not pf_name:
+        return 0
+    return read_sriov_totalvfs(pf_name)
+
+
+def _skip_if_not_enough_vfs(count):
+    max_vfs = _max_vfs()
+    return pytest.mark.skipif(
+        max_vfs < count,
+        reason=(
+            f"TEST_REAL_NIC only supports {max_vfs} VFs, "
+            f"but this test requires {count}"
+        ),
+    )
+
+
 def find_vf_iface_name(pf_name, vf_id):
     return os.listdir(
         f"/sys/class/net/{pf_name}/device/virtfn{vf_id}/net"
     ).pop()
-
-
-def get_max_vfs_count(pf_name):
-    with open(f"/sys/class/net/{pf_name}/device/sriov_totalvfs", "r") as fd:
-        return int(fd.read())
 
 
 @pytest.fixture
@@ -132,6 +151,12 @@ def sriov_iface_vf(disable_sriov):
 @pytest.fixture
 def sriov_with_62_vfs():
     pf_name = _test_nic_name()
+    total_vfs = read_sriov_totalvfs(pf_name)
+    if total_vfs < 62:
+        pytest.skip(
+            f"TEST_REAL_NIC only supports {total_vfs} VFs, "
+            "but this test requires 62"
+        )
     iface_info = {
         Interface.NAME: pf_name,
         Interface.STATE: InterfaceState.UP,
@@ -162,6 +187,7 @@ class TestSrIov:
     def test_sriov_with_no_vfs_config(self, sriov_interface):
         assertlib.assert_state_match(sriov_interface)
 
+    @_skip_if_not_enough_vfs(5)
     def test_sriov_increase_vfs(self, sriov_interface):
         desired_state = sriov_interface
         eth_config = desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
@@ -533,6 +559,7 @@ class TestSrIov:
         vf_ifaces = get_sriov_vf_names(pf_name)
         assert len(vf_ifaces) == 62
 
+    @_skip_if_not_enough_vfs(32)
     def test_drivers_autoprobe_false(self, disable_sriov):
         pf_name = _test_nic_name()
         desired_state = {
@@ -570,7 +597,7 @@ class TestSrIov:
 
     def test_raise_error_if_exceeded_maximum_supported_vfs_count(self):
         pf_name = _test_nic_name()
-        max_vfs = get_max_vfs_count(pf_name)
+        max_vfs = read_sriov_totalvfs(pf_name)
 
         desired_state = {
             Interface.KEY: [
@@ -606,3 +633,76 @@ class TestSrIov:
         libnmstate.apply(desired_state)
         vf_ifaces = get_sriov_vf_names(pf_name)
         assert len(vf_ifaces) == 2
+
+    # https://issues.redhat.com/browse/RHEL-281542
+    def test_policy_capture_pf_create_vfs_and_bond_in_one_apply(
+        self, disable_sriov
+    ):
+        pf_name = _test_nic_name()
+        pf_mac = show_only((pf_name,))[Interface.KEY][0][Interface.MAC]
+        vf_names = learn_vf_names(pf_name, 2)
+
+        policy = load_yaml(
+            f"""---
+            capture:
+              pf: interfaces.mac-address=="{pf_mac}"
+            desired:
+              interfaces:
+              - name: "{{{{ capture.pf.interfaces.0.name }}}}"
+                type: ethernet
+                state: up
+                ethernet:
+                  sr-iov:
+                    total-vfs: 2
+              - name: {vf_names[0]}
+                type: ethernet
+                state: up
+              - name: {vf_names[1]}
+                type: ethernet
+                state: up
+              - name: {TEST_BOND}
+                type: bond
+                state: up
+                link-aggregation:
+                  mode: active-backup
+                  port:
+                  - {vf_names[0]}
+                  - {vf_names[1]}
+            """
+        )
+        assert get_sriov_vf_names(pf_name) == []
+        desired_state = libnmstate.gen_net_state_from_policy(
+            policy, libnmstate.show()
+        )
+        try:
+            libnmstate.apply(desired_state)
+
+            assert read_sriov_numvfs(pf_name) == 2
+            assert sorted(get_sriov_vf_names(pf_name)) == sorted(vf_names)
+            pf_state = show_only((pf_name,))[Interface.KEY][0]
+            assert (
+                pf_state[Ethernet.CONFIG_SUBTREE][Ethernet.SRIOV_SUBTREE][
+                    Ethernet.SRIOV.TOTAL_VFS
+                ]
+                == 2
+            )
+            for vf_name in vf_names:
+                vf_state = show_only((vf_name,))[Interface.KEY][0]
+                assert vf_state[Interface.STATE] == InterfaceState.UP
+                assert vf_state[Interface.CONTROLLER] == TEST_BOND
+            bond_state = show_only((TEST_BOND,))[Interface.KEY][0]
+            assert sorted(
+                bond_state[Bond.CONFIG_SUBTREE][Bond.PORT]
+            ) == sorted(vf_names)
+        finally:
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: TEST_BOND,
+                            Interface.STATE: InterfaceState.ABSENT,
+                        }
+                    ]
+                },
+                verify_change=False,
+            )

@@ -1,0 +1,29 @@
+---
+interfaces:
+  - name: ovs-native0
+    type: ovs-interface
+    state: up
+  - name: ovs-native1
+    type: ovs-interface
+    state: up
+  - name: ovs-br0
+    type: ovs-bridge
+    state: up
+    bridge:
+      port:
+        - name: ovs-native0
+          vlan:
+            mode: native-tagged
+            tag: 100
+            enable-native: true
+            trunk-tags:
+              - id: 200
+              - id: 300
+        - name: ovs-native1
+          vlan:
+            mode: native-untagged
+            tag: 101
+            enable-native: true
+            trunk-tags:
+              - id: 201
+              - id: 301

@@ -18,6 +18,9 @@ use crate::{
 // beginning of desire state
 const INTERFACES_SET_PRIORITY_MAX_RETRY: u32 = 4;
 
+// Linux IFNAMSIZ(16) minus the trailing NUL byte
+const KERNEL_IFACE_NAME_MAX_LEN: usize = 15;
+
 const COPY_MAC_ALLOWED_IFACE_TYPES: [InterfaceType; 3] = [
     InterfaceType::Bond,
     InterfaceType::LinuxBridge,
@@ -368,6 +371,13 @@ impl Interfaces {
                         resolved_ifaces.push(new_iface);
                     }
                     _ => {
+                        if let Some(found) = find_ovs_bridge_for_untyped_iface(
+                            iface_name, &founds, self, cur_ifaces,
+                        ) {
+                            resolved_ifaces
+                                .push(Interface::deserialize(found)?);
+                            continue;
+                        }
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
@@ -765,9 +775,8 @@ fn is_opt_str_empty(opt_string: &Option<String>) -> bool {
 
 // When merging desire interface with current, we perform actions in the order
 // of:
-//  * Action might alter the results of follow-up actions:
-//    `MergedInterface.pre_inter_ifaces_process()` # For example, empty OVS
-//    bridge will get a auto created ovs internal # interface.
+//  * Actions that might alter the results of follow-up actions:
+//    `MergedInterface.pre_inter_ifaces_process()`
 //  * Actions required the knowledge of multiple interfaces:
 //    `MergedInterfaces.process()` # For example, mark changed port as changed
 //    and complex controller/port # validation
@@ -939,6 +948,9 @@ impl MergedInterfaces {
 
     // Contains all the smart modifications, validations among interfaces
     fn process(&mut self) -> Result<(), NmstateError> {
+        // Must run before the allow-extra-ports processing, which removes
+        // from the current state any port missing in the desired port list.
+        self.ensure_ovs_local_port()?;
         self.process_allow_extra_ovs_patch_ports_for_apply();
         self.process_allow_extra_bridge_ports_for_apply();
         self.apply_copy_mac_from()?;
@@ -994,6 +1006,181 @@ impl MergedInterfaces {
         {
             merged_iface.process_allow_extra_bridge_ports();
         }
+    }
+
+    fn ensure_ovs_local_port(&mut self) -> Result<(), NmstateError> {
+        let mut to_inject: Vec<(String, Vec<String>)> = Vec::new();
+        for iface in self.user_ifaces.values().filter(|i| {
+            i.is_desired()
+                && i.merged.is_up()
+                && i.merged.iface_type() == InterfaceType::OvsBridge
+        }) {
+            let br_name = iface.merged.name();
+            // Ignored kernel interfaces have already been removed. Do not
+            // recreate them as local ports.
+            if self.ignored_ifaces.iter().any(|(name, iface_type)| {
+                name == br_name && !iface_type.is_userspace()
+            }) {
+                continue;
+            }
+            // Port names are not resolved yet, so the interface with the
+            // bridge name can also be referred to by its profile name or
+            // alternative name.
+            let is_br_name = |p: &str| {
+                p == br_name || self.iface_name_search.get(p).contains(&br_name)
+            };
+            // Whether the bridge already has a port with its own name
+            let ports = iface.merged.ports().unwrap_or_default();
+            let has_local_port = ports.iter().any(|p| is_br_name(p));
+            let same_name_iface = self.kernel_ifaces.get(br_name);
+            if has_local_port {
+                if let Some(reason) = same_name_iface
+                    .and_then(|i| not_ovs_internal_iface_reason(&i.merged))
+                {
+                    warn_ovs_local_port_not_added(br_name, &reason);
+                }
+                continue;
+            }
+            // Checking for any state other than up also covers absent in
+            // memory-only mode, which has already been turned into down.
+            if same_name_iface
+                .is_some_and(|i| i.is_desired() && !i.merged.is_up())
+            {
+                if ports.is_empty() {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "OVS bridge {br_name} has no ports and the \
+                             interface with the bridge name is marked as \
+                             absent or down, so its local port cannot be \
+                             added. Please add a port to the bridge"
+                        ),
+                    );
+                    log::error!("{e}");
+                    return Err(e);
+                }
+                warn_ovs_local_port_not_added(
+                    br_name,
+                    "the interface with the bridge name is marked as absent \
+                     or down",
+                );
+                continue;
+            }
+            if let Some(reason) = same_name_iface
+                .and_then(|i| ovs_local_port_blocked_reason(i, br_name))
+            {
+                warn_ovs_local_port_not_added(br_name, &reason);
+                continue;
+            }
+            // The interface with the bridge name might not exist yet, for
+            // example an OVS internal interface to be created as port of
+            // another OVS bridge.
+            if let Some(other_ctrl) = self.iter().find(|i| {
+                i.merged.is_up()
+                    && i.merged
+                        .ports()
+                        .is_some_and(|p| p.iter().any(|p| is_br_name(p)))
+            }) {
+                warn_ovs_local_port_not_added(
+                    br_name,
+                    &format!(
+                        "the bridge name is listed as port of controller '{}'",
+                        other_ctrl.merged.name()
+                    ),
+                );
+                continue;
+            }
+            if br_name.len() > KERNEL_IFACE_NAME_MAX_LEN {
+                if ports.is_empty() {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "OVS bridge {br_name} has no ports and its name \
+                             is longer than {KERNEL_IFACE_NAME_MAX_LEN} \
+                             characters, so its local port cannot be created. \
+                             Please add a port or use a shorter bridge name"
+                        ),
+                    );
+                    log::error!("{e}");
+                    return Err(e);
+                }
+                warn_ovs_local_port_not_added(
+                    br_name,
+                    &format!(
+                        "the bridge name is longer than \
+                         {KERNEL_IFACE_NAME_MAX_LEN} characters, which is not \
+                         valid for a kernel interface"
+                    ),
+                );
+                continue;
+            }
+            // When the desired state omits the port list, it gets filled in.
+            // Include the ports attached via their `controller` property, as
+            // they would otherwise be missing from the list.
+            let ctrl_prop_ports =
+                if iface.desired.as_ref().and_then(|i| i.ports()).is_none() {
+                    self.get_ports_attached_via_ctrl_prop(br_name, &ports)
+                } else {
+                    Vec::new()
+                };
+            match iface
+                .current
+                .as_ref()
+                .map(|c| c.ports().unwrap_or_default().contains(&br_name))
+            {
+                Some(true) => log::info!(
+                    "Keeping local port {br_name} of OVS bridge {br_name}, \
+                     which is missing in the desired port list"
+                ),
+                Some(false) => log::warn!(
+                    "OVS bridge {br_name} is missing the local port. Adding \
+                     it to avoid connectivity problems."
+                ),
+                None => log::info!(
+                    "Adding local port {br_name} to new OVS bridge {br_name}"
+                ),
+            }
+            to_inject.push((br_name.to_string(), ctrl_prop_ports));
+        }
+        for (br_name, ctrl_prop_ports) in to_inject {
+            if let Some(iface) = self
+                .user_ifaces
+                .get_mut(&(br_name.clone(), InterfaceType::OvsBridge))
+            {
+                iface.add_local_port(&ctrl_prop_ports);
+                // The generated port is a literal kernel interface name,
+                // not a profile or alternative name reference.
+                self.iface_name_search.kernel_nics.insert(br_name);
+            }
+        }
+
+        Ok(())
+    }
+
+    // Desired interfaces with `controller` set to the specified OVS bridge,
+    // excluding its local port and the ones already in `ports`.
+    fn get_ports_attached_via_ctrl_prop(
+        &self,
+        br_name: &str,
+        ports: &[&str],
+    ) -> Vec<String> {
+        let mut ret: Vec<String> = self
+            .kernel_ifaces
+            .values()
+            .filter(|i| {
+                let des_ctrl = i
+                    .desired
+                    .as_ref()
+                    .and_then(|d| d.base_iface().controller.as_deref());
+                des_ctrl == Some(br_name)
+                    && i.merged.is_up()
+                    && i.merged.name() != br_name
+                    && !ports.contains(&i.merged.name())
+            })
+            .map(|i| i.merged.name().to_string())
+            .collect();
+        ret.sort_unstable();
+        ret
     }
 
     fn apply_copy_mac_from(&mut self) -> Result<(), NmstateError> {
@@ -1193,6 +1380,96 @@ impl MergedInterfaces {
     }
 }
 
+// Reason why an interface holding the bridge name cannot be the local port,
+// which has to be a plain OVS internal interface.
+fn not_ovs_internal_iface_reason(iface: &Interface) -> Option<String> {
+    match iface {
+        Interface::OvsInterface(o) if o.patch.is_some() => Some(
+            "the bridge name is used by an OVS patch interface".to_string(),
+        ),
+        Interface::OvsInterface(o) if o.dpdk.is_some() => {
+            Some("the bridge name is used by an OVS DPDK interface".to_string())
+        }
+        Interface::OvsInterface(_) => None,
+        _ => Some(format!(
+            "the bridge name is used by an interface of type {}",
+            iface.iface_type()
+        )),
+    }
+}
+
+// Reason why the interface holding the bridge name prevents us from adding
+// the local port.
+fn ovs_local_port_blocked_reason(
+    iface: &MergedInterface,
+    br_name: &str,
+) -> Option<String> {
+    not_ovs_internal_iface_reason(&iface.merged).or_else(|| {
+        match iface.merged.base_iface().controller.as_deref() {
+            Some(ctrl) if ctrl != br_name => Some(format!(
+                "the OVS interface with the bridge name is attached to \
+                 controller '{ctrl}'"
+            )),
+            _ => None,
+        }
+    })
+}
+
+fn warn_ovs_local_port_not_added(br_name: &str, reason: &str) {
+    log::warn!(
+        "Not adding local port {br_name} to OVS bridge {br_name}: {reason}. \
+         The bridge might have connectivity problems"
+    );
+}
+
+// An OVS bridge and its local port share the same name. `bridge` is not a
+// property of OVS interfaces, so an untyped interface holding it can only
+// refer to the OVS bridge. An untyped interface only setting the state also
+// refers to the bridge when the other match is its local port, as it did
+// before the local port was added automatically. Neither applies when the
+// bridge is already in the desired state.
+fn find_ovs_bridge_for_untyped_iface<'a>(
+    iface_name: &str,
+    candidates: &'a [serde_json::Value],
+    des_ifaces: &Interfaces,
+    cur_ifaces: &Interfaces,
+) -> Option<&'a serde_json::Value> {
+    let is_type = |c: &serde_json::Value, iface_type: InterfaceType| {
+        c.get("type").and_then(|t| t.as_str())
+            == Some(iface_type.to_string().as_str())
+    };
+    let mut br_candidates = candidates
+        .iter()
+        .filter(|c| is_type(c, InterfaceType::OvsBridge));
+    let br_candidate = br_candidates.next()?;
+    if br_candidates.next().is_some()
+        || !candidates.iter().all(|c| {
+            is_type(c, InterfaceType::OvsBridge)
+                || is_type(c, InterfaceType::OvsInterface)
+        })
+    {
+        return None;
+    }
+    if des_ifaces
+        .get_iface(iface_name, InterfaceType::OvsBridge)
+        .is_some()
+    {
+        return None;
+    }
+    if br_candidate.get("bridge").is_some() {
+        return Some(br_candidate);
+    }
+    let is_state_only = br_candidate.as_object().is_some_and(|o| {
+        o.keys()
+            .all(|k| matches!(k.as_str(), "name" | "type" | "state"))
+    });
+    let has_local_port = cur_ifaces
+        .get_iface(iface_name, InterfaceType::OvsBridge)
+        .and_then(|i| i.ports())
+        .is_some_and(|ports| ports.contains(&iface_name));
+    (is_state_only && has_local_port).then_some(br_candidate)
+}
+
 // Special cases:
 //  * Inherit the ignore state from current if desire not mentioned in interface
 //    section
@@ -1237,8 +1514,9 @@ fn get_ignored_ifaces(
 
     for iface_name in ignored_kernel_ifaces {
         if let Some(iface) = desired
-            .get_iface(&iface_name, InterfaceType::Unknown)
-            .or_else(|| current.get_iface(&iface_name, InterfaceType::Unknown))
+            .kernel_ifaces
+            .get(&iface_name)
+            .or_else(|| current.kernel_ifaces.get(&iface_name))
         {
             let iface_type = match iface.iface_type() {
                 InterfaceType::Veth => InterfaceType::Ethernet,
