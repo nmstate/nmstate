@@ -470,53 +470,59 @@ def test_create_down_linux_bridge(br0_down):
 
 @pytest.fixture
 def br0_with_pvid_and_unmanaged_port():
-    libnmstate.apply(
-        load_yaml(
-            f"""---
-            interfaces:
-              - name: {DUMMY1}
-                type: dummy
-              - name: {BRIDGE0}
-                type: linux-bridge
-                state: up
-                bridge:
-                  port:
-                    - name: {DUMMY1}
-                      vlan:
-                        mode: trunk
-                        trunk-tags:
-                        - id-range:
-                            min: 2
-                            max: 4092
-            """
+    try:
+        libnmstate.apply(
+            load_yaml(
+                f"""---
+                interfaces:
+                  - name: {DUMMY1}
+                    type: dummy
+                  - name: {BRIDGE0}
+                    type: linux-bridge
+                    state: up
+                    bridge:
+                      port:
+                        - name: {DUMMY1}
+                          vlan:
+                            mode: trunk
+                            trunk-tags:
+                            - id-range:
+                                min: 2
+                                max: 4092
+                """
+            )
         )
-    )
-    exec_cmd(f"ip link add {DUMMY0} type dummy".split(), check=True)
-    exec_cmd(f"nmcli device set {DUMMY0} managed no".split(), check=True)
-    exec_cmd(f"ip link set {DUMMY0} master {BRIDGE0}".split(), check=True)
-    exec_cmd(f"ip link set {DUMMY0} up".split(), check=True)
-    exec_cmd(
-        f"bridge vlan add vid 100 pvid egress untagged dev {DUMMY0}".split(),
-        check=True,
-    )
-    exec_cmd(f"bridge vlan del vid 1 dev {DUMMY0} egress".split(), check=True)
-    yield
-    libnmstate.apply(
-        load_yaml(
-            f"""---
-            interfaces:
-              - name: {DUMMY1}
-                type: dummy
-                state: absent
-              - name: {DUMMY0}
-                type: dummy
-                state: absent
-              - name: {BRIDGE0}
-                type: linux-bridge
-                state: absent
-            """
+        exec_cmd(f"ip link add {DUMMY0} type dummy".split(), check=True)
+        exec_cmd(f"nmcli device set {DUMMY0} managed no".split(), check=True)
+        exec_cmd(f"ip link set {DUMMY0} master {BRIDGE0}".split(), check=True)
+        exec_cmd(f"ip link set {DUMMY0} up".split(), check=True)
+        exec_cmd(
+            (
+                f"bridge vlan add vid 100 pvid egress untagged dev {DUMMY0}"
+            ).split(),
+            check=True,
         )
-    )
+        exec_cmd(
+            f"bridge vlan del vid 1 dev {DUMMY0} egress".split(), check=True
+        )
+        yield
+    finally:
+        libnmstate.apply(
+            load_yaml(
+                f"""---
+                interfaces:
+                  - name: {DUMMY1}
+                    type: dummy
+                    state: absent
+                  - name: {DUMMY0}
+                    type: dummy
+                    state: absent
+                  - name: {BRIDGE0}
+                    type: linux-bridge
+                    state: absent
+                """
+            )
+        )
 
 
 # https://issues.redhat.com/browse/RHEL-21576
