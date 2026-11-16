@@ -467,7 +467,7 @@ pub(crate) fn get_cur_dns_ifaces(
             && ipv4.enabled
             && let Some(dns_conf) = &ipv4.dns
             && !dns_conf.is_null()
-            && !v4_ifaces.contains(&cur_iface.name().to_string())
+            && !v4_ifaces.iter().any(|i| i == cur_iface.name())
         {
             v4_ifaces.push(cur_iface.name().to_string())
         }
@@ -475,7 +475,7 @@ pub(crate) fn get_cur_dns_ifaces(
             && ipv6.enabled
             && let Some(dns_conf) = &ipv6.dns
             && !dns_conf.is_null()
-            && !v6_ifaces.contains(&cur_iface.name().to_string())
+            && !v6_ifaces.iter().any(|i| i == cur_iface.name())
         {
             v6_ifaces.push(cur_iface.name().to_string())
         }
