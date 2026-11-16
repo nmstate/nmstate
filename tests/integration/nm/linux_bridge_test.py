@@ -20,6 +20,7 @@ from ..testlib.bridgelib import linux_bridge
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.env import nm_minor_version
+from ..testlib.ifacelib import delete_iface_and_profile
 from ..testlib.statelib import show_only
 from ..testlib.yaml import load_yaml
 
@@ -179,8 +180,7 @@ def dummy_as_port(controller, dummy_iface):
         )
         yield
     finally:
-        exec_cmd(("ip", "link", "delete", dummy_iface))
-        exec_cmd(("nmcli", "c", "del", dummy_iface))
+        delete_iface_and_profile(dummy_iface)
 
 
 def test_linux_manage_bridge_keeps_unmanaged_port(
@@ -218,19 +218,7 @@ def unmanged_veth0():
     )
     exec_cmd(f"ip link set {VETH0}.ep up".split(), check=True)
     yield
-    exec_cmd(f"ip link del {VETH0}".split())
-    exec_cmd(f"nmcli c del {VETH0}".split())
-    # Use nmstate to ensure veth0 is removed.
-    libnmstate.apply(
-        {
-            Interface.KEY: [
-                {
-                    Interface.NAME: VETH0,
-                    Interface.STATE: InterfaceState.ABSENT,
-                },
-            ]
-        }
-    )
+    delete_iface_and_profile(VETH0)
 
 
 @pytest.fixture
