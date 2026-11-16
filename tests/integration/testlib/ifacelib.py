@@ -6,6 +6,7 @@ import libnmstate
 from libnmstate import schema
 
 from . import statelib
+from .cmdlib import exec_cmd
 
 
 def ifaces_init(*ifnames):
@@ -21,6 +22,19 @@ def iface_up(ifname):
         yield statelib.show_only((ifname,))
     finally:
         _set_eth_admin_state(ifname, schema.InterfaceState.ABSENT)
+
+
+def delete_iface_and_profile(ifname):
+    """
+    Delete an interface and its NM profile.
+
+    The profile is removed first so NM cannot recreate the link from an
+    autoconnect profile; nmstate then removes the link and verifies it
+    is gone.
+    """
+    exec_cmd(("nmcli", "c", "del", ifname))
+    exec_cmd(("ip", "link", "delete", ifname))
+    _set_eth_admin_state(ifname, schema.InterfaceState.ABSENT)
 
 
 def _set_eth_admin_state(ifname, state):

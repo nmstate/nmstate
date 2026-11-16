@@ -33,6 +33,7 @@ from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
 from .testlib.dummy import dummy_interface
+from .testlib.ifacelib import delete_iface_and_profile
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.retry import retry_till_true_or_timeout
@@ -754,8 +755,7 @@ def dummy0_as_port(controller):
         )
         yield
     finally:
-        exec_cmd(("ip", "link", "delete", "dummy0"))
-        exec_cmd(("nmcli", "c", "del", "dummy0"))
+        delete_iface_and_profile("dummy0")
 
 
 def test_add_invalid_port_ip_config(eth1_up):
@@ -873,8 +873,7 @@ def bridge0_with_tap_port():
     exec_cmd(f"ip link set {TEST_TAP0} up".split(), check=True)
     exec_cmd(f"ip link set {TEST_BRIDGE0} up".split(), check=True)
     yield
-    exec_cmd(f"ip link del {TEST_TAP0}".split())
-    exec_cmd(f"nmcli c del {TEST_TAP0}".split())
+    delete_iface_and_profile(TEST_TAP0)
     libnmstate.apply(
         {
             Interface.KEY: [
