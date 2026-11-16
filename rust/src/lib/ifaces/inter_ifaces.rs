@@ -1293,7 +1293,7 @@ impl MergedInterfaces {
                 && i.merged.iface_type() != InterfaceType::OvsInterface
         }) {
             if let Some(parent) = iface.merged.parent()
-                && gone_ifaces.contains(&parent.to_string())
+                && gone_ifaces.iter().any(|i| i == parent)
             {
                 if iface.is_desired() && iface.merged.is_up() {
                     return Err(NmstateError::new(

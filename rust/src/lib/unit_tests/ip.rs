@@ -730,7 +730,7 @@ fn test_error_on_route_metric_out_of_range() {
 
 #[test]
 fn test_ipv6_auto_route_metric_sanitized_when_ipv6_disabled() {
-    let mut iface: Interface = serde_yaml::from_str(&format!(
+    let mut iface: Interface = serde_yaml::from_str(
         r#"---
         name: eth1
         type: ethernet
@@ -742,7 +742,7 @@ fn test_ipv6_auto_route_metric_sanitized_when_ipv6_disabled() {
           enabled: false
           dhcp: false
           auto-route-metric: 48"#,
-    ))
+    )
     .unwrap();
 
     iface.sanitize(true).unwrap();
