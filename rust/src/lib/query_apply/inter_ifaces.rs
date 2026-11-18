@@ -240,7 +240,26 @@ impl MergedInterfaces {
                     if let Interface::Ethernet(eth_iface) = iface
                         && eth_iface.sriov_is_enabled()
                     {
-                        eth_iface.verify_sriov(&current)?;
+                        // The `wait-vfs` policy is read from the raw
+                        // desired state, as `for_verify` has already been
+                        // sanitized to strip this apply-only property.
+                        let wait_vfs = des_iface
+                            .desired
+                            .as_ref()
+                            .or(des_iface.for_apply.as_ref())
+                            .and_then(|i| {
+                                if let Interface::Ethernet(e) = i {
+                                    Some(e.sriov_wait_vfs())
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or_default();
+                        eth_iface.verify_sriov(
+                            &current,
+                            &self.sriov_vf_references,
+                            wait_vfs,
+                        )?;
                     }
                 }
             } else if iface.is_up() {

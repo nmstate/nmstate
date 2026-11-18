@@ -163,7 +163,7 @@ pub use crate::{
         OvsDpdkConfig, OvsInterface, OvsPatchConfig, SrIovConfig,
         SrIovVfConfig, VethConfig, VlanConfig, VlanInterface, VlanProtocol,
         VlanQosMapping, VlanRegistrationProtocol, VrfConfig, VrfInterface,
-        VxlanConfig, VxlanInterface, XfrmInterface,
+        VxlanConfig, VxlanInterface, WaitVfs, XfrmInterface,
     },
     ip::{
         AddressFamily, AddressProtocol, Dhcpv4ClientId, Dhcpv6Duid,
@@ -188,7 +188,7 @@ pub(crate) use crate::{
     dns::MergedDnsState,
     hostname::MergedHostNameState,
     iface::MergedInterface,
-    ifaces::MergedInterfaces,
+    ifaces::{MergedInterfaces, SrIovVfRef},
     net_state::{MergedNetworkState, NetworkStateMode},
     ovn::MergedOvnConfiguration,
     ovs::MergedOvsDbGlobalConfig,

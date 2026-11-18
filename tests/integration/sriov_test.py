@@ -2,6 +2,7 @@
 
 import copy
 import os
+import time
 
 import pytest
 
@@ -19,6 +20,7 @@ from libnmstate.schema import LinuxBridge
 from libnmstate.schema import OVSBridge
 
 from .testlib import assertlib
+from .testlib.cmdlib import exec_cmd
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
@@ -41,6 +43,13 @@ MAC_MIX_CASE = "00:11:22:33:44:Ff"
 TEST_BOND = "test-bond0"
 TEST_BRIDGE = "test-br0"
 TEST_OVS_IFACE = "test-ovs0"
+
+VF_TEST_NETNS = "nmstate_vf_test_ns"
+
+# A VF not referenced by the desired state (bound to vfio-pci, moved to
+# another namespace, etc.) must not stall SR-IOV verification with retries.
+# The unfixed code retries ~30 times over ~30 seconds before giving up.
+NO_REFERENCED_VF_VERIFY_TIMEOUT = 15
 
 VF0_CONF = {
     Ethernet.SRIOV.VFS.ID: 0,
@@ -129,6 +138,42 @@ def sriov_interface(disable_sriov):
 
 
 @pytest.fixture
+def sriov_vf_in_other_netns(sriov_interface):
+    """
+    Hide the first VF of the SR-IOV PF in a network namespace, simulating a
+    VF owned by an external tool (bound to vfio-pci, moved
+    to another netns, etc). Yields the desired state of the PF.
+    """
+    pf_name = _test_nic_name()
+    vf0_name = find_vf_iface_name(pf_name, 0)
+    exec_cmd(["ip", "netns", "add", VF_TEST_NETNS], check=True)
+    try:
+        exec_cmd(
+            ["ip", "link", "set", vf0_name, "netns", VF_TEST_NETNS],
+            check=True,
+        )
+    except Exception:
+        exec_cmd(["ip", "netns", "del", VF_TEST_NETNS])
+        raise
+    yield sriov_interface
+    exec_cmd(
+        [
+            "ip",
+            "netns",
+            "exec",
+            VF_TEST_NETNS,
+            "ip",
+            "link",
+            "set",
+            vf0_name,
+            "netns",
+            "1",
+        ]
+    )
+    exec_cmd(["ip", "netns", "del", VF_TEST_NETNS])
+
+
+@pytest.fixture
 def sriov_iface_vf(disable_sriov):
     pf_name = _test_nic_name()
     desired_state = {
@@ -194,6 +239,27 @@ class TestSrIov:
         eth_config[Ethernet.SRIOV_SUBTREE][Ethernet.SRIOV.TOTAL_VFS] = 5
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
+
+    def test_sriov_vf_owned_by_other_tool(self, sriov_vf_in_other_netns):
+        """
+        VFs not in the desired state should not be verified if using the
+        WAIT_VFS_POLICY.DESIRED policy. This can be useful when sharing
+        VFs on the same PF with other tools.
+        """
+        desired_state = sriov_vf_in_other_netns
+        eth_config = desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
+        sriov_config = eth_config[Ethernet.SRIOV_SUBTREE]
+        sriov_config[Ethernet.SRIOV.WAIT_VFS] = (
+            Ethernet.SRIOV.WAIT_VFS_POLICY.DESIRED
+        )
+
+        start = time.monotonic()
+        libnmstate.apply(desired_state)
+        elapsed = time.monotonic() - start
+        assert elapsed < NO_REFERENCED_VF_VERIFY_TIMEOUT, (
+            "SR-IOV verification stalled "
+            f"{elapsed:.0f}s on a VF which is not referenced by desired state"
+        )
 
     def test_sriov_decrease_vfs(self, sriov_interface):
         desired_state = sriov_interface

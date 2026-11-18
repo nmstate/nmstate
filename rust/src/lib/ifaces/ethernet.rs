@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "query_apply")]
+use crate::WaitVfs;
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceType, Interfaces,
     MergedInterfaces, NetworkStateMode, NmstateError, SrIovConfig,
@@ -109,6 +111,15 @@ impl EthernetInterface {
             .and_then(|eth_conf| {
                 eth_conf.sr_iov.as_ref().map(SrIovConfig::sriov_is_enabled)
             })
+            .unwrap_or_default()
+    }
+
+    #[cfg(feature = "query_apply")]
+    pub(crate) fn sriov_wait_vfs(&self) -> WaitVfs {
+        self.ethernet
+            .as_ref()
+            .and_then(|eth_conf| eth_conf.sr_iov.as_ref())
+            .and_then(|sriov_conf| sriov_conf.wait_vfs)
             .unwrap_or_default()
     }
 }
