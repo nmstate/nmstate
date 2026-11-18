@@ -131,6 +131,7 @@ pub(crate) fn gen_nm_br_port_setting(
     nm_conn: &mut NmConnection,
 ) {
     let mut nm_set = nm_conn.bridge_port.as_ref().cloned().unwrap_or_default();
+
     let br_port_conf = if let Some(i) = nm_conn
         .iface_name()
         .and_then(|iface_name| br_iface.get_port_conf(iface_name))
@@ -151,8 +152,13 @@ pub(crate) fn gen_nm_br_port_setting(
     if let Some(v) = br_port_conf.stp_priority {
         nm_set.priority = Some(v.into());
     }
+
     if let Some(v) = br_port_conf.vlan.as_ref() {
         nm_set.vlans = Some(nmstate_port_vlans_to_nm_vlan_range(v));
+    }
+
+    if let Some(v) = br_port_conf.neigh_suppress {
+        nm_set.neighbor_suppress = Some(v);
     }
 
     nm_conn.bridge_port = Some(nm_set);

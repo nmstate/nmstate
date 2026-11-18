@@ -27,10 +27,12 @@ from .testlib.assertlib import assert_mac_address
 from .testlib.assertlib import assert_state
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
+from .testlib.bridgelib import apply_with_neigh_suppress_or_skip
 from .testlib.bridgelib import generate_vlan_filtering_config
 from .testlib.bridgelib import generate_vlan_id_config
 from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
+from .testlib.bridgelib import neigh_suppress_sysfs_value
 from .testlib.cmdlib import exec_cmd
 from .testlib.dummy import dummy_interface
 from .testlib.ifacelib import delete_iface_and_profile
@@ -1429,6 +1431,32 @@ def test_change_mtu_with_stable_link_up(bridge0_with_port0):
     )
 
     assertlib.assert_state(desired_state)
+
+
+@pytest.mark.parametrize("neigh_suppress", [False, True])
+def test_omitted_neigh_suppress_keeps_kernel_state(
+    bridge0_with_port0, neigh_suppress
+):
+    desired = bridge0_with_port0
+    bridge_config = desired[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
+
+    port_config = bridge_config[LinuxBridge.PORT_SUBTREE][0]
+    port_name = port_config[LinuxBridge.Port.NAME]
+    port_config[LinuxBridge.Port.NEIGH_SUPPRESS] = neigh_suppress
+    port_config[LinuxBridge.Port.STP_HAIRPIN_MODE] = True
+
+    apply_with_neigh_suppress_or_skip(desired)
+
+    expected_flag = str(int(neigh_suppress))
+    assert neigh_suppress_sysfs_value(port_name) == expected_flag
+
+    port_config.pop(LinuxBridge.Port.NEIGH_SUPPRESS)
+    port_config[LinuxBridge.Port.STP_HAIRPIN_MODE] = False
+
+    libnmstate.apply(desired)
+
+    assertlib.assert_state_match(desired)
+    assert neigh_suppress_sysfs_value(port_name) == expected_flag
 
 
 @pytest.fixture
