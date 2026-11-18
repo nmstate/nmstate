@@ -1,4 +1,37 @@
 # Changelog
+## [2.2.63] - 2026-11-18
+### Breaking changes
+ - apply: deprecate override iface option. (7e698d62)
+
+### New features
+ - policy: allow VFs and their users in one policy. (40c2833b)
+ - ovs: add native-tagged and native-untagged. (2a0576fd)
+ - ovs: support ovs-db settings on bridge ports. (27a33d7e)
+
+### Bug fixes
+ - nm: write the hsr section in generated keyfiles. (30d2f1ea)
+ - go: free C.CString inputs with free(). (621ffeaa)
+ - ovs: create the local port when missing. (017086dd)
+ - ifaces: properly resolve the type of OVS bridges. (64b241c7)
+ - ifaces: fix computation of ignored interfaces. (0871562e)
+ - ifaces: fix up_priority name collision. (ecaff833)
+ - nm: fix skipped connection deactivation. (220f1b4f)
+ - docs: explain route rule replacement. (437164f6)
+ - route rule: apply deletions before additions. (91641e94)
+ - nm: keep IP disabled on unknown controller ports. (19381ae6)
+ - infiniband: reject mixed port types in bonds. (9e125cc7)
+ - tests: add docs about tests. (c1c71b82)
+ - service: reject conflicting YAML basenames. (353429f8)
+ - nm: wait for deactivate-first before activate. (4290a1db)
+ - nm: wait for OVS iface deactivate before delete. (7e46cbc0)
+ - nm: deactivate OVS iface before connection delete. (6790c547)
+ - nm: refresh active connections before activate. (6e511b33)
+ - clib: close C++ linkage block in public header. (42ec6631)
+ - sriov: fix skipped verification for 17-63 VFs. (62c4b39b)
+ - lib: fix gen_revert-only build. (454213a1)
+ - ovs: add regression test for OCP balance-slb. (fb541de5)
+ - ip: ignore auto_route_metric when ipv6 disabled. (509abe6c)
+
 ## [2.2.62] - 2026-08-25
 ### Breaking changes
  - ifaces: deny unknown hsr/ip-tunnel/macsec fields. (15432fe2)
