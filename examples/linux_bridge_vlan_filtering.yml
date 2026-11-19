@@ -1,0 +1,9 @@
+---
+interfaces:
+  - name: br0
+    type: linux-bridge
+    state: up
+    bridge:
+      options:
+        # Enable filtering before any ports are attached.
+        vlan-filtering: true

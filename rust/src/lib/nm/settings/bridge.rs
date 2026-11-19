@@ -26,9 +26,11 @@ pub(crate) fn gen_nm_br_setting(
                 apply_br_options(&mut nm_br_set, br_opts)
             }
 
-            if br_conf.port.is_some() {
+            if let Some(filtering) = br_iface.vlan_filtering() {
+                nm_br_set.vlan_filtering = Some(filtering);
+            } else if br_conf.port.is_some() {
                 nm_br_set.vlan_filtering =
-                    Some(merged_br_iface.vlan_filtering_is_enabled());
+                    Some(merged_br_iface.has_port_vlans());
             }
         }
         nm_conn.bridge = Some(nm_br_set);

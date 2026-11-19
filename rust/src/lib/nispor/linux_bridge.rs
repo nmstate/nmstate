@@ -125,6 +125,7 @@ fn np_bridge_options_to_nmstate(
             np_bridge.multicast_startup_query_count;
         options.multicast_startup_query_interval =
             np_bridge.multicast_startup_query_interval;
+        options.vlan_filtering = np_bridge.vlan_filtering;
         options.vlan_protocol =
             np_bridge.vlan_protocol.as_ref().and_then(|v| match v {
                 nispor::VlanProtocol::Ieee8021Q => {

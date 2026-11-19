@@ -289,6 +289,7 @@ class LinuxBridge(Bridge):
         MULTICAST_STARTUP_QUERY_INTERVAL = (
             "multicast-startup-query-interval"  # centiseconds (1/100s)
         )
+        VLAN_FILTERING = "vlan-filtering"
         VLAN_PROTOCOL = "vlan-protocol"
         VLAN_DEFAULT_PVID = "vlan-default-pvid"
 

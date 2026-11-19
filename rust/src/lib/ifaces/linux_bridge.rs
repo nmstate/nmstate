@@ -57,6 +57,7 @@ use crate::{
 ///         hello-time: 2
 ///         max-age: 20
 ///         priority: 32768
+///       vlan-filtering: false
 ///       vlan-protocol: 802.1q
 ///     port:
 ///     - name: eth1
@@ -104,7 +105,7 @@ impl LinuxBridgeInterface {
             self.bridge.as_ref().and_then(|b| b.options.as_ref())
             && is_desired
         {
-            opts.validate_vlan_default_pvid(self)?;
+            opts.validate_vlan_options(self)?;
         }
 
         if let Some(opts) =
@@ -231,19 +232,19 @@ impl LinuxBridgeInterface {
             })
     }
 
-    pub(crate) fn vlan_filtering_is_enabled(&self) -> bool {
-        if let Some(ports) = self.bridge.as_ref().and_then(|b| b.port.as_ref())
-        {
-            ports.iter().any(|port_conf| {
-                if let Some(vlan_conf) = port_conf.vlan.as_ref() {
-                    vlan_conf != &BridgePortVlanConfig::default()
-                } else {
-                    false
-                }
+    pub(crate) fn vlan_filtering(&self) -> Option<bool> {
+        self.bridge.as_ref()?.options.as_ref()?.vlan_filtering
+    }
+
+    pub(crate) fn has_port_vlans(&self) -> bool {
+        self.bridge
+            .as_ref()
+            .and_then(|b| b.port.as_ref())
+            .is_some_and(|ports| {
+                ports.iter().any(|port| {
+                    port.vlan.as_ref().is_some_and(|vlan| !vlan.is_empty())
+                })
             })
-        } else {
-            false
-        }
     }
 
     // Port name list change is not this function's responsibility, top level
@@ -552,6 +553,17 @@ pub struct LinuxBridgeOptions {
     pub multicast_startup_query_interval: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stp: Option<LinuxBridgeStpOptions>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    /// Enable or disable VLAN filtering on the bridge, even without ports.
+    /// When omitted, NetworkManager profiles keep their current setting unless
+    /// a port list is specified, in which case filtering is inferred from the
+    /// ports' VLAN configuration. An explicit `false` cannot be combined with
+    /// non-empty port VLANs in the desired state.
+    pub vlan_filtering: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vlan_protocol: Option<VlanProtocol>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -598,13 +610,24 @@ impl LinuxBridgeOptions {
         Ok(())
     }
 
-    pub(crate) fn validate_vlan_default_pvid(
+    fn validate_vlan_options(
         &self,
         linux_bridge: &LinuxBridgeInterface,
     ) -> Result<(), NmstateError> {
+        let has_port_vlans = linux_bridge.has_port_vlans();
+        if self.vlan_filtering == Some(false) && has_port_vlans {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Linux bridge {} cannot configure port VLANs with \
+                     vlan-filtering disabled",
+                    linux_bridge.base.name
+                ),
+            ));
+        }
         if let Some(pvid) = self.vlan_default_pvid
             && pvid != 1
-            && !linux_bridge.vlan_filtering_is_enabled()
+            && !self.vlan_filtering.unwrap_or(has_port_vlans)
         {
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
