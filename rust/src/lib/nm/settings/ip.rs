@@ -4,7 +4,7 @@ use std::ops::BitXor;
 
 use super::{
     dns::apply_nm_dns_setting, route::gen_nm_ip_routes,
-    route_rule::gen_nm_ip_rules,
+    route_rule::merge_nm_ip_rules,
 };
 use crate::{
     BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
@@ -125,7 +125,8 @@ fn gen_nm_ipv4_setting(
         nm_setting.gateway = None;
     }
     if let Some(rules) = iface_ip.rules.as_ref() {
-        nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
+        nm_setting.route_rules =
+            merge_nm_ip_rules(rules, false, &nm_setting.route_rules)?;
     }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
@@ -260,7 +261,8 @@ fn gen_nm_ipv6_setting(
         nm_setting.gateway = None;
     }
     if let Some(rules) = iface_ip.rules.as_ref() {
-        nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
+        nm_setting.route_rules =
+            merge_nm_ip_rules(rules, true, &nm_setting.route_rules)?;
     }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
@@ -463,5 +465,214 @@ ipv6:
             nm_conn.ipv6.as_ref().and_then(|s| s.method.as_ref()),
             Some(&NmSettingIpMethod::Disabled)
         );
+    }
+
+    #[cfg(feature = "query_apply")]
+    mod route_rules {
+        use std::collections::HashMap;
+
+        use super::*;
+        use crate::{
+            MergedNetworkState, NetworkState, RouteRuleState,
+            nm::{
+                nm_dbus::NmIpRouteRule,
+                query_apply::{
+                    nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
+                },
+                route_rule::{nm_rule_to_nmstate, store_route_rule_config},
+                settings::route_rule::gen_nm_ip_rules,
+            },
+        };
+
+        fn raw_rule(is_ipv6: bool, index: u8, inverted: bool) -> NmIpRouteRule {
+            let address = if is_ipv6 {
+                format!("2001:db8::{index}")
+            } else {
+                format!("192.0.2.{index}")
+            };
+            let mut raw: HashMap<String, zvariant::OwnedValue> = [
+                (
+                    "family",
+                    zvariant::Value::new(if is_ipv6 { 10i32 } else { 2 }),
+                ),
+                ("priority", zvariant::Value::new(100u32)),
+                ("from", zvariant::Value::new(address)),
+                (
+                    "from-len",
+                    zvariant::Value::new(if is_ipv6 { 128u8 } else { 32 }),
+                ),
+                ("table", zvariant::Value::new(500u32)),
+                ("iifname", zvariant::Value::new("eth1")),
+                ("invert", zvariant::Value::new(inverted)),
+            ]
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), value.try_into().unwrap()))
+            .collect();
+            if inverted {
+                raw.insert(
+                    "oifname".to_string(),
+                    zvariant::Value::new("dummy99").try_into().unwrap(),
+                );
+            }
+            NmIpRouteRule::try_from(raw).unwrap()
+        }
+
+        fn queried_iface(
+            is_ipv6: bool,
+            rules: Vec<NmIpRouteRule>,
+        ) -> (Interface, NmConnection) {
+            let mut iface: Interface =
+                serde_yaml::from_str("name: eth1\ntype: ethernet\nstate: up")
+                    .unwrap();
+            let mut setting = NmSettingIp::default();
+            setting.method = Some(NmSettingIpMethod::Auto);
+            setting.route_rules = rules;
+            let mut conn = NmConnection::default();
+            if is_ipv6 {
+                iface.base_iface_mut().ipv6 = Some(nm_ip_setting_to_nmstate6(
+                    "eth1",
+                    &InterfaceType::Ethernet,
+                    &setting,
+                ));
+                conn.ipv6 = Some(setting);
+            } else {
+                iface.base_iface_mut().ipv4 =
+                    Some(nm_ip_setting_to_nmstate4(&setting));
+                conn.ipv4 = Some(setting);
+            }
+            (iface, conn)
+        }
+
+        fn ip_setting(conn: &NmConnection, is_ipv6: bool) -> &NmSettingIp {
+            if is_ipv6 { &conn.ipv6 } else { &conn.ipv4 }
+                .as_ref()
+                .unwrap()
+        }
+
+        #[test]
+        fn test_preserve_inverted_rules_on_absent_cleanup() {
+            for is_ipv6 in [false, true] {
+                let before = raw_rule(is_ipv6, 1, false);
+                let inverted = raw_rule(is_ipv6, 2, true);
+                let after = raw_rule(is_ipv6, 3, false);
+                let removed = raw_rule(is_ipv6, 2, false);
+                let added = raw_rule(is_ipv6, 4, false);
+                let (iface, mut conn) = queried_iface(
+                    is_ipv6,
+                    vec![
+                        before.clone(),
+                        inverted.clone(),
+                        after.clone(),
+                        after.clone(),
+                        removed.clone(),
+                    ],
+                );
+                let queried = if is_ipv6 {
+                    iface.base_iface().ipv6.as_ref().unwrap().rules.as_ref()
+                } else {
+                    iface.base_iface().ipv4.as_ref().unwrap().rules.as_ref()
+                }
+                .unwrap();
+                assert_eq!(queried.len(), 3);
+
+                let mut current = NetworkState::new();
+                current.rules.config = Some(queried.iter().cloned().collect());
+                current.interfaces.push(iface);
+                let mut absent = nm_rule_to_nmstate(is_ipv6, &removed).unwrap();
+                absent.state = Some(RouteRuleState::Absent);
+                let added = nm_rule_to_nmstate(is_ipv6, &added).unwrap();
+                let mut desired = NetworkState::new();
+                desired.rules.config = Some(vec![absent, added.clone()]);
+                let mut merged = MergedNetworkState::new(
+                    desired,
+                    current,
+                    Default::default(),
+                    false,
+                )
+                .unwrap();
+                store_route_rule_config(&mut merged).unwrap();
+                let iface = merged
+                    .interfaces
+                    .get_iface("eth1", InterfaceType::Ethernet)
+                    .unwrap()
+                    .for_apply
+                    .as_ref()
+                    .unwrap();
+                gen_nm_ip_setting(iface, None, &mut conn).unwrap();
+
+                let normal = gen_nm_ip_rules(
+                    [
+                        nm_rule_to_nmstate(is_ipv6, &before).unwrap(),
+                        nm_rule_to_nmstate(is_ipv6, &after).unwrap(),
+                        added,
+                    ]
+                    .iter(),
+                    is_ipv6,
+                )
+                .unwrap();
+                let remaining = &ip_setting(&conn, is_ipv6).route_rules;
+                assert_eq!(
+                    remaining,
+                    &[
+                        normal[0].clone(),
+                        inverted.clone(),
+                        normal[1].clone(),
+                        normal[2].clone()
+                    ]
+                );
+                assert_eq!(
+                    remaining[1].to_value().unwrap(),
+                    inverted.to_value().unwrap()
+                );
+                let serialized = zvariant::OwnedValue::try_from(
+                    remaining[1].to_value().unwrap(),
+                )
+                .unwrap();
+                let restored = NmIpRouteRule::try_from(
+                    HashMap::<String, zvariant::OwnedValue>::try_from(
+                        serialized,
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                assert_eq!(restored, inverted);
+            }
+        }
+
+        #[test]
+        fn test_preserve_inverted_rules_on_ip_rebuild() {
+            for is_ipv6 in [false, true] {
+                let inverted = raw_rule(is_ipv6, 1, true);
+                let normal = raw_rule(is_ipv6, 2, false);
+                let (mut iface, mut conn) = queried_iface(
+                    is_ipv6,
+                    vec![normal.clone(), inverted.clone()],
+                );
+                if is_ipv6 {
+                    iface.base_iface_mut().ipv6.as_mut().unwrap().auto_dns =
+                        Some(false);
+                } else {
+                    iface.base_iface_mut().ipv4.as_mut().unwrap().auto_dns =
+                        Some(false);
+                }
+                gen_nm_ip_setting(&iface, None, &mut conn).unwrap();
+
+                let expected = gen_nm_ip_rules(
+                    [&nm_rule_to_nmstate(is_ipv6, &normal).unwrap()],
+                    is_ipv6,
+                )
+                .unwrap();
+                let setting = ip_setting(&conn, is_ipv6);
+                assert_eq!(setting.ignore_auto_dns, Some(true));
+                assert_eq!(
+                    setting.route_rules,
+                    [expected[0].clone(), inverted.clone()]
+                );
+                assert_eq!(
+                    setting.route_rules[1].to_value().unwrap(),
+                    inverted.to_value().unwrap()
+                );
+            }
+        }
     }
 }

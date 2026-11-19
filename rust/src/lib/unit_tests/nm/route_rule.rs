@@ -37,6 +37,43 @@ fn get_routing_rules(iface: &Interface, ipv6: bool) -> Vec<RouteRuleEntry> {
 }
 
 #[test]
+fn test_present_external_rule_is_stored_in_profile() {
+    for (family, source) in [
+        (AddressFamily::IPv4, "192.0.2.16/32"),
+        (AddressFamily::IPv6, "2001:db8:1::16/128"),
+    ] {
+        let rule = RouteRuleEntry {
+            family: Some(family),
+            ip_from: Some(source.to_string()),
+            priority: Some(100),
+            table_id: Some(500),
+            iif: Some(TEST_NIC.to_string()),
+            ..Default::default()
+        };
+        let mut current = NetworkState::new();
+        current.interfaces.push(new_test_nic_with_static_ip());
+        current.rules.config = Some(vec![rule.clone()]);
+        let mut desired = NetworkState::new();
+        desired.rules = current.rules.clone();
+        let mut merged = MergedNetworkState::new(
+            desired,
+            current,
+            Default::default(),
+            false,
+        )
+        .unwrap();
+
+        store_route_rule_config(&mut merged).unwrap();
+
+        let iface = get_iface(&merged, TEST_NIC, InterfaceType::Ethernet);
+        assert_eq!(
+            get_routing_rules(iface, family == AddressFamily::IPv6),
+            vec![rule]
+        );
+    }
+}
+
+#[test]
 fn test_add_rules_to_new_interface() {
     let mut cur_net_state = NetworkState::new();
     cur_net_state.interfaces.push(new_eth_iface(TEST_NIC));
@@ -541,4 +578,175 @@ fn test_route_rule_iif_on_disconnected_iface() {
     assert_eq!(ipv4_rules.len(), 1);
     assert_eq!(ipv4_rules[0].iif.as_deref(), Some("eth1"));
     assert_eq!(ipv4_rules[0].table_id, Some(50));
+}
+
+fn current_with_profile_rule(rule: &RouteRuleEntry) -> NetworkState {
+    let mut current: NetworkState = serde_yaml::from_str(
+        r"interfaces:
+        - name: lo
+          type: loopback
+          state: up
+          ipv4:
+            enabled: true
+            address: [{ip: 127.0.0.1, prefix-length: 8}]
+          ipv6:
+            enabled: true
+            address: [{ip: '::1', prefix-length: 128}]",
+    )
+    .unwrap();
+    let mut owner = new_test_nic_with_static_ip();
+    let rules = Some([rule.clone()].into_iter().collect());
+    if rule.is_ipv6() {
+        owner.base_iface_mut().ipv6.as_mut().unwrap().rules = rules;
+    } else {
+        owner.base_iface_mut().ipv4.as_mut().unwrap().rules = rules;
+    }
+    current.interfaces.push(owner);
+    current.rules.config = Some(vec![rule.clone()]);
+    current
+}
+
+#[test]
+fn test_identical_rule_reuses_existing_profile_owner() {
+    for family in [AddressFamily::IPv4, AddressFamily::IPv6] {
+        let rule = RouteRuleEntry {
+            family: Some(family),
+            priority: Some(100),
+            table_id: Some(500),
+            ..Default::default()
+        };
+        for duplicate_owner in [false, true] {
+            let mut current = current_with_profile_rule(&rule);
+            if duplicate_owner {
+                let mut second =
+                    current.interfaces.kernel_ifaces[TEST_NIC].clone();
+                second.base_iface_mut().name = "eth2".to_string();
+                current.interfaces.push(second);
+            }
+            let mut desired = NetworkState::new();
+            desired.rules = current.rules.clone();
+            let mut merged = MergedNetworkState::new(
+                desired,
+                current,
+                Default::default(),
+                false,
+            )
+            .unwrap();
+
+            store_route_rule_config(&mut merged).unwrap();
+
+            assert_eq!(
+                get_routing_rules(
+                    get_iface(&merged, TEST_NIC, InterfaceType::Ethernet),
+                    family == AddressFamily::IPv6,
+                ),
+                vec![rule.clone()]
+            );
+            for name in ["lo", "eth2"] {
+                if let Some(iface) = merged.interfaces.kernel_ifaces.get(name) {
+                    assert!(iface.for_apply.is_none());
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn test_rule_owner_requires_matching_selectors() {
+    for family in [AddressFamily::IPv4, AddressFamily::IPv6] {
+        let rule = RouteRuleEntry {
+            family: Some(family),
+            priority: Some(100),
+            table_id: Some(500),
+            ..Default::default()
+        };
+        for suppress in [false, true] {
+            let mut owned = rule.clone();
+            if suppress {
+                owned.suppress_prefix_length = Some(0);
+            } else {
+                owned.iif = Some("lo".to_string());
+            }
+            let current = current_with_profile_rule(&owned);
+            let mut desired = NetworkState::new();
+            desired.rules.config = Some(vec![rule.clone()]);
+            let mut merged = MergedNetworkState::new(
+                desired,
+                current,
+                Default::default(),
+                false,
+            )
+            .unwrap();
+
+            store_route_rule_config(&mut merged).unwrap();
+
+            assert!(
+                merged.interfaces.kernel_ifaces[TEST_NIC]
+                    .for_apply
+                    .is_none()
+            );
+            assert_eq!(
+                get_routing_rules(
+                    get_iface(&merged, "lo", InterfaceType::Loopback),
+                    family == AddressFamily::IPv6,
+                ),
+                vec![rule.clone()]
+            );
+        }
+    }
+}
+
+#[test]
+fn test_existing_rule_owner_precedes_desired_table_interface() {
+    for family in [AddressFamily::IPv4, AddressFamily::IPv6] {
+        let rule = RouteRuleEntry {
+            family: Some(family),
+            priority: Some(100),
+            table_id: Some(500),
+            ..Default::default()
+        };
+        let mut current = current_with_profile_rule(&rule);
+        let mut unrelated = new_test_nic_with_static_ip();
+        unrelated.base_iface_mut().name = "eth2".to_string();
+        current.interfaces.push(unrelated);
+        let mut desired: NetworkState = serde_yaml::from_str(
+            r"interfaces:
+            - name: eth2
+              type: ethernet
+              state: up
+              ipv4:
+                enabled: true
+                dhcp: true
+                auto-route-table-id: 500
+              ipv6:
+                enabled: true
+                dhcp: true
+                autoconf: true
+                auto-route-table-id: 500",
+        )
+        .unwrap();
+        desired.rules = current.rules.clone();
+        let mut merged = MergedNetworkState::new(
+            desired,
+            current,
+            Default::default(),
+            false,
+        )
+        .unwrap();
+
+        store_route_rule_config(&mut merged).unwrap();
+
+        assert_eq!(
+            get_routing_rules(
+                get_iface(&merged, TEST_NIC, InterfaceType::Ethernet),
+                family == AddressFamily::IPv6,
+            ),
+            vec![rule]
+        );
+        let unrelated =
+            get_iface(&merged, "eth2", InterfaceType::Ethernet).base_iface();
+        assert!(unrelated.ipv4.as_ref().unwrap().rules.is_none());
+        assert!(unrelated.ipv6.as_ref().unwrap().rules.is_none());
+        assert!(merged.interfaces.kernel_ifaces["lo"].for_apply.is_none());
+    }
 }

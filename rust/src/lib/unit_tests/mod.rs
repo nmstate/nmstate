@@ -36,6 +36,8 @@ mod ip;
 mod ip_tunnel;
 #[cfg(test)]
 mod ipsec;
+#[cfg(all(test, feature = "query_apply"))]
+mod kernel_route_rule;
 #[cfg(test)]
 mod lldp;
 #[cfg(test)]
