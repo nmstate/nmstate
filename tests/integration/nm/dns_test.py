@@ -411,3 +411,32 @@ def test_use_global_dns_even_for_with_static_ip(
         cmdlib.exec_cmd("nmcli -g ipv4.dns c show eth1".split())[1].strip()
         == "192.0.2.1,192.0.2.2"
     )
+
+
+@pytest.fixture
+def eth1_eth2_iface_dns_with_priority(eth1_up, eth2_up):
+    for iface_name, ip, dns_srv, dns_priority in (
+        ("eth1", "192.0.2.251/24", "192.0.2.1", 0),
+        ("eth2", "198.51.100.251/24", "198.51.100.1", 1),
+    ):
+        cmdlib.exec_cmd(f"nmcli c del {iface_name}".split(), check=False)
+        cmdlib.exec_cmd(
+            f"nmcli c add type ethernet ifname {iface_name} "
+            f"connection.id {iface_name} ipv4.method manual "
+            f"ipv4.address {ip} ipv4.dns {dns_srv} "
+            f"ipv4.dns-priority {dns_priority} "
+            "ipv6.method disabled".split(),
+            check=True,
+        )
+        cmdlib.exec_cmd(f"nmcli c up {iface_name}".split(), check=True)
+    yield
+    cmdlib.exec_cmd("nmcli c del eth1 eth2".split())
+
+
+# https://github.com/nmstate/nmstate/issues/3225
+def test_show_iface_dns_treat_zero_priority_as_nm_default(
+    eth1_eth2_iface_dns_with_priority,
+):
+    servers = libnmstate.show()[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+
+    assert servers.index("198.51.100.1") < servers.index("192.0.2.1")

@@ -19,6 +19,8 @@ use crate::{
     NmstateError, ip::is_ipv6_unicast_link_local,
 };
 
+const NM_DEFAULT_DNS_PRIORITY: i32 = 100;
+
 pub(crate) fn nm_dns_to_nmstate(
     iface_name: &str,
     nm_ip_setting: &NmSettingIp,
@@ -163,8 +165,7 @@ async fn retrieve_configured_dns_info(
                 nm_ifaces_dns_confs.push(dns_conf);
             }
         }
-        nm_ifaces_dns_confs
-            .sort_unstable_by_key(|d| d.priority.unwrap_or_default());
+        sort_dns_confs_by_nm_priority(&mut nm_ifaces_dns_confs);
 
         for dns_conf in nm_ifaces_dns_confs {
             if let Some(srvs) = dns_conf.server.as_ref() {
@@ -206,6 +207,18 @@ async fn retrieve_configured_dns_info(
         options: (!options.is_empty()).then_some(options),
         ..Default::default()
     })
+}
+
+// Sort in the order NetworkManager uses for DNS configurations: lower
+// `dns-priority` first. When `dns-priority` is 0, NetworkManager uses its
+// default: 50 for VPN connections and 100 for others. VPN connections are
+// userspace interfaces which are not included in kernel interfaces, hence only
+// the non-VPN default is considered here.
+fn sort_dns_confs_by_nm_priority(dns_confs: &mut [&DnsClientState]) {
+    dns_confs.sort_unstable_by_key(|d| match d.priority.unwrap_or_default() {
+        0 => NM_DEFAULT_DNS_PRIORITY,
+        priority => priority,
+    });
 }
 
 fn nm_dns_srvs_to_nmstate(nm_dns_entry: &NmDnsEntry) -> Vec<String> {
@@ -395,4 +408,56 @@ fn cur_dns_ifaces_still_valid_for_dns(
         }
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn gen_dns_conf(server: &str, priority: Option<i32>) -> DnsClientState {
+        DnsClientState {
+            server: Some(vec![server.to_string()]),
+            priority,
+            ..Default::default()
+        }
+    }
+
+    fn get_sorted_servers(dns_confs: &[DnsClientState]) -> Vec<String> {
+        let mut dns_confs: Vec<&DnsClientState> = dns_confs.iter().collect();
+        sort_dns_confs_by_nm_priority(&mut dns_confs);
+        dns_confs
+            .iter()
+            .filter_map(|d| d.server.as_ref())
+            .flatten()
+            .cloned()
+            .collect()
+    }
+
+    #[test]
+    fn test_sort_dns_confs_zero_priority_use_nm_default() {
+        let dns_confs = [
+            gen_dns_conf("192.0.2.100", Some(0)),
+            gen_dns_conf("192.0.2.150", Some(150)),
+            gen_dns_conf("192.0.2.1", Some(1)),
+        ];
+
+        assert_eq!(
+            get_sorted_servers(&dns_confs),
+            vec!["192.0.2.1", "192.0.2.100", "192.0.2.150"]
+        );
+    }
+
+    #[test]
+    fn test_sort_dns_confs_unset_priority_use_nm_default() {
+        let dns_confs = [
+            gen_dns_conf("192.0.2.100", None),
+            gen_dns_conf("192.0.2.40", Some(40)),
+            gen_dns_conf("192.0.2.255", Some(-1)),
+        ];
+
+        assert_eq!(
+            get_sorted_servers(&dns_confs),
+            vec!["192.0.2.255", "192.0.2.40", "192.0.2.100"]
+        );
+    }
 }
