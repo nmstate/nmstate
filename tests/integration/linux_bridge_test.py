@@ -486,6 +486,25 @@ def test_activate_empty_bridge_does_not_blocked_by_dhcp():
 class TestVlanFiltering:
     ACCESS_TAG = 300
 
+    def test_explicit_vlan_filtering_without_ports(self):
+        options = {LinuxBridge.Options.VLAN_FILTERING: True}
+        with linux_bridge(
+            TEST_BRIDGE0, {LinuxBridge.OPTIONS_SUBTREE: options}
+        ) as state:
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
+            with dummy0_as_port(TEST_BRIDGE0):
+                libnmstate.apply(state)
+                assert _vlan_filtering_enabled(TEST_BRIDGE0)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
+
+            exec_cmd(("nmcli", "con", "down", TEST_BRIDGE0), check=True)
+            exec_cmd(("nmcli", "con", "up", TEST_BRIDGE0), check=True)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
+
+            options[LinuxBridge.Options.VLAN_FILTERING] = False
+            libnmstate.apply(state)
+            assert not _vlan_filtering_enabled(TEST_BRIDGE0)
+
     @pytest.fixture
     def bridge_with_trunk_port_and_native_config(self, port0_up):
         trunk_port_state = generate_vlan_filtering_config(
@@ -657,6 +676,21 @@ class TestVlanFiltering:
             TEST_BRIDGE0, bridge_config_subtree
         ) as desired_state:
             assertlib.assert_state(desired_state)
+            assert not _vlan_filtering_enabled(TEST_BRIDGE0)
+
+    def test_explicitly_disable_vlan_filtering_on_existing_bridge(
+        self, bridge_with_access_port_config
+    ):
+        # A port with an existing VLAN would otherwise keep filtering enabled.
+        with linux_bridge(
+            TEST_BRIDGE0,
+            {
+                LinuxBridge.OPTIONS_SUBTREE: {
+                    LinuxBridge.Options.VLAN_FILTERING: False
+                },
+                LinuxBridge.PORT_SUBTREE: [{LinuxBridge.Port.NAME: ETH1}],
+            },
+        ):
             assert not _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_partially_disable_vlan_filtering_on_bridge(
@@ -1162,7 +1196,11 @@ def test_create_and_remove_linux_bridge_kernel_mode():
     bridge_name = TEST_BRIDGE0
     with linux_bridge(
         bridge_name,
-        bridge_subtree_state=None,
+        bridge_subtree_state={
+            LinuxBridge.OPTIONS_SUBTREE: {
+                LinuxBridge.Options.VLAN_FILTERING: True
+            }
+        },
         kernel_mode=True,
         create=False,
     ) as desired_state:
@@ -1173,6 +1211,7 @@ def test_create_and_remove_linux_bridge_kernel_mode():
             desired_state,
             kernel_only=True,
         )
+        assert _vlan_filtering_enabled(bridge_name)
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)

@@ -356,6 +356,45 @@ bridge:
 }
 
 #[test]
+fn test_linux_bridge_disable_filtering_with_port_vlans() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r"
+        name: br0
+        type: linux-bridge
+        bridge:
+          options:
+            vlan-filtering: false
+          port:
+          - name: eth1
+            vlan: {mode: access, tag: 100}
+        ",
+    )
+    .unwrap();
+
+    assert_eq!(
+        desired.sanitize(true).unwrap_err().kind(),
+        ErrorKind::InvalidArgument
+    );
+}
+
+#[test]
+fn test_linux_bridge_default_pvid_with_explicit_filtering() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r"
+        name: br0
+        type: linux-bridge
+        bridge:
+          options:
+            vlan-filtering: true
+            vlan-default-pvid: 100
+        ",
+    )
+    .unwrap();
+
+    desired.sanitize(true).unwrap();
+}
+
+#[test]
 fn test_linux_bridge_vlan_trunk_tags_yaml_serilize() {
     let yml_content = r"name: br0
 type: linux-bridge
@@ -431,7 +470,7 @@ bridge:
         MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
 
     if let Interface::LinuxBridge(iface) = &merged_iface.merged {
-        assert!(iface.vlan_filtering_is_enabled());
+        assert!(iface.has_port_vlans());
     } else {
         panic!("Expecting a LinuxBridge but got {:?}", merged_iface.merged);
     }

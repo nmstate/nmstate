@@ -149,6 +149,12 @@ fn nmstate_iface_to_np(
         np_iface.veth = nms_veth_conf_to_np(eth_iface.veth.as_ref());
     } else if let Interface::Vlan(vlan_iface) = nms_iface {
         np_iface.vlan = nms_vlan_conf_to_np(vlan_iface.vlan.as_ref());
+    } else if let Interface::LinuxBridge(br_iface) = nms_iface
+        && let Some(filtering) = br_iface.vlan_filtering()
+    {
+        let mut bridge = nispor::BridgeConf::default();
+        bridge.vlan_filtering = Some(filtering);
+        np_iface.bridge = Some(bridge);
     }
 
     Ok(np_iface)
