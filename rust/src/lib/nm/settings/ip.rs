@@ -3,7 +3,8 @@
 use std::ops::BitXor;
 
 use super::{
-    dns::apply_nm_dns_setting, route::gen_nm_ip_routes,
+    dns::{apply_nm_dns_setting, remove_nm_dns_srvs_and_searches},
+    route::gen_nm_ip_routes,
     route_rule::gen_nm_ip_rules,
 };
 use crate::{
@@ -129,6 +130,11 @@ fn gen_nm_ipv4_setting(
     }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
+    }
+    // NetworkManager rejects DNS nameservers and searches for the `disabled`
+    // method, so discard any inherited from the existing profile.
+    if nm_setting.method == Some(NmSettingIpMethod::Disabled) {
+        remove_nm_dns_srvs_and_searches(&mut nm_setting);
     }
     nm_conn.ipv4 = Some(nm_setting);
     Ok(())
@@ -264,6 +270,15 @@ fn gen_nm_ipv6_setting(
     }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
+    }
+    // NetworkManager rejects DNS nameservers and searches for the `disabled`
+    // and `link-local` methods, so discard any inherited from the existing
+    // profile.
+    if matches!(
+        nm_setting.method,
+        Some(NmSettingIpMethod::Disabled | NmSettingIpMethod::LinkLocal)
+    ) {
+        remove_nm_dns_srvs_and_searches(&mut nm_setting);
     }
     nm_conn.ipv6 = Some(nm_setting);
     Ok(())
@@ -462,6 +477,110 @@ ipv6:
         assert_eq!(
             nm_conn.ipv6.as_ref().and_then(|s| s.method.as_ref()),
             Some(&NmSettingIpMethod::Disabled)
+        );
+    }
+
+    fn gen_nm_conn_with_dns() -> NmConnection {
+        let mut nm_setting = NmSettingIp::default();
+        nm_setting.method = Some(NmSettingIpMethod::Auto);
+        nm_setting.dns = Some(vec!["2001:db8::53".to_string()]);
+        nm_setting.dns_search = Some(vec!["example.org".to_string()]);
+        nm_setting.dns_options = Some(vec!["rotate".to_string()]);
+        let mut nm_conn = NmConnection::default();
+        nm_conn.ipv4 = Some(nm_setting.clone());
+        nm_conn.ipv6 = Some(nm_setting);
+        nm_conn
+    }
+
+    fn assert_nm_dns_srvs_and_searches_removed(nm_setting: &NmSettingIp) {
+        assert_eq!(nm_setting.dns, None);
+        assert_eq!(nm_setting.dns_search, None);
+        assert_eq!(nm_setting.dns_options, Some(vec!["rotate".to_string()]));
+    }
+
+    #[test]
+    fn test_gen_nm_ipv6_disabled_remove_existing_dns() {
+        let iface = gen_ipv6_disabled_iface("eth1", "ethernet");
+        let mut nm_conn = gen_nm_conn_with_dns();
+
+        gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
+
+        let nm_setting = nm_conn.ipv6.as_ref().unwrap();
+        assert_eq!(nm_setting.method, Some(NmSettingIpMethod::Disabled));
+        assert_nm_dns_srvs_and_searches_removed(nm_setting);
+    }
+
+    #[test]
+    fn test_gen_nm_ipv6_link_local_remove_existing_dns() {
+        let iface: Interface = serde_yaml::from_str(
+            r#"---
+name: eth1
+type: ethernet
+state: up
+ipv6:
+  enabled: true
+  dhcp: false
+  autoconf: false
+"#,
+        )
+        .unwrap();
+        let mut nm_conn = gen_nm_conn_with_dns();
+
+        gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
+
+        let nm_setting = nm_conn.ipv6.as_ref().unwrap();
+        assert_eq!(nm_setting.method, Some(NmSettingIpMethod::LinkLocal));
+        assert_nm_dns_srvs_and_searches_removed(nm_setting);
+    }
+
+    #[test]
+    fn test_gen_nm_ipv4_disabled_remove_existing_dns() {
+        let iface: Interface = serde_yaml::from_str(
+            r#"---
+name: eth1
+type: ethernet
+state: up
+ipv4:
+  enabled: false
+"#,
+        )
+        .unwrap();
+        let mut nm_conn = gen_nm_conn_with_dns();
+
+        gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
+
+        let nm_setting = nm_conn.ipv4.as_ref().unwrap();
+        assert_eq!(nm_setting.method, Some(NmSettingIpMethod::Disabled));
+        assert_nm_dns_srvs_and_searches_removed(nm_setting);
+    }
+
+    #[test]
+    fn test_gen_nm_ipv6_static_keep_existing_dns() {
+        let iface: Interface = serde_yaml::from_str(
+            r#"---
+name: eth1
+type: ethernet
+state: up
+ipv6:
+  enabled: true
+  dhcp: false
+  autoconf: false
+  address:
+  - ip: 2001:db8::1
+    prefix-length: 64
+"#,
+        )
+        .unwrap();
+        let mut nm_conn = gen_nm_conn_with_dns();
+
+        gen_nm_ip_setting(&iface, None, &mut nm_conn).unwrap();
+
+        let nm_setting = nm_conn.ipv6.as_ref().unwrap();
+        assert_eq!(nm_setting.method, Some(NmSettingIpMethod::Manual));
+        assert_eq!(nm_setting.dns, Some(vec!["2001:db8::53".to_string()]));
+        assert_eq!(
+            nm_setting.dns_search,
+            Some(vec!["example.org".to_string()])
         );
     }
 }
