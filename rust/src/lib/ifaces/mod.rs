@@ -24,6 +24,7 @@ mod mac_vlan;
 mod mac_vtap;
 mod macsec;
 mod ovs;
+pub(crate) mod qeth_vnicc;
 mod sriov;
 mod vlan;
 
@@ -71,6 +72,7 @@ pub use ovs::{
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
     OvsBridgeStpOptions, OvsDpdkConfig, OvsInterface, OvsPatchConfig,
 };
+pub use qeth_vnicc::{QethConfig, VniccConfig};
 pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{
     VlanConfig, VlanInterface, VlanProtocol, VlanQosMapping,
