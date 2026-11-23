@@ -1424,9 +1424,13 @@ fn warn_ovs_local_port_not_added(br_name: &str, reason: &str) {
 
 // An OVS bridge and its local port share the same name. `bridge` is not a
 // property of OVS interfaces, so an untyped interface holding it can only
-// refer to the OVS bridge. An untyped interface only setting the state also
-// refers to the bridge when the other match is its local port, as it did
-// before the local port was added automatically. Neither applies when the
+// refer to the OVS bridge. Other properties can be valid for both. Before the
+// local port was added automatically, an untyped interface with the bridge
+// name often matched only the bridge. To keep such interfaces working,
+// resolve them to the bridge when the other match is its local port and all
+// their properties take effect on an OVS bridge. Properties that the bridge
+// drops or rejects, like `ipv4`, `mtu` or `mac-address`, are meant for the
+// local port, so the interface stays ambiguous. Neither applies when the
 // bridge is already in the desired state.
 fn find_ovs_bridge_for_untyped_iface<'a>(
     iface_name: &str,
@@ -1459,15 +1463,32 @@ fn find_ovs_bridge_for_untyped_iface<'a>(
     if br_candidate.get("bridge").is_some() {
         return Some(br_candidate);
     }
-    let is_state_only = br_candidate.as_object().is_some_and(|o| {
-        o.keys()
-            .all(|k| matches!(k.as_str(), "name" | "type" | "state"))
+    let all_props_apply_to_bridge = br_candidate.as_object().is_some_and(|o| {
+        o.keys().all(|k| {
+            matches!(
+                k.as_str(),
+                "name"
+                    | "type"
+                    | "state"
+                    | "description"
+                    | "profile-name"
+                    | "ovs-db"
+            )
+        })
     });
     let has_local_port = cur_ifaces
         .get_iface(iface_name, InterfaceType::OvsBridge)
         .and_then(|i| i.ports())
         .is_some_and(|ports| ports.contains(&iface_name));
-    (is_state_only && has_local_port).then_some(br_candidate)
+    if !all_props_apply_to_bridge || !has_local_port {
+        return None;
+    }
+    log::info!(
+        "Interface {iface_name} without type matches both the OVS bridge and \
+         its local port, assuming the OVS bridge. To configure the local \
+         port, set the type to ovs-interface"
+    );
+    Some(br_candidate)
 }
 
 // Special cases:

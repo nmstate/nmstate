@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use crate::{
     BondMode, ErrorKind, HsrProtocol, Interface, InterfaceState, InterfaceType,
     Interfaces, MergedInterface, MergedInterfaces,
@@ -388,6 +390,65 @@ fn test_ifaces_resolve_unknown_state_only_iface_to_ovs_bridge() {
     }
 }
 
+// An untyped interface whose properties all take effect on an OVS bridge
+// refers to the bridge, as it did before the local port was added.
+#[test]
+fn test_ifaces_resolve_unknown_iface_with_bridge_props_to_ovs_bridge() {
+    for (desired_yaml, expected_description, expected_profile_name) in [
+        (
+            r"---
+- name: br0
+  ovs-db:
+    external_ids:
+      foo: abc
+",
+            None,
+            None,
+        ),
+        (
+            r"---
+- name: br0
+  state: up
+  description: test bridge
+  profile-name: br0-profile
+  ovs-db:
+    external_ids:
+      foo: abc
+    other_config:
+      in-band-queue: 99
+",
+            Some("test bridge"),
+            Some("br0-profile"),
+        ),
+    ] {
+        let current =
+            serde_yaml::from_str::<Interfaces>(OVS_BR0_WITH_LOCAL_PORT_CURRENT)
+                .unwrap();
+        let desired = serde_yaml::from_str::<Interfaces>(desired_yaml).unwrap();
+
+        let merged_ifaces =
+            MergedInterfaces::new(desired, current, Default::default(), false)
+                .unwrap();
+
+        let br_iface = merged_ifaces
+            .get_iface("br0", InterfaceType::OvsBridge)
+            .unwrap();
+        assert!(br_iface.is_desired());
+        let br_base = br_iface.for_apply.as_ref().unwrap().base_iface();
+        assert_eq!(
+            br_base.ovsdb.as_ref().unwrap().get_external_ids(),
+            HashMap::from([("foo", "abc")])
+        );
+        assert_eq!(br_base.description.as_deref(), expected_description);
+        assert_eq!(br_base.profile_name.as_deref(), expected_profile_name);
+        let local_port = merged_ifaces
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap();
+        assert!(!local_port.is_desired());
+        assert!(local_port.for_apply.is_none());
+    }
+}
+
 fn assert_resolve_unknown_iface_is_ambiguous(
     current_yaml: &str,
     desired_yaml: &str,
@@ -411,6 +472,11 @@ fn test_ifaces_resolve_unknown_iface_with_other_props_is_ambiguous() {
     for desired_yaml in [
         "- name: br0\n  mtu: 1500",
         "- name: br0\n  state: up\n  ipv4:\n    enabled: false",
+        "- name: br0\n  mtu: 1500\n  ovs-db:\n    external_ids:\n      foo: \
+         abc",
+        "- name: br0\n  description: test bridge\n  ipv6:\n    enabled: false",
+        "- name: br0\n  profile-name: br0-profile\n  mac-address: \
+         00:11:22:33:44:55",
     ] {
         assert_resolve_unknown_iface_is_ambiguous(
             OVS_BR0_WITH_LOCAL_PORT_CURRENT,
