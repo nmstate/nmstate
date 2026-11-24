@@ -1009,7 +1009,7 @@ impl MergedInterfaces {
     }
 
     fn ensure_ovs_local_port(&mut self) -> Result<(), NmstateError> {
-        let mut to_inject: Vec<(String, Vec<String>)> = Vec::new();
+        let mut to_inject: Vec<(String, Vec<String>, bool)> = Vec::new();
         for iface in self.user_ifaces.values().filter(|i| {
             i.is_desired()
                 && i.merged.is_up()
@@ -1123,26 +1123,40 @@ impl MergedInterfaces {
                 } else {
                     Vec::new()
                 };
-            match iface
+            let is_existing_port = match iface
                 .current
                 .as_ref()
                 .map(|c| c.ports().unwrap_or_default().contains(&br_name))
             {
-                Some(true) => log::info!(
-                    "Keeping local port {br_name} of OVS bridge {br_name}, \
-                     which is missing in the desired port list"
-                ),
-                Some(false) => log::warn!(
-                    "OVS bridge {br_name} is missing the local port. Adding \
-                     it to avoid connectivity problems."
-                ),
-                None => log::info!(
-                    "Adding local port {br_name} to new OVS bridge {br_name}"
-                ),
-            }
-            to_inject.push((br_name.to_string(), ctrl_prop_ports));
+                Some(true) => {
+                    log::info!(
+                        "Keeping local port {br_name} of OVS bridge \
+                         {br_name}, which is missing in the desired port list"
+                    );
+                    true
+                }
+                Some(false) => {
+                    log::warn!(
+                        "OVS bridge {br_name} is missing the local port. \
+                         Adding it to avoid connectivity problems."
+                    );
+                    false
+                }
+                None => {
+                    log::info!(
+                        "Adding local port {br_name} to new OVS bridge \
+                         {br_name}"
+                    );
+                    false
+                }
+            };
+            to_inject.push((
+                br_name.to_string(),
+                ctrl_prop_ports,
+                is_existing_port,
+            ));
         }
-        for (br_name, ctrl_prop_ports) in to_inject {
+        for (br_name, ctrl_prop_ports, is_existing_port) in to_inject {
             if let Some(iface) = self
                 .user_ifaces
                 .get_mut(&(br_name.clone(), InterfaceType::OvsBridge))
@@ -1150,7 +1164,25 @@ impl MergedInterfaces {
                 iface.add_local_port(&ctrl_prop_ports);
                 // The generated port is a literal kernel interface name,
                 // not a profile or alternative name reference.
-                self.iface_name_search.kernel_nics.insert(br_name);
+                self.iface_name_search.kernel_nics.insert(br_name.clone());
+            }
+            // An existing local port is not attached by this apply, so
+            // `handle_changed_ports()` does not include it. Apply it along
+            // with its bridge anyway, so that its profile gets the same
+            // persistence of the bridge one. Otherwise, after a memory-only
+            // apply followed by a persistent one, the local port would be lost
+            // on reboot.
+            if is_existing_port
+                && let Some(local_port) = self.kernel_ifaces.get_mut(&br_name)
+                && !local_port.is_changed()
+            {
+                self.insert_order
+                    .push((br_name.clone(), InterfaceType::OvsInterface));
+                local_port.apply_ctrller_change(
+                    br_name,
+                    Some(InterfaceType::OvsBridge),
+                    InterfaceState::Up,
+                )?;
             }
         }
 
