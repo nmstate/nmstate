@@ -4,10 +4,53 @@ use super::super::nm_dbus::NmIpRouteRule;
 use crate::{
     ErrorKind, InterfaceIpAddr, NmstateError, RouteRuleEntry,
     ip::{AddressFamily, is_ipv6_addr},
+    nm::route_rule::{nm_rule_to_nmstate, route_rule_matches},
 };
 
 const AF_INET6: i32 = 10;
 const AF_INET: i32 = 2;
+
+pub(crate) fn merge_nm_ip_rules<'a>(
+    rules: impl IntoIterator<Item = &'a RouteRuleEntry>,
+    is_ipv6: bool,
+    current: &[NmIpRouteRule],
+) -> Result<Vec<NmIpRouteRule>, NmstateError> {
+    let mut pending = Vec::new();
+    for rule in rules {
+        pending.extend(
+            gen_nm_ip_rules([rule], is_ipv6)?
+                .into_iter()
+                .map(|nm_rule| (rule, nm_rule)),
+        );
+    }
+    let mut unmatched = vec![true; pending.len()];
+    let mut ret = Vec::new();
+    for nm_rule in current {
+        if nm_rule.is_inverted() {
+            ret.push(nm_rule.clone());
+        } else if let Some(rule) = nm_rule_to_nmstate(is_ipv6, nm_rule) {
+            let mut matched = false;
+            for ((pending, _), unmatched) in
+                pending.iter().zip(unmatched.iter_mut())
+            {
+                if route_rule_matches(&rule, pending) {
+                    matched = true;
+                    *unmatched = false;
+                }
+            }
+            if matched && !ret.contains(nm_rule) {
+                ret.push(nm_rule.clone());
+            }
+        }
+    }
+    ret.extend(
+        pending
+            .into_iter()
+            .zip(unmatched)
+            .filter_map(|((_, rule), unmatched)| unmatched.then_some(rule)),
+    );
+    Ok(ret)
+}
 
 pub(crate) fn gen_nm_ip_rules<'a>(
     rules: impl IntoIterator<Item = &'a RouteRuleEntry>,

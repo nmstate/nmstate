@@ -3,13 +3,15 @@
 use std::{collections::HashSet, ops::BitXor};
 
 use super::{
-    super::nm_dbus::{NmIpRouteRuleAction, NmSettingIp, NmSettingIpMethod},
+    super::{
+        nm_dbus::{NmSettingIp, NmSettingIpMethod},
+        route_rule::nm_rule_to_nmstate,
+    },
     dns::nm_dns_to_nmstate,
 };
 use crate::{
-    AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpv4, InterfaceIpv6,
-    InterfaceType, Ipv6AddrGenMode, RouteEntry, RouteRuleAction,
-    RouteRuleEntry, WaitIp,
+    Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpv4, InterfaceIpv6, InterfaceType,
+    Ipv6AddrGenMode, RouteEntry, RouteRuleEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -263,71 +265,56 @@ fn nm_rules_to_nmstate(
     is_ipv6: bool,
     ip_set: &NmSettingIp,
 ) -> Option<HashSet<RouteRuleEntry>> {
-    let mut ret = HashSet::new();
-    for nm_rule in ip_set.route_rules.as_slice() {
-        let mut rule = RouteRuleEntry::new();
-        if is_ipv6 {
-            rule.family = Some(AddressFamily::IPv6);
-        } else {
-            rule.family = Some(AddressFamily::IPv4);
-        }
-        if let Some(v) = nm_rule.priority.as_ref() {
-            rule.priority = Some(*v as i64);
-        }
-        if let (Some(from), Some(from_len)) =
-            (nm_rule.from.as_ref(), nm_rule.from_len.as_ref())
-        {
-            rule.ip_from = Some(format!("{from}/{from_len}"));
-        }
-        if let (Some(to), Some(to_len)) =
-            (nm_rule.to.as_ref(), nm_rule.to_len.as_ref())
-        {
-            rule.ip_to = Some(format!("{to}/{to_len}"));
-        }
-        if let Some(v) = nm_rule.table.as_ref() {
-            rule.table_id = Some(*v);
-        }
-        if let Some(v) = nm_rule.fw_mark.as_ref() {
-            rule.fwmark = Some(*v);
-        }
-        if let Some(v) = nm_rule.fw_mask.as_ref() {
-            rule.fwmask = Some(*v);
-        }
-        if let Some(v) = nm_rule.iifname.as_ref() {
-            rule.iif = Some(v.to_string());
-        }
-        if let Some(v) = nm_rule.suppress_prefixlength {
-            match u32::try_from(v) {
-                Ok(i) => rule.suppress_prefix_length = Some(i),
-                Err(e) => {
-                    log::warn!(
-                        "BUG: Failed to convert `suppress_prefixlength` got \
-                         from NM: {v} to u32: {e}"
-                    );
-                }
-            }
-        }
-        if let Some(v) = nm_rule.action.as_ref() {
-            rule.action = Some(match v {
-                NmIpRouteRuleAction::Blackhole => RouteRuleAction::Blackhole,
-                NmIpRouteRuleAction::Unreachable => {
-                    RouteRuleAction::Unreachable
-                }
-                NmIpRouteRuleAction::Prohibit => RouteRuleAction::Prohibit,
-                _ => {
-                    log::warn!("Unknown NM IP route rule action {v:?}");
-                    continue;
-                }
-            });
-        }
-        ret.insert(rule);
-    }
-    Some(ret)
+    Some(
+        ip_set
+            .route_rules
+            .iter()
+            .filter_map(|rule| nm_rule_to_nmstate(is_ipv6, rule))
+            .collect(),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nm::nm_dbus::NmIpRouteRule;
+
+    #[test]
+    fn test_nm_rule_query_preserves_input_interfaces() {
+        let mut setting = NmSettingIp::default();
+        setting.method = Some(NmSettingIpMethod::Manual);
+        setting.route_rules = ["eth1", "eth2"]
+            .into_iter()
+            .map(|name| {
+                let mut rule = NmIpRouteRule::default();
+                rule.priority = Some(100);
+                rule.table = Some(500);
+                rule.iifname = Some(name.to_string());
+                rule
+            })
+            .collect();
+
+        for is_ipv6 in [false, true] {
+            let rules = if is_ipv6 {
+                nm_ip_setting_to_nmstate6(
+                    "eth1",
+                    &InterfaceType::Ethernet,
+                    &setting,
+                )
+                .rules
+            } else {
+                nm_ip_setting_to_nmstate4(&setting).rules
+            }
+            .unwrap();
+            let mut interfaces: Vec<_> = rules
+                .iter()
+                .filter_map(|rule| rule.iif.as_deref())
+                .collect();
+            interfaces.sort_unstable();
+
+            assert_eq!(interfaces, ["eth1", "eth2"]);
+        }
+    }
 
     fn gen_auto_ipv6_setting() -> NmSettingIp {
         let mut nm_setting = NmSettingIp::default();

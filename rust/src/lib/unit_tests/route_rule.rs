@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    MergedRouteRules, RouteRuleEntry, RouteRules,
+    AddressFamily, ErrorKind, MergedRouteRules, RouteRuleEntry, RouteRules,
     unit_tests::testlib::gen_test_rule_entries,
 };
 
@@ -14,6 +14,123 @@ fn test_sort_uniqe_route_rules() {
     test_routes.dedup();
 
     assert_eq!(test_routes, gen_test_rule_entries());
+}
+
+#[test]
+fn test_route_rules_differing_by_input_interface_are_distinct() {
+    let mut rules: Vec<_> = ["eth2", "eth1", "eth2"]
+        .into_iter()
+        .map(|name| RouteRuleEntry {
+            family: Some(AddressFamily::IPv4),
+            priority: Some(100),
+            table_id: Some(500),
+            iif: Some(name.to_string()),
+            ..Default::default()
+        })
+        .collect();
+    rules.sort_unstable();
+    rules.dedup();
+
+    assert_eq!(
+        rules
+            .iter()
+            .filter_map(|r| r.iif.as_deref())
+            .collect::<Vec<_>>(),
+        ["eth1", "eth2"]
+    );
+}
+
+#[test]
+fn test_route_rule_priority_range() {
+    for priority in [-2, i64::from(u32::MAX) + 1] {
+        let mut rule = RouteRuleEntry {
+            family: Some(AddressFamily::IPv4),
+            table_id: Some(500),
+            priority: Some(priority),
+            ..Default::default()
+        };
+        assert_eq!(
+            rule.sanitize().unwrap_err().kind(),
+            ErrorKind::InvalidArgument
+        );
+    }
+    for priority in [-1, 0, i64::from(u32::MAX)] {
+        let mut rule = RouteRuleEntry {
+            family: Some(AddressFamily::IPv4),
+            table_id: Some(500),
+            priority: Some(priority),
+            ..Default::default()
+        };
+        rule.sanitize().unwrap();
+        assert_eq!(rule.priority, Some(priority));
+    }
+}
+
+#[test]
+fn test_route_rule_auto_priority_rejects_overflow() {
+    for apply_ignored in [false, true] {
+        let mut current = RouteRules::new();
+        current.config = Some(vec![RouteRuleEntry {
+            family: Some(AddressFamily::IPv4),
+            priority: Some(i64::from(u32::MAX)),
+            table_id: Some(500),
+            apply_ignored,
+            ..Default::default()
+        }]);
+        let desired =
+            serde_yaml::from_str("config: [{family: ipv4, route-table: 501}]")
+                .unwrap();
+        let error = MergedRouteRules::new(desired, current).unwrap_err();
+
+        assert_eq!(error.kind(), ErrorKind::InvalidArgument);
+        assert!(error.msg().contains("4294967295"));
+    }
+}
+
+#[test]
+fn test_route_rule_auto_priority_accepts_last_available_priority() {
+    let current = serde_yaml::from_str(
+        "config: [{family: ipv4, route-table: 500, priority: 4294967294}]",
+    )
+    .unwrap();
+    let desired =
+        serde_yaml::from_str("config: [{family: ipv4, route-table: 501}]")
+            .unwrap();
+    let merged = MergedRouteRules::new(desired, current).unwrap();
+
+    assert_eq!(merged.for_apply.len(), 1);
+    assert_eq!(merged.for_apply[0].table_id, Some(501));
+    assert_eq!(merged.for_apply[0].priority, Some(i64::from(u32::MAX)));
+}
+
+#[test]
+fn test_route_rule_auto_priority_reuses_existing_when_exhausted() {
+    for priority in [100, i64::from(u32::MAX)] {
+        let mut current = RouteRules::new();
+        current.config = Some(vec![
+            RouteRuleEntry {
+                family: Some(AddressFamily::IPv4),
+                priority: Some(i64::from(u32::MAX)),
+                table_id: Some(500),
+                apply_ignored: true,
+                ..Default::default()
+            },
+            RouteRuleEntry {
+                family: Some(AddressFamily::IPv4),
+                priority: Some(priority),
+                table_id: Some(501),
+                ..Default::default()
+            },
+        ]);
+        let desired =
+            serde_yaml::from_str("config: [{family: ipv4, route-table: 501}]")
+                .unwrap();
+        let merged = MergedRouteRules::new(desired, current).unwrap();
+
+        assert_eq!(merged.for_apply.len(), 1);
+        assert_eq!(merged.for_apply[0].table_id, Some(501));
+        assert_eq!(merged.for_apply[0].priority, Some(priority));
+    }
 }
 
 #[test]
