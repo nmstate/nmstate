@@ -1,0 +1,34 @@
+---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.10
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8::10
+      prefix-length: 64
+- name: eth2
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true
+    auto-dns: false
+    auto-gateway: true
+    auto-routes: true
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    auto-dns: true
+    auto-gateway: false
+    auto-routes: true

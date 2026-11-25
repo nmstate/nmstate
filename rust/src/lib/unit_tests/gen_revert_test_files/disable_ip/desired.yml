@@ -1,0 +1,16 @@
+---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
+- name: eth2
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
