@@ -293,11 +293,19 @@ impl RouteRuleEntry {
         {
             return false;
         }
-        if self.table_id.is_some()
-            && self.table_id != Some(RouteRuleEntry::USE_DEFAULT_ROUTE_TABLE)
-            && self.table_id != other.table_id
+        if let Some(table_id) = self.table_id
+            && table_id != Self::USE_DEFAULT_ROUTE_TABLE
         {
-            return false;
+            // Table-scoped deletions only match a terminal rule's
+            // explicitly configured table.
+            let other_table_id = if self.is_absent() && other.action.is_some() {
+                other.table_id
+            } else {
+                Some(other.effective_table_id())
+            };
+            if other_table_id != Some(table_id) {
+                return false;
+            }
         }
         if self.fwmark.is_some()
             && self.fwmark.unwrap_or(0) != other.fwmark.unwrap_or(0)
@@ -321,6 +329,29 @@ impl RouteRuleEntry {
             return false;
         }
         true
+    }
+
+    #[cfg(feature = "gen_revert")]
+    pub(crate) fn has_same_config(&self, other: &Self) -> bool {
+        self.is_ipv6() == other.is_ipv6()
+            && self.effective_table_id() == other.effective_table_id()
+            && self.ip_from == other.ip_from
+            && self.ip_to == other.ip_to
+            && self.priority == other.priority
+            && self.fwmark.unwrap_or(0) == other.fwmark.unwrap_or(0)
+            && self.fwmask.unwrap_or(0) == other.fwmask.unwrap_or(0)
+            && self.action == other.action
+            && self.iif == other.iif
+            && self.suppress_prefix_length == other.suppress_prefix_length
+    }
+
+    pub(crate) fn effective_table_id(&self) -> u32 {
+        match self.table_id {
+            None | Some(Self::USE_DEFAULT_ROUTE_TABLE) => {
+                Self::DEFAULR_ROUTE_TABLE_ID
+            }
+            Some(table) => table,
+        }
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, ip_from,

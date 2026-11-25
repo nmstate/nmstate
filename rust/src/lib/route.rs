@@ -237,6 +237,7 @@ pub struct RouteEntry {
     )]
     /// Route metric. [RouteEntry::USE_DEFAULT_METRIC] for default
     /// setting of network backend.
+    /// An absent route with a concrete metric only matches that metric.
     pub metric: Option<i64>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -387,14 +388,14 @@ impl RouteEntry {
             return false;
         }
 
-        if self.next_hop_addr.as_ref().is_some()
-            && self.next_hop_addr != other.next_hop_addr
+        if self.next_hop_addr.is_some()
+            && self.next_hop_addr_or_empty() != other.next_hop_addr_or_empty()
         {
             return false;
         }
         if self.table_id.is_some()
             && self.table_id != Some(RouteEntry::USE_DEFAULT_ROUTE_TABLE)
-            && self.table_id != other.table_id
+            && self.effective_table_id() != other.effective_table_id()
         {
             return false;
         }
@@ -419,24 +420,109 @@ impl RouteEntry {
         if self.mtu.is_some() && self.mtu != other.mtu {
             return false;
         }
-        if self.quickack.is_some() && self.quickack != other.quickack {
+        if let Some(quickack) = self.quickack
+            && quickack != other.quickack.unwrap_or_default()
+        {
             return false;
         }
         if self.advmss.is_some() && self.advmss != other.advmss {
             return false;
         }
-        if self.lock_mtu.is_some() && self.lock_mtu != other.lock_mtu {
+        if let Some(lock_mtu) = self.lock_mtu
+            && lock_mtu != other.lock_mtu.unwrap_or_default()
+        {
             return false;
         }
-        if self.vrf_name.is_some() && self.vrf_name != other.vrf_name {
-            return false;
+        self.vrf_name.is_none()
+            || self.vrf_name == other.vrf_name
+            || self.table_id.is_some_and(|table| {
+                table != Self::USE_DEFAULT_ROUTE_TABLE
+                    && table == other.effective_table_id()
+            })
+    }
+
+    pub(crate) fn next_hop_addr_or_empty(&self) -> &str {
+        self.next_hop_addr
+            .as_deref()
+            .unwrap_or_else(|| if self.is_ipv6() { "::" } else { "0.0.0.0" })
+    }
+
+    pub(crate) fn matches_absent(&self, other: &Self) -> bool {
+        self.is_match(other)
+            && (self.uses_default_metric()
+                || self.effective_metric() == other.effective_metric())
+    }
+
+    #[cfg(any(feature = "query_apply", feature = "gen_revert"))]
+    pub(crate) fn as_absent_selector(&self) -> Self {
+        let mut route = self.clone();
+        route.state = Some(RouteState::Absent);
+        route.metric = Some(self.effective_metric().into());
+        route.table_id = Some(self.effective_table_id());
+        route.next_hop_addr = Some(self.next_hop_addr_or_empty().into());
+        // The selector stays usable when the VRF is removed in this request.
+        route.vrf_name = None;
+        route
+    }
+
+    #[cfg(any(feature = "query_apply", feature = "gen_revert"))]
+    pub(crate) fn keep_unicast_metric_peers<'a>(
+        delta: &mut Vec<Self>,
+        current: impl Iterator<Item = &'a Self> + Clone,
+    ) {
+        let mut peers = Vec::new();
+        for route in
+            delta.iter().filter(|rt| !rt.is_absent() && rt.is_unicast())
+        {
+            if delta.iter().any(|selector| {
+                selector.is_absent() && selector.is_match(route)
+            }) {
+                continue;
+            }
+            let key = route.merge_key();
+            let mut matching =
+                current.clone().filter(|rt| rt.merge_key() == key);
+            if let Some(peer) = matching.next()
+                && peer.effective_metric() != route.effective_metric()
+                && matching
+                    .all(|rt| rt.effective_metric() != route.effective_metric())
+            {
+                peers.push(peer.as_absent_selector());
+                let mut peer = peer.clone();
+                peer.metric = Some(peer.effective_metric().into());
+                peers.push(peer);
+            }
         }
-        true
+        delta.extend(peers);
+    }
+
+    fn uses_default_metric(&self) -> bool {
+        matches!(self.metric, None | Some(Self::USE_DEFAULT_METRIC))
+    }
+
+    pub(crate) fn cmp_for_merge(&self, other: &Self) -> std::cmp::Ordering {
+        self.merge_key().cmp(&other.merge_key()).then_with(|| {
+            self.effective_metric().cmp(&other.effective_metric())
+        })
+    }
+
+    fn merge_key(&self) -> (Vec<bool>, Vec<&str>, Vec<u32>) {
+        self.sort_key(true)
     }
 
     // Return tuple of Vec of all properties with default value unwrapped.
-    // Metric is ignored
-    fn sort_key(&self) -> (Vec<bool>, Vec<&str>, Vec<u32>) {
+    // Public ordering and equality ignore the metric. Merge callers compare
+    // it separately and use the resolved table instead of the VRF alias.
+    fn sort_key(&self, for_merge: bool) -> (Vec<bool>, Vec<&str>, Vec<u32>) {
+        let (next_hop, vrf_name, table) = if for_merge {
+            (self.next_hop_addr_or_empty(), "", self.effective_table_id())
+        } else {
+            (
+                self.next_hop_addr.as_deref().unwrap_or(""),
+                self.vrf_name.as_deref().unwrap_or(""),
+                self.table_id.unwrap_or(DEFAULT_TABLE_ID),
+            )
+        };
         (
             vec![
                 // not_absent
@@ -455,12 +541,12 @@ impl RouteEntry {
                     .as_deref()
                     .unwrap_or(LOOPBACK_IFACE_NAME),
                 self.destination.as_deref().unwrap_or(""),
-                self.next_hop_addr.as_deref().unwrap_or(""),
+                next_hop,
                 self.source.as_deref().unwrap_or(""),
-                self.vrf_name.as_deref().unwrap_or(""),
+                vrf_name,
             ],
             vec![
-                self.table_id.unwrap_or(DEFAULT_TABLE_ID),
+                table,
                 self.cwnd.unwrap_or_default(),
                 self.initcwnd.unwrap_or_default(),
                 self.initrwnd.unwrap_or_default(),
@@ -602,14 +688,14 @@ impl RouteEntry {
 // For Vec::dedup()
 impl PartialEq for RouteEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.sort_key() == other.sort_key()
+        self.sort_key(false) == other.sort_key(false)
     }
 }
 
 // For Vec::sort_unstable()
 impl Ord for RouteEntry {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.sort_key().cmp(&other.sort_key())
+        self.sort_key(false).cmp(&other.sort_key(false))
     }
 }
 
@@ -625,7 +711,7 @@ impl PartialOrd for RouteEntry {
 
 impl Hash for RouteEntry {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.sort_key().hash(state);
+        self.sort_key(false).hash(state);
     }
 }
 
@@ -707,13 +793,14 @@ pub(crate) struct MergedRoutes {
 impl MergedRoutes {
     pub(crate) fn new(
         mut desired: Routes,
-        current: Routes,
+        mut current: Routes,
         merged_ifaces: &MergedInterfaces,
     ) -> Result<Self, NmstateError> {
         desired.remove_ignored_routes();
         desired.validate()?;
         desired.resolve_next_hop_iface_ref(merged_ifaces)?;
         desired.resolve_vrf_name(merged_ifaces)?;
+        current.resolve_current_vrf_names(merged_ifaces);
 
         let mut desired_routes = Vec::new();
         if let Some(rts) = desired.config.as_ref() {
@@ -729,7 +816,7 @@ impl MergedRoutes {
         validate_special_route_conflicts(desired_routes.as_slice())?;
 
         let mut changed_ifaces: HashSet<&str> = HashSet::new();
-        let mut changed_routes: HashSet<RouteEntry> = HashSet::new();
+        let mut changed_routes = Vec::<RouteEntry>::new();
 
         let ifaces_marked_as_absent: Vec<&str> = merged_ifaces
             .kernel_ifaces
@@ -796,7 +883,7 @@ impl MergedRoutes {
         for absent_rt in desired_routes.iter().filter(|rt| rt.is_absent()) {
             if let Some(cur_rts) = current.config.as_ref() {
                 for rt in cur_rts {
-                    if absent_rt.is_match(rt) {
+                    if absent_rt.matches_absent(rt) {
                         if let Some(via) = rt.next_hop_iface.as_ref() {
                             changed_ifaces.insert(via.as_str());
                         } else {
@@ -836,12 +923,12 @@ impl MergedRoutes {
                         || desired_routes
                             .iter()
                             .filter(|r| r.is_absent())
-                            .any(|absent_rt| absent_rt.is_match(rt))
+                            .any(|absent_rt| absent_rt.matches_absent(rt))
                         || is_replaced_special(rt)
                     {
                         let mut new_rt = rt.clone();
                         new_rt.state = Some(RouteState::Absent);
-                        changed_routes.insert(new_rt);
+                        changed_routes.push(new_rt);
                     } else {
                         merged_routes.push(rt.clone());
                     }
@@ -852,12 +939,12 @@ impl MergedRoutes {
                     if desired_routes
                         .iter()
                         .filter(|r| r.is_absent())
-                        .any(|absent_rt| absent_rt.is_match(rt))
+                        .any(|absent_rt| absent_rt.matches_absent(rt))
                         || is_replaced_special(rt)
                     {
                         let mut new_rt = rt.clone();
                         new_rt.state = Some(RouteState::Absent);
-                        changed_routes.insert(new_rt);
+                        changed_routes.push(new_rt);
                         changed_ifaces.insert(LOOPBACK_IFACE_NAME);
                     } else {
                         merged_routes.push(rt.clone());
@@ -866,20 +953,41 @@ impl MergedRoutes {
             }
         }
 
-        // Append desired routes
+        // Append desired routes. A desired route can also re-add a route
+        // matched by an absent entry, cancelling the removal.
+        let retained_route_count = merged_routes.len();
         for rt in desired_routes.iter().filter(|rt| !rt.is_absent()) {
-            if let Some(cur_rts) = current.config.as_ref() {
-                if !cur_rts.iter().any(|cur_rt| cur_rt.is_match(rt)) {
-                    changed_routes.insert(rt.clone());
-                }
-            } else {
-                changed_routes.insert(rt.clone());
+            let key = rt.merge_key();
+            // Ordinary unicast requests ignore metric-only differences.
+            // Explicit removal enables changing or restoring distinct metrics.
+            let unicast_reassertion = rt.is_unicast()
+                && !desired_routes.iter().any(|selector| {
+                    selector.is_absent() && selector.is_match(rt)
+                });
+            if merged_routes.iter().enumerate().any(|(index, current)| {
+                (current.effective_metric() == rt.effective_metric()
+                    || unicast_reassertion
+                    || (rt.uses_default_metric()
+                        && index < retained_route_count))
+                    && current.merge_key() == key
+            }) {
+                continue;
+            }
+            let mut absent_rt = rt.clone();
+            absent_rt.state = Some(RouteState::Absent);
+            let changed_count = changed_routes.len();
+            changed_routes
+                .retain(|removed| !removed.cmp_for_merge(&absent_rt).is_eq());
+            if changed_routes.len() == changed_count {
+                changed_routes.push(rt.clone());
             }
             merged_routes.push(rt.clone());
         }
 
-        merged_routes.sort_unstable();
-        merged_routes.dedup();
+        merged_routes.sort_unstable_by(RouteEntry::cmp_for_merge);
+        merged_routes.dedup_by(|a, b| a.cmp_for_merge(b).is_eq());
+        changed_routes.sort_unstable_by(RouteEntry::cmp_for_merge);
+        changed_routes.dedup_by(|a, b| a.cmp_for_merge(b).is_eq());
 
         let mut merged: HashMap<String, Vec<RouteEntry>> = HashMap::new();
 
@@ -909,7 +1017,7 @@ impl MergedRoutes {
             desired,
             current,
             route_changed_ifaces,
-            changed_routes: changed_routes.drain().collect(),
+            changed_routes,
         })
     }
 

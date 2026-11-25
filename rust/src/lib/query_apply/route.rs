@@ -15,8 +15,38 @@ impl MergedRoutes {
                 ..Default::default()
             }
         } else {
-            let mut changed_routes = self.changed_routes.clone();
-            changed_routes.sort_unstable();
+            let mut changed_routes: Vec<_> = self
+                .changed_routes
+                .iter()
+                .map(|rt| {
+                    if rt.is_absent() {
+                        rt.as_absent_selector()
+                    } else {
+                        rt.clone()
+                    }
+                })
+                .collect();
+            RouteEntry::keep_unicast_metric_peers(
+                &mut changed_routes,
+                self.current.config.as_deref().unwrap_or_default().iter(),
+            );
+            // Generated selectors still allow wildcards for properties such
+            // as source. Re-add any surviving routes they would remove.
+            for route in self.merged.values().flatten() {
+                if changed_routes
+                    .iter()
+                    .any(|r| r.is_absent() && r.matches_absent(route))
+                    && !changed_routes
+                        .iter()
+                        .any(|r| r.cmp_for_merge(route).is_eq())
+                {
+                    let mut route = route.clone();
+                    route.metric = Some(route.effective_metric().into());
+                    changed_routes.push(route);
+                }
+            }
+            changed_routes.sort_unstable_by(RouteEntry::cmp_for_merge);
+            changed_routes.dedup_by(|a, b| a.cmp_for_merge(b).is_eq());
             Routes {
                 config: Some(changed_routes),
                 ..Default::default()
@@ -25,29 +55,17 @@ impl MergedRoutes {
     }
 
     fn routes_for_verify(&self) -> Vec<RouteEntry> {
-        let mut desired_routes = Vec::new();
-        if let Some(rts) = self.desired.config.as_ref() {
-            for rt in rts {
+        self.desired
+            .config
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .map(|rt| {
                 let mut rt = rt.clone();
                 rt.sanitize().ok();
-                desired_routes.push(rt);
-            }
-        }
-        desired_routes.sort_unstable();
-        desired_routes.dedup();
-
-        // Remove the absent route if matching normal route is also desired.
-        let mut new_desired_routes = Vec::new();
-
-        for rt in desired_routes.as_slice() {
-            if (!rt.is_absent())
-                || desired_routes.iter().any(|r| rt.is_match(r))
-            {
-                new_desired_routes.push(rt.clone());
-            }
-        }
-
-        new_desired_routes
+                rt
+            })
+            .collect()
     }
 
     // Kernel might append additional routes. For example, IPv6 default
@@ -75,22 +93,19 @@ impl MergedRoutes {
                 cur_routes.push(cur_rt);
             }
         }
-        cur_routes.dedup();
         let routes_for_verify = self.routes_for_verify();
+        let expected_routes = || self.merged.values().flatten();
 
         for mut rt in routes_for_verify.as_slice() {
             if rt.is_absent() {
-                // We do not valid absent route if desire has a match there.
-                // For example, user is changing a gateway.
-                if routes_for_verify
-                    .iter()
-                    .any(|r| !r.is_absent() && rt.is_match(r))
-                {
-                    continue;
-                }
-                if let Some(cur_rt) =
-                    cur_routes.iter().find(|cur_rt| rt.is_match(cur_rt))
-                {
+                // A remove-and-add request exempts the retained routes, not
+                // every route selected by the same absent entry.
+                if let Some(cur_rt) = cur_routes.iter().find(|cur_rt| {
+                    rt.matches_absent(cur_rt)
+                        && !expected_routes().any(|expected| {
+                            expected.cmp_for_merge(cur_rt).is_eq()
+                        })
+                }) {
                     return Err(NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
@@ -100,6 +115,17 @@ impl MergedRoutes {
                     ));
                 }
             } else {
+                let require_metric = self
+                    .changed_routes
+                    .iter()
+                    .any(|route| route.cmp_for_merge(rt).is_eq())
+                    || ((!rt.is_unicast()
+                        || routes_for_verify.iter().any(|selector| {
+                            selector.is_absent() && selector.is_match(rt)
+                        }))
+                        && expected_routes().any(|expected| {
+                            expected.cmp_for_merge(rt).is_eq()
+                        }));
                 let mut rt2;
                 if rt.route_type.is_some() && !rt.is_ipv6() {
                     // In nispor, the IPv4 route with route type `Blackhole`,
@@ -110,7 +136,12 @@ impl MergedRoutes {
                     rt = &rt2
                 }
 
-                if !cur_routes.iter().any(|cur_rt| rt.is_match(cur_rt)) {
+                if !cur_routes.iter().any(|cur_rt| {
+                    rt.is_match(cur_rt)
+                        && (!require_metric
+                            || rt.effective_metric()
+                                == cur_rt.effective_metric())
+                }) {
                     if is_route_delayed_by_nm(rt, current_ifaces) {
                         log::warn!(
                             "Route {rt} still missing due to NetworkManager \

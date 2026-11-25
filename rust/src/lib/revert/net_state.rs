@@ -16,7 +16,7 @@ impl NetworkState {
         Ok(Self {
             interfaces: merged_state.interfaces.generate_revert()?,
             routes: merged_state.routes.generate_revert(),
-            rules: merged_state.rules.generate_revert(),
+            rules: merged_state.rules.generate_revert()?,
             dns: merged_state.dns.generate_revert(),
             ovsdb: merged_state.ovsdb.generate_revert(),
             ovn: merged_state.ovn.generate_revert(),

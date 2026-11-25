@@ -13,6 +13,67 @@ use crate::{
 };
 
 #[test]
+fn test_verify_route_metric_removals_and_additions() {
+    let base: crate::NetworkState = serde_yaml::from_str(
+        r#"
+        routes:
+          config:
+          - destination: 198.51.100.0/24
+            route-type: blackhole
+            metric: 0
+          - destination: 198.51.100.0/24
+            route-type: blackhole
+            metric: 200
+        "#,
+    )
+    .unwrap();
+    let verify = |desired: &crate::NetworkState, actual: &[RouteEntry]| {
+        let merged = crate::MergedNetworkState::new(
+            desired.clone(),
+            base.clone(),
+            crate::NetworkStateMode::default(),
+            false,
+        )
+        .unwrap();
+        merged.routes.verify(
+            &Routes {
+                config: Some(actual.to_vec()),
+                ..Default::default()
+            },
+            &[],
+            &base.interfaces,
+        )
+    };
+    let existing = base.routes.config.as_deref().unwrap();
+    let mut desired = base.clone();
+    for route in desired.routes.config.as_mut().unwrap() {
+        route.state = Some(RouteState::Absent);
+    }
+    assert!(verify(&desired, &[]).is_ok());
+    for stale in existing {
+        assert!(verify(&desired, std::slice::from_ref(stale)).is_err());
+    }
+
+    let routes = desired.routes.config.as_mut().unwrap();
+    routes[1].state = None;
+    for wildcard_metric in [None, Some(RouteEntry::USE_DEFAULT_METRIC)] {
+        let routes = desired.routes.config.as_mut().unwrap();
+        routes[0].metric = wildcard_metric;
+        assert!(verify(&desired, &existing[1..]).is_ok());
+        assert!(verify(&desired, existing).is_err());
+    }
+
+    let mut desired = base.clone();
+    let mut new_route = existing[0].clone();
+    new_route.metric = Some(300);
+    desired.routes.config.as_mut().unwrap().push(new_route);
+    assert!(verify(&desired, existing).is_err());
+    assert!(
+        verify(&desired, desired.routes.config.as_deref().unwrap()).is_ok()
+    );
+}
+
+#[test]
 fn test_sort_uniqe_routes() {
     let mut test_routes = gen_test_route_entries();
     test_routes.reverse();
