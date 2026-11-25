@@ -31,6 +31,8 @@ routes:
   - destination: ::/0
     next-hop-address: 2001:db8:1::3
     next-hop-interface: eth1
+    metric: 1024
   - destination: 0.0.0.0/0
     next-hop-address: 192.0.2.1
     next-hop-interface: eth1
+    metric: 0

@@ -1,10 +1,14 @@
 ---
 route-rules:
   config:
-  - ip-to: 2001:db8:b::/64
+  - family: ipv6
+    ip-to: 2001:db8:b::/64
+    priority: 30001
     route-table: 201
     state: absent
-  - ip-to: 198.51.100.0/24
+  - family: ipv4
+    ip-to: 198.51.100.0/24
+    priority: 30000
     route-table: 200
     state: absent
   - family: ipv6

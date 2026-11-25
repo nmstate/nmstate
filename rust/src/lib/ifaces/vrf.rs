@@ -196,6 +196,19 @@ impl MergedInterface {
 }
 
 impl Routes {
+    pub(crate) fn resolve_current_vrf_names(
+        &mut self,
+        ifaces: &MergedInterfaces,
+    ) {
+        for route in self.config.as_mut().into_iter().flatten() {
+            if route.table_id.is_none()
+                && let Some(name) = route.vrf_name.as_deref()
+            {
+                route.table_id = ifaces.current_vrf_table(name);
+            }
+        }
+    }
+
     pub(crate) fn resolve_vrf_name(
         &mut self,
         merged_ifaces: &MergedInterfaces,
@@ -245,7 +258,15 @@ impl Routes {
                 } else {
                     continue;
                 };
-                if vrf_names_down.contains(vrf_name) {
+                let is_down = vrf_names_down.contains(vrf_name);
+                let is_absent = vrf_names_absent.contains(vrf_name);
+                let current_table_id =
+                    if rt.is_absent() && (is_down || is_absent) {
+                        merged_ifaces.current_vrf_table(vrf_name)
+                    } else {
+                        None
+                    };
+                if is_down && current_table_id.is_none() {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
@@ -254,7 +275,7 @@ impl Routes {
                         ),
                     ));
                 }
-                if vrf_names_absent.contains(vrf_name) {
+                if is_absent && current_table_id.is_none() {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
@@ -263,10 +284,10 @@ impl Routes {
                         ),
                     ));
                 }
-                let table_id = if let Some(t) =
-                    vrf_name_to_table_id.get(vrf_name)
+                let table_id = if let Some(table_id) = current_table_id
+                    .or_else(|| vrf_name_to_table_id.get(vrf_name).copied())
                 {
-                    *t
+                    table_id
                 } else {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
@@ -290,5 +311,14 @@ impl Routes {
             }
         }
         Ok(())
+    }
+}
+
+impl MergedInterfaces {
+    fn current_vrf_table(&self, name: &str) -> Option<u32> {
+        match self.kernel_ifaces.get(name)?.current.as_ref()? {
+            Interface::Vrf(iface) => iface.vrf.as_ref()?.table_id,
+            _ => None,
+        }
     }
 }
