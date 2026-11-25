@@ -782,3 +782,55 @@ def test_changed_port_list_of_down_ovs_bridge_delete_orphans(
         )[1].strip()
         == ""
     )
+
+
+def _get_nm_profile_filename(conn_name):
+    output = cmdlib.exec_cmd(
+        "nmcli -g FILENAME,NAME connection show".split(), check=True
+    )[1]
+    suffix = f":{conn_name}"
+    for line in output.split("\n"):
+        if line.endswith(suffix):
+            return line[: -len(suffix)]
+    return None
+
+
+# The local port is not in the desired state, but nmstate keeps it in the
+# port list of the bridge. A persistent apply following a memory-only one
+# must store its profile persistently, otherwise it is lost on reboot.
+@pytest.mark.tier1
+def test_ovs_local_port_persisted_after_memory_only_apply(eth1_up):
+    bridge = Bridge(BRIDGE0)
+    bridge.add_system_port(ETH1)
+    desired_state = bridge.state
+    desired_state[Interface.KEY].append(
+        {
+            Interface.NAME: ETH1,
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.STATE: InterfaceState.UP,
+        }
+    )
+    local_port_profile_names = (f"{BRIDGE0}-port", f"{BRIDGE0}-if")
+
+    try:
+        libnmstate.apply(desired_state, save_to_disk=False)
+        for conn_name in local_port_profile_names:
+            assert _get_nm_profile_filename(conn_name).startswith("/run/")
+
+        libnmstate.apply(desired_state)
+        for conn_name in (f"{BRIDGE0}-br",) + local_port_profile_names:
+            filename = _get_nm_profile_filename(conn_name)
+            assert filename
+            assert not filename.startswith("/run/")
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BRIDGE0,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )

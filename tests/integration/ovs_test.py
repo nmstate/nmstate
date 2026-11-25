@@ -3027,6 +3027,30 @@ def test_ovs_bridge_state_up_without_type(ovs_bridge_with_local_port):
     assertlib.assert_state_match(ovs_bridge_with_local_port)
 
 
+# An OVS bridge and its local port share the same name. An interface without
+# type that only sets the OVS database refers to the bridge.
+def test_ovs_bridge_ovsdb_without_type(ovs_bridge_with_local_port):
+    libnmstate.apply(
+        load_yaml(
+            f"""---
+            interfaces:
+            - name: {BRIDGE1}
+              ovs-db:
+                external_ids:
+                  foo: abc
+            """
+        )
+    )
+    for iface in statelib.show_only((BRIDGE1,))[Interface.KEY]:
+        external_ids = iface.get(OvsDB.OVS_DB_SUBTREE, {}).get(
+            OvsDB.EXTERNAL_IDS, {}
+        )
+        if iface[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
+            assert external_ids.get("foo") == "abc"
+        else:
+            assert "foo" not in external_ids
+
+
 # NetworkManager brings the OVS bridge back up via its ports when only the
 # bridge is deactivated.
 @pytest.mark.xfail(

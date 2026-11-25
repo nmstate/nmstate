@@ -2234,7 +2234,7 @@ fn test_ovs_bridge_ignore_extra_ports_for_apply() {
 }
 
 #[test]
-fn test_ovs_local_port_unchanged_with_allow_extra_ports() {
+fn test_ovs_local_port_kept_with_allow_extra_ports() {
     let current: Interfaces = serde_yaml::from_str(
         r"
 - name: br0
@@ -2283,14 +2283,19 @@ fn test_ovs_local_port_unchanged_with_allow_extra_ports() {
         .as_ref()
         .unwrap();
     assert_eq!(bridge.ports(), Some(vec!["br0", "eth1"]));
-    for (port_name, port_type) in [
-        ("br0", InterfaceType::OvsInterface),
-        ("eth1", InterfaceType::Ethernet),
-        ("eth2", InterfaceType::Ethernet),
-    ] {
+    // The local port is applied along with the bridge, without detaching it
+    let local_port = merged
+        .get_iface("br0", InterfaceType::OvsInterface)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(local_port.is_up());
+    assert_eq!(local_port.base_iface().controller.as_deref(), Some("br0"));
+    for port_name in ["eth1", "eth2"] {
         assert!(
             merged
-                .get_iface(port_name, port_type)
+                .get_iface(port_name, InterfaceType::Ethernet)
                 .unwrap()
                 .for_apply
                 .is_none(),
@@ -2299,6 +2304,100 @@ fn test_ovs_local_port_unchanged_with_allow_extra_ports() {
     }
 
     merged.verify(&current).unwrap();
+}
+
+// The existing local port is not in the desired state, but it is added to
+// the port list of the bridge. It must be applied along with the bridge, so
+// that a persistent apply after a memory-only one also stores its profile
+// persistently.
+#[test]
+fn test_ovs_existing_local_port_applied_with_bridge() {
+    let current: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: br0
+- name: br0
+  type: ovs-interface
+  state: up
+  controller: br0
+  ipv4:
+    enabled: true
+    address:
+    - ip: 192.0.2.1
+      prefix-length: 24
+- name: eth1
+  type: ethernet
+  state: up
+  controller: br0
+",
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r"
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+",
+    )
+    .unwrap();
+
+    for memory_only in [false, true] {
+        let merged = MergedInterfaces::new(
+            desired.clone(),
+            current.clone(),
+            Default::default(),
+            memory_only,
+        )
+        .unwrap();
+
+        let bridge = merged.get_iface("br0", InterfaceType::OvsBridge).unwrap();
+        for iface in [
+            &bridge.merged,
+            bridge.for_apply.as_ref().unwrap(),
+            bridge.for_verify.as_ref().unwrap(),
+        ] {
+            let mut ports = iface.ports().unwrap();
+            ports.sort_unstable();
+            assert_eq!(ports, vec!["br0", "eth1"]);
+        }
+
+        let local_port = merged
+            .get_iface("br0", InterfaceType::OvsInterface)
+            .unwrap();
+        assert!(local_port.desired.is_none());
+        assert!(local_port.for_verify.is_none());
+        let apply_iface = local_port.for_apply.as_ref().unwrap();
+        assert!(apply_iface.is_up());
+        let base_iface = apply_iface.base_iface();
+        assert_eq!(base_iface.controller.as_deref(), Some("br0"));
+        assert_eq!(base_iface.controller_type, Some(InterfaceType::OvsBridge));
+        assert!(base_iface.is_up_priority_valid());
+        // Only the name, type and controller are set, the backend preserves
+        // the existing configuration
+        assert!(base_iface.ipv4.is_none());
+
+        assert!(
+            merged
+                .get_iface("eth1", InterfaceType::Ethernet)
+                .unwrap()
+                .for_apply
+                .is_none()
+        );
+
+        // The local port is not reported by gen_diff()
+        let diff = merged.gen_diff().unwrap();
+        assert!(diff.get_iface("br0", InterfaceType::OvsInterface).is_none());
+
+        merged.verify(&current).unwrap();
+    }
 }
 
 #[test]
