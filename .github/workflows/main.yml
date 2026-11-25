@@ -154,10 +154,13 @@ jobs:
           path: rpms/el9
 
       - name: Install extra kernel modules(e.g. vrf)
+        continue-on-error: true
         run: |
           sudo apt-get update;
-          sudo apt-get -y install "linux-modules-extra-$(uname -r)" || \
+          sudo apt-get -y install "linux-modules-extra-$(uname -r)" || {
             echo "WARNING: linux-modules-extra-$(uname -r) failed to install so some operations may fail"
+            exit 1
+          }
 
 
       - name: Run tests
