@@ -12,18 +12,28 @@ impl BaseInterface {
             self.ipv4.clone_from(&current.ipv4);
             self.ipv6.clone_from(&current.ipv6);
         }
-        // If desired switch from static IP to auto IP without mentioning
-        // `address` property, the auto-generated revert state will not
-        // contains `address` property. In this case, if we noticed
-        // static/auto flipping, we clone current IP state to revert.
-        if desired.ipv4.as_ref().map(|i| i.is_auto()) == Some(true)
-            && current.ipv4.as_ref().map(|i| !i.is_auto()) == Some(true)
+        // Disabling IP or switching from static to auto can discard IP
+        // settings that the desired state omits. Restore the full IP config.
+        if desired
+            .ipv4
+            .as_ref()
+            .zip(current.ipv4.as_ref())
+            .is_some_and(|(desired, current)| {
+                (!desired.enabled && current.enabled)
+                    || (desired.is_auto() && !current.is_auto())
+            })
         {
             self.ipv4.clone_from(&current.ipv4);
         }
 
-        if desired.ipv6.as_ref().map(|i| i.is_auto()) == Some(true)
-            && current.ipv6.as_ref().map(|i| !i.is_auto()) == Some(true)
+        if desired
+            .ipv6
+            .as_ref()
+            .zip(current.ipv6.as_ref())
+            .is_some_and(|(desired, current)| {
+                (!desired.enabled && current.enabled)
+                    || (desired.is_auto() && !current.is_auto())
+            })
         {
             self.ipv6.clone_from(&current.ipv6);
         }
