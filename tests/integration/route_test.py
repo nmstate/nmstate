@@ -2,6 +2,7 @@
 
 import copy
 import json
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -2225,21 +2226,18 @@ def test_append_route_rule(route_rule_test_env):
 def cleanup_veth1_kernel_mode():
     with disable_service("NetworkManager"):
         yield
-        desired_state = load_yaml(
-            """---
+        desired_state = load_yaml("""---
             interfaces:
             - name: veth1
               type: veth
               state: absent
-            """
-        )
+            """)
         libnmstate.apply(desired_state, kernel_only=True)
 
 
 @pytest.mark.kernel
 def test_kernel_mode_static_route_and_remove(cleanup_veth1_kernel_mode):
-    desired_state = load_yaml(
-        """---
+    desired_state = load_yaml("""---
         interfaces:
         - name: veth1
           type: veth
@@ -2269,8 +2267,7 @@ def test_kernel_mode_static_route_and_remove(cleanup_veth1_kernel_mode):
              next-hop-address: 2001:db8:1::2
              next-hop-interface: veth1
              metric: 500
-        """
-    )
+        """)
     libnmstate.apply(desired_state, kernel_only=True)
 
     cur_state = libnmstate.show(kernel_only=True)
@@ -2278,14 +2275,12 @@ def test_kernel_mode_static_route_and_remove(cleanup_veth1_kernel_mode):
         desired_state[Route.KEY][Route.CONFIG], cur_state, nic="veth1"
     )
 
-    new_state = load_yaml(
-        """---
+    new_state = load_yaml("""---
         routes:
          config:
            - state: absent
              next-hop-interface: veth1
-        """
-    )
+        """)
     libnmstate.apply(new_state, kernel_only=True)
 
     cur_state = libnmstate.show(kernel_only=True)
@@ -2669,18 +2664,15 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
 @pytest.mark.parametrize(
     "routes",
     [
-        (
-            """
+        ("""
             - destination: 203.0.113.0/24
               next-hop-address: 192.0.2.1
               next-hop-interface: veth1
             - destination: 203.0.113.0/24
               next-hop-address: 192.0.2.2
               next-hop-interface: veth1
-            """
-        ),
-        (
-            """
+            """),
+        ("""
             - destination: 203.0.113.0/24
               next-hop-address: 192.0.2.1
               next-hop-interface: veth1
@@ -2689,20 +2681,16 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
               next-hop-address: 192.0.2.2
               next-hop-interface: veth1
               metric: 502
-            """
-        ),
-        (
-            """
+            """),
+        ("""
             - destination: 2001:db8:2::/64
               next-hop-address: 2001:db8:1::2
               next-hop-interface: veth1
             - destination: 2001:db8:2::/64
               next-hop-address: 2001:db8:1::3
               next-hop-interface: veth1
-            """
-        ),
-        (
-            """
+            """),
+        ("""
             - destination: 2001:db8:2::/64
               next-hop-address: 2001:db8:1::2
               next-hop-interface: veth1
@@ -2711,10 +2699,8 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
               next-hop-address: 2001:db8:1::3
               next-hop-interface: veth1
               metric: 500
-            """
-        ),
-        (
-            """
+            """),
+        ("""
             - destination: 2001:db8:2::/64
               next-hop-address: 2001:db8:1::2
               next-hop-interface: veth1
@@ -2722,8 +2708,7 @@ def test_apply_ignored_routes_to_iface(eth1_static_ip):
             - destination: 2001:db8:2::/64
               next-hop-address: 2001:db8:1::3
               next-hop-interface: veth1
-            """
-        ),
+            """),
     ],
     ids=[
         "v4_without_metric",
@@ -2738,8 +2723,7 @@ def test_kernel_mode_fail_on_same_dst_metric_routes(
     routes,
     cleanup_veth1_kernel_mode,
 ):
-    desired_state = load_yaml(
-        """---
+    desired_state = load_yaml("""---
         interfaces:
         - name: veth1
           type: veth
@@ -2759,8 +2743,7 @@ def test_kernel_mode_fail_on_same_dst_metric_routes(
             address:
               - ip: 2001:db8:1::1
                 prefix-length: 64
-        """
-    )
+        """)
     desired_state[Route.KEY] = {Route.CONFIG: load_yaml(routes)}
     with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state, kernel_only=True)
@@ -2768,8 +2751,7 @@ def test_kernel_mode_fail_on_same_dst_metric_routes(
 
 @pytest.fixture
 def eth1_up_with_prefix_route_metric(eth1_up):
-    desired_state = load_yaml(
-        """---
+    desired_state = load_yaml("""---
         interfaces:
         - name: eth1
           type: ethernet
@@ -2781,8 +2763,7 @@ def eth1_up_with_prefix_route_metric(eth1_up):
             address:
             - ip: 192.0.2.252
               prefix-length: 24
-        """
-    )
+        """)
     libnmstate.apply(desired_state)
     yield
 
@@ -2801,21 +2782,18 @@ def assert_prefix_routes(expected_routes):
 
 
 def test_prefix_route_metric_on_static_ip(eth1_up_with_prefix_route_metric):
-    expected_routes = load_yaml(
-        """---
+    expected_routes = load_yaml("""---
         - destination: 192.0.2.0/24
           next-hop-interface: eth1
           metric: 102
-        """
-    )
+        """)
     assert_prefix_routes(expected_routes)
 
 
 def preserve_prefix_route_metric_if_not_desired(
     eth1_up_with_prefix_route_metric,
 ):
-    desired_state = load_yaml(
-        """---
+    desired_state = load_yaml("""---
         interfaces:
         - name: eth1
           type: ethernet
@@ -2826,17 +2804,14 @@ def preserve_prefix_route_metric_if_not_desired(
             address:
             - ip: 192.0.2.252
               prefix-length: 24
-        """
-    )
+        """)
     libnmstate.apply(desired_state)
 
-    expected_routes = load_yaml(
-        """---
+    expected_routes = load_yaml("""---
         - destination: 192.0.2.0/24
           next-hop-interface: eth1
           metric: 102
-        """
-    )
+        """)
 
     assert_prefix_routes(expected_routes)
 
@@ -2849,8 +2824,7 @@ def preserve_prefix_route_metric_if_not_desired(
 def test_not_conflict_on_default_prefix_route_metric(eth1_up, values):
     prefix_metric = values[0]
     auto_metric = values[1]
-    desired_state = load_yaml(
-        f"""---
+    desired_state = load_yaml(f"""---
         interfaces:
         - name: eth1
           type: ethernet
@@ -2863,16 +2837,211 @@ def test_not_conflict_on_default_prefix_route_metric(eth1_up, values):
             address:
             - ip: 192.0.2.252
               prefix-length: 24
-        """
-    )
+        """)
     libnmstate.apply(desired_state)
 
-    expected_routes = load_yaml(
-        """---
+    expected_routes = load_yaml("""---
         - destination: 192.0.2.0/24
           next-hop-interface: eth1
           metric: 101
-        """
-    )
+        """)
 
     assert_prefix_routes(expected_routes)
+
+
+def _scoped_route(destination, nic="eth1", table_id=254, metric=150):
+    route = {
+        Route.DESTINATION: destination,
+        Route.NEXT_HOP_INTERFACE: nic,
+        Route.TABLE_ID: table_id,
+        Route.METRIC: metric,
+    }
+    if ":" in destination:
+        route[Route.NEXT_HOP_ADDRESS] = "2001:db8:1::2"
+    else:
+        route[Route.NEXT_HOP_ADDRESS] = "192.0.2.1"
+    return route
+
+
+def _authoritative_scope(nic="eth1", table_id=254, special_routes=False):
+    scope = {}
+    if nic is not None:
+        scope[Route.NEXT_HOP_INTERFACE] = nic
+    if table_id is not None:
+        scope[Route.TABLE_ID] = table_id
+    if special_routes:
+        scope[Route.SPECIAL_ROUTES] = True
+    return scope
+
+
+def _apply_route_state(
+    routes=None, scopes=None, ifaces=None, omit_config=False
+):
+    route_state = {}
+    if not omit_config:
+        route_state[Route.CONFIG] = routes or []
+    if scopes is not None:
+        route_state[Route.AUTHORITATIVE] = scopes
+    state = {Route.KEY: route_state}
+    if ifaces is not None:
+        state[Interface.KEY] = ifaces
+    libnmstate.apply(state)
+
+
+def _nm_ipv4_routes(nic):
+    _, con_name, _ = cmdlib.exec_cmd(
+        ["nmcli", "-g", "GENERAL.CONNECTION", "device", "show", nic],
+        check=True,
+    )
+    _, routes_out, _ = cmdlib.exec_cmd(
+        [
+            "nmcli",
+            "-g",
+            "ipv4.routes",
+            "connection",
+            "show",
+            con_name.strip(),
+        ],
+        check=True,
+    )
+    return routes_out
+
+
+def test_authoritative_scope_replaces_static_routes_via_nmstatectl(eth1_up):
+    """Dropping a route from an authoritative profile removes it.
+
+    The second apply goes through nmstatectl and does not use
+    nmstate.service. The kept route is stored on the NetworkManager
+    connection, which is what comes back after reboot.
+    """
+    route_a = _scoped_route("198.51.100.0/24")
+    route_b = _scoped_route("203.0.113.0/24")
+    scope = [_authoritative_scope()]
+    _apply_route_state(
+        [route_a, route_b], scope, ifaces=[ETH1_INTERFACE_STATE]
+    )
+    assert_routes([route_a, route_b], libnmstate.show())
+
+    with NamedTemporaryFile(mode="w") as fd:
+        fd.write("""---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+routes:
+  authoritative:
+  - next-hop-interface: eth1
+    table-id: 254
+  config:
+  - destination: 198.51.100.0/24
+    next-hop-interface: eth1
+    next-hop-address: 192.0.2.1
+    table-id: 254
+    metric: 150
+""")
+        fd.flush()
+        cmdlib.exec_cmd(["nmstatectl", "apply", fd.name], check=True)
+        cmdlib.exec_cmd(["nmstatectl", "apply", fd.name], check=True)
+
+    current = libnmstate.show()
+    assert_routes([route_a], current)
+    assert_routes_missing([route_b], current)
+    persistent = _nm_ipv4_routes("eth1")
+    assert "198.51.100.0/24" in persistent
+    assert "203.0.113.0/24" not in persistent
+
+    cmdlib.exec_cmd(
+        [
+            "ip",
+            "route",
+            "del",
+            "198.51.100.0/24",
+            "via",
+            "192.0.2.1",
+            "dev",
+            "eth1",
+        ],
+        check=True,
+    )
+    cmdlib.exec_cmd(["nmcli", "device", "reapply", "eth1"], check=True)
+    restored = libnmstate.show()
+    assert_routes([route_a], restored)
+    assert_routes_missing([route_b], restored)
+
+
+@pytest.mark.parametrize("omit_config", [False, True], ids=["empty", "omit"])
+def test_authoritative_scope_clears_managed_routes(eth1_up, omit_config):
+    route_a = _scoped_route("198.51.100.0/24")
+    route_b = _scoped_route("203.0.113.0/24")
+    scope = [_authoritative_scope()]
+    _apply_route_state(
+        [route_a, route_b], scope, ifaces=[ETH1_INTERFACE_STATE]
+    )
+    _apply_route_state([], scope, omit_config=omit_config)
+    current = libnmstate.show()
+    assert_routes_missing([route_a, route_b], current)
+    persistent = _nm_ipv4_routes("eth1")
+    assert "198.51.100.0/24" not in persistent
+    assert "203.0.113.0/24" not in persistent
+
+
+def test_authoritative_scope_preserves_routes_outside_scope(eth1_up, eth2_up):
+    route_a = _scoped_route("198.51.100.0/24")
+    route_b = _scoped_route("203.0.113.0/24")
+    other_table = _scoped_route("198.51.100.128/25", table_id=100)
+    eth2_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    eth2_state[Interface.NAME] = "eth2"
+    eth2_state.pop(Interface.IPV4)
+    eth2_route = _scoped_route("2001:db8:e::/64", nic="eth2")
+    blackhole = {
+        Route.DESTINATION: "203.0.113.128/25",
+        Route.ROUTETYPE: Route.ROUTETYPE_BLACKHOLE,
+        Route.TABLE_ID: 254,
+        Route.METRIC: 150,
+    }
+    _apply_route_state(
+        [route_a, route_b, other_table, eth2_route, blackhole],
+        ifaces=[ETH1_INTERFACE_STATE, eth2_state],
+    )
+    dhcp_dst = "203.0.113.50/32"
+    cmdlib.exec_cmd(
+        ["ip", "route", "replace", dhcp_dst, "dev", "eth1", "proto", "dhcp"],
+        check=True,
+    )
+    try:
+        _apply_route_state(
+            [route_a],
+            [_authoritative_scope()],
+        )
+        current = libnmstate.show()
+        assert_routes(
+            [route_a, other_table, eth2_route, blackhole], current, nic=None
+        )
+        assert_routes_missing([route_b], current)
+        _, dhcp_out, _ = cmdlib.exec_cmd(
+            ["ip", "route", "show", dhcp_dst], check=True
+        )
+        assert "dhcp" in dhcp_out
+    finally:
+        cmdlib.exec_cmd(["ip", "route", "del", dhcp_dst], check=False)
+
+
+def test_incremental_and_absent_routes_still_work(eth1_up):
+    route_a = _scoped_route("198.51.100.0/24")
+    route_b = _scoped_route("203.0.113.0/24")
+    _apply_route_state([route_a, route_b], ifaces=[ETH1_INTERFACE_STATE])
+    _apply_route_state([route_a])
+    assert_routes([route_a, route_b], libnmstate.show())
+
+    absent = dict(route_b)
+    absent[Route.STATE] = Route.STATE_ABSENT
+    _apply_route_state([absent])
+    current = libnmstate.show()
+    assert_routes([route_a], current)
+    assert_routes_missing([route_b], current)

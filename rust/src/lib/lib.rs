@@ -181,7 +181,9 @@ pub use crate::{
     ovn::{OvnBridgeMapping, OvnBridgeMappingState, OvnConfiguration},
     ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig},
     pci_address::PciAddress,
-    route::{RouteEntry, RouteState, RouteType, Routes},
+    route::{
+        RouteAuthoritativeScope, RouteEntry, RouteState, RouteType, Routes,
+    },
     route_rule::{RouteRuleAction, RouteRuleEntry, RouteRuleState, RouteRules},
 };
 pub(crate) use crate::{

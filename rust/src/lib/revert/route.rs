@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{MergedRoutes, RouteEntry, RouteState, Routes};
+use crate::{
+    MergedRoutes, RouteEntry, RouteState, Routes, route::desired_route_covers,
+};
 
 impl MergedRoutes {
     pub(crate) fn generate_revert(&self) -> Routes {
@@ -10,12 +12,29 @@ impl MergedRoutes {
 
         let current_rts = self.current.config.as_ref().unwrap_or(&empty_vec);
 
-        // Delete added routes
+        let has_authoritative_scope = self
+            .desired
+            .authoritative
+            .as_ref()
+            .is_some_and(|scopes| !scopes.is_empty());
+
+        // Delete routes this transaction added. Pre-existing routes that the
+        // desired state still lists are kept, which is required when an
+        // authoritative scope replaces a set but retains some of it.
         if let Some(config_rts) = self.desired.config.as_ref() {
             for config_rt in config_rts.iter().filter(|r| !r.is_absent()) {
-                let mut rt = config_rt.clone();
-                rt.state = Some(RouteState::Absent);
-                revert_rts.push(rt);
+                let already_present = current_rts.iter().any(|cur_rt| {
+                    if has_authoritative_scope {
+                        desired_route_covers(config_rt, cur_rt)
+                    } else {
+                        config_rt.is_match(cur_rt)
+                    }
+                });
+                if !already_present {
+                    let mut rt = config_rt.clone();
+                    rt.state = Some(RouteState::Absent);
+                    revert_rts.push(rt);
+                }
             }
         }
 

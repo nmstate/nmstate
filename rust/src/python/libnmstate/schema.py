@@ -34,6 +34,8 @@ class Route:
 
     RUNNING = "running"
     CONFIG = "config"
+    AUTHORITATIVE = "authoritative"
+    SPECIAL_ROUTES = "special-routes"
     STATE = "state"
     STATE_ABSENT = "absent"
     STATE_IGNORE = "ignore"

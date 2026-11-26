@@ -1,0 +1,42 @@
+# This file owns eth1 static routes in the main table (254).
+# `config` is the complete set for that scope. Apply it, then apply the
+# file again with one route removed: the omitted route is deleted from the
+# running kernel and from the NetworkManager profile. No `state: absent`
+# entry is required.
+#
+# A second file may manage eth2, or eth1 in a different table. Do not give
+# two files the same next-hop interface and table. `nmstatectl apply` and
+# `nmstate.service` apply each file separately, so overlapping scopes must
+# be combined into one desired state.
+#
+# Omit `table-id` only when this file owns every table on eth1. That overlaps
+# any file that names one of those tables.
+#
+# Special routes with no next-hop interface (blackhole, unreachable, prohibit)
+# are not part of this interface scope. Own them with `special-routes: true`,
+# or with `next-hop-interface: lo` when the route is stored on lo.
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: 192.0.2.251
+          prefix-length: 24
+
+routes:
+  authoritative:
+    - next-hop-interface: eth1
+      table-id: 254
+  config:
+    - destination: 192.0.2.0/24
+      next-hop-interface: eth1
+      next-hop-address: 192.0.2.1
+      table-id: 254
+    - destination: 198.51.100.0/24
+      next-hop-interface: eth1
+      next-hop-address: 192.0.2.1
+      table-id: 254

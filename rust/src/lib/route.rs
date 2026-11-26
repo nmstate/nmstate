@@ -43,12 +43,12 @@ pub struct Routes {
     ///  * boot (often used by `iproute` command)
     ///  * static
     ///
-    /// When applying, `None` means preserve current routes.
-    /// This property is not overriding but adding specified routes to
-    /// existing routes. To delete a route entry, please [RouteEntry.state] as
-    /// [RouteState::Absent]. Any property of absent [RouteEntry] set to
-    /// `None` means wildcard. For example, this [crate::NetworkState] could
-    /// remove all routes next hop to interface eth1(showing in yaml):
+    /// When applying, `None` means preserve current routes unless
+    /// [Routes::authoritative] is set. Without that opt-in, this property
+    /// adds routes to the existing set. To delete a route entry, set
+    /// [RouteEntry::state] to [RouteState::Absent]. Any property of an absent
+    /// [RouteEntry] set to `None` means wildcard. For example, this
+    /// [crate::NetworkState] removes all routes whose next hop is eth1:
     /// ```yaml
     /// routes:
     ///   config:
@@ -56,9 +56,81 @@ pub struct Routes {
     ///     state: absent
     /// ```
     ///
-    /// To change a route entry, you need to delete old one and add new one(can
-    /// be in single transaction).
+    /// To change a route entry, delete the old one and add the new one (both
+    /// can be in a single transaction). With [Routes::authoritative], omitting
+    /// a route from the scope is enough; no `state: absent` entry is required.
     pub config: Option<Vec<RouteEntry>>,
+    #[serde(default, skip_serializing_if = "is_none_or_empty_vec")]
+    /// Opt-in scopes where `config` is the complete static-route set.
+    ///
+    /// Omit this property to keep the default incremental behavior and
+    /// explicit `state: absent` deletes. When it is set, each entry names the
+    /// authority for one scope, such as a next-hop interface and a routing
+    /// table. Static routes that match a scope and are not listed in `config`
+    /// are removed from the running kernel and from the persistent
+    /// NetworkManager profile. `config: []` and a missing `config` both clear
+    /// every static route in the declared scopes.
+    ///
+    /// Routes outside those scopes are left unchanged. That includes static
+    /// routes on other interfaces or tables, and routes learned dynamically
+    /// (DHCP, IPv6 router advertisements, and any protocol other than `boot`
+    /// or `static`).
+    ///
+    /// Special routes (`blackhole`, `unreachable`, `prohibit`) that have no
+    /// next-hop interface are not part of an interface scope. Set
+    /// `special-routes: true` to own them, optionally narrowed with
+    /// `table-id` or `next-hop-interface`. A special route that already has a
+    /// next-hop interface, such as an IPv6 blackhole route on `lo`, is
+    /// included only when a scope names that interface.
+    ///
+    /// An IPv6 on-link `/128` route that the kernel adds for a next hop still
+    /// used by a desired route in the same scope is kept.
+    ///
+    /// `nmstatectl apply` honors this property directly. `nmstate.service` is
+    /// not required. The service applies each file under `/etc/nmstate` by
+    /// itself, and each apply replaces the whole of every scope that file
+    /// declares. When more than one source manages routes, put the routes in
+    /// one desired state or give the sources non-overlapping scopes. A later
+    /// file that repeats an earlier scope deletes routes that only the earlier
+    /// file listed.
+    ///
+    /// Per-interface files for `eth1` and `eth2` in the main table:
+    /// ```yaml
+    /// routes:
+    ///   authoritative:
+    ///     - next-hop-interface: eth1
+    ///       table-id: 254
+    ///   config:
+    ///     - destination: 192.0.2.0/24
+    ///       next-hop-interface: eth1
+    ///       next-hop-address: 192.0.2.1
+    /// ```
+    /// ```yaml
+    /// routes:
+    ///   authoritative:
+    ///     - next-hop-interface: eth2
+    ///       table-id: 254
+    ///   config:
+    ///     - destination: 198.51.100.0/24
+    ///       next-hop-interface: eth2
+    ///       next-hop-address: 192.0.2.1
+    /// ```
+    ///
+    /// Applying the `eth1` file again with only one of two previously listed
+    /// routes removes the omitted route. Clearing table 200 on `eth1`,
+    /// including when `config` is omitted:
+    /// ```yaml
+    /// routes:
+    ///   authoritative:
+    ///     - next-hop-interface: eth1
+    ///       table-id: 200
+    /// ```
+    ///
+    /// `table-id: 0` is the main table, same as a route entry. Omitting
+    /// `table-id` covers every table selected by the other fields, so do not
+    /// combine that with another file that names a single table on the same
+    /// interface.
+    pub authoritative: Option<Vec<RouteAuthoritativeScope>>,
 }
 
 impl Routes {
@@ -68,10 +140,20 @@ impl Routes {
 
     /// TODO: hide it, internal only
     pub fn is_empty(&self) -> bool {
-        self.running.is_none() && self.config.is_none()
+        self.running.is_none()
+            && self.config.is_none()
+            && self
+                .authoritative
+                .as_ref()
+                .is_none_or(|scopes| scopes.is_empty())
     }
 
     pub fn validate(&self) -> Result<(), NmstateError> {
+        if let Some(scopes) = self.authoritative.as_ref() {
+            for scope in scopes {
+                scope.validate()?;
+            }
+        }
         // All desire non-absent route should have next hop interface except
         // for route with route type `Blackhole`, `Unreachable`, `Prohibit`.
         if let Some(config_routes) = self.config.as_ref() {
@@ -184,6 +266,166 @@ impl Routes {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn resolve_authoritative_scopes(
+        &mut self,
+        merged_ifaces: &MergedInterfaces,
+    ) -> Result<(), NmstateError> {
+        let Some(scopes) = self.authoritative.as_mut() else {
+            return Ok(());
+        };
+        let iface_name_search = &merged_ifaces.iface_name_search;
+        for scope in scopes.iter_mut() {
+            let Some(iface_name) = scope.next_hop_interface.clone() else {
+                continue;
+            };
+            if iface_name == LOOPBACK_IFACE_NAME {
+                continue;
+            }
+            let kernel_names = iface_name_search.get(&iface_name);
+            if kernel_names.contains(&iface_name.as_str()) {
+                continue;
+            }
+            if kernel_names.is_empty() {
+                if merged_ifaces.ignored_ifaces.iter().any(
+                    |(name, iface_type)| {
+                        name == &iface_name && !iface_type.is_userspace()
+                    },
+                ) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Authoritative route scope next-hop interface \
+                             {iface_name} is marked as ignored"
+                        ),
+                    ));
+                }
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Authoritative route scope next-hop interface \
+                         {iface_name} was not found"
+                    ),
+                ));
+            } else if kernel_names.len() > 1 {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Authoritative route scope next-hop interface \
+                         {iface_name} matches multiple interfaces"
+                    ),
+                ));
+            } else if let Some(kernel_name) = kernel_names.first() {
+                scope.next_hop_interface = Some((*kernel_name).to_string());
+            }
+        }
+        Ok(())
+    }
+}
+
+fn is_none_or_empty_vec<T>(value: &Option<Vec<T>>) -> bool {
+    value.as_ref().is_none_or(|items| items.is_empty())
+}
+
+/// One authoritative static-route scope.
+///
+/// At least one of `next-hop-interface`, `table-id`, or
+/// `special-routes: true` is required. See [Routes::authoritative].
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[non_exhaustive]
+pub struct RouteAuthoritativeScope {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Next-hop interface this scope owns. Special routes with no next-hop
+    /// interface are excluded unless [RouteAuthoritativeScope::special_routes]
+    /// is true.
+    pub next_hop_interface: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    /// Routing table this scope owns. `None` means every table for the rest
+    /// of the scope. `0` is the main table (254).
+    pub table_id: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    /// Own `blackhole`, `unreachable`, and `prohibit` routes. Narrow with
+    /// `table-id` and `next-hop-interface`. Leave unset for an interface
+    /// scope that should ignore special routes without that next hop.
+    pub special_routes: Option<bool>,
+}
+
+impl RouteAuthoritativeScope {
+    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+        if self.next_hop_interface.as_deref() == Some("") {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Authoritative route scope next-hop-interface cannot be empty"
+                    .to_string(),
+            ));
+        }
+        if self.special_routes == Some(false) {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Authoritative route scope special-routes must be true to own \
+                 blackhole, unreachable, and prohibit routes, or be omitted"
+                    .to_string(),
+            ));
+        }
+        let has_iface = self.next_hop_interface.is_some();
+        let has_table = self.table_id.is_some();
+        let has_special = self.special_routes == Some(true);
+        if !has_iface && !has_table && !has_special {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Authoritative route scope must declare next-hop-interface, \
+                 table-id, and/or special-routes: true"
+                    .to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn effective_table_id(&self) -> Option<u32> {
+        self.table_id.map(|table| {
+            if table == RouteEntry::USE_DEFAULT_ROUTE_TABLE {
+                DEFAULT_TABLE_ID
+            } else {
+                table
+            }
+        })
+    }
+
+    /// Whether a current static route is inside this scope.
+    pub(crate) fn contains_route(&self, route: &RouteEntry) -> bool {
+        if let Some(table) = self.effective_table_id()
+            && route.effective_table_id() != table
+        {
+            return false;
+        }
+        let special = !route.is_unicast();
+        if self.special_routes == Some(true) {
+            if !special {
+                return false;
+            }
+            if let Some(iface) = self.next_hop_interface.as_deref() {
+                return route.next_hop_iface.as_deref() == Some(iface);
+            }
+            return true;
+        }
+        if special {
+            return self.next_hop_interface.is_some()
+                && route.next_hop_iface == self.next_hop_interface;
+        }
+        if let Some(iface) = self.next_hop_interface.as_deref() {
+            return route.next_hop_iface.as_deref() == Some(iface);
+        }
+        self.table_id.is_some()
     }
 }
 
@@ -699,6 +941,8 @@ pub(crate) struct MergedRoutes {
     pub(crate) route_changed_ifaces: Vec<String>,
     // The `changed_routes` contains changed routes including those been marked
     // as absent. Not including desired route equal to current route.
+    // Static routes dropped by an authoritative scope are included here as
+    // absent entries even when the desired state did not list `state: absent`.
     pub(crate) changed_routes: Vec<RouteEntry>,
     pub(crate) desired: Routes,
     pub(crate) current: Routes,
@@ -714,6 +958,7 @@ impl MergedRoutes {
         desired.validate()?;
         desired.resolve_next_hop_iface_ref(merged_ifaces)?;
         desired.resolve_vrf_name(merged_ifaces)?;
+        desired.resolve_authoritative_scopes(merged_ifaces)?;
 
         let mut desired_routes = Vec::new();
         if let Some(rts) = desired.config.as_ref() {
@@ -820,12 +1065,26 @@ impl MergedRoutes {
             })
         };
 
+        let authoritative_scopes =
+            desired.authoritative.clone().unwrap_or_default();
+
         if let Some(cur_rts) = current.config.as_ref() {
             for rt in cur_rts {
+                let removed_by_scope = route_removed_by_authoritative_scope(
+                    rt,
+                    authoritative_scopes.as_slice(),
+                    desired_routes.as_slice(),
+                );
+                if removed_by_scope {
+                    log::info!(
+                        "Route '{rt}' is inside an authoritative scope and is \
+                         not in the desired set; removing it"
+                    );
+                }
                 if let Some(via) = rt.next_hop_iface.as_ref() {
                     // We include current route to merged_routes when it is
                     // not marked as absent due to absent interface or disabled
-                    // ip stack or route state:absent.
+                    // ip stack or route state:absent or an authoritative scope.
                     if ifaces_marked_as_absent.contains(&via.as_str())
                         || (rt.is_ipv6()
                             && ifaces_with_ipv6_disabled
@@ -838,22 +1097,28 @@ impl MergedRoutes {
                             .filter(|r| r.is_absent())
                             .any(|absent_rt| absent_rt.is_match(rt))
                         || is_replaced_special(rt)
+                        || removed_by_scope
                     {
                         let mut new_rt = rt.clone();
                         new_rt.state = Some(RouteState::Absent);
                         changed_routes.insert(new_rt);
+                        if removed_by_scope {
+                            changed_ifaces.insert(via.as_str());
+                        }
                     } else {
                         merged_routes.push(rt.clone());
                     }
                 } else if rt.route_type.is_some() {
                     // Special routes with no next-hop interface. Drop them when
-                    // desired marks them absent or replaces the route-type for
-                    // the same destination, table, and metric.
+                    // desired marks them absent, an authoritative scope owns
+                    // them, or the route-type is replaced for the same
+                    // destination, table, and metric.
                     if desired_routes
                         .iter()
                         .filter(|r| r.is_absent())
                         .any(|absent_rt| absent_rt.is_match(rt))
                         || is_replaced_special(rt)
+                        || removed_by_scope
                     {
                         let mut new_rt = rt.clone();
                         new_rt.state = Some(RouteState::Absent);
@@ -1040,4 +1305,139 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
         return Ok(());
     }
     Ok(())
+}
+
+fn route_removed_by_authoritative_scope(
+    route: &RouteEntry,
+    scopes: &[RouteAuthoritativeScope],
+    desired_routes: &[RouteEntry],
+) -> bool {
+    if scopes.is_empty()
+        || !scopes.iter().any(|scope| scope.contains_route(route))
+    {
+        return false;
+    }
+    if is_preserved_ipv6_gateway_host_route(route, desired_routes) {
+        return false;
+    }
+    !desired_routes
+        .iter()
+        .any(|desired| desired_route_covers(desired, route))
+}
+
+/// A desired present route covers a current static route when it is the same
+/// route after kernel defaults are applied. Unset metric means 0 for IPv4 and
+/// 1024 for IPv6. Unset table means the main table. Empty next hops (`""`,
+/// `0.0.0.0`, `::`) match a missing next hop. An IPv6 special route stored on
+/// `lo` matches a desired special route that omits the interface.
+pub(crate) fn desired_route_covers(
+    desired: &RouteEntry,
+    current: &RouteEntry,
+) -> bool {
+    if desired.is_absent() {
+        return false;
+    }
+    let desired = normalized_route(desired);
+    let current = normalized_route(current);
+    if desired.route_type != current.route_type {
+        return false;
+    }
+    if desired.effective_table_id() != current.effective_table_id() {
+        return false;
+    }
+    if desired.effective_metric() != current.effective_metric() {
+        return false;
+    }
+    if !next_hop_equivalent(&desired.next_hop_addr, &current.next_hop_addr) {
+        return false;
+    }
+    if !iface_equivalent(&desired, &current) {
+        return false;
+    }
+    desired.is_match(&current)
+}
+
+fn normalized_route(route: &RouteEntry) -> RouteEntry {
+    let mut original = route.clone();
+    original.state = None;
+    let mut route = original.clone();
+    if route.sanitize().is_err() {
+        route = original;
+    }
+    route.state = None;
+    if canonical_next_hop(&route.next_hop_addr).is_none() {
+        route.next_hop_addr = None;
+    }
+    // IPv6 special routes are queried with next-hop-interface `lo`. Desired
+    // special routes usually omit it. Treat both as no interface.
+    if !route.is_unicast()
+        && matches!(
+            route.next_hop_iface.as_deref(),
+            None | Some(LOOPBACK_IFACE_NAME)
+        )
+    {
+        route.next_hop_iface = None;
+    }
+    route
+}
+
+fn next_hop_equivalent(left: &Option<String>, right: &Option<String>) -> bool {
+    canonical_next_hop(left) == canonical_next_hop(right)
+}
+
+fn canonical_next_hop(addr: &Option<String>) -> Option<&str> {
+    match addr.as_deref() {
+        None | Some("") | Some("0.0.0.0") | Some("::") => None,
+        Some(addr) => Some(addr),
+    }
+}
+
+fn iface_equivalent(left: &RouteEntry, right: &RouteEntry) -> bool {
+    if left.next_hop_iface == right.next_hop_iface {
+        return true;
+    }
+    if left.is_unicast() || right.is_unicast() {
+        return false;
+    }
+    let is_loopback = |iface: &Option<String>| {
+        matches!(iface.as_deref(), None | Some(LOOPBACK_IFACE_NAME))
+    };
+    is_loopback(&left.next_hop_iface) && is_loopback(&right.next_hop_iface)
+}
+
+/// Kernel/NM may install an on-link IPv6 /128 for the gateway of a static
+/// route. Keep it while a desired route in the same scope still uses that
+/// gateway. Drop it once no desired route needs the gateway.
+pub(crate) fn is_preserved_ipv6_gateway_host_route(
+    route: &RouteEntry,
+    desired_routes: &[RouteEntry],
+) -> bool {
+    if !is_ipv6_onlink_host_route(route) {
+        return false;
+    }
+    let Some(host) = ipv6_host_address(route.destination.as_deref()) else {
+        return false;
+    };
+    desired_routes.iter().any(|desired| {
+        !desired.is_absent()
+            && desired.is_ipv6()
+            && desired.next_hop_iface == route.next_hop_iface
+            && desired.effective_table_id() == route.effective_table_id()
+            && desired
+                .next_hop_addr
+                .as_deref()
+                .and_then(|addr| addr.parse::<std::net::Ipv6Addr>().ok())
+                == host.parse::<std::net::Ipv6Addr>().ok()
+    })
+}
+
+fn is_ipv6_onlink_host_route(route: &RouteEntry) -> bool {
+    route.is_ipv6()
+        && route.is_unicast()
+        && canonical_next_hop(&route.next_hop_addr).is_none()
+        && ipv6_host_address(route.destination.as_deref()).is_some()
+}
+
+fn ipv6_host_address(destination: Option<&str>) -> Option<&str> {
+    destination?.strip_suffix("/128")
 }

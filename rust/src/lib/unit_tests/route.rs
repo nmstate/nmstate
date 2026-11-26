@@ -20,6 +20,7 @@ fn test_sort_uniqe_routes() {
     let cur_routes = Routes {
         running: None,
         config: Some(test_routes.clone()),
+        ..Default::default()
     };
 
     let mut dup_route_entry =
@@ -35,6 +36,7 @@ fn test_sort_uniqe_routes() {
     let des_routes = Routes {
         running: None,
         config: Some(test_routes.clone()),
+        ..Default::default()
     };
 
     let (merged_ifaces, current_ifaces) = gen_merged_ifaces_for_route_test();
@@ -1301,5 +1303,400 @@ fn test_revert_restores_replaced_special_route() {
             rt.is_absent() && rt.route_type == Some(crate::RouteType::Prohibit)
         }),
         "revert should remove the added prohibit route: {revert_routes:?}"
+    );
+}
+
+fn merge_routes(desired: &str, current: &str) -> MergedRoutes {
+    let desired: Routes = serde_yaml::from_str(desired).unwrap();
+    let current: Routes = serde_yaml::from_str(current).unwrap();
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    MergedRoutes::new(desired, current, &merged_ifaces).unwrap()
+}
+
+fn absent_destinations(merged: &MergedRoutes) -> Vec<String> {
+    let mut found: Vec<String> = merged
+        .changed_routes
+        .iter()
+        .filter(|rt| rt.is_absent())
+        .filter_map(|rt| rt.destination.clone())
+        .collect();
+    found.sort();
+    found
+}
+
+const ROUTE_A_AND_B: &str = r#"
+config:
+- destination: 192.0.2.0/24
+  next-hop-interface: eth1
+  next-hop-address: 192.0.2.1
+  metric: 100
+  table-id: 254
+- destination: 198.51.100.0/24
+  next-hop-interface: eth1
+  next-hop-address: 192.0.2.1
+  metric: 100
+  table-id: 254
+- destination: 203.0.113.0/24
+  next-hop-interface: eth1
+  next-hop-address: 192.0.2.1
+  metric: 100
+  table-id: 100
+- destination: 203.0.113.0/24
+  next-hop-interface: eth2
+  next-hop-address: 192.0.2.2
+  metric: 100
+  table-id: 254
+- destination: 192.0.2.0/25
+  route-type: blackhole
+  metric: 100
+  table-id: 254
+"#;
+
+#[test]
+fn test_authoritative_scope_removes_omitted_route() {
+    let merged = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        "#,
+        ROUTE_A_AND_B,
+    );
+    assert_eq!(
+        absent_destinations(&merged),
+        vec!["198.51.100.0/24".to_string()]
+    );
+    let eth1 = merged.merged.get("eth1").unwrap();
+    assert!(eth1.iter().any(|rt| {
+        rt.destination.as_deref() == Some("192.0.2.0/24")
+            && rt.table_id == Some(254)
+    }));
+    assert!(eth1.iter().any(|rt| rt.table_id == Some(100)));
+    assert!(merged.merged.contains_key("eth2"));
+    assert!(merged.merged.contains_key("lo"));
+}
+
+#[test]
+fn test_authoritative_empty_and_omitted_config_clear_scope() {
+    for desired in [
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config: []
+        "#,
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        "#,
+    ] {
+        let merged = merge_routes(desired, ROUTE_A_AND_B);
+        assert_eq!(
+            absent_destinations(&merged),
+            vec!["192.0.2.0/24".to_string(), "198.51.100.0/24".to_string()]
+        );
+        let eth1 = merged.merged.get("eth1").unwrap();
+        assert!(eth1.iter().all(|rt| rt.table_id == Some(100)));
+        assert!(merged.merged.contains_key("eth2"));
+        assert!(merged.merged.contains_key("lo"));
+    }
+}
+
+#[test]
+fn test_authoritative_table_zero_is_main_table() {
+    let merged = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 0
+        config: []
+        "#,
+        ROUTE_A_AND_B,
+    );
+    assert!(absent_destinations(&merged).contains(&"192.0.2.0/24".to_string()));
+    assert!(
+        !absent_destinations(&merged).contains(&"203.0.113.0/24".to_string())
+    );
+}
+
+#[test]
+fn test_incremental_apply_keeps_omitted_route() {
+    let merged = merge_routes(
+        r#"
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        "#,
+        ROUTE_A_AND_B,
+    );
+    assert!(absent_destinations(&merged).is_empty());
+}
+
+#[test]
+fn test_explicit_absent_still_removes_route() {
+    let merged = merge_routes(
+        r#"
+        config:
+        - destination: 198.51.100.0/24
+          next-hop-interface: eth1
+          state: absent
+        "#,
+        ROUTE_A_AND_B,
+    );
+    assert_eq!(
+        absent_destinations(&merged),
+        vec!["198.51.100.0/24".to_string()]
+    );
+}
+
+#[test]
+fn test_authoritative_special_routes_require_explicit_ownership() {
+    let preserved = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+        config: []
+        "#,
+        ROUTE_A_AND_B,
+    );
+    assert!(preserved.merged.contains_key("lo"));
+
+    let removed = merge_routes(
+        r#"
+        authoritative:
+        - special-routes: true
+          table-id: 254
+        config: []
+        "#,
+        ROUTE_A_AND_B,
+    );
+    assert!(removed.changed_routes.iter().any(|rt| {
+        rt.is_absent() && rt.route_type == Some(crate::RouteType::Blackhole)
+    }));
+    assert!(removed.merged.contains_key("eth1"));
+}
+
+#[test]
+fn test_authoritative_ipv6_special_route_on_lo_needs_explicit_scope() {
+    let current = r#"
+        config:
+        - destination: 2001:db8:1::/64
+          route-type: blackhole
+          next-hop-interface: lo
+          metric: 200
+          table-id: 99
+        "#;
+    let kept = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 99
+        config: []
+        "#,
+        current,
+    );
+    assert!(kept.changed_routes.is_empty());
+
+    let removed = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: lo
+          table-id: 99
+        config: []
+        "#,
+        current,
+    );
+    assert!(removed.changed_routes.iter().any(|rt| rt.is_absent()));
+}
+
+#[test]
+fn test_authoritative_reapply_is_idempotent() {
+    let current = r#"
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 0
+          table-id: 254
+        - destination: 2001:db8:1::/64
+          next-hop-interface: eth1
+          next-hop-address: 2001:db8:1::2
+          metric: 1024
+          table-id: 254
+        "#;
+    let desired = r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          table-id: 254
+        - destination: 2001:db8:1::/64
+          next-hop-interface: eth1
+          next-hop-address: 2001:db8:1::2
+          table-id: 254
+        "#;
+    let merged = merge_routes(desired, current);
+    assert!(
+        merged.changed_routes.is_empty(),
+        "reapplying the same authoritative set changed {:?}",
+        merged.changed_routes
+    );
+}
+
+#[test]
+fn test_authoritative_preserves_ipv6_gateway_host_route() {
+    let current = r#"
+        config:
+        - destination: ::/0
+          next-hop-interface: eth1
+          next-hop-address: 2001:db8::1
+          metric: 1024
+          table-id: 254
+        - destination: 2001:db8::1/128
+          next-hop-interface: eth1
+          next-hop-address: "::"
+          metric: 1024
+          table-id: 254
+        "#;
+    let kept = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config:
+        - destination: ::/0
+          next-hop-interface: eth1
+          next-hop-address: 2001:db8::1
+          table-id: 254
+        "#,
+        current,
+    );
+    assert!(
+        kept.changed_routes.is_empty(),
+        "gateway host route was changed: {:?}",
+        kept.changed_routes
+    );
+
+    let removed = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config: []
+        "#,
+        current,
+    );
+    assert_eq!(absent_destinations(&removed).len(), 2);
+}
+
+#[test]
+fn test_authoritative_revert_restores_only_removed_route() {
+    let merged = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        "#,
+        ROUTE_A_AND_B,
+    );
+    let revert = merged.generate_revert();
+    let revert_routes = revert.config.as_ref().unwrap();
+    assert!(revert_routes.iter().any(|rt| {
+        !rt.is_absent() && rt.destination.as_deref() == Some("198.51.100.0/24")
+    }));
+    assert!(!revert_routes.iter().any(|rt| {
+        rt.is_absent() && rt.destination.as_deref() == Some("192.0.2.0/24")
+    }));
+}
+
+#[test]
+fn test_authoritative_verify_rejects_stale_route_and_allows_other_scope() {
+    let desired: Routes = serde_yaml::from_str(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        "#,
+    )
+    .unwrap();
+    let stale: Routes = serde_yaml::from_str(ROUTE_A_AND_B).unwrap();
+    let (merged_ifaces, current_ifaces) = gen_merged_ifaces_for_route_test();
+    let merged =
+        MergedRoutes::new(desired, stale.clone(), &merged_ifaces).unwrap();
+    let err = merged.verify(&stale, &[], &current_ifaces).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::VerificationError);
+
+    let clean: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        - destination: 203.0.113.0/24
+          next-hop-interface: eth2
+          next-hop-address: 192.0.2.2
+          metric: 100
+          table-id: 254
+        "#,
+    )
+    .unwrap();
+    merged.verify(&clean, &[], &current_ifaces).unwrap();
+}
+
+#[test]
+fn test_authoritative_scope_must_name_its_authority() {
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    for desired in [
+        "authoritative:\n- {}\n",
+        "authoritative:\n- special-routes: false\n  next-hop-interface: eth1\n",
+        "authoritative:\n- next-hop-interface: ''\n",
+        "authoritative:\n- next-hop-interface: missing0\n",
+    ] {
+        let desired: Routes = serde_yaml::from_str(desired).unwrap();
+        let err = MergedRoutes::new(desired, Routes::new(), &merged_ifaces)
+            .unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_authoritative_scope_rejects_unknown_field() {
+    let err = serde_yaml::from_str::<Routes>(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          foo: 1
+        "#,
+    )
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("foo") || err.to_string().contains("unknown")
     );
 }
