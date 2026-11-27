@@ -974,7 +974,15 @@ impl MergedRoutes {
         validate_special_route_conflicts(desired_routes.as_slice())?;
 
         let mut changed_ifaces: HashSet<&str> = HashSet::new();
-        let mut changed_routes: HashSet<RouteEntry> = HashSet::new();
+        // Metric is part of this identity. RouteEntry's Hash/Eq ignore it, so
+        // a HashSet would collapse two removals that differ only by metric.
+        let mut changed_routes: Vec<RouteEntry> = Vec::new();
+        let ignored_route_ifaces: HashSet<&str> = merged_ifaces
+            .ignored_ifaces
+            .iter()
+            .filter(|(_, iface_type)| !iface_type.is_userspace())
+            .map(|(name, _)| name.as_str())
+            .collect();
 
         let ifaces_marked_as_absent: Vec<&str> = merged_ifaces
             .kernel_ifaces
@@ -1070,11 +1078,12 @@ impl MergedRoutes {
 
         if let Some(cur_rts) = current.config.as_ref() {
             for rt in cur_rts {
-                let removed_by_scope = route_removed_by_authoritative_scope(
-                    rt,
-                    authoritative_scopes.as_slice(),
-                    desired_routes.as_slice(),
-                );
+                let removed_by_scope =
+                    route_removed_by_authoritative_scope(
+                        rt,
+                        authoritative_scopes.as_slice(),
+                        desired_routes.as_slice(),
+                    ) && !route_iface_is_ignored(rt, &ignored_route_ifaces);
                 if removed_by_scope {
                     log::info!(
                         "Route '{rt}' is inside an authoritative scope and is \
@@ -1101,7 +1110,7 @@ impl MergedRoutes {
                     {
                         let mut new_rt = rt.clone();
                         new_rt.state = Some(RouteState::Absent);
-                        changed_routes.insert(new_rt);
+                        push_changed_route(&mut changed_routes, new_rt);
                         if removed_by_scope {
                             changed_ifaces.insert(via.as_str());
                         }
@@ -1122,7 +1131,7 @@ impl MergedRoutes {
                     {
                         let mut new_rt = rt.clone();
                         new_rt.state = Some(RouteState::Absent);
-                        changed_routes.insert(new_rt);
+                        push_changed_route(&mut changed_routes, new_rt);
                         changed_ifaces.insert(LOOPBACK_IFACE_NAME);
                     } else {
                         merged_routes.push(rt.clone());
@@ -1131,14 +1140,22 @@ impl MergedRoutes {
             }
         }
 
-        // Append desired routes
+        // Append desired routes. A current route that this transaction
+        // removes does not count as already installed, so a metric change
+        // inside an authoritative scope deletes the old route and adds the
+        // replacement. Routes withdrawn because the interface or its IP stack
+        // is going away still suppress the add.
         for rt in desired_routes.iter().filter(|rt| !rt.is_absent()) {
-            if let Some(cur_rts) = current.config.as_ref() {
-                if !cur_rts.iter().any(|cur_rt| cur_rt.is_match(rt)) {
-                    changed_routes.insert(rt.clone());
-                }
-            } else {
-                changed_routes.insert(rt.clone());
+            if !desired_route_already_installed(
+                rt,
+                current.config.as_deref().unwrap_or(&[]),
+                &merged_routes,
+                authoritative_scopes.as_slice(),
+                &ifaces_marked_as_absent,
+                &ifaces_with_ipv4_disabled,
+                &ifaces_with_ipv6_disabled,
+            ) {
+                push_changed_route(&mut changed_routes, rt.clone());
             }
             merged_routes.push(rt.clone());
         }
@@ -1174,7 +1191,7 @@ impl MergedRoutes {
             desired,
             current,
             route_changed_ifaces,
-            changed_routes: changed_routes.drain().collect(),
+            changed_routes,
         })
     }
 
@@ -1198,6 +1215,14 @@ impl MergedRoutes {
         }
         self.route_changed_ifaces
             .retain(|n| !ignored_ifaces.contains(&n.as_str()));
+        // Nispor applies changed_routes in full. Dropping the interface from
+        // route_changed_ifaces is not enough to keep an ignored interface.
+        self.changed_routes.retain(|route| {
+            route
+                .next_hop_iface
+                .as_deref()
+                .is_none_or(|iface| !ignored_ifaces.contains(&iface))
+        });
     }
 
     pub(crate) fn is_changed(&self) -> bool {
@@ -1307,6 +1332,83 @@ fn validate_route_dst(route: &RouteEntry) -> Result<(), NmstateError> {
     Ok(())
 }
 
+fn push_changed_route(routes: &mut Vec<RouteEntry>, route: RouteEntry) {
+    if routes.iter().any(|existing| {
+        existing.sort_key() == route.sort_key()
+            && existing.metric == route.metric
+    }) {
+        return;
+    }
+    routes.push(route);
+}
+
+fn route_iface_is_ignored(
+    route: &RouteEntry,
+    ignored_ifaces: &HashSet<&str>,
+) -> bool {
+    route
+        .next_hop_iface
+        .as_deref()
+        .is_some_and(|iface| ignored_ifaces.contains(iface))
+}
+
+fn route_iface_is_going_away(
+    route: &RouteEntry,
+    ifaces_marked_as_absent: &[&str],
+    ifaces_with_ipv4_disabled: &[&str],
+    ifaces_with_ipv6_disabled: &[&str],
+) -> bool {
+    let Some(iface) = route.next_hop_iface.as_deref() else {
+        return false;
+    };
+    if ifaces_marked_as_absent.contains(&iface) {
+        return true;
+    }
+    if route.is_ipv6() {
+        ifaces_with_ipv6_disabled.contains(&iface)
+    } else {
+        ifaces_with_ipv4_disabled.contains(&iface)
+    }
+}
+
+/// A desired route is already installed when a surviving current route covers
+/// it, or when the matching current route is disappearing with its interface
+/// or IP stack. Inside an authoritative scope, coverage includes metric.
+/// Elsewhere, metric stays a wildcard so incremental apply is unchanged.
+fn desired_route_already_installed(
+    desired_rt: &RouteEntry,
+    current_routes: &[RouteEntry],
+    surviving_routes: &[RouteEntry],
+    scopes: &[RouteAuthoritativeScope],
+    ifaces_marked_as_absent: &[&str],
+    ifaces_with_ipv4_disabled: &[&str],
+    ifaces_with_ipv6_disabled: &[&str],
+) -> bool {
+    let in_scope = scopes.iter().any(|scope| scope.contains_route(desired_rt));
+    let covers = |current: &RouteEntry| {
+        if in_scope {
+            desired_route_covers(desired_rt, current)
+        } else {
+            current.is_match(desired_rt)
+        }
+    };
+    // Keep the pre-existing suppression when the interface or IP stack is
+    // going away. Metric remains a wildcard there so a desired route is not
+    // installed onto an interface that is being removed.
+    if current_routes.iter().any(|current| {
+        current.is_match(desired_rt)
+            && route_iface_is_going_away(
+                current,
+                ifaces_marked_as_absent,
+                ifaces_with_ipv4_disabled,
+                ifaces_with_ipv6_disabled,
+            )
+    }) {
+        return true;
+    }
+    surviving_routes.iter().any(covers)
+}
+
 fn route_removed_by_authoritative_scope(
     route: &RouteEntry,
     scopes: &[RouteAuthoritativeScope],
@@ -1355,6 +1457,64 @@ pub(crate) fn desired_route_covers(
         return false;
     }
     desired.is_match(&current)
+}
+
+#[cfg(feature = "query_apply")]
+/// Static routes to persist for one interface when authoritative scopes apply.
+///
+/// `None` means the saved profile needs no scope-driven route rewrite.
+/// `Some` is the full list to store: saved routes outside the scope stay,
+/// saved routes the scope removes are dropped, and kernel/desired routes
+/// already merged for this interface are included.
+pub(crate) fn reconcile_saved_static_routes(
+    scopes: &[RouteAuthoritativeScope],
+    desired_routes: &[RouteEntry],
+    saved_routes: &[RouteEntry],
+    merged_iface_routes: &[RouteEntry],
+    iface_routes_changed: bool,
+) -> Option<Vec<RouteEntry>> {
+    if scopes.is_empty() {
+        return None;
+    }
+    let removed = |route: &RouteEntry| {
+        route_removed_by_authoritative_scope(route, scopes, desired_routes)
+    };
+    let already_merged = |route: &RouteEntry| {
+        merged_iface_routes.iter().any(|merged| {
+            desired_route_covers(route, merged)
+                || desired_route_covers(merged, route)
+        })
+    };
+    let saved_in_scope_removed = saved_routes.iter().any(&removed);
+    let saved_outside_missing = saved_routes
+        .iter()
+        .any(|route| !removed(route) && !already_merged(route));
+    if !saved_in_scope_removed
+        && !(iface_routes_changed && saved_outside_missing)
+    {
+        return None;
+    }
+
+    let mut result = Vec::new();
+    for route in saved_routes.iter().filter(|route| !removed(route)) {
+        if result
+            .iter()
+            .any(|existing| desired_route_covers(route, existing))
+        {
+            continue;
+        }
+        result.push(route.clone());
+    }
+    for route in merged_iface_routes {
+        if result.iter().any(|existing| {
+            desired_route_covers(route, existing)
+                || desired_route_covers(existing, route)
+        }) {
+            continue;
+        }
+        result.push(route.clone());
+    }
+    Some(result)
 }
 
 fn normalized_route(route: &RouteEntry) -> RouteEntry {

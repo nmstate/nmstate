@@ -264,7 +264,7 @@ routes:
 .br
     next-hop-interface: eth2
 .br
-    next-hop-address: 192.0.2.1
+    next-hop-address: 198.51.100.1
 .RE
 .PP
 Applying eth1.yml again with the route omitted from \fBconfig\fR removes it.

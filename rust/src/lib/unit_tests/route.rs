@@ -1700,3 +1700,225 @@ fn test_authoritative_scope_rejects_unknown_field() {
         err.to_string().contains("foo") || err.to_string().contains("unknown")
     );
 }
+
+#[test]
+fn test_authoritative_metric_change_is_in_kernel_delta() {
+    let merged = merge_routes(
+        r#"
+        authoritative:
+        - next-hop-interface: eth1
+          table-id: 254
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 200
+          table-id: 254
+        "#,
+        r#"
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        "#,
+    );
+    assert!(
+        merged
+            .changed_routes
+            .iter()
+            .any(|route| { route.is_absent() && route.metric == Some(100) }),
+        "old metric must be deleted: {:?}",
+        merged.changed_routes
+    );
+    assert!(
+        merged
+            .changed_routes
+            .iter()
+            .any(|route| { !route.is_absent() && route.metric == Some(200) }),
+        "replacement metric must be installed: {:?}",
+        merged.changed_routes
+    );
+    let applied = merged.merged.get("eth1").unwrap();
+    assert!(applied.iter().any(|route| route.metric == Some(200)));
+    assert!(applied.iter().all(|route| route.metric != Some(100)));
+}
+
+#[test]
+fn test_route_diff_metric_change_installs_replacement() {
+    let merged = merge_routes(
+        r#"
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+          state: absent
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 200
+          table-id: 254
+        "#,
+        r#"
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        "#,
+    );
+    assert!(
+        merged
+            .changed_routes
+            .iter()
+            .any(|route| { route.is_absent() && route.metric == Some(100) })
+    );
+    assert!(
+        merged
+            .changed_routes
+            .iter()
+            .any(|route| { !route.is_absent() && route.metric == Some(200) })
+    );
+}
+
+#[test]
+fn test_authoritative_revert_restores_each_removed_metric() {
+    let merged = merge_routes(
+        r#"
+        authoritative:
+        - special-routes: true
+          table-id: 254
+        config: []
+        "#,
+        r#"
+        config:
+        - destination: 192.0.2.0/24
+          route-type: blackhole
+          metric: 100
+          table-id: 254
+        - destination: 192.0.2.0/24
+          route-type: blackhole
+          metric: 200
+          table-id: 254
+        "#,
+    );
+    assert_eq!(
+        merged
+            .changed_routes
+            .iter()
+            .filter(|route| route.is_absent())
+            .count(),
+        2
+    );
+    let revert = merged.generate_revert();
+    let revert_routes = revert.config.as_ref().unwrap();
+    assert!(
+        revert_routes
+            .iter()
+            .any(|route| { !route.is_absent() && route.metric == Some(100) })
+    );
+    assert!(
+        revert_routes
+            .iter()
+            .any(|route| { !route.is_absent() && route.metric == Some(200) })
+    );
+}
+
+#[test]
+fn test_authoritative_table_scope_skips_ignored_iface_routes() {
+    let desired: Routes = serde_yaml::from_str(
+        r#"
+        authoritative:
+        - table-id: 254
+        config: []
+        "#,
+    )
+    .unwrap();
+    let current: Routes = serde_yaml::from_str(
+        r#"
+        config:
+        - destination: 192.0.2.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        - destination: 198.51.100.0/24
+          next-hop-interface: eth2
+          next-hop-address: 198.51.100.1
+          metric: 100
+          table-id: 254
+        "#,
+    )
+    .unwrap();
+    let (merged_ifaces, _) = gen_merged_ifaces_for_route_test();
+    let mut merged =
+        MergedRoutes::new(desired, current, &merged_ifaces).unwrap();
+    merged.remove_routes_to_ignored_ifaces(&[(
+        "eth1".to_string(),
+        InterfaceType::Ethernet,
+    )]);
+    assert!(
+        merged
+            .changed_routes
+            .iter()
+            .all(|route| route.next_hop_iface.as_deref() != Some("eth1")),
+        "ignored interface route must not be deleted: {:?}",
+        merged.changed_routes
+    );
+    assert!(merged.changed_routes.iter().any(|route| {
+        route.is_absent() && route.next_hop_iface.as_deref() == Some("eth2")
+    }));
+}
+
+#[cfg(feature = "query_apply")]
+#[test]
+fn test_reconcile_saved_routes_drops_only_in_scope_routes() {
+    let desired: Routes = serde_yaml::from_str(
+        r#"
+        authoritative:
+        - table-id: 254
+        config: []
+        "#,
+    )
+    .unwrap();
+    let saved: Vec<RouteEntry> = serde_yaml::from_str(
+        r#"
+        - destination: 198.51.100.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 254
+        - destination: 203.0.113.0/24
+          next-hop-interface: eth1
+          next-hop-address: 192.0.2.1
+          metric: 100
+          table-id: 100
+        "#,
+    )
+    .unwrap();
+    let reconciled = crate::route::reconcile_saved_static_routes(
+        desired.authoritative.as_deref().unwrap(),
+        &[],
+        &saved,
+        &[],
+        false,
+    )
+    .unwrap();
+    assert_eq!(reconciled.len(), 1);
+    assert_eq!(reconciled[0].table_id, Some(100));
+
+    assert!(
+        crate::route::reconcile_saved_static_routes(
+            desired.authoritative.as_deref().unwrap(),
+            &[],
+            &saved[1..],
+            &[],
+            false,
+        )
+        .is_none()
+    );
+}

@@ -17,7 +17,7 @@ use super::super::{
         is_route_table_changed, is_veth_peer_changed, is_vlan_changed,
         is_vrf_table_id_changed, is_vxlan_changed, save_nm_connections,
     },
-    route::store_route_config,
+    route::{store_route_config, store_saved_routes_for_authoritative_scope},
     route_rule::store_route_rule_config,
 };
 use crate::{
@@ -101,6 +101,10 @@ pub(crate) async fn nm_apply(
     let mut merged_state = merged_state.clone();
 
     store_route_config(&mut merged_state)?;
+    store_saved_routes_for_authoritative_scope(
+        &mut merged_state,
+        &conn_matcher,
+    )?;
 
     store_route_rule_config(&mut merged_state)?;
 
