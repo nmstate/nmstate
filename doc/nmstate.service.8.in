@@ -60,6 +60,17 @@ If `override_iface = true`, for network state to apply, nmstate.service will:
 For example, if desired interface has no IPv4 section defined, nmstate
 will treat it as disabled regardless current network status.
 
+.PP
+Static routes stay incremental unless a file opts in with
+\fBroutes.authoritative\fR. The service applies each \fB.yml\fR or \fB.yaml\fR
+file on its own, and each authoritative scope in that file is replaced by
+the file's \fBroutes.config\fR. Per-interface files are supported: give each
+file the next-hop interface and routing tables it owns. Scopes must not
+overlap across files. When two sources manage the same interface and table,
+combine those routes into one desired state instead of splitting them.
+A later file that repeats an earlier scope deletes routes listed only in the
+earlier file. See \fBnmstatectl\fR(8) for the route scope syntax.
+
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
 .SH COPYRIGHT

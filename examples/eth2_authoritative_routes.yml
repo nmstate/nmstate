@@ -1,0 +1,24 @@
+# Non-overlapping companion to eth1_authoritative_routes.yml.
+# Applying this file does not add or remove eth1 routes, routes in other
+# tables, or dynamically learned routes.
+---
+interfaces:
+  - name: eth2
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: false
+      address:
+        - ip: 198.51.100.251
+          prefix-length: 24
+
+routes:
+  authoritative:
+    - next-hop-interface: eth2
+      table-id: 254
+  config:
+    - destination: 203.0.113.0/24
+      next-hop-interface: eth2
+      next-hop-address: 198.51.100.1
+      table-id: 254

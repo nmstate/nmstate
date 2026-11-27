@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use crate::{
     ErrorKind, InterfaceType, Interfaces, MergedRoutes, NmstateError,
     RouteEntry, RouteState, Routes,
+    route::{desired_route_covers, is_preserved_ipv6_gateway_host_route},
 };
 
 impl MergedRoutes {
@@ -123,6 +124,38 @@ impl MergedRoutes {
                         format!("Desired route {rt} not found after apply"),
                     ));
                 }
+            }
+        }
+
+        if let Some(scopes) = self.desired.authoritative.as_ref()
+            && !scopes.is_empty()
+        {
+            let present_routes: Vec<RouteEntry> = routes_for_verify
+                .iter()
+                .filter(|rt| !rt.is_absent())
+                .cloned()
+                .collect();
+            for cur_rt in &cur_routes {
+                if !scopes.iter().any(|scope| scope.contains_route(cur_rt)) {
+                    continue;
+                }
+                if is_preserved_ipv6_gateway_host_route(cur_rt, &present_routes)
+                {
+                    continue;
+                }
+                if present_routes
+                    .iter()
+                    .any(|desired| desired_route_covers(desired, cur_rt))
+                {
+                    continue;
+                }
+                return Err(NmstateError::new(
+                    ErrorKind::VerificationError,
+                    format!(
+                        "Static route {cur_rt} is inside an authoritative \
+                         scope but is not in the desired set"
+                    ),
+                ));
             }
         }
 

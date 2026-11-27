@@ -184,6 +184,93 @@ will treat it as disabled regardless current network status.
 
 .IP \fB--version
 displays nmstate version.
+.SH ROUTES
+By default, \fBroutes.config\fR is incremental. Routes listed there are added,
+and a route is removed only when an entry sets \fBstate: absent\fR. Properties
+left unset on an absent entry are wildcards, so the following removes every
+static route whose next hop is eth1:
+.PP
+.RS
+routes:
+.br
+  config:
+.br
+  - next-hop-interface: eth1
+.br
+    state: absent
+.RE
+.PP
+To replace the static routes of an explicit scope, opt in with
+\fBroutes.authoritative\fR. Each entry names the scope it owns, for example
+the next-hop interface and routing table. Inside that scope, \fBconfig\fR is
+the complete desired set: a route that is no longer listed is deleted from
+the running kernel and from the persistent NetworkManager profile on the next
+\fBnmstatectl apply\fR. An empty \fBconfig\fR list, or a state that keeps
+\fBauthoritative\fR and omits \fBconfig\fR, removes every static route in the
+scope. No \fBstate: absent\fR entry is required. \fBnmstate.service\fR is not
+required for this behavior.
+.PP
+Routes outside the declared scope are unchanged. That includes static routes
+on other interfaces or in other tables, and dynamically learned routes (DHCP,
+IPv6 router advertisements, and protocols other than boot or static).
+Special routes (\fBblackhole\fR, \fBunreachable\fR, \fBprohibit\fR) that have
+no next-hop interface are not part of an interface scope. Set
+\fBspecial-routes: true\fR on a scope, or set \fBnext-hop-interface\fR to the
+interface the special route already uses (often \fBlo\fR), to take ownership
+of them. \fBtable-id: 0\fR means the main table. Omitting \fBtable-id\fR
+covers every table selected by the other fields.
+.PP
+Per-interface files are applied one at a time by \fBnmstatectl apply\fR and by
+\fBnmstate.service\fR. Each apply replaces the whole of every scope that file
+declares. When more than one source manages routes, combine them into one
+desired state or give them non-overlapping scopes (different next-hop
+interfaces and/or tables). Two files that both own eth1's main table will
+make the later apply delete routes that only the earlier file listed.
+.PP
+.RS
+# /etc/nmstate/eth1.yml
+.br
+routes:
+.br
+  authoritative:
+.br
+  - next-hop-interface: eth1
+.br
+    table-id: 254
+.br
+  config:
+.br
+  - destination: 192.0.2.0/24
+.br
+    next-hop-interface: eth1
+.br
+    next-hop-address: 192.0.2.1
+.RE
+.PP
+.RS
+# /etc/nmstate/eth2.yml
+.br
+routes:
+.br
+  authoritative:
+.br
+  - next-hop-interface: eth2
+.br
+    table-id: 254
+.br
+  config:
+.br
+  - destination: 198.51.100.0/24
+.br
+    next-hop-interface: eth2
+.br
+    next-hop-address: 198.51.100.1
+.RE
+.PP
+Applying eth1.yml again with the route omitted from \fBconfig\fR removes it.
+Reapplying the same file changes nothing. The resulting NetworkManager
+profile is what remains after reboot. Incremental applies and explicit
+\fBstate: absent\fR continue to work when \fBauthoritative\fR is omitted.
 .SH LIMITATIONS
 *\fR Maximum supported number of interfaces in a single desire state is 1000.
 .SH BUG REPORTS
